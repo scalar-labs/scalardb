@@ -87,14 +87,32 @@ public class SchemaOperator implements AutoCloseable {
   }
 
   public void repairNamespaces(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
-    // Arbitrarily use the configuration of the first table listed in the schema for the reparation
+    // Arbitrarily select the configuration of one of the table for each namespace for the
+    // reparation according to:
+    // - if the namespace contains only transaction table, use the configuration of the first table
+    // listed
+    // - if the namespace contains transaction and storage tables, use the configuration of the
+    // first transaction table listed
+    // - if the namespace contains only storage table, use the configuration of the first table
+    // listed
+    //
     // That means if tables of a namespace have different options (resource unit, replication
-    // factor, etc.), the options of the first table will be used for the reparation
-    Map<String, TableSchema> namespaceToTableSchema = new HashMap<>();
-    for (TableSchema tableSchema : tableSchemaList) {
-      namespaceToTableSchema.putIfAbsent(tableSchema.getNamespace(), tableSchema);
+    // factor, etc.), only the option of the selected table will be used for the reparation
+    Map<String, TableSchema> namespaceToSelectedTableSchema = new HashMap<>();
+    for (TableSchema table : tableSchemaList) {
+      TableSchema selectedTable = namespaceToSelectedTableSchema.get(table.getNamespace());
+
+      if (selectedTable != null
+          && !selectedTable.isTransactionTable()
+          && table.isTransactionTable()) {
+        // Case if a namespace contains storage and transaction tables
+        // Replace the selected "storage" table by the first "transaction" table listed
+        namespaceToSelectedTableSchema.put(table.getNamespace(), table);
+      } else {
+        namespaceToSelectedTableSchema.putIfAbsent(table.getNamespace(), table);
+      }
     }
-    for (TableSchema tableSchema : namespaceToTableSchema.values()) {
+    for (TableSchema tableSchema : namespaceToSelectedTableSchema.values()) {
       try {
         if (tableSchema.isTransactionTable()) {
           transactionAdmin

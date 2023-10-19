@@ -541,28 +541,43 @@ public class SchemaOperatorTest {
   @Test
   @SuppressWarnings("unchecked")
   public void
-      repairNamespaces_WithSeveralTablesPerNamespace_ShouldRepairWithOptionsFromTheFirstListedTable()
+      repairNamespaces_WithSeveralTablesPerNamespace_ShouldRepairWithOptionsOfTheCorrectTable()
           throws SchemaLoaderException, ExecutionException {
     // Arrange
     Map<String, String> ns1SchemaOptions = mock(Map.class);
     Map<String, String> ns2SchemaOptions = mock(Map.class);
     Map<String, String> ns3SchemaOptions = mock(Map.class);
+    // ns1Schema1, ns2Schema2 and ns3Schema1 will be selected to repair respectively the ns1, ns2
+    // and ns3 namespaces
     TableSchema ns1Schema1 = prepareTableSchemaMock("ns1", true, ns1SchemaOptions);
     TableSchema ns1Schema2 = prepareTableSchemaMock("ns1", true, null);
-    TableSchema ns2Schema1 = prepareTableSchemaMock("ns2", false, ns2SchemaOptions);
-    TableSchema ns2Schema2 = prepareTableSchemaMock("ns2", true, null);
-    TableSchema ns3Schema1 = prepareTableSchemaMock("ns3", true, ns3SchemaOptions);
+    TableSchema ns2Schema1 = prepareTableSchemaMock("ns2", false, null);
+    TableSchema ns2Schema2 = prepareTableSchemaMock("ns2", true, ns2SchemaOptions);
+    TableSchema ns2Schema3 = prepareTableSchemaMock("ns2", true, null);
+    TableSchema ns2Schema4 = prepareTableSchemaMock("ns2", false, null);
+    TableSchema ns3Schema1 = prepareTableSchemaMock("ns3", false, ns3SchemaOptions);
+    TableSchema ns3Schema2 = prepareTableSchemaMock("ns3", false, null);
 
     List<TableSchema> tableSchemaList =
-        Arrays.asList(ns1Schema1, ns1Schema2, ns2Schema1, ns2Schema2, ns3Schema1);
+        Arrays.asList(
+            ns1Schema1,
+            ns1Schema2,
+            ns2Schema1,
+            ns2Schema2,
+            ns2Schema3,
+            ns2Schema4,
+            ns3Schema1,
+            ns3Schema2);
 
     // Act
     operator.repairNamespaces(tableSchemaList);
 
     // Assert
     verify(transactionAdmin).repairNamespace("ns1", ns1SchemaOptions);
-    verify(storageAdmin).repairNamespace("ns2", ns2SchemaOptions);
-    verify(transactionAdmin).repairNamespace("ns3", ns3SchemaOptions);
+    verify(transactionAdmin).repairNamespace("ns2", ns2SchemaOptions);
+    verifyNoMoreInteractions(transactionAdmin);
+    verify(storageAdmin).repairNamespace("ns3", ns3SchemaOptions);
+    verifyNoMoreInteractions(storageAdmin);
   }
 
   private TableSchema prepareTableSchemaMock(
