@@ -14,32 +14,6 @@ In transactions with a two-phase commit interface, there are two roles—Coordin
 
 The Coordinator process and the participant processes all have different transaction manager instances. The Coordinator process first starts a transaction, and the participant processes join the transaction. After executing CRUD operations, the Coordinator process and the participant processes commit the transaction by using the two-phase interface.
 
-## How to configure ScalarDB to support transactions with a two-phase commit interface
-
-To enable transactions with a two-phase commit interface, you need to specify `consensus-commit` as the value for `scalar.db.transaction_manager` in the ScalarDB properties file.
-
-The following is an example of a configuration for transactions with a two-phase commit interface when using Cassandra:
-
-```properties
-# Consensus Commit is required to support transactions with a two-phase commit interface.
-scalar.db.transaction_manager=consensus-commit
-
-# Storage implementation.
-scalar.db.storage=cassandra
-
-# Comma-separated contact points.
-scalar.db.contact_points=cassandra
-
-# Port number for all the contact points.
-scalar.db.contact_port=9042
-
-# Credential information to access the database.
-scalar.db.username=cassandra
-scalar.db.password=cassandra
-```
-
-For additional configurations, see [ScalarDB Configurations](configurations.md).
-
 ## How to execute transactions with a two-phase commit interface
 
 To execute a two-phase commit transaction, you must get the transaction manager instance. Then, the Coordinator process can start the transaction, and the participant can process the transaction.
