@@ -1393,7 +1393,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                     .build());
       } catch (RuntimeException e) {
         throw new ExecutionException(
-            "failed to retrieve the namespaces names of existing tables", e);
+            "Failed to retrieve the namespaces names of existing tables", e);
       }
       lastEvaluatedKey = scanResponse.lastEvaluatedKey();
 
