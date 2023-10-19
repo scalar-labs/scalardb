@@ -149,10 +149,16 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    // In SQLite storage, namespace will be added to table names as prefix along with underscore
+  public String[] createSchemaSqls(String fullSchema) {
+    // Do nothing, In SQLite storage, namespace will be added to table names as prefix along with
+    // underscore
     // separator.
     return new String[0];
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String fullSchema) {
+    return createSchemaSqls(fullSchema);
   }
 
   /**
@@ -184,12 +190,6 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
     return createTableSql.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
-  }
-
-  @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
-    return new String[0];
   }
 
   @Override

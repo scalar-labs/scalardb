@@ -536,6 +536,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    try {
+      client.createDatabaseIfNotExists(namespace, calculateThroughput(options));
+      createMetadataDatabaseAndNamespaceContainerIfNotExists();
+      getNamespacesContainer().upsertItem(new CosmosNamespace(namespace));
+    } catch (CosmosException e) {
+      throw new ExecutionException(String.format("Repairing the %s database failed", namespace), e);
+    }
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {

@@ -271,7 +271,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
   public void afterAll() throws Exception {
     dropTablesIfExist();
     storageAdmin.close();
-
+    transactionAdmin.close();
+    adminTestUtils.close();
     // Delete the files
     Files.delete(CONFIG_FILE_PATH);
     Files.delete(SCHEMA_FILE_PATH);

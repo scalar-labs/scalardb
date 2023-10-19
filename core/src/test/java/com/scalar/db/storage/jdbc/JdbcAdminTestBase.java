@@ -300,7 +300,9 @@ public abstract class JdbcAdminTestBase {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.MYSQL,
         "CREATE SCHEMA `my_ns` character set utf8 COLLATE utf8_bin",
-        "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
+        "CREATE SCHEMA IF NOT EXISTS `"
+            + metadataSchemaName
+            + "` character set utf8 COLLATE utf8_bin",
         "CREATE TABLE IF NOT EXISTS `"
             + metadataSchemaName
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -711,7 +713,9 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
+        "CREATE SCHEMA IF NOT EXISTS `"
+            + metadataSchemaName
+            + "` character set utf8 COLLATE utf8_bin",
         "CREATE TABLE IF NOT EXISTS `"
             + metadataSchemaName
             + "`.`metadata`("
@@ -877,7 +881,9 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `" + metadataSchemaName + "`",
+        "CREATE SCHEMA IF NOT EXISTS `"
+            + metadataSchemaName
+            + "` character set utf8 COLLATE utf8_bin",
         "CREATE TABLE IF NOT EXISTS `"
             + metadataSchemaName
             + "`.`metadata`("
@@ -2793,6 +2799,101 @@ public abstract class JdbcAdminTestBase {
 
   private RdbEngineStrategy getRdbEngineStrategy(RdbEngine rdbEngine) {
     return RDB_ENGINES.getOrDefault(rdbEngine, RdbEngineFactory.create("jdbc:mysql:"));
+  }
+
+  @Test
+  public void repairNamespace_forMysql_shouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+      throws ExecutionException, SQLException {
+    repairNamespace_forX_shouldWorkProperly(
+        RdbEngine.MYSQL,
+        "CREATE SCHEMA IF NOT EXISTS `my_ns` character set utf8 COLLATE utf8_bin",
+        "CREATE SCHEMA IF NOT EXISTS `"
+            + metadataSchemaName
+            + "` character set utf8 COLLATE utf8_bin",
+        "CREATE TABLE IF NOT EXISTS `"
+            + metadataSchemaName
+            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES (?)");
+  }
+
+  @Test
+  public void repairNamespace_forPostgresql_shouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+      throws ExecutionException, SQLException {
+    repairNamespace_forX_shouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "CREATE SCHEMA IF NOT EXISTS \"my_ns\"",
+        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+  }
+
+  @Test
+  public void repairNamespace_forSqlServer_shouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+      throws ExecutionException, SQLException {
+    repairNamespace_forX_shouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "CREATE SCHEMA [my_ns]",
+        "CREATE SCHEMA [" + metadataSchemaName + "]",
+        "CREATE TABLE ["
+            + metadataSchemaName
+            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES (?)");
+  }
+
+  @Test
+  public void repairNamespace_forOracle_shouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+      throws ExecutionException, SQLException {
+    repairNamespace_forX_shouldWorkProperly(
+        RdbEngine.ORACLE,
+        "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"my_ns\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + metadataSchemaName
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+  }
+
+  @Test
+  public void repairNamespace_forSqlite_shouldUpsertNamespaceMetadata()
+      throws SQLException, ExecutionException {
+    repairNamespace_forX_shouldWorkProperly(
+        RdbEngine.SQLITE,
+        "CREATE TABLE IF NOT EXISTS \""
+            + metadataSchemaName
+            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES (?)");
+  }
+
+  private void repairNamespace_forX_shouldWorkProperly(
+      RdbEngine rdbEngine, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    List<Statement> mockedStatements = new ArrayList<>();
+
+    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    // Act
+    admin.repairNamespace(namespace, Collections.emptyMap());
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+    verify(connection).prepareStatement(expectedSqlStatements[expectedSqlStatements.length - 1]);
+    verify(preparedStatement).execute();
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table

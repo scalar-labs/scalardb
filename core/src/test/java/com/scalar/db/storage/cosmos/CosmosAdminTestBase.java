@@ -1065,4 +1065,102 @@ public abstract class CosmosAdminTestBase {
 
     verify(client).getDatabase(metadataDatabaseName);
   }
+
+  @Test
+  public void
+      repairNamespace_WithCustomRuBelow4000_ShouldCreateDatabaseIfNotExistsWithManualThroughput()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String throughput = "2000";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    // Act
+    admin.repairNamespace(
+        namespace, Collections.singletonMap(CosmosAdmin.REQUEST_UNIT, throughput));
+
+    // Assert
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(namespace),
+            refEq(ThroughputProperties.createManualThroughput(Integer.parseInt(throughput))));
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
+  }
+
+  @Test
+  public void
+      repairNamespace_WithCustomRuEqualTo4000_ShouldCreateDatabaseIfNotExistsWithAutoscaledThroughput()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String throughput = "4000";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    // Act
+    admin.repairNamespace(
+        namespace, Collections.singletonMap(CosmosAdmin.REQUEST_UNIT, throughput));
+
+    // Assert
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(namespace),
+            refEq(ThroughputProperties.createAutoscaledThroughput(Integer.parseInt(throughput))));
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
+  }
+
+  @Test
+  public void
+      repairNamespace_WithCustomRuEqualTo4000AndNoScaling_ShouldCreateDatabaseIfNotExistsWithManualThroughput()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String throughput = "4000";
+    String noScaling = "true";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    // Act
+    admin.repairNamespace(
+        namespace,
+        ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, throughput, CosmosAdmin.NO_SCALING, noScaling));
+
+    // Assert
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(namespace),
+            refEq(ThroughputProperties.createManualThroughput(Integer.parseInt(throughput))));
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(client, times(2)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
+  }
 }

@@ -361,13 +361,21 @@ public interface Admin {
   }
 
   /**
+   * Repair a namespace which may be in an unknown state.
+   *
+   * @param namespace an existing namespace
+   * @param options options to repair
+   * @throws ExecutionException if the operation fails
+   */
+  void repairNamespace(String namespace, Map<String, String> options) throws ExecutionException;
+
+  /**
    * Repair a table which may be in an unknown state.
    *
    * @param namespace an existing namespace
    * @param table an existing table
    * @param metadata the metadata associated to the table to repair
    * @param options options to repair
-   * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
   void repairTable(

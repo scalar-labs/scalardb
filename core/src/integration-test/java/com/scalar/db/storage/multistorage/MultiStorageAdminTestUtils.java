@@ -18,14 +18,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.lang3.NotImplementedException;
 
 public class MultiStorageAdminTestUtils extends AdminTestUtils {
   // for Cassandra
   private final ClusterManager clusterManager;
   // for JDBC
-  private final JdbcConfig jdbcConfig;
   private final String jdbcMetadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final BasicDataSource dataSource;
 
   public MultiStorageAdminTestUtils(Properties cassandraProperties, Properties jdbcProperties) {
     // Cassandra has the coordinator tables
@@ -33,9 +34,15 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     clusterManager = new ClusterManager(new DatabaseConfig(cassandraProperties));
 
     // for JDBC
-    jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
+    JdbcConfig jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
     jdbcMetadataSchema = jdbcConfig.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     rdbEngine = RdbEngineFactory.create(jdbcConfig);
+    dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
+  }
+
+  @Override
+  public void dropNamespacesTable() {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -46,6 +53,11 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(
         "DROP TABLE "
             + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
+  }
+
+  @Override
+  public void truncateNamespacesTable() {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -74,9 +86,18 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(insertCorruptedMetadataStatement);
   }
 
+  @Override
+  public void dropNamespace(String namespace) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) {
+    throw new NotImplementedException();
+  }
+
   private void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
-        Connection connection = dataSource.getConnection();
+    try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }
@@ -102,8 +123,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   private boolean tableExistsOnJdbc(String namespace, String table) throws Exception {
     String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
     String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
-        Connection connection = dataSource.getConnection();
+    try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
       statement.execute(sql);
       return true;
@@ -145,5 +165,11 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
       String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
       execute(dropTableStatement);
     }
+  }
+
+  @Override
+  public void close() throws SQLException {
+    clusterManager.close();
+    dataSource.close();
   }
 }

@@ -39,8 +39,28 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void dropNamespacesTable() {
+    client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER).delete();
+  }
+
+  @Override
   public void dropMetadataTable() {
     dropTable(metadataDatabase, CosmosAdmin.TABLE_METADATA_CONTAINER);
+  }
+
+  @Override
+  public void truncateNamespacesTable() {
+    CosmosContainer container =
+        client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+
+    container
+        .queryItems("SELECT t.id FROM t", new CosmosQueryRequestOptions(), CosmosNamespace.class)
+        .forEach(
+            namespace ->
+                container.deleteItem(
+                    namespace.getId(),
+                    new PartitionKey(namespace.getId()),
+                    new CosmosItemRequestOptions()));
   }
 
   @Override
@@ -85,6 +105,24 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void dropNamespace(String namespace) {
+    client.getDatabase(namespace).delete();
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) {
+    try {
+      client.getDatabase(namespace).read();
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
+      }
+      throw e;
+    }
+    return true;
+  }
+
+  @Override
   public boolean tableExists(String namespace, String table) {
     try {
       client.getDatabase(namespace).getContainer(table).read();
@@ -100,5 +138,10 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
   @Override
   public void dropTable(String namespace, String table) {
     client.getDatabase(namespace).getContainer(table).delete();
+  }
+
+  @Override
+  public void close() {
+    client.close();
   }
 }

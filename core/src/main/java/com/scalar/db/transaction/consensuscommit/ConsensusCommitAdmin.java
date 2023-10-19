@@ -167,6 +167,12 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    admin.repairNamespace(namespace, options);
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -175,8 +181,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
-    // TODO This will be replaced with admin.repairNamespace(coordinatorNamespace, options)
-    admin.createNamespace(coordinatorNamespace, true, options);
+    admin.repairNamespace(coordinatorNamespace, options);
     admin.repairTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
   }
 
