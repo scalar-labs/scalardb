@@ -125,6 +125,9 @@ The following configurations are available for JDBC databases:
 | `scalar.db.jdbc.admin.connection_pool.max_idle`           | Maximum number of connections that can remain idle in the connection pool for admin.                                                                                         | `10`                         |
 | `scalar.db.jdbc.admin.connection_pool.max_total`          | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit.              | `25`                         |
 
+</div>
+</div>
+
 ##### Multi-storage support
 
 ScalarDB supports using multiple storage implementations simultaneously. You can use multiple storages by specifying `multi-storage` as the value for the `scalar.db.storage` property.
@@ -174,12 +177,6 @@ The following are additional configurations available for ScalarDB:
 | Name                                                             | Description                                                                                                                                                                                                       | Default              |
 |------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|
 | `scalar.db.metadata.cache_expiration_time_secs`                  | ScalarDB has a metadata cache to reduce the number of requests to the database. This setting specifies the expiration time of the cache in seconds.                                                               | `-1` (no expiration) |
-
-### Two-phase commit support
-
-ScalarDB supports transactions with a two-phase commit interface. With transactions with a two-phase commit interface, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
-
-For details about using two-phase commit, see [Transactions with a Two-Phase Commit Interface](two-phase-commit-transactions.md).
 
 ## Configuration examples
 
@@ -253,14 +250,4 @@ scalar.db.contact_points=<SCALARDB_SERVER_HOST>
 
 # ScalarDB Server port.
 scalar.db.contact_port=<SCALARDB_SERVER_PORT>
-
-# Storage implementation.
-scalar.db.storage=cassandra
-
-# Comma-separated contact points.
-scalar.db.contact_points=<CASSANDRA_HOST>
-
-# Credential information to access the database.
-scalar.db.username=<USERNAME>
-scalar.db.password=<PASSWORD>
 ```
