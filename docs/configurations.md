@@ -4,7 +4,7 @@ This page describes the available configurations for ScalarDB.
 
 ## ScalarDB client configurations
 
-ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library.
+ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library or through [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/), which is a component that is available only in the ScalarDB Enterprise edition.
 
 ### Use Consensus Commit directly
 
