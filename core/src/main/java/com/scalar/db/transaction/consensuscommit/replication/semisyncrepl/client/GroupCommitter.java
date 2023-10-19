@@ -112,9 +112,21 @@ class GroupCommitter<K, V> {
       emitExecutorService.submit(
           () -> {
             try {
+              logger.info(
+                  "Emitting (thread_id:{}, num_of_values:{})",
+                  Thread.currentThread().getId(),
+                  fetchedValues.values.size());
               emitter.accept(
                   fetchedValues.values.stream().map(vf -> vf.value).collect(Collectors.toList()));
+              logger.info(
+                  "Emitted (thread_id:{}, num_of_values:{})",
+                  Thread.currentThread().getId(),
+                  fetchedValues.values.size());
               fetchedValues.values.forEach(vf -> vf.future.complete(null));
+              logger.info(
+                  "Notified (thread_id:{}, num_of_values:{})",
+                  Thread.currentThread().getId(),
+                  fetchedValues.values.size());
             } catch (Throwable e) {
               fetchedValues.values.forEach(vf -> vf.future.completeExceptionally(e));
             }
