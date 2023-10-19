@@ -412,7 +412,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       createKeyspace(metadataKeyspace, options, true);
       createNamespacesTableIfNotExists();
       // Retrieve user keyspace and filter out system ones. A downside is that this may include
-      // keyspace not created by Scalar DB.
+      // keyspace not created by ScalarDB.
       Set<String> userKeyspaces =
           clusterManager.getSession().getCluster().getMetadata().getKeyspaces().stream()
               .map(KeyspaceMetadata::getName)
