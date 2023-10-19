@@ -213,7 +213,7 @@ Similar to `prepare()`, if any of the Coordinator or participant processes fail 
 {% capture notice--info %}
 **Note**
 
-When using the [Consensus Commit](configurations/#consensus-commit) transaction manager with `EXTRA_READ` set as the value for `scalar.db.consensus_commit.serializable_strategy` and `SERIALIZABLE` set as the value for `scalar.db.consensus_commit.isolation_level`, you need to call `validate()`. However, if you are not using Consensus Commit, specifying `validate()` will not have any effect.
+When using the [Consensus Commit](configurations.md#use-consensus-commit-directly) transaction manager with `EXTRA_READ` set as the value for `scalar.db.consensus_commit.serializable_strategy` and `SERIALIZABLE` set as the value for `scalar.db.consensus_commit.isolation_level`, you need to call `validate()`. However, if you are not using Consensus Commit, specifying `validate()` will not have any effect.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
@@ -715,7 +715,7 @@ In addition, each service typically has multiple servers (or hosts) for scalabil
 
 There are several approaches to achieve load balancing for transactions with a two-phase commit interface depending on the protocol between the services. Some approaches for this include using gRPC and HTTP/1.1.
 
-### gPRC
+### gRPC
 
 When you use a client-side load balancer, you can use the same gRPC connection to send requests in a transaction, which guarantees that the requests go to the same servers.
 
