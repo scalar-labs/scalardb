@@ -170,7 +170,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
     try {
       long mutateStart = System.currentTimeMillis();
-      if (!jdbcService.mutate(mutations, connection)) {
+      if (!jdbcService.bulkMutate(mutations, connection)) {
         try {
           connection.rollback();
         } catch (SQLException e) {
