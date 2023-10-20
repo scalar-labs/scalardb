@@ -22,6 +22,7 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
     return false;
   }
 
+  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new DynamoAdminTestUtils(getProperties(testName));
   }

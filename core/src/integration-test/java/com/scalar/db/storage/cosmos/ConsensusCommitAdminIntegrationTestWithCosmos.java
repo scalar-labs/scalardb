@@ -39,6 +39,7 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
     return CosmosEnv.getCreationOptions();
   }
 
+  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CosmosAdminTestUtils(getProperties(testName));
   }

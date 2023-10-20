@@ -18,6 +18,7 @@ public class ConsensusCommitAdminIntegrationTestWithCassandra
     return Collections.singletonMap(CassandraAdmin.REPLICATION_FACTOR, "1");
   }
 
+  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CassandraAdminTestUtils(getProperties(testName));
   }

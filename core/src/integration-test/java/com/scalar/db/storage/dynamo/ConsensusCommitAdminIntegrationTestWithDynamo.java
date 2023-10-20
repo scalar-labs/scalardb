@@ -23,6 +23,7 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
     return false;
   }
 
+  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new DynamoAdminTestUtils(getProperties(testName));
   }

@@ -12,6 +12,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     return JdbcEnv.getProperties(testName);
   }
 
+  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new JdbcAdminTestUtils(getProperties(testName));
   }

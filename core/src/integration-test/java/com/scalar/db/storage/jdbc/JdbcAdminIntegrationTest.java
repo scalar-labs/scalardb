@@ -11,6 +11,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
     return JdbcEnv.getProperties(testName);
   }
 
+  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new JdbcAdminTestUtils(getProperties(testName));
   }
