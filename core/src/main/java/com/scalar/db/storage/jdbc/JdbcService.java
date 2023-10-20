@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.sql.Statement.EXECUTE_FAILED;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
@@ -16,6 +17,7 @@ import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
+import com.scalar.db.storage.jdbc.query.Query;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
@@ -25,6 +27,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -220,5 +223,52 @@ public class JdbcService {
       }
     }
     return true;
+  }
+
+  public boolean bulkMutate(List<? extends Mutation> mutations, Connection connection)
+      throws SQLException, ExecutionException {
+    checkArgument(mutations.size() != 0);
+    operationChecker.check(mutations);
+
+    String sql = null;
+    List<Query> queries = new ArrayList<>();
+    for (Mutation m : mutations) {
+      Query query;
+      if (m instanceof Put) {
+        Put put = (Put) m;
+        TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(put);
+        query =
+            queryBuilder
+                .upsertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
+                .values(put.getPartitionKey(), put.getClusteringKey(), put.getColumns())
+                .build();
+      } else {
+        assert m instanceof Delete;
+        Delete delete = (Delete) m;
+        TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(delete);
+        query =
+            queryBuilder
+                .deleteFrom(delete.forNamespace().get(), delete.forTable().get(), tableMetadata)
+                .where(delete.getPartitionKey(), delete.getClusteringKey())
+                .build();
+      }
+      queries.add(query);
+      if (sql == null) {
+        sql = query.sql();
+      } else if (!sql.equals(query.sql())) {
+        return mutate(mutations, connection);
+      }
+    }
+
+    assert sql != null;
+
+    try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      for (Query query : queries) {
+        query.bind(preparedStatement);
+        preparedStatement.addBatch();
+      }
+      return Arrays.stream(preparedStatement.executeBatch())
+          .allMatch(result -> result != EXECUTE_FAILED);
+    }
   }
 }
