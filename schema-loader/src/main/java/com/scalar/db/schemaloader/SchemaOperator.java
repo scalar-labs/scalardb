@@ -13,6 +13,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,49 @@ public class SchemaOperator implements AutoCloseable {
         logger.warn("Table {} in the namespace {} already exists", tableName, namespace);
       } else {
         createTable(tableSchema);
+      }
+    }
+  }
+
+  public void repairNamespaces(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
+    // Arbitrarily select the configuration of one of the table for each namespace for the
+    // reparation according to:
+    // - if the namespace contains only transaction table, use the configuration of the first table
+    // listed
+    // - if the namespace contains transaction and storage tables, use the configuration of the
+    // first transaction table listed
+    // - if the namespace contains only storage table, use the configuration of the first table
+    // listed
+    //
+    // That means if tables of a namespace have different options (resource unit, replication
+    // factor, etc.), only the option of the selected table will be used for the reparation
+    Map<String, TableSchema> namespaceToSelectedTableSchema = new HashMap<>();
+    for (TableSchema table : tableSchemaList) {
+      TableSchema selectedTable = namespaceToSelectedTableSchema.get(table.getNamespace());
+
+      if (selectedTable != null
+          && !selectedTable.isTransactionTable()
+          && table.isTransactionTable()) {
+        // Case if a namespace contains storage and transaction tables
+        // Replace the selected "storage" table by the first "transaction" table listed
+        namespaceToSelectedTableSchema.put(table.getNamespace(), table);
+      } else {
+        namespaceToSelectedTableSchema.putIfAbsent(table.getNamespace(), table);
+      }
+    }
+    for (TableSchema tableSchema : namespaceToSelectedTableSchema.values()) {
+      try {
+        if (tableSchema.isTransactionTable()) {
+          transactionAdmin
+              .get()
+              .repairNamespace(tableSchema.getNamespace(), tableSchema.getOptions());
+        } else {
+          storageAdmin.get().repairNamespace(tableSchema.getNamespace(), tableSchema.getOptions());
+        }
+        logger.info("Repairing the namespace {} succeeded", tableSchema.getNamespace());
+      } catch (ExecutionException e) {
+        throw new SchemaLoaderException(
+            "Repairing the namespace " + tableSchema.getNamespace() + " failed", e);
       }
     }
   }
