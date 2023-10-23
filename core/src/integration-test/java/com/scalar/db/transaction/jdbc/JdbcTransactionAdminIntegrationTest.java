@@ -4,6 +4,7 @@ import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcEnv;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -70,5 +71,16 @@ public class JdbcTransactionAdminIntegrationTest
   public void dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException()
       throws ExecutionException {
     super.dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException();
+  }
+
+  @Test
+  @Disabled("JDBC Transaction Admin does not support upgrade()")
+  @Override
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    throw new UnsupportedOperationException();
   }
 }

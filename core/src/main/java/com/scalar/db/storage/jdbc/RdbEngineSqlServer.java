@@ -21,8 +21,13 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineSqlServer.class);
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    return new String[] {"CREATE SCHEMA " + fullNamespace};
+  public String[] createSchemaSqls(String fullSchema) {
+    return new String[] {"CREATE SCHEMA " + enclose(fullSchema)};
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String fullSchema) {
+    return createSchemaSqls(fullSchema);
   }
 
   @Override
@@ -61,11 +66,6 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
     return createTableSql;
-  }
-
-  @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {"CREATE SCHEMA " + enclose(metadataSchema)};
   }
 
   @Override

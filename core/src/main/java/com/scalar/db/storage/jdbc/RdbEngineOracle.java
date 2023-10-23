@@ -20,15 +20,20 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RdbEngineOracle implements RdbEngineStrategy {
+class RdbEngineOracle implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
+  public String[] createSchemaSqls(String fullSchema) {
     return new String[] {
-      "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
-      "ALTER USER " + fullNamespace + " quota unlimited on USERS",
+      "CREATE USER " + enclose(fullSchema) + " IDENTIFIED BY \"oracle\"",
+      "ALTER USER " + enclose(fullSchema) + " quota unlimited on USERS",
     };
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String schema) {
+    return createSchemaSqls(schema);
   }
 
   @Override
@@ -77,14 +82,6 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
     return createTableSql;
-  }
-
-  @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {
-      "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"",
-      "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS",
-    };
   }
 
   @Override

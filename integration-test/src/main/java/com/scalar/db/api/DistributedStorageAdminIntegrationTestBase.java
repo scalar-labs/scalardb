@@ -8,6 +8,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -111,6 +112,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
+
+  protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   @AfterAll
   public void afterAll() throws Exception {
@@ -763,6 +766,25 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThatThrownBy(
             () -> admin.addNewColumnToTable(namespace1, TABLE1, COL_NAME2, DataType.TEXT))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
+          throws Exception {
+    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
+    try {
+      // Arrange
+      adminTestUtils.dropNamespacesTable();
+
+      // Act
+      admin.upgrade(getCreationOptions());
+
+      // Assert
+      assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
+    } finally {
+      adminTestUtils.close();
+    }
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

@@ -536,6 +536,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    try {
+      client.createDatabaseIfNotExists(namespace, calculateThroughput(options));
+      createMetadataDatabaseAndNamespaceContainerIfNotExists();
+      getNamespacesContainer().upsertItem(new CosmosNamespace(namespace));
+    } catch (CosmosException e) {
+      throw new ExecutionException(String.format("Repairing the %s database failed", namespace), e);
+    }
+  }
+
+  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -632,6 +644,33 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       return allNamespaces.stream().map(CosmosNamespace::getId).collect(Collectors.toSet());
     } catch (RuntimeException e) {
       throw new ExecutionException("Retrieving the database names failed", e);
+    }
+  }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    try {
+      if (!tableMetadataContainerExists()) {
+        return;
+      }
+      createMetadataDatabaseAndNamespaceContainerIfNotExists();
+
+      // Upsert namespace of existing tables in the "namespaces" container
+      getTableMetadataContainer()
+          .queryItems(
+              "SELECT container.id FROM container",
+              new CosmosQueryRequestOptions(),
+              CosmosTableMetadata.class)
+          .stream()
+          .map(
+              tableMetadata ->
+                  tableMetadata.getId().substring(0, tableMetadata.getId().indexOf('.')))
+          .distinct()
+          .forEach(
+              namespaceName ->
+                  getNamespacesContainer().upsertItem(new CosmosNamespace(namespaceName)));
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Upgrading the ScalarDB environemnt failed", e);
     }
   }
 

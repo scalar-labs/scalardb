@@ -1,6 +1,7 @@
 package com.scalar.db.storage.multistorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -569,5 +570,51 @@ public class MultiStorageAdminTest {
     verify(admin2).getNamespaceNames();
     verify(admin3).getNamespaceNames();
     assertThat(actualNamespaces).isEmpty();
+  }
+
+  @Test
+  public void repairNamespace_ForNamespace2_ShouldCallAdmin2() throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    @SuppressWarnings("unchecked")
+    Map<String, String> options = mock(Map.class);
+
+    // Act
+    multiStorageAdmin.repairNamespace(namespace, options);
+
+    // Assert
+    verify(admin2).repairNamespace(namespace, options);
+  }
+
+  @Test
+  public void repairNamespace_ForNamespace3_ShouldCallDefaultAdmin() throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE3;
+    @SuppressWarnings("unchecked")
+    Map<String, String> options = mock(Map.class);
+
+    // Act
+    multiStorageAdmin.repairNamespace(namespace, options);
+
+    // Assert
+    verify(admin3).repairNamespace(namespace, options);
+  }
+
+  @Test
+  public void upgrade_ShouldCallNamespaceAndDefaultAdmins() throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+    Map<String, DistributedStorageAdmin> namespaceAdminMap =
+        ImmutableMap.of("ns1", admin1, "ns2", admin2);
+    DistributedStorageAdmin defaultAdmin = admin2;
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
+
+    // Act
+    multiStorageAdmin.upgrade(options);
+
+    // Assert
+    verify(admin1).upgrade(options);
+    verify(admin2).upgrade(options);
   }
 }

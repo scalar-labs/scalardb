@@ -3,15 +3,14 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairTableIntegrationTestBase;
-import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
-public class ConsensusCommitAdminRepairTableIntegrationTestWithCosmos
-    extends ConsensusCommitAdminRepairTableIntegrationTestBase {
+public class ConsensusCommitAdminRepairIntegrationTestWithCosmos
+    extends ConsensusCommitAdminRepairIntegrationTestBase {
 
   @Override
   protected Properties getProps(String testName) {
@@ -34,8 +33,9 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCosmos
   }
 
   @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new CosmosAdminTestUtils(getProperties(testName));
+  protected void initialize(String testName) throws Exception {
+    super.initialize(testName);
+    adminTestUtils = new CosmosAdminTestUtils(getProperties(testName));
   }
 
   @Test

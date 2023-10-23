@@ -1,11 +1,11 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.scalar.db.api.DistributedTransactionAdminRepairTableIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionAdminRepairIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Properties;
 
-public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
-    extends DistributedTransactionAdminRepairTableIntegrationTestBase {
+public abstract class ConsensusCommitAdminRepairIntegrationTestBase
+    extends DistributedTransactionAdminRepairIntegrationTestBase {
 
   @Override
   protected final Properties getProperties(String testName) {

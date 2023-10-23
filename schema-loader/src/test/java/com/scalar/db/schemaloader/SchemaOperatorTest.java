@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -535,5 +536,58 @@ public class SchemaOperatorTest {
     // Assert
     verify(storageAdmin, times(3)).importTable("ns", "tb");
     verifyNoInteractions(transactionAdmin);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void
+      repairNamespaces_WithSeveralTablesPerNamespace_ShouldRepairWithOptionsOfTheCorrectTable()
+          throws SchemaLoaderException, ExecutionException {
+    // Arrange
+    Map<String, String> ns1SchemaOptions = mock(Map.class);
+    Map<String, String> ns2SchemaOptions = mock(Map.class);
+    Map<String, String> ns3SchemaOptions = mock(Map.class);
+    // ns1Schema1, ns2Schema2 and ns3Schema1 will be selected to repair respectively the ns1, ns2
+    // and ns3 namespaces
+    TableSchema ns1Schema1 = prepareTableSchemaMock("ns1", true, ns1SchemaOptions);
+    TableSchema ns1Schema2 = prepareTableSchemaMock("ns1", true, null);
+    TableSchema ns2Schema1 = prepareTableSchemaMock("ns2", false, null);
+    TableSchema ns2Schema2 = prepareTableSchemaMock("ns2", true, ns2SchemaOptions);
+    TableSchema ns2Schema3 = prepareTableSchemaMock("ns2", true, null);
+    TableSchema ns2Schema4 = prepareTableSchemaMock("ns2", false, null);
+    TableSchema ns3Schema1 = prepareTableSchemaMock("ns3", false, ns3SchemaOptions);
+    TableSchema ns3Schema2 = prepareTableSchemaMock("ns3", false, null);
+
+    List<TableSchema> tableSchemaList =
+        Arrays.asList(
+            ns1Schema1,
+            ns1Schema2,
+            ns2Schema1,
+            ns2Schema2,
+            ns2Schema3,
+            ns2Schema4,
+            ns3Schema1,
+            ns3Schema2);
+
+    // Act
+    operator.repairNamespaces(tableSchemaList);
+
+    // Assert
+    verify(transactionAdmin).repairNamespace("ns1", ns1SchemaOptions);
+    verify(transactionAdmin).repairNamespace("ns2", ns2SchemaOptions);
+    verifyNoMoreInteractions(transactionAdmin);
+    verify(storageAdmin).repairNamespace("ns3", ns3SchemaOptions);
+    verifyNoMoreInteractions(storageAdmin);
+  }
+
+  private TableSchema prepareTableSchemaMock(
+      String namespace, boolean isTransactionTable, @Nullable Map<String, String> options) {
+    TableSchema schema = mock(TableSchema.class);
+    when(schema.getNamespace()).thenReturn(namespace);
+    when(schema.isTransactionTable()).thenReturn(isTransactionTable);
+    if (options != null) {
+      when(schema.getOptions()).thenReturn(options);
+    }
+    return schema;
   }
 }
