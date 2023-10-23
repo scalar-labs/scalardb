@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - master
+      - "[0-9]+"
+      - "[0-9]+.[0-9]+"
     types:
       - closed
 
@@ -15,11 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GH_PR_PAT }}
+      # Escape the PR title. See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable for details
+      PR_TITLE: ${{ github.event.pull_request.title }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # This is necessary to avoid unexpected auto-merge in git cherry-pick
           fetch-depth: 0
+          # This is necessary for git-push
+          token: ${{ secrets.GH_PR_PAT }}
 
       - name: Create pull requests
         run: |
@@ -47,7 +53,7 @@ jobs:
           ci/auto-pr/create_pull_requests \
             "${{ github.event.number }}" \
             "${{ github.event.pull_request.html_url }}" \
-            "${{ github.event.pull_request.title }}" \
+            "$PR_TITLE" \
             "${{ github.sha }}" \
             "$new_pr_assignee" \
             $branches
