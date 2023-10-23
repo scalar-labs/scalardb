@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+
+require "set"
+
+versions = ARGV
+
+versions.inject(Set.new) {|acc, v|
+  major_version, minor_version, patch_version = v.strip.split(".")
+
+  if patch_version == "0"
+    if minor_version == "0"
+      # e.g. project: "ScalarDB 4.0.0" -> branch: "master"
+      #
+      # This GitHub project corresponds to `main`/`master` branch.
+      # The target change is already merged to the default branch.
+      # Nonthing to do.
+    else
+      # e.g. project: "ScalarDB 3.8.0" -> branch: "3"
+      #
+      # This GitHub project corresponds to a support branch.
+      acc << major_version
+    end
+  else
+    # e.g. project: "ScalarDB 3.7.1" -> branch: "3.7"
+    #
+    # This GitHub project corresponds to a release branch.
+    acc << "#{major_version}.#{minor_version}"
+  end
+
+  acc
+}.each {|branch|
+  puts branch
+}
+
