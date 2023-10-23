@@ -364,6 +364,12 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    throw new UnsupportedOperationException(
+        "Upgrading the ScalarDB environment is not supported in ScalarDB Server");
+  }
+
+  @Override
   public void close() {
     try {
       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);

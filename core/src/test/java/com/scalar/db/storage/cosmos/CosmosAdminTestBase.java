@@ -1163,4 +1163,50 @@ public abstract class CosmosAdminTestBase {
     verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
     verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
   }
+
+  @Test
+  public void upgrade_WithExistingTables_ShouldUpsertNamespaces() throws ExecutionException {
+    // Arrange
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    CosmosContainer tableMetadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(anyString()))
+        .thenReturn(
+            tableMetadataContainer,
+            tableMetadataContainer,
+            namespacesContainer,
+            namespacesContainer);
+    CosmosPagedIterable<CosmosTableMetadata> cosmosPagedIterable = mock(CosmosPagedIterable.class);
+    CosmosTableMetadata tableMetadata1 = CosmosTableMetadata.newBuilder().id("ns1.tbl1").build();
+    CosmosTableMetadata tableMetadata2 = CosmosTableMetadata.newBuilder().id("ns1.tbl2").build();
+    CosmosTableMetadata tableMetadata3 = CosmosTableMetadata.newBuilder().id("ns2.tbl3").build();
+    when(cosmosPagedIterable.stream())
+        .thenReturn(Stream.of(tableMetadata1, tableMetadata2, tableMetadata3));
+    when(tableMetadataContainer.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
+        .thenReturn(cosmosPagedIterable);
+
+    // Act
+    admin.upgrade(Collections.emptyMap());
+
+    // Assert
+    verify(client, times(5)).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER);
+    verify(tableMetadataContainer).read();
+    verify(client)
+        .createDatabaseIfNotExists(
+            eq(metadataDatabaseName),
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
+    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verify(tableMetadataContainer)
+        .queryItems(
+            eq("SELECT container.id FROM container"),
+            refEq(new CosmosQueryRequestOptions()),
+            eq(CosmosTableMetadata.class));
+    verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
+    verify(namespacesContainer).upsertItem(new CosmosNamespace("ns1"));
+    verify(namespacesContainer).upsertItem(new CosmosNamespace("ns2"));
+  }
 }

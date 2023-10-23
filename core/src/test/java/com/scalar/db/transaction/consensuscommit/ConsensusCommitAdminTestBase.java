@@ -683,4 +683,16 @@ public abstract class ConsensusCommitAdminTestBase {
     // Assert
     verify(distributedStorageAdmin).repairNamespace("ns", Collections.emptyMap());
   }
+
+  @Test
+  public void upgrade_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.upgrade(options);
+
+    // Arrange
+    verify(distributedStorageAdmin).upgrade(options);
+  }
 }

@@ -599,4 +599,22 @@ public class MultiStorageAdminTest {
     // Assert
     verify(admin3).repairNamespace(namespace, options);
   }
+
+  @Test
+  public void upgrade_ShouldCallNamespaceAndDefaultAdmins() throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+    Map<String, DistributedStorageAdmin> namespaceAdminMap =
+        ImmutableMap.of("ns1", admin1, "ns2", admin2);
+    DistributedStorageAdmin defaultAdmin = admin2;
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
+
+    // Act
+    multiStorageAdmin.upgrade(options);
+
+    // Assert
+    verify(admin1).upgrade(options);
+    verify(admin2).upgrade(options);
+  }
 }

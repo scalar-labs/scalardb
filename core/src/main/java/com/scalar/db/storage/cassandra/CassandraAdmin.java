@@ -406,6 +406,26 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    try {
+      createKeyspace(metadataKeyspace, options, true);
+      createNamespacesTableIfNotExists();
+      // Retrieve user keyspace and filter out system ones. A downside is that this may include
+      // keyspace not created by ScalarDB.
+      Set<String> userKeyspaces =
+          clusterManager.getSession().getCluster().getMetadata().getKeyspaces().stream()
+              .map(KeyspaceMetadata::getName)
+              .filter(name -> !name.startsWith("system") && !name.equals(metadataKeyspace))
+              .collect(Collectors.toSet());
+      for (String userKeyspace : userKeyspaces) {
+        upsertIntoNamespacesTable(userKeyspace);
+      }
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Upgrading the ScalarDB environment failed", e);
+    }
+  }
+
   private void createNamespacesTableIfNotExists() {
     String createTableQuery =
         SchemaBuilder.createTable(

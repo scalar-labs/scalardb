@@ -1363,6 +1363,50 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    if (!metadataTableExists()) {
+      return;
+    }
+    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
+    createNamespacesTableIfNotExists(noBackup);
+    try {
+      for (Namespace namespace : getNamespacesOfExistingTables()) {
+        upsertIntoNamespacesTable(namespace);
+      }
+    } catch (ExecutionException e) {
+      throw new ExecutionException("Upgrading the ScalarDB environment failed", e);
+    }
+  }
+
+  private Set<Namespace> getNamespacesOfExistingTables() throws ExecutionException {
+    Set<Namespace> namespaceNames = new HashSet<>();
+    Map<String, AttributeValue> lastEvaluatedKey = null;
+    do {
+      ScanResponse scanResponse;
+      try {
+        scanResponse =
+            client.scan(
+                ScanRequest.builder()
+                    .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
+                    .exclusiveStartKey(lastEvaluatedKey)
+                    .build());
+      } catch (RuntimeException e) {
+        throw new ExecutionException(
+            "Failed to retrieve the namespaces names of existing tables", e);
+      }
+      lastEvaluatedKey = scanResponse.lastEvaluatedKey();
+
+      for (Map<String, AttributeValue> tableMetadata : scanResponse.items()) {
+        String fullTableName = tableMetadata.get(METADATA_ATTR_TABLE).s();
+        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        namespaceNames.add(Namespace.of(namespaceName));
+      }
+    } while (!lastEvaluatedKey.isEmpty());
+
+    return namespaceNames;
+  }
+
   private void createNamespacesTableIfNotExists(boolean noBackup) throws ExecutionException {
     try {
       if (!namespacesTableExists()) {

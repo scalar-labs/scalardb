@@ -431,4 +431,14 @@ public interface Admin {
    * @throws ExecutionException if the operation fails
    */
   Set<String> getNamespaceNames() throws ExecutionException;
+
+  /**
+   * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
+   * you will be requested, as indicated on the release notes, to run this method after updating the
+   * ScalarDB version of your application environment.
+   *
+   * @param options options to upgrade
+   * @throws ExecutionException if the operation fails
+   */
+  void upgrade(Map<String, String> options) throws ExecutionException;
 }
