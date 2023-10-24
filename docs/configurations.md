@@ -4,7 +4,7 @@ This page describes the available configurations for ScalarDB.
 
 ## ScalarDB client configurations
 
-ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library.
+ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library or through [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/), which is a component that is available only in the ScalarDB Enterprise edition.
 
 ### Use Consensus Commit directly
 
@@ -127,11 +127,35 @@ The following configurations are available for JDBC databases:
 | `scalar.db.jdbc.admin.connection_pool.max_idle`           | Maximum number of connections that can remain idle in the connection pool for admin.                                                                                         | `10`                         |
 | `scalar.db.jdbc.admin.connection_pool.max_total`          | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit.              | `25`                         |
 
+{% capture notice--info %}
+**Note**
+
+If you use SQLite3 as a JDBC database, you must set `scalar.db.contact_points` as follows.
+
+```properties
+scalar.db.contact_points=jdbc:sqlite:<YOUR_DB>.sqlite3?busy_timeout=10000
+```
+
+Unlike other JDBC databases, [SQLite3 does not fully support concurrent access](https://www.sqlite.org/lang_transaction.html).
+To avoid frequent errors caused internally by [`SQLITE_BUSY`](https://www.sqlite.org/rescode.html#busy), we recommend setting a [`busy_timeout`](https://www.sqlite.org/c3ref/busy_timeout.html) parameter.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+</div>
+</div>
+
 ##### Multi-storage support
 
 ScalarDB supports using multiple storage implementations simultaneously. You can use multiple storages by specifying `multi-storage` as the value for the `scalar.db.storage` property.
 
 For details about using multiple storages, see [Multi-Storage Transactions](multi-storage-transactions.md).
+
+### Use Consensus Commit through ScalarDB Cluster
+
+[ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/) is a component that provides a gRPC interface to ScalarDB.
+
+For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
 
 ## Other ScalarDB configurations
 
@@ -143,13 +167,11 @@ The following are additional configurations available for ScalarDB:
 | `scalar.db.active_transaction_management.expiration_time_millis` | ScalarDB maintains ongoing transactions, which can be resumed by using a transaction ID. This setting specifies the expiration time of this transaction management feature in milliseconds.                       | `-1` (no expiration) |
 | `scalar.db.default_namespace_name`                               | The given namespace name will be used by operations that do not already specify a namespace. |                      |
 
-### Two-phase commit support
+## Configuration examples
 
-ScalarDB supports transactions with a two-phase commit interface. With transactions with a two-phase commit interface, you can execute a transaction that spans multiple processes or applications, like in a microservice architecture.
+This section provides some configuration examples.
 
-For details about using two-phase commit, see [Transactions with a Two-Phase Commit Interface](two-phase-commit-transactions.md).
-
-## Configuration example
+### Configuration example #1 - App and database
 
 ```mermaid
 flowchart LR
@@ -184,3 +206,36 @@ scalar.db.contact_points=<CASSANDRA_HOST>
 scalar.db.username=<USERNAME>
 scalar.db.password=<PASSWORD>
 ```
+
+### Configuration example #2 - App, ScalarDB Cluster, and database
+
+```mermaid
+flowchart LR
+    app["App -<br />ScalarDB library with gRPC"]
+    cluster["ScalarDB Cluster -<br />(ScalarDB library with<br />Consensus Commit)"]
+    db[(Underlying storage or database)]
+    app --> cluster --> db
+```
+
+In this example configuration, the app (ScalarDB library with gRPC) connects to an underlying storage or database (in this case, Cassandra) through ScalarDB Cluster, which is a component that is available only in the ScalarDB Enterprise edition.
+
+{% capture notice--info %}
+**Note**
+
+This configuration is acceptable for production use because ScalarDB Cluster implements the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface, which enables you to take transactionally consistent backups for ScalarDB by pausing ScalarDB Cluster.
+
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+The following is an example of the configuration for connecting the app to the underlying database through ScalarDB Cluster:
+
+```properties
+# Transaction manager implementation.
+scalar.db.transaction_manager=cluster
+
+# Contact point of the cluster.
+scalar.db.contact_points=indirect:<SCALARDB_CLUSTER_CONTACT_POINT>
+```
+
+For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).

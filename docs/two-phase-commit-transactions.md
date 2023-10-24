@@ -14,32 +14,6 @@ In transactions with a two-phase commit interface, there are two roles—Coordin
 
 The Coordinator process and the participant processes all have different transaction manager instances. The Coordinator process first begins or starts a transaction, and the participant processes join the transaction. After executing CRUD operations, the Coordinator process and the participant processes commit the transaction by using the two-phase interface.
 
-## How to configure ScalarDB to support transactions with a two-phase commit interface
-
-To enable transactions with a two-phase commit interface, you need to specify `consensus-commit` as the value for `scalar.db.transaction_manager` in the ScalarDB properties file.
-
-The following is an example of a configuration for transactions with a two-phase commit interface when using Cassandra:
-
-```properties
-# Consensus Commit is required to support transactions with a two-phase commit interface.
-scalar.db.transaction_manager=consensus-commit
-
-# Storage implementation.
-scalar.db.storage=cassandra
-
-# Comma-separated contact points.
-scalar.db.contact_points=cassandra
-
-# Port number for all the contact points.
-scalar.db.contact_port=9042
-
-# Credential information to access the database.
-scalar.db.username=cassandra
-scalar.db.password=cassandra
-```
-
-For additional configurations, see [ScalarDB Configurations](configurations.md).
-
 ## How to execute transactions with a two-phase commit interface
 
 To execute a two-phase commit transaction, you must get the transaction manager instance. Then, the Coordinator process can begin or start the transaction, and the participant can process the transaction.
@@ -61,28 +35,28 @@ For the process or application that begins the transaction to act as Coordinator
 
 ```java
 // Begin a transaction.
-TwoPhaseCommitTransaction tx = manager.begin();
+TwoPhaseCommitTransaction tx = transactionManager.begin();
 ```
 
 Or, for the process or application that begins the transaction to act as Coordinator, you should use the following `start` method:
 
 ```java
 // Start a transaction.
-TwoPhaseCommitTransaction tx = manager.start();
+TwoPhaseCommitTransaction tx = transactionManager.start();
 ```
 
 Alternatively, you can use the `begin` method for a transaction by specifying a transaction ID as follows:
 
 ```java
 // Begin a transaction by specifying a transaction ID.
-TwoPhaseCommitTransaction tx = manager.begin("<TRANSACTION_ID>");
+TwoPhaseCommitTransaction tx = transactionManager.begin("<TRANSACTION_ID>");
 ```
 
 Or, you can use the `start` method for a transaction by specifying a transaction ID as follows:
 
 ```java
 // Start a transaction by specifying a transaction ID.
-TwoPhaseCommitTransaction tx = manager.start("<TRANSACTION_ID>");
+TwoPhaseCommitTransaction tx = transactionManager.start("<TRANSACTION_ID>");
 ```
 
 ### Join a transaction (for participants)
@@ -90,7 +64,7 @@ TwoPhaseCommitTransaction tx = manager.start("<TRANSACTION_ID>");
 For participants, you can join a transaction by specifying the transaction ID associated with the transaction that Coordinator has started or begun as follows:
 
 ```java
-TwoPhaseCommitTransaction tx = manager.join("<TRANSACTION_ID>")
+TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>")
 ```
 
 {% capture notice--info %}
@@ -213,7 +187,7 @@ Similar to `prepare()`, if any of the Coordinator or participant processes fail 
 {% capture notice--info %}
 **Note**
 
-When using the [Consensus Commit](configurations/#consensus-commit) transaction manager with `EXTRA_READ` set as the value for `scalar.db.consensus_commit.serializable_strategy` and `SERIALIZABLE` set as the value for `scalar.db.consensus_commit.isolation_level`, you need to call `validate()`. However, if you are not using Consensus Commit, specifying `validate()` will not have any effect.
+When using the [Consensus Commit](configurations.md#use-consensus-commit-directly) transaction manager with `EXTRA_READ` set as the value for `scalar.db.consensus_commit.serializable_strategy` and `SERIALIZABLE` set as the value for `scalar.db.consensus_commit.isolation_level`, you need to call `validate()`. However, if you are not using Consensus Commit, specifying `validate()` will not have any effect.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
@@ -307,12 +281,12 @@ The following shows how `resume()` works:
 
 ```java
 // Join (or begin) the transaction.
-TwoPhaseCommitTransaction tx = manager.join("<TRANSACTION_ID>");
+TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>");
 
 ...
 
 // Resume the transaction by using the transaction ID.
-TwoPhaseCommitTransaction tx1 = manager.resume("<TRANSACTION_ID>")
+TwoPhaseCommitTransaction tx1 = transactionManager.resume("<TRANSACTION_ID>")
 ```
 
 {% capture notice--info %}
@@ -359,7 +333,7 @@ public class ServiceAImpl implements ServiceA {
 
   @Override
   public void facadeEndpoint() throws Exception {
-    TwoPhaseCommitTransaction tx = manager.begin();
+    TwoPhaseCommitTransaction tx = transactionManager.begin();
 
     try {
       ...
@@ -404,19 +378,19 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void endpoint1(String txId) throws Exception {
     // Join the transaction.
-    TwoPhaseCommitTransaction tx = manager.join(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.join(txId);
   }
 
   @Override
   public void endpoint2(String txId) throws Exception {
     // Resume the transaction that you joined in `endpoint1()`.
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
   }
 
   @Override
   public void prepare(String txId) throws Exception {
     // Resume the transaction.
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
     ...
 
@@ -427,7 +401,7 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void commit(String txId) throws Exception {
     // Resume the transaction.
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
     ...
 
@@ -438,7 +412,7 @@ public class ServiceBImpl implements ServiceB {
   @Override
   public void rollback(String txId) throws Exception {
     // Resume the transaction.
-    TwoPhaseCommitTransaction tx = manager.resume(txId);
+    TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
     ...
 
@@ -713,7 +687,7 @@ In addition, each service typically has multiple servers (or hosts) for scalabil
 
 ![Load balancing for transactions with a two-phase commit interface](images/two_phase_commit_load_balancing.png)
 
-There are several approaches to achieve load balancing for transactions with a two-phase commit interface depending on the protocol between the services. Some approaches for this include using gRPC and HTTP/1.1.
+There are several approaches to achieve load balancing for transactions with a two-phase commit interface depending on the protocol between the services. Some approaches for this include using gRPC, HTTP/1.1, and [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/), which is a component that is available only in the ScalarDB Enterprise edition.
 
 ### gRPC
 
@@ -732,8 +706,11 @@ For more details about load balancing in gRPC, see [gRPC Load Balancing](https:/
 Typically, you use a server-side (proxy) load balancer with HTTP/1.1:
 
 - When using an L3/L4 load balancer, you can use the same HTTP connection to send requests in a transaction, which guarantees the requests go to the same server.
-- When using an L7 load balancer, since requests in the same HTTP connection don't necessarily go to the same server, you need to use cookies or similar method to route requests to the correct server.
-You can use session affinity (sticky session) in that case.
+- When using an L7 load balancer, since requests in the same HTTP connection don't necessarily go to the same server, you need to use cookies or similar method to route requests to the correct server. You can use session affinity (sticky session) in that case.
+
+### ScalarDB Cluster
+
+ScalarDB Cluster addresses request routing by providing a routing mechanism that is capable of directing requests to the appropriate cluster node within the cluster. For details about ScalarDB Cluster, see [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/).
 
 ## Hands-on tutorial
 
