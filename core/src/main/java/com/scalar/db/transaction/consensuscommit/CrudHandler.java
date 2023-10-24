@@ -237,6 +237,8 @@ public class CrudHandler {
     parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, snapshot.getId());
   }
 
+  // Although this class is not thread-safe, this method is actually thread-safe because the storage
+  // is thread-safe
   private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
       get.clearProjections();

@@ -108,7 +108,8 @@ public class Snapshot {
     return isolation;
   }
 
-  // This method is actually thread-safe since readSet is a concurrent map
+  // Although this class is not thread-safe, this method is actually thread-safe because the readSet
+  // is a concurrent map
   public void put(Key key, Optional<TransactionResult> result) {
     readSet.put(key, result);
   }
