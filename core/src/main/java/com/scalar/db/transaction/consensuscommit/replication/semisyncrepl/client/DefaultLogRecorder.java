@@ -104,7 +104,8 @@ public class DefaultLogRecorder implements LogRecorder {
               groupCommitNumOfThreads,
               transactions -> {
                 try {
-                  replicationTransactionRepository.add(transactions);
+                  // replicationTransactionRepository.add(transactions);
+                  replicationTransactionRepository.bulkAdd(transactions);
                 } catch (ExecutionException e) {
                   // TODO: Revisit what information is needed in this log message
                   throw new RuntimeException("Failed to send transactions", e);
