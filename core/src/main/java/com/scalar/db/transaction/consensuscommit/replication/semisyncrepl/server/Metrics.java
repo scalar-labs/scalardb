@@ -13,6 +13,8 @@ class Metrics {
   public final AtomicInteger handledCommittedTransactions = new AtomicInteger();
   public final AtomicLong totalDurationInMillisToFetchTransaction = new AtomicLong();
   public final AtomicInteger totalCountToFetchTransaction = new AtomicInteger();
+  public final AtomicLong totalDurationInMillisToFetchBulkTransaction = new AtomicLong();
+  public final AtomicInteger totalCountToFetchBulkTransaction = new AtomicInteger();
   public final AtomicLong totalDurationInMillisToAppendValueToRecord = new AtomicLong();
   public final AtomicInteger totalCountToAppendValueToRecord = new AtomicInteger();
   public final AtomicLong totalDurationInMillisToSetPrepTxIdInRecord = new AtomicLong();
@@ -57,6 +59,13 @@ class Metrics {
         "meanDurationInMillisToFetchTxns",
         totalCountToFetchTransaction.get(),
         totalDurationInMillisToFetchTransaction.get());
+
+    addDuration(
+        stringHelper,
+        "countOfFetchBulkTxns",
+        "meanDurationInMillisToFetchBulkTxns",
+        totalCountToFetchBulkTransaction.get(),
+        totalDurationInMillisToFetchBulkTransaction.get());
 
     addDuration(
         stringHelper,
