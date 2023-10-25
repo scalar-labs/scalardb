@@ -1,122 +1,208 @@
-# A Guide on How to Backup and Restore Databases Used Through ScalarDB
+# How to Back Up and Restore Databases Used Through ScalarDB
 
-Since ScalarDB provides transaction capability on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care of backing up and restoring the databases in a transactionally-consistent way.
-This document sets out some guidelines for backing up and restoring the databases that ScalarDB supports.
+Since ScalarDB provides transaction capabilities on top of non-transactional or transactional databases non-invasively, you need to take special care to back up and restore the databases in a transactionally consistent way.
 
-## Create Backup
+This guide describes how to back up and restore the databases that ScalarDB supports.
 
-The way to create a backup varies on what database you use and whether or not you use multiple databases.
+## Create a backup
 
+How you create a backup depends on which database you're using and whether or not you're using multiple databases. The following decision tree shows which approach you should take.
 
-The following is the decision tree to decide what approach you should take.
+```mermaid
+flowchart TD
+  A[Are you using a single database with ScalarDB?]
+  A -->|Yes| B[Does the database have transaction support?]
+  B -->|Yes| C[Perform <a href='#back-up-without-explicit-pausing'>back up without explicit pausing</a>]
+  B ---->|No| D[Perform <a href='#back-up-with-explicit-pausing'>back up with explicit pausing</a>]
+  A ---->|No| D
+```
 
-- :question: Do you use a single DB under ScalarDB?
-  - :question: Does the DB have transaction support?
-    - :arrow_right: use [backup without explicit pausing](#backup-without-explicit-pausing)
-- Otherwise
-  - :arrow_right: use [backup with explicit pausing](#backup-with-explicit-pausing)
+### Back up without explicit pausing
 
-### Backup without explicit pausing
+If you're using ScalarDB with a single database with support for transactions, you can create a backup of the database even while ScalarDB continues to accept transactions.
 
-If you use ScalarDB on a single DB with transaction support, you can create backups for the DB even while ScalarDB continues to accept transactions.
+{% capture notice--warning %}
+**Attention**
 
-One requirement for backup in ScalarDB is that backups for all the ScalarDB managed tables (including the coordinator tables) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
-That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
+Before creating a backup, you should consider the safest way to create a transactionally consistent backup of your databases and understand any risks that are associated with the backup process.
+{% endcapture %}
 
-The ways to create transactional backups are different among each database product.
-We show examples for some database products, but you are requested to find safe ways for a transactional backup from your databases at your own risk.
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
-#### MySQL (backup)
+One requirement for creating a backup in ScalarDB is that backups for all the ScalarDB-managed tables (including the Coordinator table) need to be transactionally consistent or automatically recoverable to a transactionally consistent state. That means that you need to create a consistent backup by dumping all tables in a single transaction.
 
-Use the `mysqldump` command with `--single-transaction` option.
+How you create a transactionally consistent backup depends on the type of database that you're using. Select a database to see how to create a transactionally consistent backup for ScalarDB.
 
-#### PostgreSQL (backup)
+{% capture notice--info %}
+**Note**
+
+The backup methods by database listed below are just examples of some of the databases that ScalarDB supports.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+<div id="tabset-1">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Amazon_RDS_or_Azure_Database_for_MySQL_or_PostgreSQL1', 'tabset-1')" id="defaultOpen-1">Amazon RDS or Azure Database for MySQL or PostgreSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'MySQL1', 'tabset-1')">MySQL</button>
+  <button class="tablinks" onclick="openTab(event, 'PostgreSQL1', 'tabset-1')">PostgreSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'SQLite1', 'tabset-1')">SQLite</button>
+</div>
+
+<div id="Amazon_RDS_or_Azure_Database_for_MySQL_or_PostgreSQL1" class="tabcontent" markdown="1">
+
+You can restore to any point within the backup retention period by using the automated backup feature.
+</div>
+<div id="MySQL1" class="tabcontent" markdown="1">
+
+Use the `mysqldump` command with the `--single-transaction` option.
+</div>
+<div id="PostgreSQL1" class="tabcontent" markdown="1">
 
 Use the `pg_dump` command.
+</div>
+<div id="SQLite1" class="tabcontent" markdown="1">
 
-#### Amazon RDS or Azure Database for MySQL/PostgreSQL (backup)
+Use the `.backup` command with the `.timeout` command as specified in [Special commands to sqlite3 (dot-commands)](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_)
 
-You can restore to any point within the backup retention period with the automated backup feature.
+For an example, see [BASH: SQLite3 .backup command](https://stackoverflow.com/questions/23164445/bash-sqlite3-backup-command).
+</div>
+</div>
 
-### Backup with explicit pausing
+### Back up with explicit pausing
 
-One way to create a transactionally-consistent backup is to take a backup while ScalarDB cluster does not have outstanding transactions.
-If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
-If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a time (preferably the mid-time) in the period.
+Another way to create a transactionally consistent backup is to create a backup while a cluster of ScalarDB instances does not have any outstanding transactions. Creating the backup depends on the following:
 
-To easily make ScalarDB drain outstanding requests and stop accepting new requests to create a pause duration, it is recommended to use [ScalarDB Server](https://github.com/scalar-labs/scalardb/tree/master/server) (which implements `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your ScalarDB applications.
-With [scalar-admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes/servers/applications that implement the scalar-admin interface without losing ongoing transactions.
+- If the underlying database has a point-in-time snapshot or backup feature, you can create a backup during the period when no outstanding transactions exist.
+- If the underlying database has a point-in-time restore or recovery (PITR) feature, you can set a restore point to a time (preferably the mid-time) in the pause duration period when no outstanding transactions exist.
 
-Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between clients and servers by using clock synchronization such as NTP.
-Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
-Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the mid-time of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
+{% capture notice--info %}
+**Note**
 
-#### Database-specific ways to create a transactionally-consistent backup
+When using a PITR feature, you should minimize the clock drifts between clients and servers by using clock synchronization, such as NTP. Otherwise, the time you get as the paused duration might be too different from the time in which the pause was actually conducted, which could restore the backup to a point where ongoing transactions exist.
 
-**Cassandra**
+In addition, you should pause for a sufficient amount of time (for example, five seconds) and use the mid-time of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
+{% endcapture %}
 
-Cassandra has a built-in replication mechanism, so you do not always have to create a transactionally-consistent backup.
-For example, if the replication factor is set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
-However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
-If you want to create a transactionally-consistent cluster-wide backup, pause the ScalarDB application (or ScalarDB Server) and take the snapshots of nodes as described [here](#transactionally-consistent-backups-during-pause-duration), or stop the Cassandra cluster and take the copies of all the nodes' data, and start the cluster.
+To make ScalarDB drain outstanding requests and stop accepting new requests so that a pause duration can be created, you should implement the [Scalar Admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application that uses ScalarDB or use [ScalarDB Server](scalardb-server.md), which implements the Scalar Admin interface.
 
-To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
-Cassy is also integrated with `scalar-admin` so it can issue a pause request to the ScalarDB application (or ScalarDB Server) of a Cassandra cluster.
-Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
+By using the [Scalar Admin client tool](https://github.com/scalar-labs/scalar-admin/tree/main/java#scalar-admin-client-tool), you can pause nodes, servers, or applications that implement the Scalar Admin interface without losing ongoing transactions.
 
-**Cosmos DB**
+How you create a transactionally consistent backup depends on the type of database that you're using. Select a database to see how to create a transactionally consistent backup for ScalarDB.
 
-You must create a Cosmos DB account with a continuous backup policy enabled to use point-in-time restore (PITR) feature. Backups are created continuously after it is enabled.
-To specify a transactionally-consistent restore point, please pause the ScalarDB application of a Cosmos DB as described [here](#transactionally-consistent-backups-during-pause-duration).
+{% capture notice--warning %}
+**Note**
 
-**DynamoDB**
+The backup methods by database listed below are just examples of some of the databases that ScalarDB supports.
+{% endcapture %}
 
-You must enable the point-in-time recovery (PITR) feature for DynamoDB tables. If you use [ScalarDB Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader) for creating schema, it enables PITR feature for tables by default.
-To specify a transactionally-consistent restore point, please pause the ScalarDB application of a DynamoDB as described [here](#transactionally-consistent-backups-during-pause-duration).
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
-## Restore Backup
+<div id="tabset-2">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra2', 'tabset-2')" id="defaultOpen-2">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL2', 'tabset-2')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB2', 'tabset-2')">DynamoDB</button>
+</div>
 
-### MySQL (restore)
+<div id="Cassandra2" class="tabcontent" markdown="1">
 
-If you use `mysqldump` to create a backup file, use `mysql` command to restore the file as specified [in the MySQL doc](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
+Cassandra has a built-in replication feature, so you do not always have to create a transactionally consistent backup. For example, if the replication factor is set to `3` and only the data of one of the nodes in a Cassandra cluster is lost, you won't need a transactionally consistent backup (snapshot) because the node can be recovered by using a normal, transactionally inconsistent backup (snapshot) and the repair feature.
 
-### PostgreSQL (restore)
+However, if the quorum of cluster nodes loses their data, you will need a transactionally consistent backup (snapshot) to restore the cluster to a certain transactionally consistent point.
 
-If you use `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+To create a transactionally consistent cluster-wide backup (snapshot), pause the application that is using ScalarDB or [ScalarDB Server](scalardb-server.md) and create backups (snapshots) of the nodes as described in [Back up with explicit pausing](#back-up-with-explicit-pausing) or stop the Cassandra cluster, take copies of all the data in the nodes, and start the cluster.
+</div>
+<div id="Cosmos_DB_for_NoSQL2" class="tabcontent" markdown="1">
 
-### Amazon RDS or Azure Database for MySQL/PostgreSQL (restore)
+You must create a Cosmos DB for NoSQL account with a continuous backup policy that has the PITR feature enabled. After enabling the feature, backups are created continuously.
 
-You can restore to any point within the backup retention period with the automated backup feature.
+To specify a transactionally consistent restore point, pause your application that is using ScalarDB with Cosmos DB for NoSQL as described in [Back up with explicit pausing](#back-up-with-explicit-pausing).
+</div>
+<div id="DynamoDB2" class="tabcontent" markdown="1">
 
-### Cassandra (restore)
+You must enable the PITR feature for DynamoDB tables. If you're using [ScalarDB Schema Loader](schema-loader.md) to create schemas, the tool enables the PITR feature for tables by default.
 
-You first need to stop all the nodes of a Cassandra cluster. Clean the directories (`data`, `commitlogs`, and `hints`) and place backups (snapshots) in each node. Then, start all the nodes.
+To specify a transactionally consistent restore point, pause your application that is using ScalarDB with DynamoDB as described in [Back up with explicit pausing](#back-up-with-explicit-pausing).
+</div>
+</div>
 
-To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
-Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
+## Restore a backup
 
-### Cosmos DB (restore)
+How you restore a transactionally consistent backup depends on the type of database that you're using. Select a database to see how to create a transactionally consistent backup for ScalarDB.
 
-You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring backups. change the default consistencies of the restored databases to `STRONG`
-It is recommended to use the mid-time of paused duration as a restore point as we explained earlier.
+{% capture notice--warning %}
+**Note**
 
-### DynamoDB (restore)
+The restore methods by database listed below are just examples of some of the databases that ScalarDB supports.
+{% endcapture %}
 
-You can basically follow [the official doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html). However, a table can only be restored with an alias, so you need to restore a table with an alias and delete the original table and rename the alias to the original name to restore the same named tables.
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
-Specifically, please follow the steps below.
+<div id="tabset-3">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Amazon_RDS_or_Azure_Database_for_MySQL_or_PostgreSQL3', 'tabset-3')" id="defaultOpen-3">Amazon RDS or Azure Database for MySQL or PostgreSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'Cassandra3', 'tabset-3')">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL3', 'tabset-3')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB3', 'tabset-3')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'MySQL3', 'tabset-3')">MySQL</button>
+  <button class="tablinks" onclick="openTab(event, 'PostgreSQL3', 'tabset-3')">PostgreSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'SQLite3', 'tabset-3')">SQLite</button>
+</div>
 
-1. Create a backup
-   * Select the mid-time of paused duration as the restore point.
-   * Restore with PITR of table A to another table B
-   * Take a backup of the restored table B (assume the backup is named backup B)
-   * Remove table B 
-2. Restore from the backup 
-   * Remove table A
-   * Create a table named A with backup B
+<div id="Amazon_RDS_or_Azure_Database_for_MySQL_or_PostgreSQL3" class="tabcontent" markdown="1">
 
-Note:
+You can restore to any point within the backup retention period by using the automated backup feature.
+</div>
+<div id="Cassandra3" class="tabcontent" markdown="1">
 
-* You need to do the above steps for each table because tables can only be restored one by one.
-* Configurations such as PITR and auto-scaling policies are reset to the default values for restored tables, so please manually configure required settings. See [the doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CreateBackup.html#CreateBackup_HowItWorks-restore) for more detail.
+First, stop all the nodes of the Cassandra cluster. Then, clean the `data`, `commitlog`, and `hints` directories, and place the backups (snapshots) in each node.
+
+After placing the backups (snapshots) in each node, start all the nodes of the Cassandra Cluster.
+</div>
+<div id="Cosmos_DB_for_NoSQL3" class="tabcontent" markdown="1">
+
+Follow the official Azure documentation for [restore an account by using Azure portal](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring a backup, [configure the default consistency level](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-manage-consistency#configure-the-default-consistency-level) of the restored databases to `STRONG`. In addition, you should use the mid-time of the paused duration as the restore point as previously explained.
+
+ScalarDB implements the Cosmos DB adapter by using its stored procedures, which are installed when creating schemas by using ScalarDB Schema Loader. However, the PITR feature of Cosmos DB doesn't restore stored procedures. Because of this, you need to re-install the required stored procedures for all tables after restoration. You can do this by using ScalarDB Schema Loader with the `--repair-all` option. For details, see [Repair tables](schema-loader.md#repair-tables).
+</div>
+<div id="DynamoDB3" class="tabcontent" markdown="1">
+
+Follow the official AWS documentation for [restoring a DynamoDB table to a point in time](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html), but keep in mind that a table can only be restored with an alias. Because of this, you will need to restore the table with an alias, delete the original table, and rename the alias to the original name to restore the tables with the same name.
+
+To do this procedure:
+
+1. Create a backup.
+  1. Select the mid-time of the paused duration as the restore point.
+  2. Restore by using the PITR of table A to table B.
+  3. Create a backup of the restored table B (assuming that the backup is named backup B).
+  4. Remove table B.
+2. Restore the backup.
+  1. Remove table A.
+  2. Create a table named A by using backup B.
+
+{% capture notice--info %}
+**Note**
+
+* You must do the steps mentioned above for each table because tables can only be restored one at a time.
+* Configurations such as PITR and auto-scaling policies are reset to the default values for restored tables, so you must manually configure the required settings. For details, see the official AWS documentation for [How to restore DynamoDB tables with DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CreateBackup.html#CreateBackup_HowItWorks-restore).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+</div>
+<div id="MySQL3" class="tabcontent" markdown="1">
+
+If you used `mysqldump` to create the backup file, use the `mysql` command to restore the backup as specified in [Reloading SQL-Format Backups](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html).
+</div>
+<div id="PostgreSQL3" class="tabcontent" markdown="1">
+
+If you used `pg_dump` to create the backup file, use the `psql` command to restore the backup as specified in [Restoring the Dump](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
+</div>
+<div id="SQLite3" class="tabcontent" markdown="1">
+
+Use the `.restore` command as specified in [Special commands to sqlite3 (dot-commands)](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_).
+</div>
+</div>
