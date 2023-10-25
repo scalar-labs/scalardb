@@ -219,10 +219,10 @@ Create/Delete JDBC schemas
 
 ### Create namespaces and tables
 
-To create a namespace and tables by using a properties file, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using and `<PATH_TO_PROPERTIES_FILE>` with the path to the properties file. If `--coordinator` is specified, a Coordinator table will be created.
+To create namespaces and tables by using a properties file, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using and `<PATH_TO_PROPERTIES_FILE>` with the path to the properties file. If `--coordinator` is specified, a Coordinator table will be created.
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json [--coordinator]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator]
 ```
 
 {% capture notice--info %}
@@ -237,7 +237,7 @@ For using CLI arguments fully for configuration (Deprecated. Please use the comm
 
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> [-r BASE_RESOURCE_UNIT]
 
 ```
   - `<COSMOS_DB_FOR_NOSQL_KEY>` you can use a primary key or a secondary key.
@@ -245,7 +245,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQ
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> [-r BASE_RESOURCE_UNIT]
 ```
 
   - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
@@ -253,7 +253,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID>
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
 
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
@@ -263,7 +263,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE>
 ```
 
 ### Alter tables
@@ -273,7 +273,7 @@ You can use a command to add new columns to and create or delete a secondary ind
 To add new colums to and create or delete a secondary index for existing tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> --alter
 ```
 
 {% capture notice--info %}
@@ -289,22 +289,22 @@ file instead):
 
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> --alter
 ```
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> --alter
 ```
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> --alter
 ```
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> --alter
 ```
 
 ### Delete tables
@@ -312,7 +312,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 You can delete tables by using the properties file. To delete tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json [--coordinator] -D 
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] -D 
 ```
 
 {% capture notice--info %}
@@ -328,22 +328,22 @@ For using CLI arguments fully for configuration (Deprecated. Please use the comm
 
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> -D
 ```
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> -D
 ```
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> -D
 ```
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json -D
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> -D
 ```
 
 ### Repair tables
@@ -351,7 +351,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 You can repair the table metadata of existing tables by using the properties file. To repair table metadata of exisitng tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f schema.json [--coordinator] --repair-all 
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] --repair-all 
 ```
 
 {% capture notice--info %}
@@ -368,22 +368,22 @@ For using CLI arguments fully for configuration (Deprecated. Please use the comm
 
 ```console
 # For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> --repair-all
 ```
 
 ```console
 # For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> [--no-backup] -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> [--no-backup] -f <PATH_TO_SCHEMA_FILE> --repair-all
 ```
 
 ```console
 # For Cassandra
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> --repair-all
 ```
 
 ```console
 # For a JDBC database
-$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f schema.json --repair-all
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> --repair-all
 ```
 
 ### Sample schema file
