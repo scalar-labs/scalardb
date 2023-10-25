@@ -1,15 +1,9 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model;
 
-import com.azure.cosmos.implementation.guava25.collect.ImmutableList;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.UUID;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -33,27 +27,5 @@ public class Transaction {
     this.updatedAt = updatedAt;
     this.transactionId = transactionId;
     this.writtenTuples = writtenTuples;
-  }
-
-  public static void main(String[] args) throws JsonProcessingException {
-    System.out.println(
-        new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .writeValueAsString(
-                ImmutableList.of(
-                    new Transaction(
-                        42,
-                        Instant.now(),
-                        Instant.now(),
-                        UUID.randomUUID().toString(),
-                        Collections.singleton(
-                            new InsertedTuple(
-                                "ns",
-                                "tbl",
-                                42,
-                                System.currentTimeMillis(),
-                                null,
-                                null,
-                                Collections.emptyList()))))));
   }
 }
