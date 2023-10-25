@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.BulkTransaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
 import java.time.Instant;
@@ -107,6 +108,20 @@ public class MetricsLogger {
         metrics -> {
           metrics.totalCountToFetchTransaction.incrementAndGet();
           metrics.totalDurationInMillisToFetchTransaction.addAndGet(
+              resultWithDuration.durationInMillis);
+        });
+    return resultWithDuration.result;
+  }
+
+  public List<BulkTransaction> execFetchBulkTransactions(Task<List<BulkTransaction>> task) {
+    ResultWithDuration<List<BulkTransaction>> resultWithDuration = captureDuration(task);
+    if (!isEnabled) {
+      return resultWithDuration.result;
+    }
+    withPrintAndCleanup(
+        metrics -> {
+          metrics.totalCountToFetchBulkTransaction.incrementAndGet();
+          metrics.totalDurationInMillisToFetchBulkTransaction.addAndGet(
               resultWithDuration.durationInMillis);
         });
     return resultWithDuration.result;

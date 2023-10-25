@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
@@ -90,7 +91,7 @@ public class LogApplier {
           Integer.parseInt(System.getenv(ENV_VAR_EXTRA_WAIT_MILLIS_FOR_OLD_TRANSACTION));
     }
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     CoordinatorStateRepository coordinatorStateRepository =
         new CoordinatorStateRepository(

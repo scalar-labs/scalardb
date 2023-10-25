@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.BulkTransaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.CoordinatorState;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.DeletedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.InsertedTuple;
@@ -158,12 +159,34 @@ public class DistributorThread implements Closeable {
     recordWriterQueue.add(key);
   }
 
-  private void handleTransaction(Transaction transaction, Instant committedAt)
-      throws ExecutionException {
-    for (WrittenTuple writtenTuple : transaction.writtenTuples) {
-      handleWrittenTuple(transaction.transactionId, writtenTuple, committedAt);
+  private void copyWrittenTuplesToRecords(Transaction transaction) throws ExecutionException {
+    metricsLogger.incrementScannedTransactions();
+    Optional<CoordinatorState> coordinatorState =
+        coordinatorStateRepository.get(transaction.transactionId);
+    if (!coordinatorState.isPresent()) {
+      metricsLogger.incrementUncommittedTransactions();
+      Instant now = Instant.now();
+      if (transaction.updatedAt.isBefore(now.minusMillis(conf.thresholdMillisForOldTransaction))) {
+        logger.info(
+            "Updating an old transaction to be handled later. txId:{}", transaction.transactionId);
+        replicationTransactionRepository.updateUpdatedAt(transaction);
+      }
+      return;
     }
-    replicationTransactionRepository.delete(transaction);
+    if (coordinatorState.get().txState != TransactionState.COMMITTED) {
+      metricsLogger.incrementUncommittedTransactions();
+      if (coordinatorState.get().txState == TransactionState.ABORTED) {
+        replicationTransactionRepository.delete(transaction);
+      }
+      // FIXME: Should delete other state?
+      return;
+    }
+
+    // Copy written tuples to `records` table
+    for (WrittenTuple writtenTuple : transaction.writtenTuples) {
+      handleWrittenTuple(
+          transaction.transactionId, writtenTuple, coordinatorState.get().txCommittedAt);
+    }
     metricsLogger.incrementHandledCommittedTransactions();
   }
 
@@ -172,33 +195,25 @@ public class DistributorThread implements Closeable {
         metricsLogger.execFetchTransactions(
             () -> replicationTransactionRepository.scan(partitionId, conf.fetchThreadSize));
     for (Transaction transaction : scannedTxns) {
-      metricsLogger.incrementScannedTransactions();
-      Optional<CoordinatorState> coordinatorState =
-          coordinatorStateRepository.get(transaction.transactionId);
-      if (!coordinatorState.isPresent()) {
-        metricsLogger.incrementUncommittedTransactions();
-        Instant now = Instant.now();
-        if (transaction.updatedAt.isBefore(
-            now.minusMillis(conf.thresholdMillisForOldTransaction))) {
-          logger.info(
-              "Updating an old transaction to be handled later. txId:{}",
-              transaction.transactionId);
-          replicationTransactionRepository.updateUpdatedAt(transaction);
-        }
-        continue;
-      }
-      if (coordinatorState.get().txState != TransactionState.COMMITTED) {
-        metricsLogger.incrementUncommittedTransactions();
-        if (coordinatorState.get().txState == TransactionState.ABORTED) {
-          replicationTransactionRepository.delete(transaction);
-        }
-        // FIXME: Should delete other state?
-        continue;
-      }
-      handleTransaction(transaction, coordinatorState.get().txCommittedAt);
+      copyWrittenTuplesToRecords(transaction);
+      replicationTransactionRepository.delete(transaction);
     }
 
     return scannedTxns.size() >= conf.fetchThreadSize;
+  }
+
+  private boolean fetchAndHandleBulkTransactions(int partitionId) throws ExecutionException {
+    List<BulkTransaction> scannedBulkTxns =
+        metricsLogger.execFetchBulkTransactions(
+            () -> replicationTransactionRepository.bulkScan(partitionId, conf.fetchThreadSize));
+    for (BulkTransaction bulkTransaction : scannedBulkTxns) {
+      for (Transaction transaction : bulkTransaction.transactions) {
+        copyWrittenTuplesToRecords(transaction);
+      }
+      replicationTransactionRepository.delete(bulkTransaction);
+    }
+
+    return scannedBulkTxns.size() >= conf.fetchThreadSize;
   }
 
   public DistributorThread run() {
@@ -224,7 +239,8 @@ public class DistributorThread implements Closeable {
                 }
 
                 try {
-                  if (fetchAndHandleTransactions(partitionId)) {
+                  // if (fetchAndHandleTransactions(partitionId)) {
+                  if (fetchAndHandleBulkTransactions(partitionId)) {
                     // Enable the skip waits mode
                     skipWaitsStartPartitionId = partitionId;
                   }
