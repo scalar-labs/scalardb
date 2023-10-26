@@ -45,7 +45,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
         run: |
           $JAVA_HOME_11_X64/bin/java ReleaseNoteCreation.java ${{ github.repository_owner }} ScalarDB ${{ steps.version.outputs.version }} ${{ github.event.repository.name }} > rnbody.md
-          cat rnbody.md # For debug
+          cat rnbody.md
 
       - name: Create release
         id: create_release
