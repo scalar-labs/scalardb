@@ -1,6 +1,6 @@
-# Getting Started with ScalarDB
+# Getting Started with ScalarDB by Using Kotlin
 
-This getting started tutorial explains how to configure your preferred database in ScalarDB and set up a basic electronic money application.
+This getting started tutorial explains how to configure your preferred database in ScalarDB and set up a basic electronic money application by using Kotlin. Since Kotlin has Java interoperability, you can use ScalarDB directly from Kotlin.
 
 {% capture notice--warning %}
 **Warning**
@@ -35,10 +35,10 @@ Open a terminal window, and go to your working directory. Then, clone the [scala
 $ git clone https://github.com/scalar-labs/scalardb
 ```
 
-Then, go to the `scalardb/docs/getting-started` directory in the cloned repository by running the following command: 
+Then, go to the `scalardb/docs/getting-started-kotlin` directory in the cloned repository by running the following command: 
 
 ```shell
-$ cd scalardb/docs/getting-started
+$ cd scalardb/docs/getting-started-kotlin
 ```
 
 ## Set up your database for ScalarDB
@@ -69,7 +69,7 @@ Open **cassandra.yaml** in your preferred IDE. Then, change `commitlog_sync` fro
 
 The following instructions assume that you have properly installed and configured the JDK and Cassandra in your local environment, and Cassandra is running on your localhost.
 
-The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. The following is a basic configuration for Cassandra. Be sure to change the values for `scalar.db.username` and `scalar.db.password` as described.
+The **scalardb.properties** file in the `docs/getting-started-kotlin` directory holds database configurations for ScalarDB. The following is a basic configuration for Cassandra. Be sure to change the values for `scalar.db.username` and `scalar.db.password` as described.
 
 ```properties
 # The Cassandra storage implementation is used for Consensus Commit.
@@ -100,7 +100,7 @@ Set the **default consistency level** to **Strong** according to the official do
 
 The following instructions assume that you have properly installed and configured the JDK in your local environment and properly configured your Cosmos DB for NoSQL account in Azure. 
 
-The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. Be sure to change the values for `scalar.db.contact_points` and `scalar.db.password` as described.
+The **scalardb.properties** file in the `docs/getting-started-kotlin` directory holds database configurations for ScalarDB. Be sure to change the values for `scalar.db.contact_points` and `scalar.db.password` as described.
     
 ```properties
 # The Cosmos DB for NoSQL storage implementation is used for Consensus Commit.
@@ -129,7 +129,7 @@ To use Amazon DynamoDB, you must have an AWS account. If you don't have an AWS a
 
 The following instructions assume that you have properly installed and configured the JDK in your local environment.
 
-The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. Be sure to change the values for `scalar.db.contact_points`, `scalar.db.username`, and  `scalar.db.password` as described.
+The **scalardb.properties** file in the `docs/getting-started-kotlin` directory holds database configurations for ScalarDB. Be sure to change the values for `scalar.db.contact_points`, `scalar.db.username`, and  `scalar.db.password` as described.
 
 ```properties
 # The DynamoDB storage implementation is used for Consensus Commit.
@@ -152,7 +152,7 @@ Confirm that you have a JDBC database installed. For a list of supported JDBC da
 
 The following instructions assume that you have properly installed and configured the JDK and JDBC database in your local environment, and the JDBC database is running on your localhost.
 
-The **scalardb.properties** file in the `docs/getting-started` directory holds database configurations for ScalarDB. The following is a basic configuration for JDBC databases. 
+The **scalardb.properties** file in the `docs/getting-started-kotlin` directory holds database configurations for ScalarDB. The following is a basic configuration for JDBC databases. 
 
 {% capture notice--info %}
 **Note**
@@ -184,7 +184,7 @@ scalar.db.password=<PASSWORD>
 
 You need to define the database schema (the method in which the data will be organized) in the application. For details about the supported data types, see [Data type mapping between ScalarDB and other databases](schema-loader.md#data-type-mapping-between-scalardb-and-the-other-databases).
 
-For this tutorial, create a file named **emoney.json** in the `scalardb/docs/getting-started` directory. Then, add the following JSON code to define the schema.
+For this tutorial, create a file named **emoney.json** in the `scalardb/docs/getting-started-kotlin` directory. Then, add the following JSON code to define the schema.
 
 ```json
 {
@@ -313,4 +313,4 @@ The balance for merchant1 is 100
 
 ## Reference
 
-To see the source code for the electronic money application used in this tutorial, see [`ElectronicMoney.java`](./getting-started/src/main/java/sample/ElectronicMoney.java).
+To see the source code for the electronic money application used in this tutorial, see [`ElectronicMoney.kt`](./getting-started-kotlin/src/main/kotlin/sample/ElectronicMoney.kt).
