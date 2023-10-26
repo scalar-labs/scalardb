@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,8 @@ public class DefaultLogRecorder implements LogRecorder {
   private static final Logger logger = LoggerFactory.getLogger(DefaultLogRecorder.class);
 
   private static final String ENV_VAR_GROUP_COMMIT_ENABLED = "LOG_RECORDER_GROUP_COMMIT_ENABLED";
+  private static final String ENV_VAR_GROUP_COMMIT_BATCH_ENABLED =
+      "LOG_RECORDER_GROUP_COMMIT_BATCH_ENABLED";
   private static final String ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS =
       "LOG_RECORDER_GROUP_COMMIT_NUM_OF_THREADS";
   private static final String ENV_VAR_GROUP_COMMIT_RETENTION_TIME_IN_MILLIS =
@@ -70,6 +73,12 @@ public class DefaultLogRecorder implements LogRecorder {
       groupCommitEnabled = Boolean.parseBoolean(System.getenv(ENV_VAR_GROUP_COMMIT_ENABLED));
     }
 
+    boolean groupCommitBatchEnabled = true;
+    if (System.getenv(ENV_VAR_GROUP_COMMIT_BATCH_ENABLED) != null) {
+      groupCommitBatchEnabled =
+          Boolean.parseBoolean(System.getenv(ENV_VAR_GROUP_COMMIT_BATCH_ENABLED));
+    }
+
     int groupCommitNumOfThreads = 4;
     if (System.getenv(ENV_VAR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
       groupCommitNumOfThreads =
@@ -95,6 +104,29 @@ public class DefaultLogRecorder implements LogRecorder {
     }
 
     if (groupCommitEnabled) {
+      Consumer<List<Transaction>> emitter;
+      if (groupCommitBatchEnabled) {
+        emitter =
+            transactions -> {
+              try {
+                replicationTransactionRepository.bulkAdd(transactions);
+              } catch (ExecutionException e) {
+                // TODO: Revisit what information is needed in this log message
+                throw new RuntimeException("Failed to send transactions", e);
+              }
+            };
+      } else {
+        emitter =
+            transactions -> {
+              try {
+                replicationTransactionRepository.add(transactions);
+              } catch (ExecutionException e) {
+                // TODO: Revisit what information is needed in this log message
+                throw new RuntimeException("Failed to send transactions", e);
+              }
+            };
+      }
+
       this.groupCommitter =
           new GroupCommitter<>(
               "log-recorder",
@@ -102,15 +134,7 @@ public class DefaultLogRecorder implements LogRecorder {
               groupCommitNumOfRetentionValues,
               groupCommitExpirationCheckIntervalInMillis,
               groupCommitNumOfThreads,
-              transactions -> {
-                try {
-                  // replicationTransactionRepository.add(transactions);
-                  replicationTransactionRepository.bulkAdd(transactions);
-                } catch (ExecutionException e) {
-                  // TODO: Revisit what information is needed in this log message
-                  throw new RuntimeException("Failed to send transactions", e);
-                }
-              });
+              emitter);
     } else {
       this.groupCommitter = null;
     }
