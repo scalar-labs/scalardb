@@ -55,9 +55,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          # TODO: Remove '#' and enable "body_path: rnbody" when every PR becomes including the release note section.
-          # Until that, the release note body is created by actions/create-release automatically.
-          # body_path: rnbody.md
+          body_path: rnbody.md
           draft: true
           prerelease: false
 
