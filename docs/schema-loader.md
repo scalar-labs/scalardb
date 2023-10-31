@@ -23,12 +23,12 @@ Select your preferred method to set up Schema Loader, and follow the instruction
 
 <div id="tabset-1">
 <div class="tab">
-  <button class="tablinks" onclick="openTab(event, 'Install', 'tabset-1')" id="defaultOpen-1">Install</button>
+  <button class="tablinks" onclick="openTab(event, 'Download', 'tabset-1')" id="defaultOpen-1">Download</button>
   <button class="tablinks" onclick="openTab(event, 'Build', 'tabset-1')">Build</button>
   <button class="tablinks" onclick="openTab(event, 'Docker', 'tabset-1')">Docker</button>
 </div>
 
-<div id="Install" class="tabcontent" markdown="1">
+<div id="Download" class="tabcontent" markdown="1">
 
 You can download the release versions of Schema Loader from the [ScalarDB Releases](https://github.com/scalar-labs/scalardb/releases) page.
 </div>
