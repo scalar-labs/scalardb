@@ -471,19 +471,19 @@ private static final long serialVersionUID = 0L;
     return columns_.get(index);
   }
 
-  public static final int BLIND_FIELD_NUMBER = 10;
-  private boolean blind_ = false;
+  public static final int IMPLICIT_PRE_READ_ENABLED_FIELD_NUMBER = 10;
+  private boolean implicitPreReadEnabled_ = false;
   /**
    * <pre>
    * only for Put operations
    * </pre>
    *
-   * <code>bool blind = 10;</code>
-   * @return The blind.
+   * <code>bool implicit_pre_read_enabled = 10;</code>
+   * @return The implicitPreReadEnabled.
    */
   @java.lang.Override
-  public boolean getBlind() {
-    return blind_;
+  public boolean getImplicitPreReadEnabled() {
+    return implicitPreReadEnabled_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -527,8 +527,8 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < columns_.size(); i++) {
       output.writeMessage(9, columns_.get(i));
     }
-    if (blind_ != false) {
-      output.writeBool(10, blind_);
+    if (implicitPreReadEnabled_ != false) {
+      output.writeBool(10, implicitPreReadEnabled_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -573,9 +573,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, columns_.get(i));
     }
-    if (blind_ != false) {
+    if (implicitPreReadEnabled_ != false) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(10, blind_);
+        .computeBoolSize(10, implicitPreReadEnabled_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -617,8 +617,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getValueList())) return false;
     if (!getColumnsList()
         .equals(other.getColumnsList())) return false;
-    if (getBlind()
-        != other.getBlind()) return false;
+    if (getImplicitPreReadEnabled()
+        != other.getImplicitPreReadEnabled()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -658,9 +658,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + COLUMNS_FIELD_NUMBER;
       hash = (53 * hash) + getColumnsList().hashCode();
     }
-    hash = (37 * hash) + BLIND_FIELD_NUMBER;
+    hash = (37 * hash) + IMPLICIT_PRE_READ_ENABLED_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getBlind());
+        getImplicitPreReadEnabled());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -823,7 +823,7 @@ private static final long serialVersionUID = 0L;
         columnsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000100);
-      blind_ = false;
+      implicitPreReadEnabled_ = false;
       return this;
     }
 
@@ -907,7 +907,7 @@ private static final long serialVersionUID = 0L;
         result.type_ = type_;
       }
       if (((from_bitField0_ & 0x00000200) != 0)) {
-        result.blind_ = blind_;
+        result.implicitPreReadEnabled_ = implicitPreReadEnabled_;
       }
     }
 
@@ -1032,8 +1032,8 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
-      if (other.getBlind() != false) {
-        setBlind(other.getBlind());
+      if (other.getImplicitPreReadEnabled() != false) {
+        setImplicitPreReadEnabled(other.getImplicitPreReadEnabled());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1129,7 +1129,7 @@ private static final long serialVersionUID = 0L;
               break;
             } // case 74
             case 80: {
-              blind_ = input.readBool();
+              implicitPreReadEnabled_ = input.readBool();
               bitField0_ |= 0x00000200;
               break;
             } // case 80
@@ -2381,31 +2381,31 @@ private static final long serialVersionUID = 0L;
       return columnsBuilder_;
     }
 
-    private boolean blind_ ;
+    private boolean implicitPreReadEnabled_ ;
     /**
      * <pre>
      * only for Put operations
      * </pre>
      *
-     * <code>bool blind = 10;</code>
-     * @return The blind.
+     * <code>bool implicit_pre_read_enabled = 10;</code>
+     * @return The implicitPreReadEnabled.
      */
     @java.lang.Override
-    public boolean getBlind() {
-      return blind_;
+    public boolean getImplicitPreReadEnabled() {
+      return implicitPreReadEnabled_;
     }
     /**
      * <pre>
      * only for Put operations
      * </pre>
      *
-     * <code>bool blind = 10;</code>
-     * @param value The blind to set.
+     * <code>bool implicit_pre_read_enabled = 10;</code>
+     * @param value The implicitPreReadEnabled to set.
      * @return This builder for chaining.
      */
-    public Builder setBlind(boolean value) {
+    public Builder setImplicitPreReadEnabled(boolean value) {
       
-      blind_ = value;
+      implicitPreReadEnabled_ = value;
       bitField0_ |= 0x00000200;
       onChanged();
       return this;
@@ -2415,12 +2415,12 @@ private static final long serialVersionUID = 0L;
      * only for Put operations
      * </pre>
      *
-     * <code>bool blind = 10;</code>
+     * <code>bool implicit_pre_read_enabled = 10;</code>
      * @return This builder for chaining.
      */
-    public Builder clearBlind() {
+    public Builder clearImplicitPreReadEnabled() {
       bitField0_ = (bitField0_ & ~0x00000200);
-      blind_ = false;
+      implicitPreReadEnabled_ = false;
       onChanged();
       return this;
     }

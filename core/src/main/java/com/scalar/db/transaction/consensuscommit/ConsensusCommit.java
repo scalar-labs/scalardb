@@ -131,17 +131,13 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    // Fill the read set with records from the write and delete sets if they are unread
+    // Execute implicit pre-read
     try {
-      crud.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+      crud.executeImplicitPreReadIfEnabled();
     } catch (CrudConflictException e) {
-      throw new CommitConflictException(
-          "Conflict occurred while reading unread records in the write and delete sets",
-          e,
-          getId());
+      throw new CommitConflictException("Conflict occurred while implicit pre-read", e, getId());
     } catch (CrudException e) {
-      throw new CommitException(
-          "Failed to read unread records in the write and delete sets", e, getId());
+      throw new CommitException("Failed to execute implicit pre-read", e, getId());
     }
 
     commit.commit(crud.getSnapshot());

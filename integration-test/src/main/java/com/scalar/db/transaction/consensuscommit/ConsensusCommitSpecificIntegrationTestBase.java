@@ -2731,7 +2731,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .intValue(BALANCE, INITIAL_BALANCE)
-                .blind()
+                .disableImplicitPreRead()
                 .build();
         transaction.put(put);
       }

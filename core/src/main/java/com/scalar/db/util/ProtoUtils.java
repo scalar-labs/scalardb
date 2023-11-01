@@ -431,7 +431,7 @@ public final class ProtoUtils {
       }
       return buildable
           .consistency(toConsistency(mutation.getConsistency()))
-          .blind(mutation.getBlind())
+          .implicitRreReadEnabled(mutation.getImplicitPreReadEnabled())
           .build();
     } else {
       DeleteBuilder.Buildable buildable =
@@ -456,7 +456,7 @@ public final class ProtoUtils {
     if (mutation instanceof Put) {
       builder.setType(com.scalar.db.rpc.Mutation.Type.PUT);
       ((Put) mutation).getColumns().values().forEach(c -> builder.addColumns(toColumn(c)));
-      builder.setBlind(((Put) mutation).isBlind());
+      builder.setImplicitPreReadEnabled(((Put) mutation).isImplicitPreReadEnabled());
     } else {
       builder.setType(com.scalar.db.rpc.Mutation.Type.DELETE);
     }

@@ -689,11 +689,11 @@ Put put =
         .build();
 ```
 
-##### Blind `Put` operation
+##### Disable implicit pre-read for `Put` operations
 
-If you're certain that a record you're trying to write doesn't exist, you can use a blind `Put` operation for better performance. A blind `Put` is faster than a regular `Put` as it doesn't read the record beforehand. However, if the record does exist, the operation will fail due to a conflict.
+If you're certain that a record you're trying to write doesn't exist, you can disable implicit pre-read for the `Put` operation for better performance. A `Put` without implicit pre-read is faster than a regular `Put` as it skips the implicit pre-read. However, if the record does exist, the operation will fail due to a conflict.
 
-You can use a blind `Put` operation by specifying `blind()` in the `Put` operation builder as follows:
+You can disable implicit pre-read for a `Put` operation by specifying `disableImplicitPreRead()` in the `Put` operation builder as follows:
 
 ```java
 Put put =
@@ -704,7 +704,7 @@ Put put =
         .clusteringKey(clusteringKey)
         .floatValue("c4", 1.23F)
         .doubleValue("c5", 4.56)
-        .blind()
+        .disableImplicitPreRead()
         .build();
 ```
 

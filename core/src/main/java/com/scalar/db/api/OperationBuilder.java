@@ -281,21 +281,21 @@ class OperationBuilder {
     T clearValue(String columnName);
   }
 
-  interface Blind<T> {
+  interface ImplicitRreReadEnabled<T> {
     /**
-     * Sets this put operation as a blind write.
+     * Disable implicit pre-read for this put operation.
      *
      * @return the operation builder
      */
-    T blind();
+    T disableImplicitPreRead();
 
     /**
-     * Sets whether this put operation is a blind write or not.
+     * Sets whether implicit pre-read is enabled or not for this put operation.
      *
-     * @param blind {@code true} if this put operation is a blind write, {@code false} otherwise
+     * @param implicitRreReadEnabled whether implicit pre-read is enabled or not
      * @return the operation builder
      */
-    T blind(boolean blind);
+    T implicitRreReadEnabled(boolean implicitRreReadEnabled);
   }
 
   interface Limit<T> {

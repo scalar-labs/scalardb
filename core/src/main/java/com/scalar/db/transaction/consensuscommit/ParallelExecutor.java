@@ -36,7 +36,7 @@ public class ParallelExecutor {
         || config.isParallelValidationEnabled()
         || config.isParallelCommitEnabled()
         || config.isParallelRollbackEnabled()
-        || config.isParallelFillReadSetEnabled()) {
+        || config.isParallelImplicitPreReadEnabled()) {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
@@ -130,19 +130,19 @@ public class ParallelExecutor {
     }
   }
 
-  public void fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(
-      List<ParallelExecutorTask> tasks, String transactionId) throws CrudException {
+  public void executeImplicitPreRead(List<ParallelExecutorTask> tasks, String transactionId)
+      throws CrudException {
     try {
       executeTasks(
           tasks,
-          config.isParallelFillReadSetEnabled(),
+          config.isParallelImplicitPreReadEnabled(),
           false,
           true,
-          "fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread",
+          "executeImplicitPreRead",
           transactionId);
     } catch (ExecutionException | ValidationConflictException e) {
       throw new AssertionError(
-          "Tasks for filling a read set should not throw ExecutionException and ValidationConflictException",
+          "Tasks for implicit pre-read should not throw ExecutionException and ValidationConflictException",
           e);
     }
   }

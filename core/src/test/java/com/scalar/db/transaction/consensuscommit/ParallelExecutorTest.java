@@ -399,14 +399,13 @@ public class ParallelExecutorTest {
   }
 
   @Test
-  public void
-      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetNotEnabled_ShouldExecuteTasksSerially()
-          throws ExecutionException, ValidationConflictException, CrudException {
+  public void executeImplicitPreRead_ParallelImplicitPreReadNotEnabled_ShouldExecuteTasksSerially()
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
-    when(config.isParallelFillReadSetEnabled()).thenReturn(false);
+    when(config.isParallelImplicitPreReadEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID);
+    parallelExecutor.executeImplicitPreRead(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -415,28 +414,25 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetNotEnabled_CrudExceptionThrownByTask_ShouldThrowCrudException()
+      executeImplicitPreRead_ParallelImplicitPreReadNotEnabled_CrudExceptionThrownByTask_ShouldThrowCrudException()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
-    when(config.isParallelFillReadSetEnabled()).thenReturn(false);
+    when(config.isParallelImplicitPreReadEnabled()).thenReturn(false);
     doThrow(CrudException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID))
+    assertThatThrownBy(() -> parallelExecutor.executeImplicitPreRead(tasks, TX_ID))
         .isInstanceOf(CrudException.class);
   }
 
   @Test
-  public void
-      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetEnabled_ShouldExecuteTasksInParallel()
-          throws ExecutionException, ValidationConflictException, CrudException {
+  public void executeImplicitPreRead_ParallelImplicitPreReadEnabled_ShouldExecuteTasksInParallel()
+      throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
-    when(config.isParallelFillReadSetEnabled()).thenReturn(true);
+    when(config.isParallelImplicitPreReadEnabled()).thenReturn(true);
 
     // Act
-    parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID);
+    parallelExecutor.executeImplicitPreRead(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -445,16 +441,14 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ParallelRollbackParallelFillReadSetEnabled_CrudExceptionThrownByTask_ShouldThrowCrudException()
+      executeImplicitPreRead_ParallelImplicitPreReadEnabled_CrudExceptionThrownByTask_ShouldThrowCrudException()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
-    when(config.isParallelFillReadSetEnabled()).thenReturn(true);
+    when(config.isParallelImplicitPreReadEnabled()).thenReturn(true);
     doThrow(CrudException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, TX_ID))
+    assertThatThrownBy(() -> parallelExecutor.executeImplicitPreRead(tasks, TX_ID))
         .isInstanceOf(CrudException.class);
   }
 }

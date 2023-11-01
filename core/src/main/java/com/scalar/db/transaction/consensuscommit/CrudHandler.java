@@ -163,14 +163,15 @@ public class CrudHandler {
   }
 
   public void put(Put put) throws CrudException {
-    if (put.getCondition().isPresent() && put.isBlind()) {
-      throw new IllegalArgumentException("Blind put cannot have a condition: " + put);
+    if (put.getCondition().isPresent() && !put.isImplicitPreReadEnabled()) {
+      throw new IllegalArgumentException(
+          "Put cannot have a condition when implicit pre-read is disabled: " + put);
     }
 
     Snapshot.Key key = new Snapshot.Key(put);
 
     if (put.getCondition().isPresent()) {
-      fillReadSetIfUnread(key);
+      readUnread(key);
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           put, snapshot.getFromReadSet(key).orElse(null));
     }
@@ -182,7 +183,7 @@ public class CrudHandler {
     Snapshot.Key key = new Snapshot.Key(delete);
 
     if (delete.getCondition().isPresent()) {
-      fillReadSetIfUnread(key);
+      readUnread(key);
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           delete, snapshot.getFromReadSet(key).orElse(null));
     }
@@ -191,13 +192,13 @@ public class CrudHandler {
   }
 
   @VisibleForTesting
-  void fillReadSetIfUnread(Snapshot.Key key) throws CrudException {
+  void readUnread(Snapshot.Key key) throws CrudException {
     if (!snapshot.containsKeyInReadSet(key)) {
-      fillReadSet(key);
+      read(key);
     }
   }
 
-  private void fillReadSet(Snapshot.Key key) throws CrudException {
+  private void read(Snapshot.Key key) throws CrudException {
     Optional<TransactionResult> result = getFromStorage(createGet(key));
     if (!result.isPresent() || result.get().isCommitted()) {
       snapshot.put(key, result);
@@ -217,24 +218,26 @@ public class CrudHandler {
     return buildableGet.build();
   }
 
-  public void fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread() throws CrudException {
+  public void executeImplicitPreReadIfEnabled() throws CrudException {
     List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
     for (Put put : snapshot.getPutsInWriteSet()) {
-      if (!put.isBlind()) {
+      if (put.isImplicitPreReadEnabled()) {
         Snapshot.Key key = new Snapshot.Key(put);
         if (!snapshot.containsKeyInReadSet(key)) {
-          tasks.add(() -> fillReadSet(key));
+          tasks.add(() -> read(key));
         }
       }
     }
     for (Delete delete : snapshot.getDeletesInDeleteSet()) {
       Snapshot.Key key = new Snapshot.Key(delete);
       if (!snapshot.containsKeyInReadSet(key)) {
-        tasks.add(() -> fillReadSet(key));
+        tasks.add(() -> read(key));
       }
     }
 
-    parallelExecutor.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(tasks, snapshot.getId());
+    if (!tasks.isEmpty()) {
+      parallelExecutor.executeImplicitPreRead(tasks, snapshot.getId());
+    }
   }
 
   // Although this class is not thread-safe, this method is actually thread-safe because the storage

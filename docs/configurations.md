@@ -38,16 +38,16 @@ The following basic configurations are available for the Consensus Commit transa
 
 The following performance-related configurations are available for the Consensus Commit transaction manager:
 
-| Name                                                        | Description                                                                                         | Default                                                           |
-|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-| `scalar.db.consensus_commit.parallel_executor_count`        | Number of executors (threads) for parallel execution.                                               | `128`                                                             |
-| `scalar.db.consensus_commit.parallel_preparation.enabled`   | Whether or not the preparation phase is executed in parallel.                                       | `true`                                                            |
-| `scalar.db.consensus_commit.parallel_validation.enabled`    | Whether or not the validation phase (in `EXTRA_READ`) is executed in parallel.                      | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
-| `scalar.db.consensus_commit.parallel_commit.enabled`        | Whether or not the commit phase is executed in parallel.                                            | `true`                                                            |
-| `scalar.db.consensus_commit.parallel_rollback.enabled`      | Whether or not the rollback phase is executed in parallel.                                          | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
-| `scalar.db.consensus_commit.async_commit.enabled`           | Whether or not the commit phase is executed asynchronously.                                         | `false`                                                           |
-| `scalar.db.consensus_commit.async_rollback.enabled`         | Whether or not the rollback phase is executed asynchronously.                                       | The value of `scalar.db.consensus_commit.async_commit.enabled`    |
-| `scalar.db.consensus_commit.parallel_fill_read_set.enabled` | Whether or not to fill the read set with records from the write and delete sets if they are unread. | `true`                                                            |
+| Name                                                            | Description                                                                    | Default                                                           |
+|-----------------------------------------------------------------|--------------------------------------------------------------------------------|-------------------------------------------------------------------|
+| `scalar.db.consensus_commit.parallel_executor_count`            | Number of executors (threads) for parallel execution.                          | `128`                                                             |
+| `scalar.db.consensus_commit.parallel_preparation.enabled`       | Whether or not the preparation phase is executed in parallel.                  | `true`                                                            |
+| `scalar.db.consensus_commit.parallel_validation.enabled`        | Whether or not the validation phase (in `EXTRA_READ`) is executed in parallel. | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
+| `scalar.db.consensus_commit.parallel_commit.enabled`            | Whether or not the commit phase is executed in parallel.                       | `true`                                                            |
+| `scalar.db.consensus_commit.parallel_rollback.enabled`          | Whether or not the rollback phase is executed in parallel.                     | The value of `scalar.db.consensus_commit.parallel_commit.enabled` |
+| `scalar.db.consensus_commit.async_commit.enabled`               | Whether or not the commit phase is executed asynchronously.                    | `false`                                                           |
+| `scalar.db.consensus_commit.async_rollback.enabled`             | Whether or not the rollback phase is executed asynchronously.                  | The value of `scalar.db.consensus_commit.async_commit.enabled`    |
+| `scalar.db.consensus_commit.parallel_implicit_pre_read.enabled` | Whether or not implicit pre-read is executed in parallel.                      | `true`                                                            |
 
 #### Underlying storage or database configurations
 

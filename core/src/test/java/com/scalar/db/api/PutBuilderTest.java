@@ -81,7 +81,7 @@ public class PutBuilderTest {
             .textValue("text", "a_value")
             .value(TextColumn.of("text2", "another_value"))
             .condition(condition1)
-            .blind()
+            .disableImplicitPreRead()
             .build();
 
     // Assert
@@ -106,7 +106,7 @@ public class PutBuilderTest {
                 .withTextValue("text", "a_value")
                 .withValue(TextColumn.of("text2", "another_value"))
                 .withCondition(condition1)
-                .setBlind(true));
+                .setImplicitPreReadEnabled(false));
   }
 
   @Test
@@ -186,7 +186,7 @@ public class PutBuilderTest {
             .withIntValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .withTextValue("text", "a_value")
             .withCondition(condition1)
-            .setBlind(true);
+            .setImplicitPreReadEnabled(false);
 
     // Act
     Put newPut = Put.newBuilder(existingPut).build();
@@ -243,7 +243,7 @@ public class PutBuilderTest {
             .textValue("text", "another_value")
             .value(TextColumn.of("text2", "foo"))
             .condition(condition2)
-            .blind(true)
+            .implicitRreReadEnabled(false)
             .build();
 
     // Assert
@@ -268,7 +268,7 @@ public class PutBuilderTest {
                 .withTextValue("text", "another_value")
                 .withTextValue("text2", "foo")
                 .withCondition(condition2)
-                .setBlind(true));
+                .setImplicitPreReadEnabled(false));
   }
 
   @Test

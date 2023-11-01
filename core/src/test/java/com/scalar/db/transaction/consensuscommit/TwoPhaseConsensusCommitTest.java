@@ -227,19 +227,17 @@ public class TwoPhaseConsensusCommitTest {
     transaction.prepare();
 
     // Assert
-    verify(crud).fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+    verify(crud).executeImplicitPreReadIfEnabled();
     verify(commit).prepare(snapshot);
   }
 
   @Test
   public void
-      prepare_ProcessedCrudGiven_CrudConflictExceptionThrownWhileFillingReadSet_ShouldThrowPreparationConflictException()
+      prepare_ProcessedCrudGiven_CrudConflictExceptionThrownWhileImplicitPreRead_ShouldThrowPreparationConflictException()
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class)
-        .when(crud)
-        .fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+    doThrow(CrudConflictException.class).when(crud).executeImplicitPreReadIfEnabled();
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
@@ -247,11 +245,11 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void
-      prepare_ProcessedCrudGiven_CrudExceptionThrownWhileFillingReadSet_ShouldThrowPreparationException()
+      prepare_ProcessedCrudGiven_CrudExceptionThrownWhileImplicitPreRead_ShouldThrowPreparationException()
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+    doThrow(CrudException.class).when(crud).executeImplicitPreReadIfEnabled();
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);

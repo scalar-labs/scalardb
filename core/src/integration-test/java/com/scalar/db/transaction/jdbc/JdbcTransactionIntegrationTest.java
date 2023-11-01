@@ -39,5 +39,6 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
 
   @Disabled
   @Override
-  public void putAndCommit_BlindPutGivenForExisting_ShouldThrowCommitConflictException() {}
+  public void
+      putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowCommitConflictException() {}
 }

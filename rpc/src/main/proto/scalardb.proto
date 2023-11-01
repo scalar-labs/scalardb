@@ -131,7 +131,7 @@ message Mutation {
   Type type = 7;
   repeated Value value = 8 [deprecated = true]; // only for Put operations
   repeated Column columns = 9; // only for Put operations
-  bool blind = 10; // only for Put operations
+  bool implicit_pre_read_enabled = 10; // only for Put operations
 }
 
 message Result {

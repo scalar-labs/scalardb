@@ -2900,7 +2900,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .intValue(BALANCE, INITIAL_BALANCE)
-                .blind()
+                .disableImplicitPreRead()
                 .build());
       }
     }

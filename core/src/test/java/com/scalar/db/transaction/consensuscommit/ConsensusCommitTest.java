@@ -228,19 +228,17 @@ public class ConsensusCommitTest {
     consensus.commit();
 
     // Assert
-    verify(crud).fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+    verify(crud).executeImplicitPreReadIfEnabled();
     verify(commit).commit(snapshot);
   }
 
   @Test
   public void
-      commit_ProcessedCrudGiven_CrudConflictExceptionThrownWhileFillingReadSet_ShouldThrowCommitConflictException()
+      commit_ProcessedCrudGiven_CrudConflictExceptionThrownWhileImplicitPreRead_ShouldThrowCommitConflictException()
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class)
-        .when(crud)
-        .fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+    doThrow(CrudConflictException.class).when(crud).executeImplicitPreReadIfEnabled();
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
@@ -248,11 +246,11 @@ public class ConsensusCommitTest {
 
   @Test
   public void
-      commit_ProcessedCrudGiven_CrudExceptionThrownWhileFillingReadSet_ShouldThrowCommitException()
+      commit_ProcessedCrudGiven_CrudExceptionThrownWhileImplicitPreRead_ShouldThrowCommitException()
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+    doThrow(CrudException.class).when(crud).executeImplicitPreReadIfEnabled();
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitException.class);

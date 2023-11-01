@@ -494,7 +494,7 @@ public class CrudHandlerTest {
     spied.put(put);
 
     // Assert
-    verify(spied, never()).fillReadSetIfUnread(any());
+    verify(spied, never()).readUnread(any());
     verify(snapshot, never()).getFromReadSet(any());
     verify(mutationConditionsValidator, never()).checkIfConditionIsSatisfied(any(Put.class), any());
     verify(snapshot).put(new Snapshot.Key(put), put);
@@ -521,7 +521,7 @@ public class CrudHandlerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).fillReadSetIfUnread(key);
+    verify(spied).readUnread(key);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
     verify(snapshot).put(key, put);
@@ -547,14 +547,15 @@ public class CrudHandlerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).fillReadSetIfUnread(key);
+    verify(spied).readUnread(key);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, null);
     verify(snapshot).put(key, put);
   }
 
   @Test
-  public void put_PutWithBlindAndConditionGiven_ShouldThrowIllegalArgumentException() {
+  public void
+      put_PutWithImplicitPreReadDisabledAndConditionGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Put put =
         Put.newBuilder()
@@ -562,7 +563,7 @@ public class CrudHandlerTest {
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(ConditionBuilder.putIfExists())
-            .blind()
+            .disableImplicitPreRead()
             .build();
 
     // Act Assert
@@ -585,7 +586,7 @@ public class CrudHandlerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied, never()).fillReadSetIfUnread(any());
+    verify(spied, never()).readUnread(any());
     verify(snapshot, never()).getFromReadSet(any());
     verify(mutationConditionsValidator, never())
         .checkIfConditionIsSatisfied(any(Delete.class), any());
@@ -613,7 +614,7 @@ public class CrudHandlerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).fillReadSetIfUnread(key);
+    verify(spied).readUnread(key);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, result);
     verify(snapshot).put(key, delete);
@@ -639,7 +640,7 @@ public class CrudHandlerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).fillReadSetIfUnread(key);
+    verify(spied).readUnread(key);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null);
     verify(snapshot).put(key, delete);
@@ -647,14 +648,14 @@ public class CrudHandlerTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void fillReadSetIfUnread_ContainsKeyInReadSet_ShouldCallAppropriateMethods()
+  public void readUnread_ContainsKeyInReadSet_ShouldCallAppropriateMethods()
       throws CrudException, ExecutionException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
 
     // Act
-    handler.fillReadSetIfUnread(key);
+    handler.readUnread(key);
 
     // Assert
     verify(storage, never()).get(any());
@@ -663,7 +664,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      fillReadSetIfUnread_NotContainsKeyInReadSet_EmptyResultReturnedByStorage_ShouldCallAppropriateMethods()
+      readUnread_NotContainsKeyInReadSet_EmptyResultReturnedByStorage_ShouldCallAppropriateMethods()
           throws CrudException, ExecutionException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
@@ -675,7 +676,7 @@ public class CrudHandlerTest {
     when(storage.get(any())).thenReturn(Optional.empty());
 
     // Act
-    handler.fillReadSetIfUnread(key);
+    handler.readUnread(key);
 
     // Assert
     verify(storage).get(any());
@@ -684,7 +685,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      fillReadSetIfUnread_NotContainsKeyInReadSet_CommittedRecordReturnedByStorage_ShouldCallAppropriateMethods()
+      readUnread_NotContainsKeyInReadSet_CommittedRecordReturnedByStorage_ShouldCallAppropriateMethods()
           throws CrudException, ExecutionException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
@@ -699,7 +700,7 @@ public class CrudHandlerTest {
     when(storage.get(any())).thenReturn(Optional.of(result));
 
     // Act
-    handler.fillReadSetIfUnread(key);
+    handler.readUnread(key);
 
     // Assert
     verify(storage).get(any());
@@ -708,7 +709,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      fillReadSetIfUnread_NotContainsKeyInReadSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
+      readUnread_NotContainsKeyInReadSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
           throws ExecutionException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
@@ -723,29 +724,30 @@ public class CrudHandlerTest {
     when(storage.get(any())).thenReturn(Optional.of(result));
 
     // Act Assert
-    assertThatThrownBy(() -> handler.fillReadSetIfUnread(key))
+    assertThatThrownBy(() -> handler.readUnread(key))
         .isInstanceOf(UncommittedRecordException.class);
   }
 
   @Test
-  public void fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread_ShouldCallAppropriateMethods()
-      throws CrudException {
+  public void executeImplicitPreReadIfEnabled_ShouldCallAppropriateMethods() throws CrudException {
     // Arrange
     Put put1 = mock(Put.class);
     when(put1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put1.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(put1.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+    when(put1.isImplicitPreReadEnabled()).thenReturn(true);
 
     Put put2 = mock(Put.class);
     when(put2.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put2.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(put2.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_2));
+    when(put2.isImplicitPreReadEnabled()).thenReturn(true);
 
     Put put3 = mock(Put.class);
     when(put3.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put3.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(put3.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_3));
-    when(put3.isBlind()).thenReturn(true);
+    when(put3.isImplicitPreReadEnabled()).thenReturn(false);
 
     when(snapshot.getPutsInWriteSet()).thenReturn(Arrays.asList(put1, put2, put3));
 
@@ -764,7 +766,7 @@ public class CrudHandlerTest {
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
 
     // Act
-    handler.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+    handler.executeImplicitPreReadIfEnabled();
 
     // Assert
     @SuppressWarnings("unchecked")
@@ -772,8 +774,7 @@ public class CrudHandlerTest {
         ArgumentCaptor.forClass(List.class);
     ArgumentCaptor<String> transactionIdCaptor = ArgumentCaptor.forClass(String.class);
     verify(parallelExecutor)
-        .fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread(
-            tasksCaptor.capture(), transactionIdCaptor.capture());
+        .executeImplicitPreRead(tasksCaptor.capture(), transactionIdCaptor.capture());
 
     List<ParallelExecutor.ParallelExecutorTask> tasks = tasksCaptor.getValue();
     assertThat(tasks.size()).isEqualTo(4);

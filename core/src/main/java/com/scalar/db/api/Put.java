@@ -39,7 +39,7 @@ public class Put extends Mutation {
 
   private final Map<String, Column<?>> columns;
 
-  private boolean blind;
+  private boolean implicitPreReadEnabled = true;
 
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
@@ -82,7 +82,7 @@ public class Put extends Mutation {
   public Put(Put put) {
     super(put);
     columns = new LinkedHashMap<>(put.columns);
-    blind = put.blind;
+    implicitPreReadEnabled = put.implicitPreReadEnabled;
   }
 
   /**
@@ -755,21 +755,21 @@ public class Put extends Mutation {
   }
 
   /**
-   * Returns whether this Put is a blind write.
+   * Returns whether implicit pre-read is enabled for this Put.
    *
-   * @return whether this Put is a blind write
+   * @return whether implicit pre-read is enabled for this Put
    */
-  public boolean isBlind() {
-    return blind;
+  public boolean isImplicitPreReadEnabled() {
+    return implicitPreReadEnabled;
   }
 
   /**
-   * Sets whether this Put is a blind write.
+   * Sets whether implicit pre-read is enabled for this Put.
    *
-   * @param blind whether this Put is a blind write
+   * @param implicitPreReadEnabled whether the implicit pre-read is enabled for this Put
    */
-  Put setBlind(boolean blind) {
-    this.blind = blind;
+  Put setImplicitPreReadEnabled(boolean implicitPreReadEnabled) {
+    this.implicitPreReadEnabled = implicitPreReadEnabled;
     return this;
   }
 
@@ -798,12 +798,12 @@ public class Put extends Mutation {
       return false;
     }
     Put other = (Put) o;
-    return columns.equals(other.columns) && blind == other.blind;
+    return columns.equals(other.columns) && implicitPreReadEnabled == other.implicitPreReadEnabled;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), columns, blind);
+    return Objects.hash(super.hashCode(), columns, implicitPreReadEnabled);
   }
 
   @Override
@@ -816,7 +816,7 @@ public class Put extends Mutation {
         .add("columns", getColumns())
         .add("consistency", getConsistency())
         .add("condition", getCondition())
-        .add("blind", isBlind())
+        .add("implicitPreReadEnabled", isImplicitPreReadEnabled())
         .toString();
   }
 }

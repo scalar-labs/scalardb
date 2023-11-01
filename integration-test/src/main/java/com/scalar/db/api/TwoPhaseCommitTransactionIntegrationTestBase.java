@@ -469,7 +469,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_BlindPutGivenForNonExisting_ShouldCreateRecord()
+  public void putAndCommit_PutWithImplicitPreReadDisabledGivenForNonExisting_ShouldCreateRecord()
       throws TransactionException {
     // Arrange
     int expected = INITIAL_BALANCE;
@@ -480,7 +480,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
             .intValue(BALANCE, expected)
-            .blind()
+            .disableImplicitPreRead()
             .build();
     TwoPhaseCommitTransaction transaction = manager1.start();
 
@@ -534,8 +534,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_BlindPutGivenForExisting_ShouldThrowPreparationConflictException()
-      throws TransactionException {
+  public void
+      putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowPreparationConflictException()
+          throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
@@ -548,7 +549,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
             .intValue(BALANCE, INITIAL_BALANCE + 100)
-            .blind()
+            .disableImplicitPreRead()
             .build();
     transaction.put(put);
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
@@ -1656,7 +1657,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                                   .clusteringKey(clusteringKey)
                                   .intValue(BALANCE, INITIAL_BALANCE)
                                   .intValue(SOME_COLUMN, i * j)
-                                  .blind()
+                                  .disableImplicitPreRead()
                                   .build();
                           try {
                             transaction.put(put);
@@ -1682,7 +1683,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .intValue(BALANCE, INITIAL_BALANCE)
-            .blind()
+            .disableImplicitPreRead()
             .build();
 
     transaction.put(put);

@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.scalar.db.api.OperationBuilder.Blind;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -10,6 +9,7 @@ import com.scalar.db.api.OperationBuilder.ClearValues;
 import com.scalar.db.api.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.OperationBuilder.Condition;
 import com.scalar.db.api.OperationBuilder.Consistency;
+import com.scalar.db.api.OperationBuilder.ImplicitRreReadEnabled;
 import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.api.OperationBuilder.Values;
@@ -78,12 +78,12 @@ public class PutBuilder {
           Consistency<Buildable>,
           Condition<Buildable>,
           Values<Buildable>,
-          Blind<Buildable> {
+          ImplicitRreReadEnabled<Buildable> {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
-    boolean blind;
+    boolean implicitPreReadEnabled = true;
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -203,14 +203,14 @@ public class PutBuilder {
     }
 
     @Override
-    public Buildable blind() {
-      blind = true;
+    public Buildable disableImplicitPreRead() {
+      implicitPreReadEnabled = false;
       return this;
     }
 
     @Override
-    public Buildable blind(boolean blind) {
-      this.blind = blind;
+    public Buildable implicitRreReadEnabled(boolean implicitRreReadEnabled) {
+      this.implicitPreReadEnabled = implicitRreReadEnabled;
       return this;
     }
 
@@ -225,7 +225,7 @@ public class PutBuilder {
       if (condition != null) {
         put.withCondition(condition);
       }
-      put.setBlind(blind);
+      put.setImplicitPreReadEnabled(implicitPreReadEnabled);
 
       return put;
     }
@@ -253,7 +253,7 @@ public class PutBuilder {
       this.columns.putAll(put.getColumns());
       this.consistency = put.getConsistency();
       this.condition = put.getCondition().orElse(null);
-      this.blind = put.isBlind();
+      this.implicitPreReadEnabled = put.isImplicitPreReadEnabled();
     }
 
     @Override
@@ -410,14 +410,14 @@ public class PutBuilder {
     }
 
     @Override
-    public BuildableFromExisting blind(boolean blind) {
-      super.blind(blind);
+    public Buildable disableImplicitPreRead() {
+      super.disableImplicitPreRead();
       return this;
     }
 
     @Override
-    public BuildableFromExisting blind() {
-      super.blind();
+    public Buildable implicitRreReadEnabled(boolean implicitRreReadEnabled) {
+      super.implicitRreReadEnabled(implicitRreReadEnabled);
       return this;
     }
   }

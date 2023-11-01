@@ -191,8 +191,8 @@ public interface MutationOrBuilder extends
    * only for Put operations
    * </pre>
    *
-   * <code>bool blind = 10;</code>
-   * @return The blind.
+   * <code>bool implicit_pre_read_enabled = 10;</code>
+   * @return The implicitPreReadEnabled.
    */
-  boolean getBlind();
+  boolean getImplicitPreReadEnabled();
 }

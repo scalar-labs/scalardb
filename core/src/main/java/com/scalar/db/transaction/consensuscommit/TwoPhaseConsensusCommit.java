@@ -133,17 +133,14 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void prepare() throws PreparationException {
-    // Fill the read set with records from the write and delete sets if they are unread
+    // Execute implicit pre-read
     try {
-      crud.fillReadSetForRecordsFromWriteAndDeleteSetsIfUnread();
+      crud.executeImplicitPreReadIfEnabled();
     } catch (CrudConflictException e) {
       throw new PreparationConflictException(
-          "Conflict occurred while reading unread records in the write and delete sets",
-          e,
-          getId());
+          "Conflict occurred while implicit pre-read", e, getId());
     } catch (CrudException e) {
-      throw new PreparationException(
-          "Failed to read unread records in the write and delete sets", e, getId());
+      throw new PreparationException("Failed to execute implicit pre-read", e, getId());
     }
 
     try {
