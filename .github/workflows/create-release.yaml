@@ -1,0 +1,89 @@
+name: Create release
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      GH_PROJECT_ACCESS_TOKEN:
+        required: true
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set version
+        id: version
+        run: |
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Set up JDK 8 and 11 (default 8)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: |
+            11
+            8
+
+      - name: Checkout release note scripts
+        uses: actions/checkout@v4
+        with:
+          repository: scalar-labs/actions
+          token: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+          path: ${{ github.workspace }}
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            release-note-script/src/main/java
+
+      - name: Move scripts to the working directory
+        run: cp ${{ github.workspace }}/release-note-script/src/main/java/* ${{ github.workspace }}
+
+      - name: Create release note body
+        id: rn_body
+        env:
+          GH_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+        run: |
+          $JAVA_HOME_11_X64/bin/java ReleaseNoteCreation.java ${{ github.repository_owner }} ScalarDB ${{ steps.version.outputs.version }} ${{ github.event.repository.name }} > rnbody.md
+          cat rnbody.md
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body_path: rnbody.md
+          draft: true
+          prerelease: false
+
+      - name: Checkout the current repository
+        uses: actions/checkout@v4
+
+      - name: Build scalardb-server zip
+        run: ./gradlew :server:distZip
+
+      - name: Upload scalardb-server zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: server/build/distributions/scalardb-server-${{ steps.version.outputs.version }}.zip
+          asset_name: scalardb-server-${{ steps.version.outputs.version }}.zip
+          asset_content_type: application/zip
+
+      - name: Build scalardb-schema-loader jar
+        run: ./gradlew :schema-loader:shadowJar
+
+      - name: Upload scalardb-schema-loader jar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: schema-loader/build/libs/scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
+          asset_name: scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
+          asset_content_type: application/java-archive
