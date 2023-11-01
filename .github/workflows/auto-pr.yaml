@@ -46,6 +46,8 @@ jobs:
           echo -------------
 
           branches=$(ci/auto-pr/conv_proj_version_to_branch $versions)
+          # Remove the base branch from the list because the target change is already merged to the branch.
+          branches=$(echo "$branches" | sed "/^${{ github.base_ref }}$/d")
           echo -------------
           echo "branches: $branches"
           echo -------------
