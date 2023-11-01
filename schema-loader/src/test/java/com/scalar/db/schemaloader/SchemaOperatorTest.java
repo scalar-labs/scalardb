@@ -517,7 +517,7 @@ public class SchemaOperatorTest {
     operator.importTables(tableSchemaList);
 
     // Assert
-    verify(transactionAdmin, times(3)).importTable("ns", "tb");
+    verify(transactionAdmin, times(3)).importTable("ns", "tb", Collections.emptyMap());
     verifyNoInteractions(storageAdmin);
   }
 
@@ -534,7 +534,7 @@ public class SchemaOperatorTest {
     operator.importTables(tableSchemaList);
 
     // Assert
-    verify(storageAdmin, times(3)).importTable("ns", "tb");
+    verify(storageAdmin, times(3)).importTable("ns", "tb", Collections.emptyMap());
     verifyNoInteractions(transactionAdmin);
   }
 

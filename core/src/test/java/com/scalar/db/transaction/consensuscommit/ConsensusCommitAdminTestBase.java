@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionTableMetadata;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -595,6 +596,7 @@ public abstract class ConsensusCommitAdminTestBase {
   @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
     String primaryKeyColumn = "pk";
     String column = "col";
     TableMetadata metadata =
@@ -610,7 +612,7 @@ public abstract class ConsensusCommitAdminTestBase {
         .addRawColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
 
     // Act
-    admin.importTable(NAMESPACE, TABLE);
+    admin.importTable(NAMESPACE, TABLE, options);
 
     // Assert
     verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
@@ -625,6 +627,9 @@ public abstract class ConsensusCommitAdminTestBase {
             NAMESPACE, TABLE, getBeforeImageColumnName(column, metadata), DataType.INT);
     verify(distributedStorageAdmin, never())
         .addRawColumnToTable(NAMESPACE, TABLE, primaryKeyColumn, DataType.INT);
+    verify(distributedStorageAdmin).repairNamespace(NAMESPACE, options);
+    verify(distributedStorageAdmin)
+        .repairTable(NAMESPACE, TABLE, buildTransactionTableMetadata(metadata), options);
   }
 
   @Test
@@ -653,7 +658,8 @@ public abstract class ConsensusCommitAdminTestBase {
     when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
 
     // Act
-    Throwable thrown = catchThrowable(() -> admin.importTable(NAMESPACE, TABLE));
+    Throwable thrown =
+        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
