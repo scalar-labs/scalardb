@@ -1,0 +1,124 @@
+name: Upload artifacts
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      CR_PAT:
+        required: true
+      ACR_LOGIN_SERVER:
+        required: true
+      ACR_USER:
+        required: true
+      ACR_PASSWORD:
+        required: true
+      AWS_MARKETPLACE_ROLE_OIDC:
+        required: true
+      AWS_MARKETPLACE_ECR_ID:
+        required: true
+      SIGNING_SECRET_KEY_RING:
+        required: true
+      SIGNING_KEY_ID:
+        required: true
+      SIGNING_PASSWORD:
+        required: true
+      OSSRH_USERNAMAE:
+        required: true
+      OSSRH_PASSWORD:
+        required: true
+
+jobs:
+  upload-artifacts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set version
+        id: version
+        run: |
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          MINOR_VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g" | grep -o -E "^[0-9]+\.[0-9]+")
+          echo "minor_version=${MINOR_VERSION}" >> $GITHUB_OUTPUT
+          LATEST_VERSION=$(curl -s -u "${{ github.repository_owner }}:${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/scalar-labs/scalardb/tags | jq -r .[].name | sort --version-sort -r | head -n 1 | sed -e "s#v##g")
+          echo "latest_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USER }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_MARKETPLACE_ROLE_OIDC }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon Elastic Container Registry
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registries: ${{ secrets.AWS_MARKETPLACE_ECR_ID }}
+
+      - name: Create containers
+        run: ./gradlew docker
+
+      - name: Push containers
+        run: |
+          docker push ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
+          docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
+
+      - name: Push containers to Azure Container Registry
+        run: |
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.version }}
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.minor_version }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.minor_version }}
+
+      # Push the latest tag image since it is required from the perspective of the specification of Azure Marketplace.
+      - name: Push latest tag to Azure Container Registry
+        if: ${{ steps.version.outputs.version == steps.version.outputs.latest_version }}
+        run: |
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
+
+      # Push the patch version image only since AWS Marketplace restricts using the latest tag.
+      - name: Push containers to Amazon Elastic Container Registry
+        run: |
+          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.AWS_MARKETPLACE_ECR_ID }}.dkr.ecr.us-east-1.amazonaws.com/scalar/scalardb-server:${{ steps.version.outputs.version }}
+          docker push ${{ secrets.AWS_MARKETPLACE_ECR_ID }}.dkr.ecr.us-east-1.amazonaws.com/scalar/scalardb-server:${{ steps.version.outputs.version }}
+
+      - name: Upload scalardb, scalardb-server, scalardb-rpc, scalardb-schema-loader, and scalardb-integration-test to Maven Central Repository
+        run: |
+          echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
+          ./gradlew publish \
+          -Psigning.keyId="${{ secrets.SIGNING_KEY_ID }}" \
+          -P'signing.password'="${{ secrets.SIGNING_PASSWORD }}" \
+          -Psigning.secretKeyRingFile="$(echo ~/.gradle/secring.gpg)" \
+          -PossrhUsername="${{ secrets.OSSRH_USERNAMAE }}" \
+          -PossrhPassword="${{ secrets.OSSRH_PASSWORD }}"
