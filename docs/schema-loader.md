@@ -47,7 +47,7 @@ Running that command builds a fat JAR file named `scalardb-schema-loader-<VERSIO
 You can pull the Docker image from the [Scalar container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader) by running the following command, replacing the contents in the angle brackets as described:
 
 ```console
-docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_YOUR_LOCAL_PROPERTIES_FILE>:<PATH_TO_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION> <COMMAND_ARGUMENTS>
+$ docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_YOUR_LOCAL_PROPERTIES_FILE>:<PATH_TO_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION> <COMMAND_ARGUMENTS>
 ```
 
 {% capture notice--info %}
@@ -111,59 +111,22 @@ Create/Delete schemas in the storage defined in the config file
       --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
 ```
 
-For Cosmos DB for NoSQL (Deprecated. Please use the command using a config file instead):
+For a sample properties file, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
 
-```console
-Usage: java -jar scalardb-schema-loader-<VERSION>.jar --cosmos [-D]
-       [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
-Create/Delete Cosmos DB schemas
-  -A, --alter         Alter tables : it will add new columns and create/delete
-                        secondary index for existing tables. It compares the
-                        provided table schema to the existing schema to decide
-                        which columns need to be added and which indexes need
-                        to be created or deleted
-  -D, --delete-all       Delete tables
-  -f, --schema-file=<schemaFile>
-                         Path to the schema json file
-  -h, --host=<uri>       Cosmos DB account URI
-      --no-scaling       Disable auto-scaling for Cosmos DB
-  -p, --password=<key>   Cosmos DB key
-  -r, --ru=<ru>          Base resource unit
-      --repair-all       Repair tables : it repairs the table metadata of
-                           existing tables and repairs stored procedure
-                           attached to each table
-```
+{% capture notice--info %}
+**Note**
 
-For DynamoDB (Deprecated. Please use the command using a config file instead):
+The following database-specific methods have been deprecated. Please use the [commands for configuring the properties file](#available-commands) instead.
 
-```console
-Usage: java -jar scalardb-schema-loader-<VERSION>.jar --dynamo [-D]
-       [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
-       -f=<schemaFile> -p=<awsSecKey> [-r=<ru>] --region=<awsRegion>
-       -u=<awsKeyId>
-Create/Delete DynamoDB schemas
-  -A, --alter         Alter tables : it will add new columns and create/delete
-                        secondary index for existing tables. It compares the
-                        provided table schema to the existing schema to decide
-                        which columns need to be added and which indexes need
-                        to be created or deleted
-  -D, --delete-all           Delete tables
-      --endpoint-override=<endpointOverride>
-                             Endpoint with which the DynamoDB SDK should
-                               communicate
-  -f, --schema-file=<schemaFile>
-                             Path to the schema json file
-      --no-backup            Disable continuous backup for DynamoDB
-      --no-scaling           Disable auto-scaling for DynamoDB
-  -p, --password=<awsSecKey> AWS access secret key
-  -r, --ru=<ru>              Base resource unit
-      --region=<awsRegion>   AWS region
-      --repair-all           Repair tables : it repairs the table metadata of
-                               existing tables
-  -u, --user=<awsKeyId>      AWS access key ID
-```
+<div id="tabset-2">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra-2', 'tabset-2')" id="defaultOpen-2">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL-2', 'tabset-2')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB-2', 'tabset-2')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases-2', 'tabset-2')">JDBC databases</button>
+</div>
 
-For Cassandra (Deprecated. Please use the command using a config file instead):
+<div id="Cassandra-2" class="tabcontent" markdown="1">
 
 ```console
 Usage: java -jar scalardb-schema-loader-<VERSION>.jar --cassandra [-D]
@@ -194,8 +157,60 @@ Create/Delete Cassandra schemas
                          existing tables
   -u, --user=<user>     Cassandra user
 ```
+</div>
+<div id="Cosmos_DB_for_NoSQL-2" class="tabcontent" markdown="1">
 
-For a JDBC database (Deprecated. Please use the command using a config file instead):
+```console
+Usage: java -jar scalardb-schema-loader-<VERSION>.jar --cosmos [-D]
+       [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
+Create/Delete Cosmos DB schemas
+  -A, --alter         Alter tables : it will add new columns and create/delete
+                        secondary index for existing tables. It compares the
+                        provided table schema to the existing schema to decide
+                        which columns need to be added and which indexes need
+                        to be created or deleted
+  -D, --delete-all       Delete tables
+  -f, --schema-file=<schemaFile>
+                         Path to the schema json file
+  -h, --host=<uri>       Cosmos DB account URI
+      --no-scaling       Disable auto-scaling for Cosmos DB
+  -p, --password=<key>   Cosmos DB key
+  -r, --ru=<ru>          Base resource unit
+      --repair-all       Repair tables : it repairs the table metadata of
+                           existing tables and repairs stored procedure
+                           attached to each table
+```
+</div>
+<div id="DynamoDB-2" class="tabcontent" markdown="1">
+
+```console
+Usage: java -jar scalardb-schema-loader-<VERSION>.jar --dynamo [-D]
+       [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
+       -f=<schemaFile> -p=<awsSecKey> [-r=<ru>] --region=<awsRegion>
+       -u=<awsKeyId>
+Create/Delete DynamoDB schemas
+  -A, --alter         Alter tables : it will add new columns and create/delete
+                        secondary index for existing tables. It compares the
+                        provided table schema to the existing schema to decide
+                        which columns need to be added and which indexes need
+                        to be created or deleted
+  -D, --delete-all           Delete tables
+      --endpoint-override=<endpointOverride>
+                             Endpoint with which the DynamoDB SDK should
+                               communicate
+  -f, --schema-file=<schemaFile>
+                             Path to the schema json file
+      --no-backup            Disable continuous backup for DynamoDB
+      --no-scaling           Disable auto-scaling for DynamoDB
+  -p, --password=<awsSecKey> AWS access secret key
+  -r, --ru=<ru>              Base resource unit
+      --region=<awsRegion>   AWS region
+      --repair-all           Repair tables : it repairs the table metadata of
+                               existing tables
+  -u, --user=<awsKeyId>      AWS access key ID
+```
+</div>
+<div id="JDBC_databases-2" class="tabcontent" markdown="1">
 
 ```console
 Usage: java -jar scalardb-schema-loader-<VERSION>.jar --jdbc [-D]
@@ -216,61 +231,80 @@ Create/Delete JDBC schemas
                            existing tables
   -u, --user=<user>      JDBC user
 ```
+</div>
+</div>
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ### Create namespaces and tables
 
-To create namespaces and tables by using a properties file, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using and `<PATH_TO_PROPERTIES_FILE>` with the path to the properties file. If `--coordinator` is specified, a Coordinator table will be created.
+To create namespaces and tables by using a properties file, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator]
 ```
 
+If `--coordinator` is specified, a Coordinator table will be created.
+
 {% capture notice--info %}
 **Note**
 
-For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
-{% endcapture %}
+The following database-specific CLI arguments have been deprecated. Please use the CLI arguments for configuring the properties file instead.
 
-<div class="notice--info">{{ notice--info | markdownify }}</div>
+<div id="tabset-3">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra-3', 'tabset-3')" id="defaultOpen-3">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL-3', 'tabset-3')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB-3', 'tabset-3')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases-3', 'tabset-3')">JDBC databases</button>
+</div>
 
-For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
-
-```console
-# For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> [-r BASE_RESOURCE_UNIT]
-
-```
-  - `<COSMOS_DB_FOR_NOSQL_KEY>` you can use a primary key or a secondary key.
-  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. By default, it's 400.
+<div id="Cassandra-3" class="tabcontent" markdown="1">
 
 ```console
-# For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> [-r BASE_RESOURCE_UNIT]
-```
-
-  - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
-  - `-r` option is almost the same as Cosmos DB for NoSQL option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
-
-```console
-# For Cassandra
 $ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
 
-  - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
-  - If `-u <CASSANDRA_USER>` is not supplied, it defaults to `cassandra`.
-  - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
-  - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
+- If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
+- If `-u <CASSANDRA_USER>` is not supplied, it defaults to `cassandra`.
+- If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
+- `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
+</div>
+<div id="Cosmos_DB_for_NoSQL-3" class="tabcontent" markdown="1">
 
 ```console
-# For a JDBC database
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> [-r BASE_RESOURCE_UNIT]
+```
+
+- `<COSMOS_DB_FOR_NOSQL_KEY>` you can use a primary key or a secondary key.
+- `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. By default, it's 400.
+</div>
+<div id="DynamoDB-3" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> [-r BASE_RESOURCE_UNIT]
+```
+
+- `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
+- `-r` option is almost the same as Cosmos DB for NoSQL option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
+</div>
+<div id="JDBC_databases-3" class="tabcontent" markdown="1">
+
+```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE>
 ```
+</div>
+</div>
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ### Alter tables
 
 You can use a command to add new columns to and create or delete a secondary index for existing tables. This command compares the provided table schema to the existing schema to decide which columns need to be added and which indexes need to be created or deleted.
 
-To add new colums to and create or delete a secondary index for existing tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
+To add new colums to and create or delete a secondary index for existing tables, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> --alter
@@ -279,124 +313,152 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FI
 {% capture notice--info %}
 **Note**
 
-For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
+The following database-specific CLI arguments have been deprecated. Please use the CLI arguments for configuring the properties file instead.
+
+<div id="tabset-4">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra-4', 'tabset-4')" id="defaultOpen-4">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL-4', 'tabset-4')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB-4', 'tabset-4')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases-4', 'tabset-4')">JDBC databases</button>
+</div>
+
+<div id="Cassandra-4" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> --alter
+```
+</div>
+<div id="Cosmos_DB_for_NoSQL-4" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> --alter
+```
+</div>
+<div id="DynamoDB-4" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> --alter
+```
+</div>
+<div id="JDBC_databases-4" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> --alter
+```
+</div>
+</div>
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-For using CLI arguments fully for configuration (Deprecated. Please use the command using a config
-file instead):
-
-```console
-# For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> --alter
-```
-
-```console
-# For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> --alter
-```
-
-```console
-# For Cassandra
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> --alter
-```
-
-```console
-# For a JDBC database
-$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> --alter
-```
-
 ### Delete tables
 
-You can delete tables by using the properties file. To delete tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
+You can delete tables by using the properties file. To delete tables, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] -D 
 ```
 
+If `--coordinator` is specified, the Coordinator table will be deleted as well.
+
 {% capture notice--info %}
 **Note**
 
-- For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
-- If `--coordinator` is specified, the Coordinator table will be deleted as well.
+The following database-specific CLI arguments have been deprecated. Please use the CLI arguments for configuring the properties file instead.
+
+<div id="tabset-5">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra-5', 'tabset-5')" id="defaultOpen-5">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL-5', 'tabset-5')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB-5', 'tabset-5')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases-5', 'tabset-4')">JDBC databases</button>
+</div>
+
+<div id="Cassandra-5" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> -D
+```
+</div>
+<div id="Cosmos_DB_for_NoSQL-5" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> -D
+```
+</div>
+<div id="DynamoDB-5" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> -D
+```
+</div>
+<div id="JDBC_databases-5" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> -D
+```
+</div>
+</div>
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
-  
-For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
-
-```console
-# For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> -D
-```
-
-```console
-# For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f <PATH_TO_SCHEMA_FILE> -D
-```
-
-```console
-# For Cassandra
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> -D
-```
-
-```console
-# For a JDBC database
-$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> -D
-```
 
 ### Repair tables
 
-You can repair the table metadata of existing tables by using the properties file. To repair table metadata of exisitng tables, run the following command, replacing `<VERSION>` with the version of ScalarDB that you're using:
+You can repair the table metadata of existing tables by using the properties file. To repair table metadata of existing tables, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] --repair-all 
 ```
 
+If `--coordinator` is specified, the Coordinator table will be repaired as well. In addition, if you're using Cosmos DB for NoSQL, running this command will also repair stored procedures attached to each table.
+
 {% capture notice--info %}
 **Note**
 
-- For a sample configuration, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
-- If `--coordinator` is specified, the Coordinator table will be repaired as well.
-- If you're using Cosmos DB for NoSQL, running this command will also repair stored procedures attached to each table.
+The following database-specific CLI arguments have been deprecated. Please use the CLI arguments for configuring the properties file instead.
+
+<div id="tabset-6">
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Cassandra-6', 'tabset-6')" id="defaultOpen-6">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL-6', 'tabset-6')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB-6', 'tabset-6')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases-6', 'tabset-6')">JDBC databases</button>
+</div>
+
+<div id="Cassandra-6" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> --repair-all
+```
+</div>
+<div id="Cosmos_DB_for_NoSQL-6" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> --repair-all
+```
+</div>
+<div id="DynamoDB-6" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> [--no-backup] -f <PATH_TO_SCHEMA_FILE> --repair-all
+```
+</div>
+<div id="JDBC_databases-6" class="tabcontent" markdown="1">
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> --repair-all
+```
+</div>
+</div>
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
-
-For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
-
-```console
-# For Cosmos DB for NoSQL
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cosmos -h <COSMOS_DB_FOR_NOSQL_ACCOUNT_URI> -p <COSMOS_DB_FOR_NOSQL_KEY> -f <PATH_TO_SCHEMA_FILE> --repair-all
-```
-
-```console
-# For DynamoDB
-$ java -jar scalardb-schema-loader-<VERSION>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> [--no-backup] -f <PATH_TO_SCHEMA_FILE> --repair-all
-```
-
-```console
-# For Cassandra
-$ java -jar scalardb-schema-loader-<VERSION>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f <PATH_TO_SCHEMA_FILE> --repair-all
-```
-
-```console
-# For a JDBC database
-$ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> -p <PASSWORD> -f <PATH_TO_SCHEMA_FILE> --repair-all
-```
 
 ### Sample schema file
 
-The following is a sample schema.
-
-{% capture notice--info %}
-**Note**
-
-For a sample schema file, see [`schema_sample.json`](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json).
-{% endcapture %}
-
-<div class="notice--info">{{ notice--info | markdownify }}</div>
+The following is a sample schema. For a sample schema file, see [`schema_sample.json`](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json).
 
 ```json
 {
@@ -491,27 +553,27 @@ You can also specify database or storage-specific options in the table definitio
 
 The database or storage-specific options you can specify are as follows:
 
-<div id="tabset-2">
+<div id="tabset-7">
 <div class="tab">
-  <button class="tablinks" onclick="openTab(event, 'Cassandra', 'tabset-2')" id="defaultOpen-2">Cassandra</button>
-  <button class="tablinks" onclick="openTab(event, 'Cosmos DB for NoSQL', 'tabset-2')">Cosmos DB for NoSQL</button>
-  <button class="tablinks" onclick="openTab(event, 'DynamoDB', 'tabset-2')">DynamoDB</button>
-  <button class="tablinks" onclick="openTab(event, 'JDBC_databases', 'tabset-2')">JDBC databases</button>
+  <button class="tablinks" onclick="openTab(event, 'Cassandra-7', 'tabset-7')" id="defaultOpen-7">Cassandra</button>
+  <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL-7', 'tabset-7')">Cosmos DB for NoSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'DynamoDB-7', 'tabset-7')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'JDBC_databases-7', 'tabset-7')">JDBC databases</button>
 </div>
 
-<div id="Cassandra" class="tabcontent" markdown="1">
+<div id="Cassandra-7" class="tabcontent" markdown="1">
 
 The `compaction-strategy` option is the compaction strategy used. This option should be `STCS` (SizeTieredCompaction), `LCS` (LeveledCompactionStrategy), or `TWCS` (TimeWindowCompactionStrategy).
 </div>
-<div id="Cosmos DB for NoSQL" class="tabcontent" markdown="1">
+<div id="Cosmos_DB_for_NoSQL-7" class="tabcontent" markdown="1">
 
 The `ru` option stands for Request Units. For details, see [RUs](#rus).
 </div>
-<div id="DynamoDB" class="tabcontent" markdown="1">
+<div id="DynamoDB-7" class="tabcontent" markdown="1">
 
 The `ru` option stands for Request Units. For details, see [RUs](#rus).
 </div>
-<div id="JDBC_databases" class="tabcontent" markdown="1">
+<div id="JDBC_databases-7" class="tabcontent" markdown="1">
 
 No options are available for JDBC databases.
 </div>
