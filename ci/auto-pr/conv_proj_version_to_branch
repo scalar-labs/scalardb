@@ -12,8 +12,7 @@ versions.inject(Set.new) {|acc, v|
       # e.g. project: "ScalarDB 4.0.0" -> branch: "master"
       #
       # This GitHub project corresponds to `main`/`master` branch.
-      # The target change is already merged to the default branch.
-      # Nonthing to do.
+      acc << "master"
     else
       # e.g. project: "ScalarDB 3.8.0" -> branch: "3"
       #
