@@ -176,7 +176,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
     try {
       long mutateStart = System.currentTimeMillis();
-      if (!jdbcService.bulkMutate(mutations, connection)) {
+      if (!jdbcService.mutate(mutations, connection)) {
         try {
           connection.rollback();
         } catch (SQLException e) {
@@ -185,6 +185,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         }
         throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
       } else {
+        // TODO: Remove this logging
         logger.info(
             "Mutated (thread_id:{}, username:{}, num_of_mutations:{}) {} ms",
             Thread.currentThread().getId(),
@@ -193,6 +194,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             System.currentTimeMillis() - mutateStart);
         long commitStart = System.currentTimeMillis();
         connection.commit();
+        // TODO: Remove this logging
         logger.info(
             "Committed (thread_id:{}, username:{}, num_of_mutations:{}) {} ms",
             Thread.currentThread().getId(),
