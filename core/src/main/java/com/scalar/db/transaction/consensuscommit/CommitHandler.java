@@ -14,6 +14,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -21,6 +22,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -28,6 +30,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -44,6 +47,7 @@ public class CommitHandler {
   // FIXME
   private final LogRecorder logRecorder;
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+  private final GroupCommitter<String, Snapshot> groupCommitter;
 
   private Optional<LogRecorder> prepareLogRecorder() {
     String replicationDbConfigPath = System.getenv("LOG_RECORDER_REPLICATION_CONFIG");
@@ -79,8 +83,124 @@ public class CommitHandler {
 
     // FIXME: This is only for PoC.
     logRecorder = prepareLogRecorder().orElse(null);
+    // TODO: Make this configurable
+    // TODO: Take care of lazy recovery
+    groupCommitter =
+        new GroupCommitter<>(
+            "coordinator-writer",
+            10,
+            16,
+            5,
+            32,
+            snapshots -> {
+              try {
+                commitStateWithParentTxId(snapshots);
+                for (Snapshot snapshot : snapshots) {
+                  commitRecords(snapshot);
+                }
+              } catch (TransactionException e) {
+                throw new TransactionGroupCommitException(e);
+              }
+            });
   }
 
+  static class TransactionGroupCommitException extends RuntimeException {
+    public TransactionGroupCommitException(TransactionException cause) {
+      super(cause);
+    }
+
+    public TransactionException getTransactionException() {
+      return (TransactionException) getCause();
+    }
+  }
+
+  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+    CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+    groupCommitter.addValue(
+        snapshot.getId(),
+        parentId -> {
+          // TODO?: Immutable
+          snapshot.setParentId(parentId);
+          try {
+            prepareAndValidate(snapshot);
+          } catch (TransactionException e) {
+            throw new TransactionGroupCommitException(e);
+          }
+          return snapshot;
+        },
+        completableFuture);
+
+    try {
+      completableFuture.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    } catch (java.util.concurrent.ExecutionException e) {
+      Throwable cause = e.getCause();
+      if (!(cause instanceof TransactionGroupCommitException)) {
+        // TODO: Revisit this
+        throw new RuntimeException(cause);
+      }
+
+      TransactionGroupCommitException gce = (TransactionGroupCommitException) cause;
+      TransactionException transactionEx = gce.getTransactionException();
+      if (transactionEx instanceof PreparationConflictException) {
+        PreparationConflictException ce = (PreparationConflictException) transactionEx;
+        throw new CommitConflictException(ce.getMessage(), ce, ce.getTransactionId().orElse(null));
+      }
+      if (transactionEx instanceof ValidationConflictException) {
+        ValidationConflictException ce = (ValidationConflictException) transactionEx;
+        throw new CommitConflictException(ce.getMessage(), ce, ce.getTransactionId().orElse(null));
+      }
+      if (transactionEx instanceof CommitConflictException) {
+        CommitConflictException ce = (CommitConflictException) transactionEx;
+        throw new CommitConflictException(ce.getMessage(), ce, ce.getTransactionId().orElse(null));
+      }
+      if (transactionEx instanceof UnknownTransactionStatusException) {
+        throw (UnknownTransactionStatusException) transactionEx;
+      }
+      throw new CommitException(
+          transactionEx.getMessage(), transactionEx, transactionEx.getTransactionId().orElse(null));
+    }
+  }
+
+  public void prepareAndValidate(Snapshot snapshot)
+      throws UnknownTransactionStatusException, ValidationException, PreparationException {
+    Optional<Future<Void>> logRecordFuture;
+    try {
+      logRecordFuture = prepare(snapshot);
+    } catch (PreparationException e) {
+      abortState(snapshot.getId());
+      rollbackRecords(snapshot);
+      throw e;
+    }
+
+    try {
+      validate(snapshot);
+    } catch (ValidationException e) {
+      abortState(snapshot.getId());
+      rollbackRecords(snapshot);
+      throw e;
+    }
+
+    logRecordFuture.ifPresent(
+        logRecord -> {
+          try {
+            logRecord.get();
+          } catch (InterruptedException e) {
+            throw new RuntimeException(
+                String.format(
+                    "Log recording failed due to an interruption. transactionId:%s",
+                    snapshot.getId()),
+                e);
+          } catch (java.util.concurrent.ExecutionException e) {
+            throw new RuntimeException(
+                String.format("Log recording failed. transactionId:%s", snapshot.getId()), e);
+          }
+        });
+  }
+
+  /*
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
     Optional<Future<Void>> logRecordFuture;
     try {
@@ -124,6 +244,7 @@ public class CommitHandler {
     commitState(snapshot);
     commitRecords(snapshot);
   }
+   */
 
   public Optional<Future<Void>> prepare(Snapshot snapshot) throws PreparationException {
     try {
@@ -187,6 +308,57 @@ public class CommitHandler {
           TransactionState state = s.get().getState();
           if (state.equals(TransactionState.ABORTED)) {
             rollbackRecords(snapshot);
+            throw new CommitException(
+                "Committing state in coordinator failed. the transaction is aborted", e, id);
+          }
+        } else {
+          throw new UnknownTransactionStatusException(
+              "Committing state failed with NoMutationException but the coordinator status doesn't exist",
+              e,
+              id);
+        }
+      } catch (CoordinatorException e1) {
+        throw new UnknownTransactionStatusException("Can't get the state", e1, id);
+      }
+    } catch (CoordinatorException e) {
+      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, id);
+    }
+  }
+
+  public void commitStateWithParentTxId(List<Snapshot> snapshots)
+      throws CommitException, UnknownTransactionStatusException {
+    // Validate parent transaction IDs
+    String id = null;
+    for (Snapshot snapshot : snapshots) {
+      if (id == null) {
+        id = snapshot.getParentId();
+      } else {
+        if (!id.equals(snapshot.getParentId())) {
+          throw new AssertionError(
+              String.format(
+                  "Found different parent transaction IDs. prev=%s, new=%s",
+                  id, snapshot.getParentId()));
+        }
+      }
+    }
+    if (id == null) {
+      throw new AssertionError("No parent transaction ID is found");
+    }
+
+    try {
+      Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
+      coordinator.putState(state);
+      logger.debug(
+          "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
+    } catch (CoordinatorConflictException e) {
+      try {
+        Optional<Coordinator.State> s = coordinator.getState(id);
+        if (s.isPresent()) {
+          TransactionState state = s.get().getState();
+          if (state.equals(TransactionState.ABORTED)) {
+            for (Snapshot snapshot : snapshots) {
+              rollbackRecords(snapshot);
+            }
             throw new CommitException(
                 "Committing state in coordinator failed. the transaction is aborted", e, id);
           }
