@@ -10,8 +10,11 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -152,5 +155,57 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   @Override
   public void close() {
     jdbcAdmin.close();
+  }
+
+  @Override
+  public void createUser(String username, @Nullable String password, UserOption... userOption) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void alterUser(String username, @Nullable String password, UserOption... userOption) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void dropUser(String username) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void grant(String username, String namespaceName, Privilege... privileges) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void grant(
+      String username, String namespaceName, String tableName, Privilege... privileges) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void revoke(String username, String namespaceName, Privilege... privileges) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void revoke(
+      String username, String namespaceName, String tableName, Privilege... privileges) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<User> getUsers() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public EnumSet<Privilege> getPrivileges(String username, String namespaceName) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public EnumSet<Privilege> getPrivileges(String username, String namespaceName, String tableName) {
+    throw new UnsupportedOperationException();
   }
 }
