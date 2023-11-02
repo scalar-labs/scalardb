@@ -589,6 +589,7 @@ public class SchemaLoader {
     Either<Path, Properties> config = new Left<>(configPath);
     upgrade(config, options);
   }
+
   /**
    * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
    * you will be requested, as indicated on the release notes, to run this method after updating the
