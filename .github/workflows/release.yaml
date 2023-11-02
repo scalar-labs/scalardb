@@ -6,115 +6,24 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  upload-artifacts:
+    uses: ./.github/workflows/upload-artifacts.yaml
+    secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USER: ${{ secrets.ACR_USER }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      AWS_MARKETPLACE_ROLE_OIDC: ${{ secrets.AWS_MARKETPLACE_ROLE_OIDC }}
+      AWS_MARKETPLACE_ECR_ID: ${{ secrets.AWS_MARKETPLACE_ECR_ID }}
+      SIGNING_SECRET_KEY_RING: ${{ secrets.SIGNING_SECRET_KEY_RING }}
+      SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+      OSSRH_USERNAMAE: ${{ secrets.OSSRH_USERNAMAE }}
+      OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
 
-    steps:
-      - name: Set version
-        id: version
-        run: |
-          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
-          echo ::set-output name=version::${VERSION}
-          MINOR_VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g" | grep -o -E "^[0-9]+\.[0-9]+")
-          echo ::set-output name=minor_version::${MINOR_VERSION}
-          LATEST_VERSION=$(curl -s -u "${{ github.repository_owner }}:${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/scalar-labs/scalardb/tags | jq -r .[].name | sort --version-sort -r | head -n 1 | sed -e "s#v##g")
-          echo ::set-output name=latest_version::${LATEST_VERSION}
-
-      - uses: actions/checkout@v2
-
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Login to Azure Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USER }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Create containers
-        run: ./gradlew docker
-
-      - name: Push containers
-        run: |
-          docker push ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
-          docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
-
-      - name: Push containers to Azure Container Registry
-        run: |
-          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.version }}
-          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.minor_version }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.version }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:${{ steps.version.outputs.minor_version }}
-
-      - name: Push latest tag to Azure Container Registry
-        if: ${{ steps.version.outputs.version == steps.version.outputs.latest_version }}
-        run: |
-          docker tag ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }} ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/scalardb-server:latest
-
-      - name: Upload scalardb, scalardb-server, scalardb-rpc, and scalardb-schema-loader to Maven Central Repository
-        run: |
-          echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
-          ./gradlew publish \
-          -Psigning.keyId="${{ secrets.SIGNING_KEY_ID }}" \
-          -P'signing.password'="${{ secrets.SIGNING_PASSWORD }}" \
-          -Psigning.secretKeyRingFile="$(echo ~/.gradle/secring.gpg)" \
-          -PossrhUsername="${{ secrets.OSSRH_USERNAMAE }}" \
-          -PossrhPassword="${{ secrets.OSSRH_PASSWORD }}"
-
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: true
-          prerelease: false
-
-      - name: Build scalardb-server zip
-        run: ./gradlew :server:distZip
-
-      - name: Upload scalardb-server zip
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: server/build/distributions/scalardb-server-${{ steps.version.outputs.version }}.zip
-          asset_name: scalardb-server-${{ steps.version.outputs.version }}.zip
-          asset_content_type: application/zip
-
-      - name: Build scalardb-schema-loader jar
-        run: ./gradlew :schema-loader:shadowJar
-
-      - name: Upload scalardb-schema-loader jar
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: schema-loader/build/libs/scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
-          asset_name: scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
-          asset_content_type: application/java-archive
+  create-release:
+    needs: upload-artifacts
+    if: ${{ success() }}
+    uses: ./.github/workflows/create-release.yaml
+    secrets:
+      GH_PROJECT_ACCESS_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
