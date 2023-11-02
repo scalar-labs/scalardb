@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class GroupCommitter<K, V> {
+public class GroupCommitter<K, V> {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
   private final BlockingQueue<Itemable<K, V>> queue = new LinkedBlockingQueue<>();
   private final AtomicReference<FetchedValues<K, V>> currentFetchedItems = new AtomicReference<>();
@@ -66,7 +66,7 @@ class GroupCommitter<K, V> {
     }
   }
 
-  GroupCommitter(
+  public GroupCommitter(
       String label,
       long retentionTimeInMillis,
       int numberOfRetentionValues,
@@ -180,7 +180,7 @@ class GroupCommitter<K, V> {
         TimeUnit.MILLISECONDS);
   }
 
-  void addValue(
+  public void addValue(
       K keyCandidate, Function<K, V> valueGeneratorFromUniqueKey, CompletableFuture<Void> future) {
     queue.add(new Item<>(keyCandidate, valueGeneratorFromUniqueKey, future));
   }

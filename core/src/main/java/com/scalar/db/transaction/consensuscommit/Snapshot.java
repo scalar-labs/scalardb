@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 public class Snapshot {
   private static final Logger logger = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
+  private String parentId;
   private final Isolation isolation;
   private final SerializableStrategy strategy;
   private final TransactionTableMetadataManager tableMetadataManager;
@@ -97,7 +98,20 @@ public class Snapshot {
 
   @Nonnull
   public String getId() {
-    return id;
+    if (parentId == null) {
+      return id;
+    } else {
+      return parentId + ":" + id;
+    }
+  }
+
+  @Nullable
+  public String getParentId() {
+    return parentId;
+  }
+
+  public void setParentId(String parentId) {
+    this.parentId = parentId;
   }
 
   @VisibleForTesting
