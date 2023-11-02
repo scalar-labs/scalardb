@@ -71,15 +71,22 @@ public class CrudHandler {
   public Optional<Result> get(Get get) throws CrudException {
     List<String> originalProjections = new ArrayList<>(get.getProjections());
     Snapshot.Key key = new Snapshot.Key(get);
+    readUnread(key, get);
+    return createGetResult(key, originalProjections);
+  }
 
-    if (snapshot.containsKeyInReadSet(key)) {
-      return createGetResult(key, originalProjections);
+  @VisibleForTesting
+  void readUnread(Snapshot.Key key, Get get) throws CrudException {
+    if (!snapshot.containsKeyInReadSet(key)) {
+      read(key, get);
     }
+  }
 
+  private void read(Snapshot.Key key, Get get) throws CrudException {
     Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
       snapshot.put(key, result);
-      return createGetResult(key, originalProjections);
+      return;
     }
     throw new UncommittedRecordException(
         result.get(), "This record needs recovery", snapshot.getId());
@@ -171,7 +178,7 @@ public class CrudHandler {
     Snapshot.Key key = new Snapshot.Key(put);
 
     if (put.getCondition().isPresent()) {
-      readUnread(key);
+      readUnread(key, createGet(key));
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           put, snapshot.getFromReadSet(key).orElse(null));
     }
@@ -183,7 +190,7 @@ public class CrudHandler {
     Snapshot.Key key = new Snapshot.Key(delete);
 
     if (delete.getCondition().isPresent()) {
-      readUnread(key);
+      readUnread(key, createGet(key));
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           delete, snapshot.getFromReadSet(key).orElse(null));
     }
@@ -191,21 +198,26 @@ public class CrudHandler {
     snapshot.put(key, delete);
   }
 
-  @VisibleForTesting
-  void readUnread(Snapshot.Key key) throws CrudException {
-    if (!snapshot.containsKeyInReadSet(key)) {
-      read(key);
+  public void executeImplicitPreReadIfEnabled() throws CrudException {
+    List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
+    for (Put put : snapshot.getPutsInWriteSet()) {
+      if (put.isImplicitPreReadEnabled()) {
+        Snapshot.Key key = new Snapshot.Key(put);
+        if (!snapshot.containsKeyInReadSet(key)) {
+          tasks.add(() -> read(key, createGet(key)));
+        }
+      }
     }
-  }
+    for (Delete delete : snapshot.getDeletesInDeleteSet()) {
+      Snapshot.Key key = new Snapshot.Key(delete);
+      if (!snapshot.containsKeyInReadSet(key)) {
+        tasks.add(() -> read(key, createGet(key)));
+      }
+    }
 
-  private void read(Snapshot.Key key) throws CrudException {
-    Optional<TransactionResult> result = getFromStorage(createGet(key));
-    if (!result.isPresent() || result.get().isCommitted()) {
-      snapshot.put(key, result);
-      return;
+    if (!tasks.isEmpty()) {
+      parallelExecutor.executeImplicitPreRead(tasks, snapshot.getId());
     }
-    throw new UncommittedRecordException(
-        result.get(), "This record needs recovery", snapshot.getId());
   }
 
   private Get createGet(Snapshot.Key key) {
@@ -218,31 +230,10 @@ public class CrudHandler {
     return buildableGet.build();
   }
 
-  public void executeImplicitPreReadIfEnabled() throws CrudException {
-    List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
-    for (Put put : snapshot.getPutsInWriteSet()) {
-      if (put.isImplicitPreReadEnabled()) {
-        Snapshot.Key key = new Snapshot.Key(put);
-        if (!snapshot.containsKeyInReadSet(key)) {
-          tasks.add(() -> read(key));
-        }
-      }
-    }
-    for (Delete delete : snapshot.getDeletesInDeleteSet()) {
-      Snapshot.Key key = new Snapshot.Key(delete);
-      if (!snapshot.containsKeyInReadSet(key)) {
-        tasks.add(() -> read(key));
-      }
-    }
-
-    if (!tasks.isEmpty()) {
-      parallelExecutor.executeImplicitPreRead(tasks, snapshot.getId());
-    }
-  }
-
   // Although this class is not thread-safe, this method is actually thread-safe because the storage
   // is thread-safe
-  private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
+  @VisibleForTesting
+  Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
       get.clearProjections();
       // Retrieve only the after images columns when including the metadata is disabled, otherwise
