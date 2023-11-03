@@ -243,7 +243,7 @@ public class PutBuilderTest {
             .textValue("text", "another_value")
             .value(TextColumn.of("text2", "foo"))
             .condition(condition2)
-            .implicitRreReadEnabled(false)
+            .implicitPreReadEnabled(false)
             .build();
 
     // Assert

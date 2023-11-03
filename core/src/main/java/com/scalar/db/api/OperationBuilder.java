@@ -281,7 +281,7 @@ class OperationBuilder {
     T clearValue(String columnName);
   }
 
-  interface ImplicitRreReadEnabled<T> {
+  interface ImplicitPreReadEnabled<T> {
     /**
      * Disable implicit pre-read for this put operation.
      *
@@ -292,10 +292,10 @@ class OperationBuilder {
     /**
      * Sets whether implicit pre-read is enabled or not for this put operation.
      *
-     * @param implicitRreReadEnabled whether implicit pre-read is enabled or not
+     * @param implicitPreReadEnabled whether implicit pre-read is enabled or not
      * @return the operation builder
      */
-    T implicitRreReadEnabled(boolean implicitRreReadEnabled);
+    T implicitPreReadEnabled(boolean implicitPreReadEnabled);
   }
 
   interface Limit<T> {

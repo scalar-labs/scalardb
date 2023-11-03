@@ -431,7 +431,7 @@ public final class ProtoUtils {
       }
       return buildable
           .consistency(toConsistency(mutation.getConsistency()))
-          .implicitRreReadEnabled(mutation.getImplicitPreReadEnabled())
+          .implicitPreReadEnabled(mutation.getImplicitPreReadEnabled())
           .build();
     } else {
       DeleteBuilder.Buildable buildable =

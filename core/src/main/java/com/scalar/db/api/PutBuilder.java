@@ -9,7 +9,7 @@ import com.scalar.db.api.OperationBuilder.ClearValues;
 import com.scalar.db.api.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.OperationBuilder.Condition;
 import com.scalar.db.api.OperationBuilder.Consistency;
-import com.scalar.db.api.OperationBuilder.ImplicitRreReadEnabled;
+import com.scalar.db.api.OperationBuilder.ImplicitPreReadEnabled;
 import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.api.OperationBuilder.Values;
@@ -78,7 +78,7 @@ public class PutBuilder {
           Consistency<Buildable>,
           Condition<Buildable>,
           Values<Buildable>,
-          ImplicitRreReadEnabled<Buildable> {
+          ImplicitPreReadEnabled<Buildable> {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
@@ -209,8 +209,8 @@ public class PutBuilder {
     }
 
     @Override
-    public Buildable implicitRreReadEnabled(boolean implicitRreReadEnabled) {
-      this.implicitPreReadEnabled = implicitRreReadEnabled;
+    public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
+      this.implicitPreReadEnabled = implicitPreReadEnabled;
       return this;
     }
 
@@ -416,8 +416,8 @@ public class PutBuilder {
     }
 
     @Override
-    public Buildable implicitRreReadEnabled(boolean implicitRreReadEnabled) {
-      super.implicitRreReadEnabled(implicitRreReadEnabled);
+    public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
+      super.implicitPreReadEnabled(implicitPreReadEnabled);
       return this;
     }
   }

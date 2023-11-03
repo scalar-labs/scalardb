@@ -1082,7 +1082,7 @@ public class ProtoUtilsTest {
                 .blobValue("col7", (byte[]) null)
                 .condition(ConditionBuilder.putIfNotExists())
                 .consistency(Consistency.EVENTUAL)
-                .implicitRreReadEnabled(true)
+                .implicitPreReadEnabled(true)
                 .build());
   }
 
@@ -1201,7 +1201,7 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col5").isLessThanOrEqualToDouble(4.56))
                         .build())
                 .consistency(Consistency.EVENTUAL)
-                .implicitRreReadEnabled(true)
+                .implicitPreReadEnabled(true)
                 .build());
   }
 
@@ -1317,7 +1317,7 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col5").isLessThanOrEqualToDouble(4.56))
                         .build())
                 .consistency(Consistency.EVENTUAL)
-                .implicitRreReadEnabled(true)
+                .implicitPreReadEnabled(true)
                 .build());
   }
 
