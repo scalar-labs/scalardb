@@ -228,7 +228,7 @@ public class ConsensusCommitTest {
     consensus.commit();
 
     // Assert
-    verify(crud).executeImplicitPreReadIfEnabled();
+    verify(crud).readIfImplicitPreReadEnabled();
     verify(commit).commit(snapshot);
   }
 
@@ -238,7 +238,7 @@ public class ConsensusCommitTest {
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class).when(crud).executeImplicitPreReadIfEnabled();
+    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled();
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
@@ -250,7 +250,7 @@ public class ConsensusCommitTest {
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).executeImplicitPreReadIfEnabled();
+    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled();
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitException.class);

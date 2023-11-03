@@ -135,7 +135,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   public void prepare() throws PreparationException {
     // Execute implicit pre-read
     try {
-      crud.executeImplicitPreReadIfEnabled();
+      crud.readIfImplicitPreReadEnabled();
     } catch (CrudConflictException e) {
       throw new PreparationConflictException(
           "Conflict occurred while implicit pre-read", e, getId());

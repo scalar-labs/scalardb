@@ -227,7 +227,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.prepare();
 
     // Assert
-    verify(crud).executeImplicitPreReadIfEnabled();
+    verify(crud).readIfImplicitPreReadEnabled();
     verify(commit).prepare(snapshot);
   }
 
@@ -237,7 +237,7 @@ public class TwoPhaseConsensusCommitTest {
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class).when(crud).executeImplicitPreReadIfEnabled();
+    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled();
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
@@ -249,7 +249,7 @@ public class TwoPhaseConsensusCommitTest {
           throws CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).executeImplicitPreReadIfEnabled();
+    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled();
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);

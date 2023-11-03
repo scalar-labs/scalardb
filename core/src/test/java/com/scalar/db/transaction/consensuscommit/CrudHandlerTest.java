@@ -800,7 +800,7 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void executeImplicitPreReadIfEnabled_ShouldCallAppropriateMethods() throws CrudException {
+  public void readIfImplicitPreReadEnabled_ShouldCallAppropriateMethods() throws CrudException {
     // Arrange
     Put put1 = mock(Put.class);
     when(put1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
@@ -837,7 +837,7 @@ public class CrudHandlerTest {
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
 
     // Act
-    handler.executeImplicitPreReadIfEnabled();
+    handler.readIfImplicitPreReadEnabled();
 
     // Assert
     @SuppressWarnings("unchecked")

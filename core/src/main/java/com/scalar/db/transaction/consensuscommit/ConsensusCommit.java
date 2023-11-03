@@ -133,7 +133,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   public void commit() throws CommitException, UnknownTransactionStatusException {
     // Execute implicit pre-read
     try {
-      crud.executeImplicitPreReadIfEnabled();
+      crud.readIfImplicitPreReadEnabled();
     } catch (CrudConflictException e) {
       throw new CommitConflictException("Conflict occurred while implicit pre-read", e, getId());
     } catch (CrudException e) {

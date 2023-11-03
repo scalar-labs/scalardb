@@ -198,7 +198,7 @@ public class CrudHandler {
     snapshot.put(key, delete);
   }
 
-  public void executeImplicitPreReadIfEnabled() throws CrudException {
+  public void readIfImplicitPreReadEnabled() throws CrudException {
     List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
     for (Put put : snapshot.getPutsInWriteSet()) {
       if (put.isImplicitPreReadEnabled()) {
