@@ -691,9 +691,9 @@ Put put =
 
 ##### Disable implicit pre-read for `Put` operations
 
-In Consensus Commit, write operations (`Put` and `Delete`) within a transaction require pre-reading the affected records to obtain the necessary information for the writes. If these records are not explicitly read during the transaction, ScalarDB performs an `implicit pre-read` of the records before committing the transaction.
+In Consensus Commit, an application must read a record before mutating the record with `Put` and `Delete` operations to obtain the latest states of the record in case the record exists. If an application does not read the record explicitly in a transaction, ScalarDB reads the record on behalf of the application before committing the transaction. We call the feature `implicit pre-read`.
 
-If you're certain that a record you're trying to write doesn't exist, you can disable implicit pre-read for the `Put` operation for better performance. A `Put` without implicit pre-read is faster than a regular `Put` as it skips the implicit pre-read. However, if the record does exist, the operation will fail due to a conflict.
+If you are certain that a record you are trying to mutate does not exist, you can disable implicit pre-read for the `Put` operation for better performance. For example, if you load initial data, you can and should disable it. A `Put` without implicit pre-read is faster than a regular `Put` as it skips an unnecessary read. However, if the record exists, the operation will fail due to a conflict, i.e., ScalarDB thinks another transaction writes the record.
 
 You can disable implicit pre-read for a `Put` operation by specifying `disableImplicitPreRead()` in the `Put` operation builder as follows:
 
