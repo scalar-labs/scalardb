@@ -590,4 +590,14 @@ public class SchemaOperatorTest {
     }
     return schema;
   }
+
+  @Test
+  public void upgrade_ShouldCallTransactionAdminProperly() throws Exception {
+    // Act
+    operator.upgrade(options);
+
+    // Assert
+    verify(transactionAdmin).upgrade(options);
+    verifyNoInteractions(storageAdmin);
+  }
 }

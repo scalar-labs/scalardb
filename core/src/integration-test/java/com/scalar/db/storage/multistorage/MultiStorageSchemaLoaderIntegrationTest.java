@@ -80,6 +80,14 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
   }
 
   @Override
+  protected List<String> getCommandArgsForUpgrade(Path configFilePath) {
+    return ImmutableList.<String>builder()
+        .addAll(super.getCommandArgsForUpgrade(configFilePath))
+        .add("--replication-factor=1")
+        .build();
+  }
+
+  @Override
   protected void waitForCreationIfNecessary() {
     // In some of the tests, we modify metadata in one Cassandra cluster session (via the
     // Schema Loader) and verify if such metadata were updated by using another session (via the

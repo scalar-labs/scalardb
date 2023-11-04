@@ -37,4 +37,12 @@ public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
         .add("--no-backup")
         .build();
   }
+
+  @Override
+  protected List<String> getCommandArgsForUpgrade(Path configFilePath) {
+    return ImmutableList.<String>builder()
+        .addAll(super.getCommandArgsForUpgrade(configFilePath))
+        .add("--no-backup")
+        .build();
+  }
 }
