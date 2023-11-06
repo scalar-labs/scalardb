@@ -25,6 +25,7 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter.GroupCommitException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -32,7 +33,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -87,23 +87,30 @@ public class CommitHandler {
     logRecorder = prepareLogRecorder().orElse(null);
     // TODO: Make this configurable
     // TODO: Take care of lazy recovery
-    groupCommitter =
-        new GroupCommitter<>(
-            "coordinator-writer",
-            10,
-            16,
-            5,
-            32,
-            snapshots -> {
-              try {
-                commitStateWithParentTxId(snapshots);
-                for (Snapshot snapshot : snapshots) {
-                  commitRecords(snapshot);
+    if ("true".equalsIgnoreCase(System.getenv("LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED"))) {
+      groupCommitter =
+          new GroupCommitter<>(
+              "coordinator-writer",
+              10,
+              16,
+              5,
+              32,
+              snapshots -> {
+                try {
+                  commitStateWithParentTxId(snapshots);
+                  for (Snapshot snapshot : snapshots) {
+                    commitRecords(snapshot);
+                  }
+                } catch (TransactionException e) {
+                  throw new TransactionGroupCommitException(e);
+                } catch (Throwable e) {
+                  logger.error("Failed to group-commit", e);
+                  throw e;
                 }
-              } catch (TransactionException e) {
-                throw new TransactionGroupCommitException(e);
-              }
-            });
+              });
+    } else {
+      groupCommitter = null;
+    }
   }
 
   static class TransactionGroupCommitException extends RuntimeException {
@@ -117,93 +124,105 @@ public class CommitHandler {
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-    groupCommitter.addValue(
-        snapshot.getId(),
-        parentId -> {
-          // TODO?: Immutable
-          snapshot.setParentId(parentId);
-          try {
-            prepareAndValidate(snapshot);
-          } catch (TransactionException e) {
-            throw new TransactionGroupCommitException(e);
-          }
-          return snapshot;
-        },
-        completableFuture);
+    if (groupCommitter == null) {
+      normalCommit(snapshot);
+    } else {
+      groupCommit(snapshot);
+    }
+  }
 
+  private void groupCommit(Snapshot snapshot)
+      throws CommitException, UnknownTransactionStatusException {
+    String transactionId = snapshot.getId();
     try {
-      completableFuture.get();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    } catch (java.util.concurrent.ExecutionException e) {
+      groupCommitter.addValue(
+          snapshot.getId(),
+          parentId -> {
+            // TODO?: Immutable
+            snapshot.setParentId(parentId);
+            try {
+              prepareAndValidate(snapshot);
+            } catch (TransactionException e) {
+              throw new TransactionGroupCommitException(e);
+            }
+            return snapshot;
+          });
+    } catch (GroupCommitException e) {
       Throwable cause = e.getCause();
       if (!(cause instanceof TransactionGroupCommitException)) {
         // TODO: Revisit this
         throw new RuntimeException(cause);
       }
-
       TransactionGroupCommitException gce = (TransactionGroupCommitException) cause;
       TransactionException transactionEx = gce.getTransactionException();
       if (transactionEx instanceof PreparationConflictException) {
         PreparationConflictException ce = (PreparationConflictException) transactionEx;
-        throw new CommitConflictException(ce.getMessage(), ce, ce.getTransactionId().orElse(null));
+        throw new CommitConflictException(ce.getMessage(), ce, transactionId);
       }
       if (transactionEx instanceof ValidationConflictException) {
         ValidationConflictException ce = (ValidationConflictException) transactionEx;
-        throw new CommitConflictException(ce.getMessage(), ce, ce.getTransactionId().orElse(null));
+        throw new CommitConflictException(ce.getMessage(), ce, transactionId);
       }
       if (transactionEx instanceof CommitConflictException) {
         CommitConflictException ce = (CommitConflictException) transactionEx;
-        throw new CommitConflictException(ce.getMessage(), ce, ce.getTransactionId().orElse(null));
+        throw new CommitConflictException(ce.getMessage(), ce, transactionId);
       }
       if (transactionEx instanceof UnknownTransactionStatusException) {
         throw (UnknownTransactionStatusException) transactionEx;
       }
-      throw new CommitException(
-          transactionEx.getMessage(), transactionEx, transactionEx.getTransactionId().orElse(null));
+      throw new CommitException(transactionEx.getMessage(), transactionEx, transactionId);
+    } catch (Throwable e) {
+      throw new CommitException("Failed to buffer a snapshot for group-commit", e, transactionId);
     }
   }
 
-  public void prepareAndValidate(Snapshot snapshot)
-      throws UnknownTransactionStatusException, ValidationException, PreparationException {
-    Optional<Future<Void>> logRecordFuture;
+  public void prepareAndValidate(Snapshot snapshot) throws TransactionException {
+    String transactionIdOnCoordinator =
+        snapshot.getParentId() != null ? snapshot.getParentId() : snapshot.getId();
+    Optional<Future<Void>> optLogRecordFuture;
     try {
-      logRecordFuture = prepare(snapshot);
+      optLogRecordFuture = prepare(snapshot);
     } catch (PreparationException e) {
-      abortState(snapshot.getId());
+      abortState(transactionIdOnCoordinator);
       rollbackRecords(snapshot);
+      throw e;
+    } catch (Throwable e) {
+      logger.error("Failed to prepare", e);
       throw e;
     }
 
     try {
       validate(snapshot);
     } catch (ValidationException e) {
-      abortState(snapshot.getId());
+      abortState(transactionIdOnCoordinator);
       rollbackRecords(snapshot);
+      throw e;
+    } catch (Throwable e) {
+      logger.error("Failed to validate", e);
       throw e;
     }
 
-    logRecordFuture.ifPresent(
-        logRecord -> {
-          try {
-            logRecord.get();
-          } catch (InterruptedException e) {
-            throw new RuntimeException(
-                String.format(
-                    "Log recording failed due to an interruption. transactionId:%s",
-                    snapshot.getId()),
-                e);
-          } catch (java.util.concurrent.ExecutionException e) {
-            throw new RuntimeException(
-                String.format("Log recording failed. transactionId:%s", snapshot.getId()), e);
-          }
-        });
+    // FIXME: Move this before validate
+    if (optLogRecordFuture.isPresent()) {
+      Future<Void> logRecordFuture = optLogRecordFuture.get();
+      try {
+        logRecordFuture.get();
+      } catch (InterruptedException e) {
+        throw new RuntimeException(
+            String.format(
+                "Log recording failed due to an interruption. transactionId:%s", snapshot.getId()),
+            e);
+      } catch (java.util.concurrent.ExecutionException e) {
+        throw new TransactionException("Log recording failed", e, snapshot.getId());
+      } catch (Throwable e) {
+        logger.error("Failed to replicate data", e);
+        throw e;
+      }
+    }
   }
 
-  /*
-  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+  private void normalCommit(Snapshot snapshot)
+      throws CommitException, UnknownTransactionStatusException {
     Optional<Future<Void>> logRecordFuture;
     try {
       logRecordFuture = prepare(snapshot);
@@ -246,7 +265,6 @@ public class CommitHandler {
     commitState(snapshot);
     commitRecords(snapshot);
   }
-   */
 
   public Optional<Future<Void>> prepare(Snapshot snapshot) throws PreparationException {
     try {
