@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -55,6 +56,7 @@ public class GroupCommitter<K, V> {
     }
   }
 
+  // TODO: Rename to BufferedValues?
   static class FetchedValues<K, V> {
     public final K key;
     public final List<ValueAndFuture<V>> values = new ArrayList<>();
@@ -63,6 +65,16 @@ public class GroupCommitter<K, V> {
     public FetchedValues(K key, Long createdAtInMilli) {
       this.key = key;
       this.createdAtInMilli = createdAtInMilli;
+    }
+  }
+
+  public static class GroupCommitException extends Exception {
+    public GroupCommitException(String message) {
+      super(message);
+    }
+
+    public GroupCommitException(String message, Throwable cause) {
+      super(message, cause);
     }
   }
 
@@ -98,7 +110,7 @@ public class GroupCommitter<K, V> {
             1,
             new ThreadFactoryBuilder()
                 .setDaemon(true)
-                .setNameFormat(label + "-group-commit-watch-%d")
+                .setNameFormat(label + "-group-commit-expire-%d")
                 .build());
 
     startDequeueExecutorService();
@@ -134,35 +146,52 @@ public class GroupCommitter<K, V> {
     }
   }
 
+  private void handleItem(Itemable<K, V> itemable) {
+    if (itemable instanceof Item) {
+      Item<K, V> item = (Item<K, V>) itemable;
+      FetchedValues<K, V> fetchedValues =
+          currentFetchedItems.updateAndGet(
+              current -> {
+                if (current == null) {
+                  return new FetchedValues<>(item.keyCandidate, System.currentTimeMillis());
+                }
+                return current;
+              });
+      // All values in a queue need to use the same unique key for partition key.
+      V value;
+      try {
+        value = item.valueGenerator.apply(fetchedValues.key);
+      } catch (Throwable e) {
+        logger.error(
+            "Failed to handle an item for group commit. Making the item fail. item: " + item, e);
+        List<ValueAndFuture<V>> values = currentFetchedItems.getAndSet(null).values;
+        if (!values.isEmpty()) {
+          logger.error(
+              "Removing current fetched items since it has a key associated with the failure. But the current fetched items isn't empty. values:{}",
+              values);
+        }
+        item.future.completeExceptionally(e);
+        return;
+      }
+      fetchedValues.values.add(new ValueAndFuture<>(value, item.future));
+      emitFetchedItemsIfNeeded(fetchedValues);
+    } else if (itemable instanceof WakeupItem) {
+      FetchedValues<K, V> fetchedValues = currentFetchedItems.get();
+      if (fetchedValues != null) {
+        // FIXME: Wrap an exception
+        emitFetchedItemsIfNeeded(fetchedValues);
+      }
+    } else {
+      logger.error("Fetched an unexpected item. Skipping " + itemable);
+    }
+  }
+
   private void startDequeueExecutorService() {
     dequeueExecutorService.submit(
         () -> {
           while (true) {
             try {
-              Itemable<K, V> itemable = queue.take();
-              if (itemable instanceof Item) {
-                Item<K, V> item = (Item<K, V>) itemable;
-                FetchedValues<K, V> fetchedValues =
-                    currentFetchedItems.updateAndGet(
-                        current -> {
-                          if (current == null) {
-                            return new FetchedValues<>(
-                                item.keyCandidate, System.currentTimeMillis());
-                          }
-                          return current;
-                        });
-                // All values in a queue need to use the same unique key for partition key.
-                V value = item.valueGenerator.apply(fetchedValues.key);
-                fetchedValues.values.add(new ValueAndFuture<>(value, item.future));
-                emitFetchedItemsIfNeeded(fetchedValues);
-              } else if (itemable instanceof WakeupItem) {
-                FetchedValues<K, V> fetchedValues = currentFetchedItems.get();
-                if (fetchedValues != null) {
-                  emitFetchedItemsIfNeeded(fetchedValues);
-                }
-              } else {
-                throw new AssertionError();
-              }
+              handleItem(queue.take());
             } catch (InterruptedException e) {
               Thread.currentThread().interrupt();
               logger.warn("Interrupted", e);
@@ -180,14 +209,30 @@ public class GroupCommitter<K, V> {
         TimeUnit.MILLISECONDS);
   }
 
-  public void addValue(
-      K keyCandidate, Function<K, V> valueGeneratorFromUniqueKey, CompletableFuture<Void> future) {
+  public void addValue(K keyCandidate, Function<K, V> valueGeneratorFromUniqueKey)
+      throws GroupCommitException {
+    CompletableFuture<Void> future = new CompletableFuture<>();
     queue.add(new Item<>(keyCandidate, valueGeneratorFromUniqueKey, future));
+    try {
+      long start = System.currentTimeMillis();
+      logger.info("Wait start(thread_id:{})", Thread.currentThread().getId());
+      future.get();
+      logger.info(
+          "Wait end(thread_id:{}): {} ms",
+          Thread.currentThread().getId(),
+          System.currentTimeMillis() - start);
+    } catch (ExecutionException e) {
+      throw new GroupCommitException("Failed to group-commit", e.getCause());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("Interrupted", e);
+    }
   }
 
   void emitIfExpired() {
     FetchedValues<K, V> fetchedValues = currentFetchedItems.get();
     if (fetchedValues != null
+        && !fetchedValues.values.isEmpty()
         && fetchedValues.createdAtInMilli + retentionTimeInMillis < System.currentTimeMillis()) {
       queue.add(new WakeupItem<>());
     }
