@@ -23,26 +23,15 @@ Select your preferred method to set up Schema Loader, and follow the instruction
 
 <div id="tabset-1">
 <div class="tab">
-  <button class="tablinks" onclick="openTab(event, 'Download', 'tabset-1')" id="defaultOpen-1">Download</button>
-  <button class="tablinks" onclick="openTab(event, 'Build', 'tabset-1')">Build</button>
-  <button class="tablinks" onclick="openTab(event, 'Docker', 'tabset-1')">Docker</button>
+  <button class="tablinks" onclick="openTab(event, 'Fat_JAR', 'tabset-1')" id="defaultOpen-1">Fat JAR</button>
+  <button class="tablinks" onclick="openTab(event, 'Docker_container', 'tabset-1')">Docker container</button>
 </div>
 
-<div id="Download" class="tabcontent" markdown="1">
+<div id="Fat_JAR" class="tabcontent" markdown="1">
 
 You can download the release versions of Schema Loader from the [ScalarDB Releases](https://github.com/scalar-labs/scalardb/releases) page.
 </div>
-<div id="Build" class="tabcontent" markdown="1">
-
-If you want to build Schema Loader from the source, run the following command:
-
-```console
-$ ./gradlew schema-loader:shadowJar
-```
-
-Running that command builds a fat JAR file named `scalardb-schema-loader-<VERSION>.jar` in the `schema-loader/build/libs` folder, with `<VERSION>` matching the version of ScalarDB that you are using.
-</div>
-<div id="Docker" class="tabcontent" markdown="1">
+<div id="Docker_container" class="tabcontent" markdown="1">
 
 You can pull the Docker image from the [Scalar container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader) by running the following command, replacing the contents in the angle brackets as described:
 
@@ -245,7 +234,7 @@ To create namespaces and tables by using a properties file, run the following co
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator]
 ```
 
-If `--coordinator` is specified, a Coordinator table will be created.
+If `--coordinator` is specified, a [Coordinator table](api-guide.md#specify-operations-for-the-coordinator-table) will be created.
 
 {% capture notice--info %}
 **Note**
