@@ -1,0 +1,61 @@
+name: Merge release notes
+
+on:
+  workflow_dispatch:
+
+jobs:
+  merge-release-notes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set version
+        id: version
+        run: |
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
+          echo $VERSION
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: "11"
+
+      - name: Checkout release note scripts
+        uses: actions/checkout@v4
+        with:
+          repository: scalar-labs/actions
+          token: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+          path: ${{ github.workspace }}
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            release-note-script/src/main/java
+
+      - name: Move scripts to the working directory
+        run: cp ${{ github.workspace }}/release-note-script/src/main/java/* ${{ github.workspace }}
+
+      - name: Checkout the ScalarDB's release notes
+        run: |
+          gh release view v${{ steps.version.outputs.version }} --repo scalar-labs/scalardb --json body -q .body > scalardb.md
+          gh release view v${{ steps.version.outputs.version }} --repo scalar-labs/scalardb-cluster --json body -q .body > cluster.md
+          gh release view v${{ steps.version.outputs.version }} --repo scalar-labs/scalardb-graphql --json body -q .body > graphql.md
+          gh release view v${{ steps.version.outputs.version }} --repo scalar-labs/scalardb-sql --json body -q .body > sql.md
+        env:
+          GH_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+
+      - name: Create merged release note body
+        id: rn_body
+        run: |
+          java MergeReleaseNotes.java > rnbody.md
+
+      - name: Update release body
+        id: update_release_body
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          bodyFile: ./rnbody.md
+          name: v${{ steps.version.outputs.version }}
+          tag: v${{ steps.version.outputs.version }}
+          token: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+          draft: true
+          prerelease: true
