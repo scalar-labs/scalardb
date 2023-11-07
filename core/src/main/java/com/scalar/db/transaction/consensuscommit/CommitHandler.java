@@ -40,6 +40,11 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class CommitHandler {
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
+
   private static final Logger logger = LoggerFactory.getLogger(CommitHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
@@ -72,6 +77,41 @@ public class CommitHandler {
         new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository));
   }
 
+  private Optional<GroupCommitter<String, Snapshot>> prepareGroupCommitter() {
+    // TODO: Make this configurable
+    // TODO: Take care of lazy recovery
+    if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
+      return Optional.empty();
+    }
+
+    int groupCommitNumOfRetentionValues = 32;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
+      groupCommitNumOfRetentionValues =
+          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
+    }
+
+    return Optional.of(
+        new GroupCommitter<>(
+            "coordinator-writer",
+            10,
+            groupCommitNumOfRetentionValues,
+            5,
+            32,
+            snapshots -> {
+              try {
+                commitStateWithParentTxId(snapshots);
+                for (Snapshot snapshot : snapshots) {
+                  commitRecords(snapshot);
+                }
+              } catch (TransactionException e) {
+                throw new TransactionGroupCommitException(e);
+              } catch (Throwable e) {
+                logger.error("Failed to group-commit", e);
+                throw e;
+              }
+            }));
+  }
+
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
@@ -83,34 +123,9 @@ public class CommitHandler {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
 
-    // FIXME: This is only for PoC.
+    // FIXME: These are only for PoC.
     logRecorder = prepareLogRecorder().orElse(null);
-    // TODO: Make this configurable
-    // TODO: Take care of lazy recovery
-    if ("true".equalsIgnoreCase(System.getenv("LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED"))) {
-      groupCommitter =
-          new GroupCommitter<>(
-              "coordinator-writer",
-              10,
-              16,
-              5,
-              32,
-              snapshots -> {
-                try {
-                  commitStateWithParentTxId(snapshots);
-                  for (Snapshot snapshot : snapshots) {
-                    commitRecords(snapshot);
-                  }
-                } catch (TransactionException e) {
-                  throw new TransactionGroupCommitException(e);
-                } catch (Throwable e) {
-                  logger.error("Failed to group-commit", e);
-                  throw e;
-                }
-              });
-    } else {
-      groupCommitter = null;
-    }
+    groupCommitter = prepareGroupCommitter().orElse(null);
   }
 
   static class TransactionGroupCommitException extends RuntimeException {
@@ -177,13 +192,11 @@ public class CommitHandler {
   }
 
   public void prepareAndValidate(Snapshot snapshot) throws TransactionException {
-    String transactionIdOnCoordinator =
-        snapshot.getParentId() != null ? snapshot.getParentId() : snapshot.getId();
     Optional<Future<Void>> optLogRecordFuture;
     try {
       optLogRecordFuture = prepare(snapshot);
     } catch (PreparationException e) {
-      abortState(transactionIdOnCoordinator);
+      abortState(snapshot.getId());
       rollbackRecords(snapshot);
       throw e;
     } catch (Throwable e) {
@@ -194,7 +207,7 @@ public class CommitHandler {
     try {
       validate(snapshot);
     } catch (ValidationException e) {
-      abortState(transactionIdOnCoordinator);
+      abortState(snapshot.getId());
       rollbackRecords(snapshot);
       throw e;
     } catch (Throwable e) {
