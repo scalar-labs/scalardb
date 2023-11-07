@@ -25,6 +25,7 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter.GroupCommitCascadeException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter.GroupCommitException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
@@ -162,11 +163,12 @@ public class CommitHandler {
             }
             return snapshot;
           });
+    } catch (GroupCommitCascadeException e) {
+      throw new CommitConflictException(e.getMessage(), e, transactionId);
     } catch (GroupCommitException e) {
       Throwable cause = e.getCause();
       if (!(cause instanceof TransactionGroupCommitException)) {
-        // TODO: Revisit this
-        throw new RuntimeException(cause);
+        throw new CommitException(cause.getMessage(), cause, transactionId);
       }
       TransactionGroupCommitException gce = (TransactionGroupCommitException) cause;
       TransactionException transactionEx = gce.getTransactionException();

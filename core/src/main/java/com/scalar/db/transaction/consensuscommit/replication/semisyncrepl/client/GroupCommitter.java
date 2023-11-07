@@ -80,6 +80,12 @@ public class GroupCommitter<K, V> {
     }
   }
 
+  public static class GroupCommitCascadeException extends Exception {
+    public GroupCommitCascadeException(String message, Throwable cause) {
+      super(message, cause);
+    }
+  }
+
   public GroupCommitter(
       String label,
       long retentionTimeInMillis,
@@ -164,16 +170,15 @@ public class GroupCommitter<K, V> {
       try {
         value = item.valueGenerator.apply(fetchedValues.key);
       } catch (Throwable e) {
-        logger.error(
-            "Failed to handle an item for group commit. Making the item fail. item: " + item, e);
+        logger.error("Failed to prepare an item for group commit. item: {}", item, e);
         item.future.completeExceptionally(e);
         List<ValueAndFuture<V>> values = currentFetchedItems.getAndSet(null).values;
         if (!values.isEmpty()) {
-          GroupCommitException gce =
-              new GroupCommitException(
+          GroupCommitCascadeException gcce =
+              new GroupCommitCascadeException(
                   "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
                   e);
-          fetchedValues.values.forEach(vf -> vf.future.completeExceptionally(gce));
+          fetchedValues.values.forEach(vf -> vf.future.completeExceptionally(gcce));
         }
         return;
       }
@@ -214,7 +219,7 @@ public class GroupCommitter<K, V> {
   }
 
   public void addValue(K keyCandidate, Function<K, V> valueGeneratorFromUniqueKey)
-      throws GroupCommitException {
+      throws GroupCommitException, GroupCommitCascadeException {
     CompletableFuture<Void> future = new CompletableFuture<>();
     queue.add(new Item<>(keyCandidate, valueGeneratorFromUniqueKey, future));
     try {
@@ -226,6 +231,11 @@ public class GroupCommitter<K, V> {
           Thread.currentThread().getId(),
           System.currentTimeMillis() - start);
     } catch (ExecutionException e) {
+      if (e.getCause() instanceof GroupCommitCascadeException) {
+        throw (GroupCommitCascadeException) e.getCause();
+      } else if (e.getCause() instanceof GroupCommitException) {
+        throw (GroupCommitException) e.getCause();
+      }
       throw new GroupCommitException("Failed to group-commit", e.getCause());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
