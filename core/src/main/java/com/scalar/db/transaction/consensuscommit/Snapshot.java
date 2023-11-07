@@ -182,7 +182,8 @@ public class Snapshot {
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException("Getting a table metadata failed", e, id);
+      // For PoC
+      throw new CrudException("Getting a table metadata failed", e, getId());
     }
   }
 
@@ -443,7 +444,9 @@ public class Snapshot {
               for (Result result : scanner) {
                 TransactionResult transactionResult = new TransactionResult(result);
                 // Ignore records that this transaction has prepared (and that are in the write set)
-                if (transactionResult.getId() != null && transactionResult.getId().equals(id)) {
+                // FIXME: Only for PoC
+                if (transactionResult.getId() != null
+                    && transactionResult.getId().equals(getId())) {
                   continue;
                 }
                 currentReadMap.put(new Key(scan, result), transactionResult);
@@ -529,11 +532,14 @@ public class Snapshot {
   private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
     throw new PreparationConflictException(
         "Reading empty records might cause write skew anomaly so aborting the transaction for safety",
-        id);
+        // For PoC
+        getId());
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
-    throw new ValidationConflictException("Anti-dependency found. Aborting the transaction", id);
+    // For PoC
+    throw new ValidationConflictException(
+        "Anti-dependency found. Aborting the transaction", getId());
   }
 
   private boolean isExtraReadEnabled() {

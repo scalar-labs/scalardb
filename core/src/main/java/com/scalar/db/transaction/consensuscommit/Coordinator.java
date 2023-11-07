@@ -60,8 +60,12 @@ public class Coordinator {
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
   }
 
+  private String getTxIdForState(String txId) {
+    return txId.split(":")[0];
+  }
+
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
-    Get get = createGetWith(id);
+    Get get = createGetWith(getTxIdForState(id));
     return get(get);
   }
 
@@ -99,7 +103,7 @@ public class Coordinator {
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    return new Put(new Key(Attribute.toIdValue(state.getId())))
+    return new Put(new Key(Attribute.toIdValue(getTxIdForState(state.getId()))))
         .withValue(Attribute.toStateValue(state.getState()))
         .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
         .withConsistency(Consistency.LINEARIZABLE)
