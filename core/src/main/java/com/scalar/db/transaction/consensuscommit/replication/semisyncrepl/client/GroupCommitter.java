@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +55,11 @@ public class GroupCommitter<K, V> {
       this.value = value;
       this.future = future;
     }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this).add("value", value).add("future", future).toString();
+    }
   }
 
   // TODO: Rename to BufferedValues?
@@ -69,10 +75,6 @@ public class GroupCommitter<K, V> {
   }
 
   public static class GroupCommitException extends Exception {
-    public GroupCommitException(String message) {
-      super(message);
-    }
-
     public GroupCommitException(String message, Throwable cause) {
       super(message, cause);
     }
@@ -164,13 +166,15 @@ public class GroupCommitter<K, V> {
       } catch (Throwable e) {
         logger.error(
             "Failed to handle an item for group commit. Making the item fail. item: " + item, e);
+        item.future.completeExceptionally(e);
         List<ValueAndFuture<V>> values = currentFetchedItems.getAndSet(null).values;
         if (!values.isEmpty()) {
-          logger.error(
-              "Removing current fetched items since it has a key associated with the failure. But the current fetched items isn't empty. values:{}",
-              values);
+          GroupCommitException gce =
+              new GroupCommitException(
+                  "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
+                  e);
+          fetchedValues.values.forEach(vf -> vf.future.completeExceptionally(gce));
         }
-        item.future.completeExceptionally(e);
         return;
       }
       fetchedValues.values.add(new ValueAndFuture<>(value, item.future));
