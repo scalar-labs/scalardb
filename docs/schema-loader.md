@@ -46,12 +46,6 @@ You can specify the same command arguments even if you use the fat JAR or the co
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
-
-You can also build the Docker image as follows by running the following command:
-
-```console
-$ ./gradlew schema-loader:docker
-```
 </div>
 </div>
 
