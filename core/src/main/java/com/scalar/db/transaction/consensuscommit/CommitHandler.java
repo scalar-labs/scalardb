@@ -22,9 +22,9 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter.GroupCommitCascadeException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter.GroupCommitException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitCascadeException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.GroupCommitter2;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -53,7 +53,7 @@ public class CommitHandler {
   // FIXME
   private final LogRecorder logRecorder;
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-  private final GroupCommitter<String, Snapshot> groupCommitter;
+  private final GroupCommitter2<String, Snapshot> groupCommitter;
 
   private Optional<LogRecorder> prepareLogRecorder() {
     String replicationDbConfigPath = System.getenv("LOG_RECORDER_REPLICATION_CONFIG");
@@ -76,7 +76,7 @@ public class CommitHandler {
         new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository));
   }
 
-  private Optional<GroupCommitter<String, Snapshot>> prepareGroupCommitter() {
+  private Optional<GroupCommitter2<String, Snapshot>> prepareGroupCommitter() {
     // TODO: Make this configurable
     // TODO: Take care of lazy recovery
     if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
@@ -90,7 +90,7 @@ public class CommitHandler {
     }
 
     return Optional.of(
-        new GroupCommitter<>(
+        new GroupCommitter2<>(
             "coordinator-writer",
             10,
             groupCommitNumOfRetentionValues,
