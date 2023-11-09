@@ -74,18 +74,6 @@ public class GroupCommitter<K, V> {
     }
   }
 
-  public static class GroupCommitException extends Exception {
-    public GroupCommitException(String message, Throwable cause) {
-      super(message, cause);
-    }
-  }
-
-  public static class GroupCommitCascadeException extends Exception {
-    public GroupCommitCascadeException(String message, Throwable cause) {
-      super(message, cause);
-    }
-  }
-
   public GroupCommitter(
       String label,
       long retentionTimeInMillis,
