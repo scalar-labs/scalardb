@@ -83,7 +83,6 @@ public class GroupCommitter2<K, V> {
     private final AtomicBoolean done = new AtomicBoolean();
     private final List<ValueSlot<K, V>> valueSlots;
     private final Set<ValueSlot<K, V>> readyValueSlots;
-    private int nextIndex = 0;
 
     BufferedValues(
         ExecutorService executorService,
@@ -97,18 +96,16 @@ public class GroupCommitter2<K, V> {
       this.expiredAt = Instant.now().plusMillis(retentionTimeInMillis);
       this.key = key;
       this.valueSlots = new ArrayList<>(capacity);
-      for (int i = 0; i < capacity; i++) {
-        valueSlots.set(i, new ValueSlot<>(this));
-      }
       this.readyValueSlots = new HashSet<>(capacity);
     }
 
     public synchronized boolean noMoreSlot() {
-      return nextIndex > capacity - 1;
+      return valueSlots.size() >= capacity;
     }
 
     public synchronized ValueSlot<K, V> getValueSlot() {
-      ValueSlot<K, V> valueSlot = valueSlots.get(nextIndex++);
+      ValueSlot<K, V> valueSlot = new ValueSlot<>(this);
+      valueSlots.add(valueSlot);
       if (noMoreSlot()) {
         size = capacity;
       }
@@ -117,7 +114,7 @@ public class GroupCommitter2<K, V> {
 
     public synchronized void fixSize() {
       // Current ValueSlot that `index` is pointing is not used yet.
-      size = nextIndex;
+      size = valueSlots.size();
       emitIfReady();
     }
 
@@ -225,7 +222,7 @@ public class GroupCommitter2<K, V> {
       // Already expired. Nothing to do
     } else {
       Instant now = Instant.now();
-      if (now.isBefore(bufferedValues.expiredAt)) {
+      if (now.isAfter(bufferedValues.expiredAt)) {
         // Expired
         bufferedValues.fixSize();
       } else {
@@ -269,7 +266,7 @@ public class GroupCommitter2<K, V> {
   }
 
   private synchronized ValueSlot<K, V> getValueSlot(K keyCandidate) {
-    if (bufferedValues == null || bufferedValues.noMoreSlot()) {
+    if (bufferedValues == null || bufferedValues.noMoreSlot() || bufferedValues.isDone()) {
       bufferedValues =
           new BufferedValues<>(
               emitExecutorService,
