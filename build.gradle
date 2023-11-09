@@ -38,7 +38,7 @@ subprojects {
         annotationVersion = '1.3.2'
         picocliVersion = '4.7.5'
         scalarAdminVersion = '2.1.2'
-        dropwizardMetricsVersion = '4.2.21'
+        dropwizardMetricsVersion = '4.2.22'
         prometheusVersion = '0.16.0'
         commonsTextVersion = '1.11.0'
         jettyVersion = '9.4.53.v20231009'
