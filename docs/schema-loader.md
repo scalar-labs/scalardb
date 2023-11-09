@@ -36,13 +36,13 @@ You can download the release versions of Schema Loader from the [ScalarDB Releas
 You can pull the Docker image from the [Scalar container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader) by running the following command, replacing the contents in the angle brackets as described:
 
 ```console
-$ docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_YOUR_LOCAL_PROPERTIES_FILE>:<PATH_TO_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION> <COMMAND_ARGUMENTS>
+$ docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_LOCAL_SCALARDB_PROPERTIES_FILE>:<PATH_TO_SCALARDB_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION> <COMMAND_ARGUMENTS>
 ```
 
 {% capture notice--info %}
 **Note**
 
-You can specify the same command arguments even if you use the fat JAR or the container. In the [Available commands](#available-commands) section, the JAR is used, but you can run the commands by using the container in the same way by replacing `java -jar scalardb-schema-loader-<VERSION>.jar` with `docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_YOUR_LOCAL_PROPERTIES_FILE>:<PATH_TO_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION>`.
+You can specify the same command arguments even if you use the fat JAR or the container. In the [Available commands](#available-commands) section, the JAR is used, but you can run the commands by using the container in the same way by replacing `java -jar scalardb-schema-loader-<VERSION>.jar` with `docker run --rm -v <PATH_TO_YOUR_LOCAL_SCHEMA_FILE>:<PATH_TO_SCHEMA_FILE_DOCKER> [-v <PATH_TO_LOCAL_SCALARDB_PROPERTIES_FILE>:<PATH_TO_SCALARDB_PROPERTIES_FILE_IN_DOCKER>] ghcr.io/scalar-labs/scalardb-schema-loader:<VERSION>`.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
@@ -225,7 +225,7 @@ Create/Delete JDBC schemas
 To create namespaces and tables by using a properties file, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator]
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator]
 ```
 
 If `--coordinator` is specified, a [Coordinator table](api-guide.md#specify-operations-for-the-coordinator-table) will be created.
@@ -290,7 +290,7 @@ You can use a command to add new columns to and create or delete a secondary ind
 To add new colums to and create or delete a secondary index for existing tables, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> --alter
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> --alter
 ```
 
 {% capture notice--info %}
@@ -340,7 +340,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 You can delete tables by using the properties file. To delete tables, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] -D 
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] -D 
 ```
 
 If `--coordinator` is specified, the Coordinator table will be deleted as well.
@@ -392,7 +392,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 You can repair the table metadata of existing tables by using the properties file. To repair table metadata of existing tables, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
-$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] --repair-all 
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] --repair-all 
 ```
 
 If `--coordinator` is specified, the Coordinator table will be repaired as well. In addition, if you're using Cosmos DB for NoSQL, running this command will also repair stored procedures attached to each table.
