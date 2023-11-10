@@ -99,9 +99,7 @@ public class CommitHandler {
             snapshots -> {
               try {
                 commitStateWithParentTxId(snapshots);
-                for (Snapshot snapshot : snapshots) {
-                  commitRecords(snapshot);
-                }
+                snapshots.parallelStream().forEach(this::commitRecords);
               } catch (TransactionException e) {
                 throw new TransactionGroupCommitException(e);
               } catch (Throwable e) {
