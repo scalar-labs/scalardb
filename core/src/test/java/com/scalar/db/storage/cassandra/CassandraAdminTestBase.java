@@ -27,6 +27,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction;
 import com.datastax.driver.core.schemabuilder.SchemaStatement;
 import com.datastax.driver.core.schemabuilder.TableOptions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
@@ -836,5 +837,136 @@ public abstract class CassandraAdminTestBase {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void repairNamespace_WithoutOptions_ShouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+
+    // Act
+    cassandraAdmin.repairNamespace(namespace, Collections.emptyMap());
+
+    // Assert
+    Map<String, Object> replicationOptions = new LinkedHashMap<>();
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("replication_factor", "3");
+    KeyspaceOptions query =
+        SchemaBuilder.createKeyspace(namespace)
+            .ifNotExists()
+            .with()
+            .replication(replicationOptions);
+    verify(cassandraSession).execute(query.getQueryString());
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
+    verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(namespace);
+  }
+
+  @Test
+  public void
+      repairNamespace_WithReplicationFactorAndSimpleStategyAsOptions_ShouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    Map<String, String> options = ImmutableMap.of(CassandraAdmin.REPLICATION_FACTOR, "5");
+
+    // Act
+    cassandraAdmin.repairNamespace(namespace, options);
+
+    // Assert
+    Map<String, Object> replicationOptions = new LinkedHashMap<>();
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("replication_factor", "5");
+    KeyspaceOptions query =
+        SchemaBuilder.createKeyspace(namespace)
+            .ifNotExists()
+            .with()
+            .replication(replicationOptions);
+    verify(cassandraSession).execute(query.getQueryString());
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
+    verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(namespace);
+  }
+
+  @Test
+  public void
+      repairNamespace_WithNetworkTopologyStrategyAsOptions_ShouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    Map<String, String> options =
+        ImmutableMap.of(
+            CassandraAdmin.REPLICATION_STRATEGY,
+            ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
+
+    // Act
+    cassandraAdmin.repairNamespace(namespace, options);
+
+    // Assert
+    Map<String, Object> replicationOptions = new LinkedHashMap<>();
+    replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
+    replicationOptions.put("dc1", "3");
+    KeyspaceOptions query =
+        SchemaBuilder.createKeyspace(namespace)
+            .ifNotExists()
+            .with()
+            .replication(replicationOptions);
+    verify(cassandraSession).execute(query.getQueryString());
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
+    verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(namespace);
+  }
+
+  @Test
+  public void upgrade_withExistingUserKeyspaces_ShouldUpsertKeyspacesIntoNamespacesTable()
+      throws ExecutionException {
+    // Arrange
+    String replicationFactor = "5";
+    Map<String, String> options = new HashMap<>();
+    options.put(
+        CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    options.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
+    Cluster cluster = mock(Cluster.class);
+    Metadata metadata = mock(Metadata.class);
+    KeyspaceMetadata keyspace1 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace2 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace3 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace4 = mock(KeyspaceMetadata.class);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspaces())
+        .thenReturn(ImmutableList.of(keyspace1, keyspace2, keyspace3, keyspace4));
+    when(keyspace1.getName()).thenReturn("system_foo");
+    when(keyspace2.getName()).thenReturn(metadataKeyspaceName);
+    when(keyspace3.getName()).thenReturn("ks1");
+    when(keyspace4.getName()).thenReturn("ks2");
+
+    // Act
+    cassandraAdmin.upgrade(options);
+
+    // Assert
+    Map<String, Object> replicationOptions = new LinkedHashMap<>();
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("replication_factor", replicationFactor);
+    verifyCreateMetadataKeyspaceQuery(replicationOptions);
+    verifyCreateKeyspacesTableQuery();
+    verify(clusterManager, times(5)).getSession();
+    String upsertKs1Query =
+        QueryBuilder.insertInto(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .value(CassandraAdmin.NAMESPACES_NAME_COL, "ks1")
+            .toString();
+
+    String upsertKs2Query =
+        QueryBuilder.insertInto(
+                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .value(CassandraAdmin.NAMESPACES_NAME_COL, "ks2")
+            .toString();
+    verify(cassandraSession).execute(upsertKs1Query);
+    verify(cassandraSession).execute(upsertKs2Query);
   }
 }

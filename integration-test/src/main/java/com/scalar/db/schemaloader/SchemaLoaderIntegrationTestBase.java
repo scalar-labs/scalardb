@@ -141,9 +141,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
                         .put("col7", "BOOLEAN")
                         .build())
                 .put("secondary-index", Arrays.asList("col1", "col5"))
-                .put("compaction-strategy", "LCS")
-                .put("network-strategy", "SimpleStrategy")
-                .put("replication-factor", "1")
                 .build(),
         namespace2 + "." + TABLE_2,
             ImmutableMap.<String, Object>builder()
@@ -155,8 +152,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
                     ImmutableMap.of(
                         "pk1", "INT", "ck1", "INT", "col1", "INT", "col2", "BIGINT", "col3",
                         "FLOAT"))
-                .put("network-strategy", "SimpleStrategy")
-                .put("replication-factor", "1")
                 .build());
   }
 
@@ -225,8 +220,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
-  protected List<String> getCommandArgsForTableReparation(
-      Path configFilePath, Path schemaFilePath) {
+  protected List<String> getCommandArgsForReparation(Path configFilePath, Path schemaFilePath) {
     return ImmutableList.of(
         "--config",
         configFilePath.toString(),
@@ -235,10 +229,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
         "--repair-all");
   }
 
-  protected List<String> getCommandArgsForTableReparationWithCoordinator(
+  protected List<String> getCommandArgsForReparationWithCoordinator(
       Path configFilePath, Path schemaFilePath) {
     return ImmutableList.<String>builder()
-        .addAll(getCommandArgsForTableReparation(configFilePath, schemaFilePath))
+        .addAll(getCommandArgsForReparation(configFilePath, schemaFilePath))
         .add("--coordinator")
         .build();
   }
@@ -267,11 +261,16 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .build();
   }
 
+  protected List<String> getCommandArgsForUpgrade(Path configFilePath) {
+    return ImmutableList.of("--config", configFilePath.toString(), "--upgrade");
+  }
+
   @AfterAll
   public void afterAll() throws Exception {
     dropTablesIfExist();
     storageAdmin.close();
-
+    transactionAdmin.close();
+    adminTestUtils.close();
     // Delete the files
     Files.delete(CONFIG_FILE_PATH);
     Files.delete(SCHEMA_FILE_PATH);
@@ -321,53 +320,36 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   @Test
-  public void createTablesThenDropMetadataTableThenRepairTables_ShouldExecuteProperly()
+  public void createTablesThenDropTablesThenRepairAllWithoutCoordinator_ShouldExecuteProperly()
       throws Exception {
     // Arrange
     int exitCodeCreation =
         executeWithArgs(getCommandArgsForCreation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
     assertThat(exitCodeCreation).isZero();
-    adminTestUtils.dropMetadataTable();
+    adminTestUtils.dropNamespacesTable();
+    adminTestUtils.dropTable(namespace1, TABLE_1);
+    adminTestUtils.dropNamespace(namespace1);
 
     // Act
     int exitCodeReparation =
-        executeWithArgs(getCommandArgsForTableReparation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForReparation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCodeReparation).isZero();
+    waitForCreationIfNecessary();
+    assertThat(adminTestUtils.namespaceExists(namespace1)).isTrue();
+    assertThat(adminTestUtils.namespaceExists(namespace2)).isTrue();
+    assertThat(transactionAdmin.namespaceExists(namespace1)).isTrue();
+    assertThat(storageAdmin.namespaceExists(namespace2)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isFalse();
   }
 
   @Test
-  public void
-      createTablesThenDropMetadataTableThenRepairTablesWithCoordinator_ShouldExecuteProperly()
-          throws Exception {
-    // Arrange
-    int exitCodeCreation =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
-    assertThat(exitCodeCreation).isZero();
-    adminTestUtils.dropMetadataTable();
-
-    // Act
-    int exitCodeReparation =
-        executeWithArgs(
-            getCommandArgsForTableReparationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
-
-    // Assert
-    assertThat(exitCodeReparation).isZero();
-    assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
-    assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
-    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
-    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
-  }
-
-  @Test
-  public void createTablesThenDropTablesThenRepairTablesWithCoordinator_ShouldExecuteProperly()
+  public void createTablesThenDropTablesThenRepairAllWithCoordinator_ShouldExecuteProperly()
       throws Exception {
     // Arrange
     int exitCodeCreation =
@@ -376,16 +358,20 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(exitCodeCreation).isZero();
     adminTestUtils.dropMetadataTable();
     adminTestUtils.dropTable(namespace1, TABLE_1);
-    adminTestUtils.dropTable(namespace2, TABLE_2);
+    adminTestUtils.dropNamespace(namespace1);
 
     // Act
     int exitCodeReparation =
         executeWithArgs(
-            getCommandArgsForTableReparationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+            getCommandArgsForReparationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
 
     // Assert
     assertThat(exitCodeReparation).isZero();
     waitForCreationIfNecessary();
+    assertThat(adminTestUtils.namespaceExists(namespace1)).isTrue();
+    assertThat(adminTestUtils.namespaceExists(namespace2)).isTrue();
+    assertThat(transactionAdmin.namespaceExists(namespace1)).isTrue();
+    assertThat(storageAdmin.namespaceExists(namespace2)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
@@ -423,6 +409,25 @@ public abstract class SchemaLoaderIntegrationTestBase {
         .isEqualTo(expectedTable1Metadata);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2))
         .isEqualTo(expectedTable2Metadata);
+  }
+
+  @Test
+  public void createThenDropNamespacesTableThenUpgrade_ShouldCreateNamespacesTableCorrectly()
+      throws Exception {
+    // Arrange
+    int exitCodeCreation =
+        executeWithArgs(
+            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+    assertThat(exitCodeCreation).isZero();
+    adminTestUtils.dropNamespacesTable();
+
+    // Act
+    int exitCodeUpgrade = executeWithArgs(getCommandArgsForUpgrade(CONFIG_FILE_PATH));
+
+    // Assert
+    assertThat(exitCodeUpgrade).isZero();
+    waitForCreationIfNecessary();
+    assertThat(transactionAdmin.getNamespaceNames()).containsOnly(namespace1, namespace2);
   }
 
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {

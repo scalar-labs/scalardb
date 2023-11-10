@@ -30,11 +30,18 @@ public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
   }
 
   @Override
-  protected List<String> getCommandArgsForTableReparation(
-      Path configFilePath, Path schemaFilePath) {
+  protected List<String> getCommandArgsForReparation(Path configFilePath, Path schemaFilePath) {
     return ImmutableList.<String>builder()
-        .addAll(super.getCommandArgsForTableReparation(configFilePath, schemaFilePath))
+        .addAll(super.getCommandArgsForReparation(configFilePath, schemaFilePath))
         .add("--no-scaling")
+        .add("--no-backup")
+        .build();
+  }
+
+  @Override
+  protected List<String> getCommandArgsForUpgrade(Path configFilePath) {
+    return ImmutableList.<String>builder()
+        .addAll(super.getCommandArgsForUpgrade(configFilePath))
         .add("--no-backup")
         .build();
   }

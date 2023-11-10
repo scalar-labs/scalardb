@@ -567,7 +567,7 @@ public abstract class ConsensusCommitAdminTestBase {
     admin.repairCoordinatorTables(options);
 
     // Assert
-    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
+    verify(distributedStorageAdmin).repairNamespace(coordinatorNamespaceName, options);
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
@@ -671,5 +671,28 @@ public abstract class ConsensusCommitAdminTestBase {
     // Assert
     verify(distributedStorageAdmin).getNamespaceNames();
     assertThat(actualNamespaces).containsOnly("n1", "n2");
+  }
+
+  @Test
+  public void repairNamespace_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+
+    // Act
+    admin.repairNamespace("ns", Collections.emptyMap());
+
+    // Assert
+    verify(distributedStorageAdmin).repairNamespace("ns", Collections.emptyMap());
+  }
+
+  @Test
+  public void upgrade_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.upgrade(options);
+
+    // Arrange
+    verify(distributedStorageAdmin).upgrade(options);
   }
 }

@@ -21,8 +21,17 @@ class RdbEngineMysql implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    return new String[] {"CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin"};
+  public String[] createSchemaSqls(String fullSchema) {
+    return new String[] {
+      "CREATE SCHEMA " + enclose(fullSchema) + " character set utf8 COLLATE utf8_bin"
+    };
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String schema) {
+    return new String[] {
+      "CREATE SCHEMA IF NOT EXISTS " + enclose(schema) + " character set utf8 COLLATE utf8_bin"
+    };
   }
 
   @Override
@@ -61,11 +70,6 @@ class RdbEngineMysql implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateTableSql(String createTableSql) {
     return createTableSql.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
-  }
-
-  @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
   }
 
   @Override

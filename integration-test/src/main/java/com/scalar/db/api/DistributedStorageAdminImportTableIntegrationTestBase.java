@@ -79,7 +79,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   @Test
   public void importTable_ShouldWorkProperly() throws Exception {
     // Arrange
-    admin.createNamespace(getNamespace(), getCreationOptions());
+    admin.repairNamespace(getNamespace(), getCreationOptions());
     tables.putAll(createExistingDatabaseWithAllDataTypes());
 
     // Act Assert
@@ -99,7 +99,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
     // Arrange
-    admin.createNamespace(getNamespace(), getCreationOptions());
+    admin.repairNamespace(getNamespace(), getCreationOptions());
 
     // Act Assert
     assertThatThrownBy(() -> admin.importTable(getNamespace(), "unsupported_db"))

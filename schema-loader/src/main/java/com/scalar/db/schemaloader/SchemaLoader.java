@@ -285,15 +285,15 @@ public class SchemaLoader {
   }
 
   /**
-   * Repair tables defined in the schema.
+   * Repair namespaces and tables defined in the schema that are in an unknown state.
    *
    * @param configProperties ScalarDB config properties
    * @param serializedSchemaJson serialized json string schema.
-   * @param options specific options for repairing tables.
+   * @param options specific options for repairing.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when repairing tables fails.
+   * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairTables(
+  public static void repairAll(
       Properties configProperties,
       String serializedSchemaJson,
       Map<String, String> options,
@@ -301,19 +301,19 @@ public class SchemaLoader {
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairAll(config, schema, options, repairCoordinatorTable);
   }
 
   /**
-   * Repair tables defined in the schema file.
+   * Repair namespaces and tables defined in the schema file that are in an unknown state.
    *
    * @param configProperties ScalarDB properties.
    * @param schemaPath path to the schema file.
-   * @param options specific options for repairing tables.
+   * @param options specific options for repairing.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when repairing tables fails.
+   * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairTables(
+  public static void repairAll(
       Properties configProperties,
       Path schemaPath,
       Map<String, String> options,
@@ -321,19 +321,19 @@ public class SchemaLoader {
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaPath);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairAll(config, schema, options, repairCoordinatorTable);
   }
 
   /**
-   * Repair tables defined in the schema.
+   * Repair namespaces and tables defined in the schema that are in an unknown state.
    *
    * @param configPath path to the ScalarDB config.
    * @param serializedSchemaJson serialized json string schema.
-   * @param options specific options for repairing tables.
+   * @param options specific options for repairing.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when repairing tables fails.
+   * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairTables(
+  public static void repairAll(
       Path configPath,
       String serializedSchemaJson,
       Map<String, String> options,
@@ -341,36 +341,36 @@ public class SchemaLoader {
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configPath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairAll(config, schema, options, repairCoordinatorTable);
   }
 
   /**
-   * Repair tables defined in the schema file.
+   * Repair namespaces and tables defined in the schema file that are in an unknown state.
    *
    * @param configPath path to the ScalarDB config.
    * @param schemaPath path to the schema file.
-   * @param options specific options for repairing tables.
+   * @param options specific options for repairing.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when repairing tables fails.
+   * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairTables(
+  public static void repairAll(
       Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configPath);
     Either<Path, String> schema = new Left<>(schemaPath);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairAll(config, schema, options, repairCoordinatorTable);
   }
 
   /**
-   * Repair tables defined in the schema file.
+   * Repair namespaces and tables defined in the schema file.
    *
    * @param config ScalarDB config
    * @param schema schema.
-   * @param options specific options for repairing tables.
+   * @param options specific options for repairing.
    * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when repairing tables fails.
+   * @throws SchemaLoaderException thrown when repairing fails.
    */
-  private static void repairTables(
+  private static void repairAll(
       Either<Path, Properties> config,
       Either<Path, String> schema,
       Map<String, String> options,
@@ -381,6 +381,7 @@ public class SchemaLoader {
 
     // Repair tables
     try (SchemaOperator operator = getSchemaOperator(config)) {
+      operator.repairNamespaces(tableSchemaList);
       operator.repairTables(tableSchemaList);
       if (repairCoordinatorTable) {
         operator.repairCoordinatorTables(options);
@@ -572,6 +573,41 @@ public class SchemaLoader {
     try (SchemaOperator operator = getSchemaOperator(config)) {
       operator.importTables(tableSchemaList);
     }
+  }
+
+  /**
+   * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
+   * you will be requested, as indicated on the release notes, to run this method after updating the
+   * ScalarDB version of your application environment.
+   *
+   * @param configPath path to the ScalarDB config properties.
+   * @param options specific options for upgrading.
+   * @throws SchemaLoaderException thrown when upgrading failed.
+   */
+  public static void upgrade(Path configPath, Map<String, String> options)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Left<>(configPath);
+    upgrade(config, options);
+  }
+
+  /**
+   * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
+   * you will be requested, as indicated on the release notes, to run this method after updating the
+   * ScalarDB version of your application environment.
+   *
+   * @param configProperties ScalarDB config properties.
+   * @param options specific options for upgrading.
+   * @throws SchemaLoaderException thrown when upgrading failed.
+   */
+  public static void upgrade(Properties configProperties, Map<String, String> options)
+      throws SchemaLoaderException {
+    Either<Path, Properties> config = new Right<>(configProperties);
+    upgrade(config, options);
+  }
+
+  private static void upgrade(Either<Path, Properties> config, Map<String, String> options)
+      throws SchemaLoaderException {
+    getSchemaOperator(config).upgrade(options);
   }
 
   @VisibleForTesting

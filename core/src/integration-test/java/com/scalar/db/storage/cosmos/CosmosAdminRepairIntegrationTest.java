@@ -2,16 +2,15 @@ package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.scalar.db.api.DistributedStorageAdminRepairTableIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageAdminRepairIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
-public class CosmosAdminRepairTableIntegrationTest
-    extends DistributedStorageAdminRepairTableIntegrationTestBase {
+public class CosmosAdminRepairIntegrationTest
+    extends DistributedStorageAdminRepairIntegrationTestBase {
 
   @Override
   protected Properties getProperties(String testName) {
@@ -34,8 +33,9 @@ public class CosmosAdminRepairTableIntegrationTest
   }
 
   @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new CosmosAdminTestUtils(getProperties(testName));
+  protected void initialize(String testName) throws Exception {
+    super.initialize(testName);
+    adminTestUtils = new CosmosAdminTestUtils(getProperties(testName));
   }
 
   @Test

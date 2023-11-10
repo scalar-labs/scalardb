@@ -361,13 +361,21 @@ public interface Admin {
   }
 
   /**
+   * Repair a namespace which may be in an unknown state.
+   *
+   * @param namespace an existing namespace
+   * @param options options to repair
+   * @throws ExecutionException if the operation fails
+   */
+  void repairNamespace(String namespace, Map<String, String> options) throws ExecutionException;
+
+  /**
    * Repair a table which may be in an unknown state.
    *
    * @param namespace an existing namespace
    * @param table an existing table
    * @param metadata the metadata associated to the table to repair
    * @param options options to repair
-   * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
   void repairTable(
@@ -423,4 +431,14 @@ public interface Admin {
    * @throws ExecutionException if the operation fails
    */
   Set<String> getNamespaceNames() throws ExecutionException;
+
+  /**
+   * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
+   * you will be requested, as indicated on the release notes, to run this method after updating the
+   * ScalarDB version of your application environment.
+   *
+   * @param options options to upgrade
+   * @throws ExecutionException if the operation fails
+   */
+  void upgrade(Map<String, String> options) throws ExecutionException;
 }

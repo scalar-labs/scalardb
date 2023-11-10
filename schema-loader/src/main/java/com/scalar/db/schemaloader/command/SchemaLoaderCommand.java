@@ -79,9 +79,9 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     @Option(
         names = {"--repair-all"},
         description =
-            "Repair tables : it repairs the table metadata of existing tables. When using Cosmos DB, it additionally repairs stored procedure attached to each table",
+            "Repair namespaces and tables that are in an unknown state: it recreates namespaces, tables, secondary indexes and their metadata if necessary.",
         defaultValue = "false")
-    boolean repairTables;
+    boolean repairAll;
 
     @Option(
         names = {"-A", "--alter"},
@@ -96,6 +96,14 @@ public class SchemaLoaderCommand implements Callable<Integer> {
         description = "Import tables : it will import existing non-ScalarDB tables to ScalarDB.",
         defaultValue = "false")
     boolean importTables;
+
+    @Option(
+        names = {"--upgrade"},
+        description =
+            "Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically, you will be requested, as indicated on the release notes, to run this command after"
+                + " updating the ScalarDB version of your application environment.",
+        defaultValue = "false")
+    boolean upgrade;
   }
 
   @Override
@@ -107,12 +115,14 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       createTables();
     } else if (mode.deleteTables) {
       SchemaLoader.unload(configPath, schemaFile, coordinator);
-    } else if (mode.repairTables) {
-      repairTables();
+    } else if (mode.repairAll) {
+      repairAll();
     } else if (mode.alterTables) {
       alterTables();
     } else if (mode.importTables) {
       importTables();
+    } else if (mode.upgrade) {
+      upgrade();
     }
     return 0;
   }
@@ -122,13 +132,13 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     SchemaLoader.load(configPath, schemaFile, options, coordinator);
   }
 
-  private void repairTables() throws SchemaLoaderException {
+  private void repairAll() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
           "Specifying the '--schema-file' option is required when using the '--repair-all' option");
     }
     Map<String, String> options = prepareAllOptions();
-    SchemaLoader.repairTables(configPath, schemaFile, options, coordinator);
+    SchemaLoader.repairAll(configPath, schemaFile, options, coordinator);
   }
 
   private void alterTables() throws SchemaLoaderException {
@@ -153,6 +163,11 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     }
 
     SchemaLoader.importTables(configPath, schemaFile);
+  }
+
+  private void upgrade() throws SchemaLoaderException {
+    Map<String, String> options = prepareAllOptions();
+    SchemaLoader.upgrade(configPath, options);
   }
 
   private Map<String, String> prepareAllOptions() {

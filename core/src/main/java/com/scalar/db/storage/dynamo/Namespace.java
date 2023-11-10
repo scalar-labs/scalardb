@@ -1,5 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
+import java.util.Objects;
+
 public class Namespace {
   private final String prefix;
   private final String name;
@@ -34,5 +36,22 @@ public class Namespace {
   @Override
   public String toString() {
     return prefixed();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof Namespace)) {
+      return false;
+    }
+    Namespace namespace = (Namespace) o;
+    return Objects.equals(prefix, namespace.prefix) && Objects.equals(name, namespace.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(prefix, name);
   }
 }

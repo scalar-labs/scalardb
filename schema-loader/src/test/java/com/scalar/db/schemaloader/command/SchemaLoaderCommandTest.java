@@ -194,7 +194,7 @@ public class SchemaLoaderCommandTest {
 
   @Test
   public void
-      call_WithProperArgumentsForRepairingTablesWithoutCoordinatorArgument_ShouldCallRepairTableProperly() {
+      call_WithProperArgumentsForRepairingAllWithoutCoordinatorArgument_ShouldCallRepairAllProperly() {
     // Arrange
     String schemaFile = "path_to_file";
     String configFile = "path_to_config_file";
@@ -205,14 +205,12 @@ public class SchemaLoaderCommandTest {
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () ->
-            SchemaLoader.repairTables(
-                Paths.get(configFile), Paths.get(schemaFile), options, false));
+        () -> SchemaLoader.repairAll(Paths.get(configFile), Paths.get(schemaFile), options, false));
   }
 
   @Test
   public void
-      call_WithProperArgumentsForRepairingTablesWithCoordinatorArgument_ShouldCallRepairTableProperly() {
+      call_WithProperArgumentsForRepairingAllWithCoordinatorArgument_ShouldCallRepairAllProperly() {
     // Arrange
     String schemaFile = "path_to_file";
     String configFile = "path_to_config_file";
@@ -224,12 +222,11 @@ public class SchemaLoaderCommandTest {
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () ->
-            SchemaLoader.repairTables(Paths.get(configFile), Paths.get(schemaFile), options, true));
+        () -> SchemaLoader.repairAll(Paths.get(configFile), Paths.get(schemaFile), options, true));
   }
 
   @Test
-  public void call_forRepairingTablesWithoutSchemaFile_ShouldThrowIllegalArgumentException() {
+  public void call_forRepairingAllWithoutSchemaFile_ShouldThrowIllegalArgumentException() {
     // Arrange
     String configFile = "path_to_config_file";
 
@@ -351,7 +348,7 @@ public class SchemaLoaderCommandTest {
   }
 
   @Test
-  public void call_ImportOptionGivenWithProperArguments_ShouldCallRepairTableProperly() {
+  public void call_ImportOptionGivenWithProperArguments_ShouldCallImportTableProperly() {
     // Arrange
     String schemaFile = "path_to_file";
     String configFile = "path_to_config_file";
@@ -390,5 +387,42 @@ public class SchemaLoaderCommandTest {
     // Assert
     Assertions.assertThat(exitCode).isEqualTo(1);
     schemaLoaderMockedStatic.verifyNoInteractions();
+  }
+
+  @Test
+  public void call_WithProperArgumentsForUpgrading_ShouldCallUpgradeProperly() {
+    // Arrange
+    String configFile = "path_to_config_file";
+    Map<String, String> options =
+        ImmutableMap.<String, String>builder()
+            .put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy)
+            .put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy)
+            .put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor)
+            .put(DynamoAdmin.REQUEST_UNIT, ru)
+            .put(DynamoAdmin.NO_SCALING, noScaling.toString())
+            .put(DynamoAdmin.NO_BACKUP, noBackup.toString())
+            .build();
+
+    // Act
+    commandLine.execute(
+        "--config",
+        configFile,
+        "--upgrade",
+        "--replication-strategy",
+        replicationStrategy,
+        "--compaction-strategy",
+        compactionStrategy,
+        "--replication-factor",
+        replicationFactor,
+        "--ru",
+        ru,
+        "--no-scaling",
+        "--no-backup",
+        "-f",
+        schemaFile,
+        "--coordinator");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(() -> SchemaLoader.upgrade(Paths.get(configFile), options));
   }
 }

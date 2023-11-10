@@ -358,6 +358,18 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairNamespace(String namespace, Map<String, String> options) {
+    throw new UnsupportedOperationException(
+        "Repairing a namespace is not supported in ScalarDB Server");
+  }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    throw new UnsupportedOperationException(
+        "Upgrading the ScalarDB environment is not supported in ScalarDB Server");
+  }
+
+  @Override
   public void close() {
     try {
       channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);

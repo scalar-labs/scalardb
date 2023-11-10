@@ -540,120 +540,128 @@ public class SchemaLoaderTest {
 
   @Test
   public void
-      repairTable_WithConfigFilePathAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigFilePathAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, SERIALIZED_SCHEMA_JSON, options, true);
+    SchemaLoader.repairAll(configFilePath, SERIALIZED_SCHEMA_JSON, options, true);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
   }
 
   @Test
   public void
-      repairTable_WithConfigFilePathAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigFilePathAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, SERIALIZED_SCHEMA_JSON, options, false);
+    SchemaLoader.repairAll(configFilePath, SERIALIZED_SCHEMA_JSON, options, false);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
   }
 
   @Test
   public void
-      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigPropertiesAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, SERIALIZED_SCHEMA_JSON, options, true);
+    SchemaLoader.repairAll(configProperties, SERIALIZED_SCHEMA_JSON, options, true);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
   }
 
   @Test
   public void
-      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigPropertiesAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, SERIALIZED_SCHEMA_JSON, options, false);
+    SchemaLoader.repairAll(configProperties, SERIALIZED_SCHEMA_JSON, options, false);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
   }
 
   @Test
   public void
-      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigPropertiesAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, schemaFilePath, options, true);
+    SchemaLoader.repairAll(configProperties, schemaFilePath, options, true);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
   }
 
   @Test
   public void
-      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigPropertiesAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, schemaFilePath, options, false);
+    SchemaLoader.repairAll(configProperties, schemaFilePath, options, false);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
   }
 
   @Test
   public void
-      repairTable_WithConfigFilePathAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigFilePathAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, true);
+    SchemaLoader.repairAll(configFilePath, schemaFilePath, options, true);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
   }
 
   @Test
   public void
-      repairTable_WithConfigFilePathAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
+      repairAll_WithConfigFilePathAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, false);
+    SchemaLoader.repairAll(configFilePath, schemaFilePath, options, false);
 
     // Assert
     verify(parser).parse();
+    verify(operator).repairNamespaces(anyList());
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
   }
@@ -765,5 +773,27 @@ public class SchemaLoaderTest {
     // Assert
     verify(importSchemaParser).parse();
     verify(operator).importTables(anyList());
+  }
+
+  @Test
+  public void upgrade_WithConfigProperties_ShouldCallOperatorProperly() throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.upgrade(configProperties, options);
+
+    // Assert
+    verify(operator).upgrade(options);
+  }
+
+  @Test
+  public void upgrade_WithConfigFilePath_ShouldCallOperatorProperly() throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.upgrade(configFilePath, options);
+
+    // Assert
+    verify(operator).upgrade(options);
   }
 }

@@ -3,8 +3,11 @@ package com.scalar.db.storage.multistorage;
 import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
+import com.scalar.db.storage.cassandra.CassandraConfig;
 import com.scalar.db.storage.cassandra.ClusterManager;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
@@ -14,6 +17,8 @@ import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
@@ -22,20 +27,41 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public class MultiStorageAdminTestUtils extends AdminTestUtils {
   // for Cassandra
   private final ClusterManager clusterManager;
+  private final String cassandraMetadataNamespace;
   // for JDBC
-  private final JdbcConfig jdbcConfig;
   private final String jdbcMetadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final BasicDataSource dataSource;
 
   public MultiStorageAdminTestUtils(Properties cassandraProperties, Properties jdbcProperties) {
     // Cassandra has the coordinator tables
     super(cassandraProperties);
+    CassandraConfig cassandraConfig = new CassandraConfig(new DatabaseConfig(cassandraProperties));
     clusterManager = new ClusterManager(new DatabaseConfig(cassandraProperties));
+    cassandraMetadataNamespace =
+        cassandraConfig.getMetadataKeyspace().orElse(CassandraAdmin.METADATA_KEYSPACE);
 
     // for JDBC
-    jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
+    JdbcConfig jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
     jdbcMetadataSchema = jdbcConfig.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
     rdbEngine = RdbEngineFactory.create(jdbcConfig);
+    dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
+  }
+
+  @Override
+  public void dropNamespacesTable() throws SQLException {
+    // for Cassandra
+    String dropTableQuery =
+        SchemaBuilder.dropTable(
+                quoteIfNecessary(cassandraMetadataNamespace),
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .getQueryString();
+    clusterManager.getSession().execute(dropTableQuery);
+
+    // for JDBC
+    execute(
+        "DROP TABLE "
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.NAMESPACES_TABLE));
   }
 
   @Override
@@ -46,6 +72,22 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(
         "DROP TABLE "
             + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
+  }
+
+  @Override
+  public void truncateNamespacesTable() throws SQLException {
+    // for Cassandra
+    String truncateTableQuery =
+        QueryBuilder.truncate(
+                quoteIfNecessary(cassandraMetadataNamespace),
+                quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
+            .getQueryString();
+    clusterManager.getSession().execute(truncateTableQuery);
+
+    // for JDBC
+    String truncateTableStatement =
+        rdbEngine.truncateTableSql(jdbcMetadataSchema, JdbcAdmin.NAMESPACES_TABLE);
+    execute(truncateTableStatement);
   }
 
   @Override
@@ -74,9 +116,77 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(insertCorruptedMetadataStatement);
   }
 
+  @Override
+  public void dropNamespace(String namespace) throws SQLException {
+    boolean existsOnCassandra = namespaceExistsOnCassandra(namespace);
+    boolean existsOnJdbc = namespaceExistsOnJdbc(namespace);
+
+    if (existsOnCassandra && existsOnJdbc) {
+      throw new IllegalStateException(
+          "The " + namespace + " namespace should not exist on both storages");
+    } else if (!(existsOnCassandra || existsOnJdbc)) {
+      throw new IllegalStateException(
+          "The " + namespace + " namespace does not exist on both storages");
+    }
+    if (existsOnCassandra) {
+      String dropKeyspaceQuery =
+          SchemaBuilder.dropKeyspace(quoteIfNecessary(namespace)).getQueryString();
+      clusterManager.getSession().execute(dropKeyspaceQuery);
+    } else {
+      execute(rdbEngine.dropNamespaceSql(namespace));
+    }
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws SQLException {
+    boolean existsOnCassandra = namespaceExistsOnCassandra(namespace);
+    boolean existsOnJdbc = namespaceExistsOnJdbc(namespace);
+
+    if (existsOnCassandra && existsOnJdbc) {
+      throw new IllegalStateException(
+          "The " + namespace + " namespace should not exist on both storages");
+    }
+    return existsOnCassandra || existsOnJdbc;
+  }
+
+  private boolean namespaceExistsOnCassandra(String namespace) {
+    return clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace) != null;
+  }
+
+  private boolean namespaceExistsOnJdbc(String namespace) throws SQLException {
+    String sql;
+    // RdbEngine classes are not publicly exposed, so we test the type using hard coded class name
+    switch (rdbEngine.getClass().getSimpleName()) {
+      case "RdbEngineMysql":
+        sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
+        break;
+      case "RdbEngineOracle":
+        sql = "SELECT 1 FROM all_users WHERE username = ?";
+        break;
+      case "RdbEnginePostgresql":
+        sql = "SELECT 1 FROM pg_namespace WHERE nspname = ?";
+        break;
+      case "RdbEngineSqlite":
+        // SQLite has no concept of namespace
+        return true;
+      case "RdbEngineSqlServer":
+        sql = "SELECT 1 FROM sys.schemas WHERE name = ?";
+        break;
+      default:
+        throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
+    }
+
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setString(1, namespace);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      return resultSet.next();
+    }
+  }
+
   private void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
-        Connection connection = dataSource.getConnection();
+    try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }
@@ -84,15 +194,15 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
   @Override
   public boolean tableExists(String namespace, String table) throws Exception {
-    boolean existsOnCassandraStorage = tableExistsOnCassandra(namespace, table);
-    boolean existsOnJdbcStorage = tableExistsOnJdbc(namespace, table);
-    if (existsOnCassandraStorage && existsOnJdbcStorage) {
+    boolean existsOnCassandra = tableExistsOnCassandra(namespace, table);
+    boolean existsOnJdbc = tableExistsOnJdbc(namespace, table);
+    if (existsOnCassandra && existsOnJdbc) {
       throw new IllegalStateException(
           String.format(
-              "The %s table should not exists on both storages",
+              "The %s table should not exist on both storages",
               getFullTableName(namespace, table)));
     }
-    return existsOnCassandraStorage || existsOnJdbcStorage;
+    return existsOnCassandra || existsOnJdbc;
   }
 
   private boolean tableExistsOnCassandra(String namespace, String table) {
@@ -102,8 +212,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   private boolean tableExistsOnJdbc(String namespace, String table) throws Exception {
     String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
     String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
-        Connection connection = dataSource.getConnection();
+    try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
       statement.execute(sql);
       return true;
@@ -122,21 +231,21 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void dropTable(String namespace, String table) throws Exception {
-    boolean tableExistsOnCassandra = tableExistsOnCassandra(namespace, table);
-    boolean tableExistsOnJdbc = tableExistsOnJdbc(namespace, table);
+    boolean existsOnCassandra = tableExistsOnCassandra(namespace, table);
+    boolean existsOnJdbc = tableExistsOnJdbc(namespace, table);
 
-    if (tableExistsOnCassandra && tableExistsOnJdbc) {
+    if (existsOnCassandra && existsOnJdbc) {
       throw new IllegalStateException(
           String.format(
               "The %s table should not exist on both storages",
               getFullTableName(namespace, table)));
-    } else if (!(tableExistsOnCassandra || tableExistsOnJdbc)) {
+    } else if (!(existsOnCassandra || existsOnJdbc)) {
       throw new IllegalStateException(
           String.format(
               "The %s table does not exist on both storages", getFullTableName(namespace, table)));
     }
 
-    if (tableExistsOnCassandra) {
+    if (existsOnCassandra) {
       String dropTableQuery =
           SchemaBuilder.dropTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
               .getQueryString();
@@ -145,5 +254,11 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
       String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
       execute(dropTableStatement);
     }
+  }
+
+  @Override
+  public void close() throws SQLException {
+    clusterManager.close();
+    dataSource.close();
   }
 }
