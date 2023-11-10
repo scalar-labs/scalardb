@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.time.Instant;
@@ -14,8 +14,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -30,7 +28,7 @@ public class GroupCommitter2<K, V> {
   private final long expirationCheckIntervalInMillis;
   private final ExecutorService emitExecutorService;
   private final ExecutorService expirationCheckExecutorService;
-  private final Consumer<List<V>> emitter;
+  private final Emittable<V> emitter;
   @Nullable private BufferedValues<K, V> bufferedValues;
 
   private static class ValueSlot<K, V> {
@@ -75,7 +73,7 @@ public class GroupCommitter2<K, V> {
 
   private static class BufferedValues<K, V> {
     private final ExecutorService executorService;
-    private final Consumer<List<V>> emitter;
+    private final Emittable<V> emitter;
     private final int capacity;
     private Integer size;
     private final K key;
@@ -86,7 +84,7 @@ public class GroupCommitter2<K, V> {
 
     BufferedValues(
         ExecutorService executorService,
-        Consumer<List<V>> emitter,
+        Emittable<V> emitter,
         long retentionTimeInMillis,
         K key,
         int capacity) {
@@ -143,7 +141,7 @@ public class GroupCommitter2<K, V> {
                     "Emitting (thread_id:{}, num_of_values:{})",
                     Thread.currentThread().getId(),
                     size);
-                emitter.accept(
+                emitter.execute(
                     valueSlots.stream().map(vs -> vs.value).collect(Collectors.toList()));
                 logger.info(
                     "Emitted (thread_id:{}, num_of_values:{})",
@@ -188,7 +186,7 @@ public class GroupCommitter2<K, V> {
       int numberOfRetentionValues,
       long expirationCheckIntervalInMillis,
       int numberOfThreads,
-      Consumer<List<V>> emitter) {
+      Emittable<V> emitter) {
     this.retentionTimeInMillis = retentionTimeInMillis;
     this.numberOfRetentionValues = numberOfRetentionValues;
     this.expirationCheckIntervalInMillis = expirationCheckIntervalInMillis;
@@ -279,22 +277,26 @@ public class GroupCommitter2<K, V> {
     return bufferedValues.getValueSlot();
   }
 
-  public void addValue(K keyCandidate, Function<K, V> valueGeneratorFromUniqueKey)
+  public void addValue(K keyCandidate, ValueGenerator<K, V> valueGeneratorFromUniqueKey)
       throws GroupCommitCascadeException, GroupCommitException {
     ValueSlot<K, V> valueSlot = getValueSlot(keyCandidate);
 
     V value;
     try {
       long start = System.currentTimeMillis();
-      value = valueGeneratorFromUniqueKey.apply(valueSlot.getKey());
+      value = valueGeneratorFromUniqueKey.execute(valueSlot.getKey());
       logger.info(
           "Created value(thread_id:{}): {} ms",
           Thread.currentThread().getId(),
           System.currentTimeMillis() - start);
     } catch (Throwable e) {
-      logger.error("Failed to prepare a value for group commit. keyCandidate: {}", keyCandidate, e);
-      valueSlot.abort(e);
-      throw e;
+      GroupCommitException gce =
+          new GroupCommitException(
+              String.format(
+                  "Failed to prepare a value for group commit. keyCandidate: %s", keyCandidate),
+              e);
+      valueSlot.abort(gce);
+      throw gce;
     }
     valueSlot.setValue(value);
     long start = System.currentTimeMillis();

@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client;
+package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
