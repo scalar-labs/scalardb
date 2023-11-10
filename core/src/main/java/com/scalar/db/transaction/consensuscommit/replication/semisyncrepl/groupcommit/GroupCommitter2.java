@@ -92,6 +92,9 @@ public class GroupCommitter2<K, V> {
       this.emitter = emitter;
       this.capacity = capacity;
       this.expiredAt = Instant.now().plusMillis(retentionTimeInMillis);
+      if (key == null) {
+        throw new IllegalArgumentException("`key` can't be null");
+      }
       this.key = key;
       this.valueSlots = new ArrayList<>(capacity);
       this.readyValueSlots = new HashSet<>(capacity);
@@ -137,21 +140,22 @@ public class GroupCommitter2<K, V> {
         executorService.execute(
             () -> {
               try {
-                logger.info(
-                    "Emitting (thread_id:{}, num_of_values:{})",
-                    Thread.currentThread().getId(),
-                    size);
+                long startEmit = System.currentTimeMillis();
                 emitter.execute(
                     valueSlots.stream().map(vs -> vs.value).collect(Collectors.toList()));
                 logger.info(
-                    "Emitted (thread_id:{}, num_of_values:{})",
+                    "Emitted (thread_id:{}, num_of_values:{}): {} ms",
                     Thread.currentThread().getId(),
-                    size);
+                    size,
+                    System.currentTimeMillis() - startEmit);
+
+                long startNotify = System.currentTimeMillis();
                 valueSlots.forEach(vf -> vf.completableFuture.complete(null));
                 logger.info(
-                    "Notified (thread_id:{}, num_of_values:{})",
+                    "Notified (thread_id:{}, num_of_values:{}): {} ms",
                     Thread.currentThread().getId(),
-                    size);
+                    size,
+                    System.currentTimeMillis() - startNotify);
               } catch (Throwable e) {
                 valueSlots.forEach(
                     vf ->
