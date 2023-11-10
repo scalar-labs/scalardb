@@ -115,6 +115,9 @@ public class Snapshot {
   }
 
   public void setParentId(String parentId) {
+    if (parentId == null) {
+      throw new IllegalArgumentException("`parentId` can't be set to null");
+    }
     this.parentId = parentId;
   }
 

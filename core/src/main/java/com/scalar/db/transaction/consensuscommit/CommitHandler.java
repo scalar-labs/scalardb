@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.error.CoreError;
@@ -34,6 +35,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -56,6 +59,12 @@ public class CommitHandler {
   private final LogRecorder logRecorder;
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
   private final GroupCommitter2<String, Snapshot> groupCommitter;
+  private final ExecutorService executorService =
+      Executors.newCachedThreadPool(
+          new ThreadFactoryBuilder()
+              .setDaemon(true)
+              .setNameFormat("commit-handler-commit-records-%d")
+              .build());
 
   private Optional<LogRecorder> prepareLogRecorder() {
     String replicationDbConfigPath = System.getenv("LOG_RECORDER_REPLICATION_CONFIG");
@@ -100,8 +109,39 @@ public class CommitHandler {
             32,
             snapshots -> {
               try {
+                long startCommitState = System.currentTimeMillis();
                 commitStateWithParentTxId(snapshots);
-                snapshots.parallelStream().forEach(this::commitRecords);
+                logger.info(
+                    "CommitState-ed(thread_id:{}, num_of_values:{}): {} ms",
+                    Thread.currentThread().getId(),
+                    snapshots.size(),
+                    System.currentTimeMillis() - startCommitState);
+
+                long startCommitRecords = System.currentTimeMillis();
+                List<Future<Void>> futures = new ArrayList<>(snapshots.size());
+                for (Snapshot snapshot : snapshots) {
+                  Future<Void> f =
+                      executorService.submit(
+                          () -> {
+                            commitRecords(snapshot);
+                            return null;
+                          });
+                  futures.add(f);
+                }
+                for (Future<Void> f : futures) {
+                  try {
+                    f.get();
+                  } catch (Throwable e) {
+                    logger.warn(
+                        "Committing the records failed. But the state is already committed. So the record state will be recovered later",
+                        e);
+                  }
+                }
+                logger.info(
+                    "CommitRecords-ed(thread_id:{}, num_of_values:{}): {} ms",
+                    Thread.currentThread().getId(),
+                    snapshots.size(),
+                    System.currentTimeMillis() - startCommitRecords);
               } catch (TransactionException e) {
                 throw new TransactionGroupCommitException(e);
               } catch (Throwable e) {
@@ -172,26 +212,29 @@ public class CommitHandler {
       } else if (cause instanceof TransactionException) {
         transactionEx = (TransactionException) cause;
       } else {
-        throw new CommitException(cause.getMessage(), cause, transactionId);
+        throw new CommitException("Group-commit failed", cause, transactionId);
       }
       if (transactionEx instanceof PreparationConflictException) {
         PreparationConflictException ce = (PreparationConflictException) transactionEx;
-        throw new CommitConflictException(ce.getMessage(), ce, transactionId);
+        throw new CommitConflictException(
+            "A conflict happened in the group-commit", ce, transactionId);
       }
       if (transactionEx instanceof ValidationConflictException) {
         ValidationConflictException ce = (ValidationConflictException) transactionEx;
-        throw new CommitConflictException(ce.getMessage(), ce, transactionId);
+        throw new CommitConflictException(
+            "A conflict happened in the group-commit", ce, transactionId);
       }
       if (transactionEx instanceof CommitConflictException) {
         CommitConflictException ce = (CommitConflictException) transactionEx;
-        throw new CommitConflictException(ce.getMessage(), ce, transactionId);
+        throw new CommitConflictException(
+            "A conflict happened in the group-commit", ce, transactionId);
       }
       if (transactionEx instanceof UnknownTransactionStatusException) {
         throw (UnknownTransactionStatusException) transactionEx;
       }
-      throw new CommitException(transactionEx.getMessage(), transactionEx, transactionId);
+      throw new CommitException("Group-commit failed", transactionEx, transactionId);
     } catch (Throwable e) {
-      throw new CommitException("Failed to buffer a snapshot for group-commit", e, transactionId);
+      throw new CommitException("Group-commit failed", e, transactionId);
     }
   }
 
