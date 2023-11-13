@@ -10,7 +10,6 @@ import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitCascadeException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
@@ -230,7 +229,7 @@ public class DefaultLogRecorder implements LogRecorder {
             candidatePartitionId,
             partitionId ->
                 new Transaction(partitionId, now, now, composer.transactionId(), writtenTuples));
-      } catch (GroupCommitException | GroupCommitCascadeException e) {
+      } catch (GroupCommitException e) {
         throw new RuntimeException(
             "Group commit failed. transactionId:" + composer.transactionId(), e);
       }

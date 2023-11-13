@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -115,6 +116,18 @@ public class Snapshot {
       throw new IllegalArgumentException("`parentId` can't be set to null");
     }
     this.parentId = parentId;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("id", id)
+        .add("parentId", parentId)
+        .add("readSet", readSet)
+        .add("scanSet", scanSet)
+        .add("writeSet", writeSet)
+        .add("deleteSet", deleteSet)
+        .toString();
   }
 
   @VisibleForTesting

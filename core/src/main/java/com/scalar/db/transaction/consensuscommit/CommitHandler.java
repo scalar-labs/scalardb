@@ -24,8 +24,8 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitCascadeException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitTransientException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter2;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,7 +102,7 @@ public class CommitHandler {
     return Optional.of(
         new GroupCommitter2<>(
             "coordinator-writer",
-            10,
+            500,
             groupCommitNumOfRetentionValues,
             5,
             32,
@@ -188,8 +189,15 @@ public class CommitHandler {
     String transactionId = snapshot.getId();
     try {
       groupCommitter.addValue(
-          snapshot.getId(),
+          transactionId,
           parentId -> {
+            /////////// FIXME DELETE THIS TEST DEBUG
+            logger.info(
+                "GROUP COMMIT() : txId={}, parentId={}, snapshot={}",
+                transactionId,
+                parentId,
+                snapshot);
+            /////////// FIXME DELETE THIS TEST DEBUG
             // TODO?: Immutable
             snapshot.setParentId(parentId);
             try {
@@ -199,7 +207,7 @@ public class CommitHandler {
             }
             return snapshot;
           });
-    } catch (GroupCommitCascadeException e) {
+    } catch (GroupCommitTransientException e) {
       throw new CommitConflictException(e.getMessage(), e, transactionId);
     } catch (GroupCommitException e) {
       Throwable cause = e.getCause();
@@ -405,6 +413,21 @@ public class CommitHandler {
 
   public void commitStateWithParentTxId(List<Snapshot> snapshots)
       throws CommitException, UnknownTransactionStatusException {
+    ///// FIXME DELETE THIS TEST DEBUG
+    logger.info(
+        "SNAPSHOTS: {}",
+        snapshots.stream()
+            .map(
+                ss -> {
+                  if (ss == null) {
+                    return "NULL";
+                  } else {
+                    return String.format("%s:%s", ss.getId(), ss.getParentId());
+                  }
+                })
+            .collect(Collectors.joining(", ")));
+    ///// FIXME DELETE THIS TEST DEBUG
+
     // Validate parent transaction IDs
     String id = null;
     for (Snapshot snapshot : snapshots) {
@@ -420,7 +443,7 @@ public class CommitHandler {
       }
     }
     if (id == null) {
-      throw new AssertionError("No parent transaction ID is found");
+      throw new AssertionError("No parent transaction ID is found. snapshots:" + snapshots);
     }
 
     try {
