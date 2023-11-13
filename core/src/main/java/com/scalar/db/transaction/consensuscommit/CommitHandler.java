@@ -38,7 +38,6 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -193,13 +192,6 @@ public class CommitHandler {
       groupCommitter.addValue(
           transactionId,
           parentId -> {
-            /////////// FIXME DELETE THIS TEST DEBUG
-            logger.info(
-                "GROUP COMMIT() : txId={}, parentId={}, snapshot={}",
-                transactionId,
-                parentId,
-                snapshot);
-            /////////// FIXME DELETE THIS TEST DEBUG
             // TODO?: Immutable
             snapshot.setParentId(parentId);
             try {
@@ -426,21 +418,6 @@ public class CommitHandler {
 
   public void commitStateWithParentTxId(List<Snapshot> snapshots)
       throws CommitException, UnknownTransactionStatusException {
-    ///// FIXME DELETE THIS TEST DEBUG
-    logger.info(
-        "SNAPSHOTS: {}",
-        snapshots.stream()
-            .map(
-                ss -> {
-                  if (ss == null) {
-                    return "NULL";
-                  } else {
-                    return String.format("%s:%s", ss.getId(), ss.getParentId());
-                  }
-                })
-            .collect(Collectors.joining(", ")));
-    ///// FIXME DELETE THIS TEST DEBUG
-
     // Validate parent transaction IDs
     String id = null;
     for (Snapshot snapshot : snapshots) {
