@@ -80,6 +80,10 @@ public class GroupCommitter2<K, V> {
     public void abort(Throwable e) {
       parentBuffer.abortAll(e);
     }
+
+    public void remove() {
+      parentBuffer.removeValueSlot(this);
+    }
   }
 
   private static class BufferedValues<K, V> {
@@ -148,6 +152,13 @@ public class GroupCommitter2<K, V> {
 
     public synchronized boolean isDone() {
       return done.get();
+    }
+
+    public synchronized void removeValueSlot(ValueSlot<K, V> valueSlot) {
+      if (!isSizeFixed()) {
+        valueSlots.remove(valueSlot);
+        readyValueSlots.remove(valueSlot);
+      }
     }
 
     public synchronized void emitIfReady() {
@@ -322,6 +333,7 @@ public class GroupCommitter2<K, V> {
       valueSlot.setValue(value);
       return valueSlot;
     } catch (GroupCommitAlreadyClosedException e) {
+      valueSlot.remove();
       throw e;
     } catch (Throwable e) {
       GroupCommitException gce =
