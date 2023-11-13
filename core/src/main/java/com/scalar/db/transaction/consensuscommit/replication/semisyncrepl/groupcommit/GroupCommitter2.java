@@ -51,7 +51,7 @@ public class GroupCommitter2<K, V> {
         throw new AssertionError("'value' is null. key=" + getKey());
       }
       if (parentBuffer.isDone()) {
-        throw new GroupCommitTransientException(
+        throw new GroupCommitAlreadyClosedException(
             String.format(
                 "The parent buffer is already closed. parentBuffer:%s, value:%s",
                 parentBuffer, value));
@@ -60,7 +60,7 @@ public class GroupCommitter2<K, V> {
       parentBuffer.notifyOfReadyValue(this);
     }
 
-    public void waitUntilEmit() throws GroupCommitException, GroupCommitTransientException {
+    public void waitUntilEmit() throws GroupCommitException, GroupCommitCascadeException {
       try {
         completableFuture.get();
       } catch (InterruptedException e) {
@@ -68,8 +68,8 @@ public class GroupCommitter2<K, V> {
         throw new GroupCommitException("Group commit was interrupted", e);
       } catch (ExecutionException e) {
         Throwable cause = e.getCause();
-        if (cause instanceof GroupCommitTransientException) {
-          throw (GroupCommitTransientException) cause;
+        if (cause instanceof GroupCommitCascadeException) {
+          throw (GroupCommitCascadeException) cause;
         } else if (cause instanceof GroupCommitException) {
           throw (GroupCommitException) cause;
         }
@@ -201,7 +201,7 @@ public class GroupCommitter2<K, V> {
     public synchronized void abortAll(Throwable cause) {
       for (ValueSlot<K, V> kv : valueSlots) {
         kv.completableFuture.completeExceptionally(
-            new GroupCommitTransientException(
+            new GroupCommitCascadeException(
                 "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
                 cause));
         done.set(true);
@@ -321,7 +321,7 @@ public class GroupCommitter2<K, V> {
           System.currentTimeMillis() - start);
       valueSlot.setValue(value);
       return valueSlot;
-    } catch (GroupCommitException e) {
+    } catch (GroupCommitAlreadyClosedException e) {
       throw e;
     } catch (Throwable e) {
       GroupCommitException gce =
