@@ -315,9 +315,6 @@ public class GroupCommitter2<K, V> {
 
       long start = System.currentTimeMillis();
       V value = valueGeneratorFromUniqueKey.execute(valueSlot.getKey());
-      //////////// FIXME DELETE THIS TEST DEBUG
-      logger.info("buffer:{}, value:{}", bufferedValues, value);
-      //////////// FIXME DELETE THIS TEST DEBUG
       logger.info(
           "Created value(thread_id:{}): {} ms",
           Thread.currentThread().getId(),
