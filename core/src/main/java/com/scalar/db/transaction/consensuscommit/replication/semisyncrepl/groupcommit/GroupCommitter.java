@@ -162,8 +162,8 @@ public class GroupCommitter<K, V> {
         item.future.completeExceptionally(e);
         List<ValueAndFuture<V>> values = currentFetchedItems.getAndSet(null).values;
         if (!values.isEmpty()) {
-          GroupCommitCascadeException gcce =
-              new GroupCommitCascadeException(
+          GroupCommitTransientException gcce =
+              new GroupCommitTransientException(
                   "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
                   e);
           fetchedValues.values.forEach(vf -> vf.future.completeExceptionally(gcce));
@@ -207,7 +207,7 @@ public class GroupCommitter<K, V> {
   }
 
   public void addValue(K keyCandidate, Function<K, V> valueGeneratorFromUniqueKey)
-      throws GroupCommitException, GroupCommitCascadeException {
+      throws GroupCommitException, GroupCommitTransientException {
     CompletableFuture<Void> future = new CompletableFuture<>();
     queue.add(new Item<>(keyCandidate, valueGeneratorFromUniqueKey, future));
     try {
@@ -219,8 +219,8 @@ public class GroupCommitter<K, V> {
           Thread.currentThread().getId(),
           System.currentTimeMillis() - start);
     } catch (ExecutionException e) {
-      if (e.getCause() instanceof GroupCommitCascadeException) {
-        throw (GroupCommitCascadeException) e.getCause();
+      if (e.getCause() instanceof GroupCommitTransientException) {
+        throw (GroupCommitTransientException) e.getCause();
       } else if (e.getCause() instanceof GroupCommitException) {
         throw (GroupCommitException) e.getCause();
       }
