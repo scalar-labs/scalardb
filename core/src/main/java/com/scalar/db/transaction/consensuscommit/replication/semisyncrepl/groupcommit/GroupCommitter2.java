@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -44,12 +46,21 @@ public class GroupCommitter2<K, V> {
       return parentBuffer.key;
     }
 
-    public void setValue(V value) {
+    public synchronized void setValue(V value) throws GroupCommitException {
+      if (value == null) {
+        throw new AssertionError("'value' is null. key=" + getKey());
+      }
+      if (parentBuffer.isDone()) {
+        throw new GroupCommitTransientException(
+            String.format(
+                "The parent buffer is already closed. parentBuffer:%s, value:%s",
+                parentBuffer, value));
+      }
       this.value = value;
       parentBuffer.notifyOfReadyValue(this);
     }
 
-    public void waitUntilEmit() throws GroupCommitException, GroupCommitCascadeException {
+    public void waitUntilEmit() throws GroupCommitException, GroupCommitTransientException {
       try {
         completableFuture.get();
       } catch (InterruptedException e) {
@@ -57,8 +68,8 @@ public class GroupCommitter2<K, V> {
         throw new GroupCommitException("Group commit was interrupted", e);
       } catch (ExecutionException e) {
         Throwable cause = e.getCause();
-        if (cause instanceof GroupCommitCascadeException) {
-          throw (GroupCommitCascadeException) cause;
+        if (cause instanceof GroupCommitTransientException) {
+          throw (GroupCommitTransientException) cause;
         } else if (cause instanceof GroupCommitException) {
           throw (GroupCommitException) cause;
         }
@@ -75,12 +86,20 @@ public class GroupCommitter2<K, V> {
     private final ExecutorService executorService;
     private final Emittable<V> emitter;
     private final int capacity;
-    private Integer size;
+    private final AtomicReference<Integer> size = new AtomicReference<>();
     private final K key;
     public final Instant expiredAt;
     private final AtomicBoolean done = new AtomicBoolean();
     private final List<ValueSlot<K, V>> valueSlots;
     private final Set<ValueSlot<K, V>> readyValueSlots;
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("key", key)
+          .add("hashCode", hashCode())
+          .toString();
+    }
 
     BufferedValues(
         ExecutorService executorService,
@@ -108,23 +127,23 @@ public class GroupCommitter2<K, V> {
       ValueSlot<K, V> valueSlot = new ValueSlot<>(this);
       valueSlots.add(valueSlot);
       if (noMoreSlot()) {
-        size = capacity;
+        size.set(capacity);
       }
       return valueSlot;
     }
 
     public synchronized void fixSize() {
       // Current ValueSlot that `index` is pointing is not used yet.
-      size = valueSlots.size();
+      size.set(valueSlots.size());
       emitIfReady();
     }
 
     public synchronized boolean isSizeFixed() {
-      return size != null;
+      return size.get() != null;
     }
 
     public synchronized boolean isReady() {
-      return isSizeFixed() && readyValueSlots.size() >= size;
+      return isSizeFixed() && readyValueSlots.size() >= size.get();
     }
 
     public synchronized boolean isDone() {
@@ -137,6 +156,11 @@ public class GroupCommitter2<K, V> {
       }
 
       if (isReady()) {
+        if (valueSlots.isEmpty()) {
+          logger.warn("'valueSlots' is empty. Nothing to do. bufferedValue:{}", this);
+          done.set(true);
+          return;
+        }
         executorService.execute(
             () -> {
               try {
@@ -146,7 +170,7 @@ public class GroupCommitter2<K, V> {
                 logger.info(
                     "Emitted (thread_id:{}, num_of_values:{}): {} ms",
                     Thread.currentThread().getId(),
-                    size,
+                    size.get(),
                     System.currentTimeMillis() - startEmit);
 
                 long startNotify = System.currentTimeMillis();
@@ -154,9 +178,10 @@ public class GroupCommitter2<K, V> {
                 logger.info(
                     "Notified (thread_id:{}, num_of_values:{}): {} ms",
                     Thread.currentThread().getId(),
-                    size,
+                    size.get(),
                     System.currentTimeMillis() - startNotify);
               } catch (Throwable e) {
+                logger.error("Group commit failed", e);
                 valueSlots.forEach(
                     vf ->
                         vf.completableFuture.completeExceptionally(
@@ -176,7 +201,7 @@ public class GroupCommitter2<K, V> {
     public synchronized void abortAll(Throwable cause) {
       for (ValueSlot<K, V> kv : valueSlots) {
         kv.completableFuture.completeExceptionally(
-            new GroupCommitCascadeException(
+            new GroupCommitTransientException(
                 "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
                 cause));
         done.set(true);
@@ -230,7 +255,7 @@ public class GroupCommitter2<K, V> {
       } else {
         // Not expired. Retry
         retryWaitInMillis =
-            Math.min(
+            Math.max(
                 bufferedValues.expiredAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
                 expirationCheckIntervalInMillis);
       }
@@ -238,7 +263,7 @@ public class GroupCommitter2<K, V> {
 
     if (retryWaitInMillis != null) {
       try {
-        TimeUnit.MILLISECONDS.sleep(expirationCheckIntervalInMillis);
+        TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         logger.warn("Interrupted", e);
@@ -281,28 +306,44 @@ public class GroupCommitter2<K, V> {
     return bufferedValues.getValueSlot();
   }
 
-  public void addValue(K keyCandidate, ValueGenerator<K, V> valueGeneratorFromUniqueKey)
-      throws GroupCommitCascadeException, GroupCommitException {
-    ValueSlot<K, V> valueSlot = getValueSlot(keyCandidate);
-
-    V value;
+  private ValueSlot<K, V> getValueSlotContainingValue(
+      K keyCandidate, ValueGenerator<K, V> valueGeneratorFromUniqueKey)
+      throws GroupCommitException {
+    ValueSlot<K, V> valueSlot = null;
     try {
+      valueSlot = getValueSlot(keyCandidate);
+
       long start = System.currentTimeMillis();
-      value = valueGeneratorFromUniqueKey.execute(valueSlot.getKey());
+      V value = valueGeneratorFromUniqueKey.execute(valueSlot.getKey());
+      //////////// FIXME DELETE THIS TEST DEBUG
+      logger.info("buffer:{}, value:{}", bufferedValues, value);
+      //////////// FIXME DELETE THIS TEST DEBUG
       logger.info(
           "Created value(thread_id:{}): {} ms",
           Thread.currentThread().getId(),
           System.currentTimeMillis() - start);
+      valueSlot.setValue(value);
+      return valueSlot;
+    } catch (GroupCommitException e) {
+      throw e;
     } catch (Throwable e) {
       GroupCommitException gce =
           new GroupCommitException(
               String.format(
                   "Failed to prepare a value for group commit. keyCandidate: %s", keyCandidate),
               e);
-      valueSlot.abort(gce);
+      if (valueSlot != null) {
+        valueSlot.abort(gce);
+      }
       throw gce;
     }
-    valueSlot.setValue(value);
+  }
+
+  public void addValue(K keyCandidate, ValueGenerator<K, V> valueGeneratorFromUniqueKey)
+      throws GroupCommitException {
+    ValueSlot<K, V> valueSlot =
+        getValueSlotContainingValue(keyCandidate, valueGeneratorFromUniqueKey);
+
     long start = System.currentTimeMillis();
     valueSlot.waitUntilEmit();
     logger.info(

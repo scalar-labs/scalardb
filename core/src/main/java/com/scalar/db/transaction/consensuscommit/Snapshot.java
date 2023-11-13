@@ -121,6 +121,18 @@ public class Snapshot {
     this.parentId = parentId;
   }
 
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("id", id)
+        .add("parentId", parentId)
+        .add("readSet", readSet)
+        .add("scanSet", scanSet)
+        .add("writeSet", writeSet)
+        .add("deleteSet", deleteSet)
+        .toString();
+  }
+
   @VisibleForTesting
   @Nonnull
   Isolation getIsolation() {
