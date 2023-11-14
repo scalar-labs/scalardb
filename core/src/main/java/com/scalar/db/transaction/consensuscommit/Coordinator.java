@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
@@ -16,7 +17,11 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +39,7 @@ public class Coordinator {
           .addColumn(Attribute.ID, DataType.TEXT)
           .addColumn(Attribute.STATE, DataType.INT)
           .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
+          .addColumn("child_ids", DataType.TEXT)
           .addPartitionKey(Attribute.ID)
           .build();
 
@@ -60,17 +66,107 @@ public class Coordinator {
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
   }
 
-  private String getTxIdForState(String txId) {
-    return txId.split(":")[0];
+  private static class IdForGroupCommit {
+    public final String parentId;
+    public final String childId;
+
+    public IdForGroupCommit(String parentId, String childId) {
+      this.parentId = parentId;
+      this.childId = childId;
+    }
+  }
+
+  private boolean isIdForGroupCommit(String id) {
+    return id.contains(":");
+  }
+
+  private IdForGroupCommit idForGroupCommit(String id) {
+    if (!isIdForGroupCommit(id)) {
+      throw new IllegalArgumentException("'id' isn't for group commit. id:" + id);
+    }
+    String[] parts = id.split(":");
+    return new IdForGroupCommit(parts[0], parts[1]);
   }
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
-    Get get = createGetWith(getTxIdForState(id));
+    if (isIdForGroupCommit(id)) {
+      return getStateForGroupCommit(id);
+    }
+
+    Get get = createGetWith(id);
     return get(get);
   }
 
+  public Optional<Coordinator.State> getStateForGroupCommit(String id) throws CoordinatorException {
+    IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
+
+    String parentId = idForGroupCommit.parentId;
+    String childId = idForGroupCommit.childId;
+    Get get = createGetWith(parentId);
+    Optional<State> state = get(get);
+    return state.flatMap(
+        s -> {
+          if (!s.getState().equals(TransactionState.COMMITTED)) {
+            return state;
+          }
+
+          boolean isTheChildIdContained = Arrays.asList(s.childIds).contains(childId);
+          if (isTheChildIdContained) {
+            return state;
+          } else {
+            State partiallyCommittedState = state.get();
+            return Optional.of(
+                new State(
+                    partiallyCommittedState.getId(),
+                    TransactionState.ABORTED,
+                    partiallyCommittedState.getCreatedAt()));
+          }
+        });
+  }
+
   public void putState(Coordinator.State state) throws CoordinatorException {
+    if (isIdForGroupCommit(state.getId())) {
+      putStateForGroupCommit(
+          Collections.singleton(state.getId()), state.getState(), state.getCreatedAt());
+      return;
+    }
+
     Put put = createPutWith(state);
+    put(put);
+  }
+
+  public void putStateForGroupCommit(
+      Collection<String> ids, TransactionState transactionState, long createdAt)
+      throws CoordinatorException {
+    StringBuilder sb = new StringBuilder();
+    String firstParentId = null;
+    for (String id : ids) {
+      IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
+      String parentId = idForGroupCommit.parentId;
+      String childId = idForGroupCommit.childId;
+      if (firstParentId == null) {
+        firstParentId = parentId;
+      } else {
+        if (!firstParentId.equals(parentId)) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "Different parent ID is found. firstParentId:%s, parentId:%s",
+                  firstParentId, parentId));
+        }
+        sb.append(",");
+      }
+      sb.append(childId);
+    }
+
+    Put put =
+        new Put(new Key(Attribute.toIdValue(firstParentId)))
+            .withValue(Attribute.toStateValue(transactionState))
+            .withValue(Attribute.toCreatedAtValue(createdAt))
+            .withValue(new TextValue("child_ids", sb.toString()))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .withCondition(new PutIfNotExists())
+            .forNamespace(coordinatorNamespace)
+            .forTable(TABLE);
     put(put);
   }
 
@@ -103,7 +199,7 @@ public class Coordinator {
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    return new Put(new Key(Attribute.toIdValue(getTxIdForState(state.getId()))))
+    return new Put(new Key(Attribute.toIdValue(state.getId())))
         .withValue(Attribute.toStateValue(state.getState()))
         .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
         .withConsistency(Consistency.LINEARIZABLE)
@@ -140,12 +236,14 @@ public class Coordinator {
     private final String id;
     private final TransactionState state;
     private final long createdAt;
+    private final String[] childIds;
 
     public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
       id = result.getValue(Attribute.ID).get().getAsString().get();
       state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
       createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
+      childIds = result.getValue(Attribute.ID).get().getAsString().get().split(",");
     }
 
     public State(String id, TransactionState state) {
@@ -161,6 +259,7 @@ public class Coordinator {
       this.id = checkNotNull(id);
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
+      this.childIds = new String[] {};
     }
 
     @Nonnull
@@ -175,6 +274,21 @@ public class Coordinator {
 
     public long getCreatedAt() {
       return createdAt;
+    }
+
+    public String[] childIds() {
+      return childIds;
+    }
+
+    /// FIXME: DEBUG
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("id", id)
+          .add("state", state)
+          .add("createdAt", createdAt)
+          .add("childIds", childIds)
+          .toString();
     }
 
     @Override
