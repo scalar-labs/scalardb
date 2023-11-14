@@ -47,6 +47,9 @@ public class GroupCommitter2<K, V> {
     }
 
     public synchronized void setValue(V value) throws GroupCommitException {
+      ////// FIXME: DEBUG
+      logger.info("SET-VALUE: value={}", value);
+      ////// FIXME: DEBUG
       if (value == null) {
         throw new AssertionError("'value' is null. key=" + getKey());
       }
@@ -81,8 +84,13 @@ public class GroupCommitter2<K, V> {
       parentBuffer.abortAll(e);
     }
 
-    public void remove() {
-      parentBuffer.removeValueSlot(this);
+    public void remove(K keyCandidate) {
+      parentBuffer.removeValueSlot(this, keyCandidate);
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this).add("value", value).toString();
     }
   }
 
@@ -102,6 +110,12 @@ public class GroupCommitter2<K, V> {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
           .add("hashCode", hashCode())
+          .add("expiredAt", expiredAt)
+          .add("done", isDone())
+          .add("ready", isReady())
+          .add("sizeFixed", isSizeFixed())
+          .add("valueSlots.size", valueSlots.size())
+          .add("readyValueSlots.size", readyValueSlots.size())
           .toString();
     }
 
@@ -127,16 +141,23 @@ public class GroupCommitter2<K, V> {
       return valueSlots.size() >= capacity;
     }
 
-    public synchronized ValueSlot<K, V> getValueSlot() {
+    public synchronized ValueSlot<K, V> getValueSlot() throws GroupCommitAlreadyClosedException {
+      if (isSizeFixed()) {
+        throw new GroupCommitAlreadyClosedException(
+            "The size of 'valueSlot' is already fixed. buffer:" + this);
+      }
       ValueSlot<K, V> valueSlot = new ValueSlot<>(this);
       valueSlots.add(valueSlot);
       if (noMoreSlot()) {
-        size.set(capacity);
+        fixSize();
       }
       return valueSlot;
     }
 
     public synchronized void fixSize() {
+      ////// FIXME: DEBUG
+      logger.info("GC FIX-SIZE: key={}", key);
+      ////// FIXME: DEBUG
       // Current ValueSlot that `index` is pointing is not used yet.
       size.set(valueSlots.size());
       emitIfReady();
@@ -154,11 +175,23 @@ public class GroupCommitter2<K, V> {
       return done.get();
     }
 
-    public synchronized void removeValueSlot(ValueSlot<K, V> valueSlot) {
-      if (!isSizeFixed()) {
-        valueSlots.remove(valueSlot);
-        readyValueSlots.remove(valueSlot);
-      }
+    public synchronized void removeValueSlot(ValueSlot<K, V> valueSlot, K keyCandidate) {
+      //      if (!isSizeFixed()) {
+      valueSlots.remove(valueSlot);
+      size.set(size.get() - 1);
+      readyValueSlots.remove(valueSlot);
+      //      }
+      ////// FIXME: DEBUG
+      logger.info(
+          "REMOVE VS: key={}, keyCandidate={}, valueSlot={}, valueSlotsSize={}, size={}, readyValueSlotsSize={}",
+          key,
+          keyCandidate,
+          valueSlot,
+          valueSlots.size(),
+          size.get(),
+          readyValueSlots.size());
+      ////// FIXME: DEBUG
+      emitIfReady();
     }
 
     public synchronized void emitIfReady() {
@@ -175,6 +208,9 @@ public class GroupCommitter2<K, V> {
         executorService.execute(
             () -> {
               try {
+                ////// FIXME: DEBUG
+                logger.info("EMIT: buffer={}", this);
+                ////// FIXME: DEBUG
                 long startEmit = System.currentTimeMillis();
                 emitter.execute(
                     valueSlots.stream().map(vs -> vs.value).collect(Collectors.toList()));
@@ -250,14 +286,33 @@ public class GroupCommitter2<K, V> {
     startExpirationCheckExecutorService();
   }
 
+  ////////// FIXME: DEBUG LOG
+  private volatile long lastDebugPrint = 0;
+  ////////// FIXME: DEBUG LOG
   private boolean dequeueAndHandleBufferedValues() {
     BufferedValues<K, V> bufferedValues = queueOfBufferedValues.peek();
     Long retryWaitInMillis = null;
+
+    ////////// FIXME: DEBUG LOG
+    logger.info("FETCHED BUFFER: buffer={}", bufferedValues);
+    if (lastDebugPrint + 1000 < System.currentTimeMillis()) {
+      logger.info("QUEUE STATUS: size={}", queueOfBufferedValues.size());
+      lastDebugPrint = System.currentTimeMillis();
+    }
+    ////////// FIXME: DEBUG LOG
 
     if (bufferedValues == null) {
       retryWaitInMillis = expirationCheckIntervalInMillis;
     } else if (bufferedValues.isSizeFixed()) {
       // Already expired. Nothing to do
+      ////////// FIXME: DEBUG LOG
+      if (bufferedValues.expiredAt.isBefore(Instant.now().minusMillis(5000))) {
+        logger.info(
+            "TOO OLD BUFFER: buffer.key={}, buffer.values={}",
+            bufferedValues.key,
+            bufferedValues.valueSlots);
+      }
+      ////////// FIXME: DEBUG LOG
     } else {
       Instant now = Instant.now();
       if (now.isAfter(bufferedValues.expiredAt)) {
@@ -273,6 +328,9 @@ public class GroupCommitter2<K, V> {
     }
 
     if (retryWaitInMillis != null) {
+      ////////// FIXME: DEBUG LOG
+      logger.info("FETCHED BUFFER(RETRY): buffer={}, wait={}", bufferedValues, retryWaitInMillis);
+      ////////// FIXME: DEBUG LOG
       try {
         TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
       } catch (InterruptedException e) {
@@ -281,6 +339,9 @@ public class GroupCommitter2<K, V> {
         return false;
       }
     } else {
+      ////////// FIXME: DEBUG LOG
+      logger.info("FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
+      ////////// FIXME: DEBUG LOG
       BufferedValues<K, V> removed = queueOfBufferedValues.poll();
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.warn(
@@ -303,7 +364,8 @@ public class GroupCommitter2<K, V> {
         });
   }
 
-  private synchronized ValueSlot<K, V> getValueSlot(K keyCandidate) {
+  private synchronized ValueSlot<K, V> getValueSlot(K keyCandidate)
+      throws GroupCommitAlreadyClosedException {
     if (bufferedValues == null || bufferedValues.noMoreSlot() || bufferedValues.isDone()) {
       bufferedValues =
           new BufferedValues<>(
@@ -327,23 +389,36 @@ public class GroupCommitter2<K, V> {
       long start = System.currentTimeMillis();
       V value = valueGeneratorFromUniqueKey.execute(valueSlot.getKey());
       logger.info(
-          "Created value(thread_id:{}): {} ms",
+          "Created value(thread_id:{}): {} ms, bufferKey={}, key={}",
           Thread.currentThread().getId(),
-          System.currentTimeMillis() - start);
+          System.currentTimeMillis() - start,
+          valueSlot.parentBuffer.key,
+          keyCandidate);
       valueSlot.setValue(value);
       return valueSlot;
     } catch (GroupCommitAlreadyClosedException e) {
-      valueSlot.remove();
+      ///////// FIXME: DEBUG
+      logger.info(
+          "FAILED TO CREATE VALUE #1: , bufferKey={}, key={}",
+          valueSlot.parentBuffer.key,
+          keyCandidate);
+      ///////// FIXME: DEBUG
+      valueSlot.remove(keyCandidate);
       throw e;
     } catch (Throwable e) {
+      ///////// FIXME: DEBUG
+      logger.info(
+          "FAILED TO CREATE VALUE #2: , bufferKey={}, key={}",
+          valueSlot.parentBuffer.key,
+          keyCandidate);
+      ///////// FIXME: DEBUG
       GroupCommitException gce =
           new GroupCommitException(
               String.format(
                   "Failed to prepare a value for group commit. keyCandidate: %s", keyCandidate),
               e);
-      if (valueSlot != null) {
-        valueSlot.abort(gce);
-      }
+      // valueSlot.abort(gce);
+      valueSlot.remove(keyCandidate);
       throw gce;
     }
   }
