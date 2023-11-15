@@ -425,6 +425,18 @@ public class SchemaOperator implements AutoCloseable {
     }
   }
 
+  public void upgrade(Map<String, String> options) throws SchemaLoaderException {
+    try {
+      // As of 4.0.0, upgrade() implementation is identical for the storage or transaction admin.
+      // This could change in the future but for now using either admin regardless of the schema is
+      // fine
+      transactionAdmin.get().upgrade(options);
+      logger.info("Upgrading the environment succeeded.");
+    } catch (ExecutionException e) {
+      throw new RuntimeException("Upgrading the environment failed", e);
+    }
+  }
+
   @Override
   public void close() {
     if (storageAdminLoaded.get()) {
