@@ -429,7 +429,10 @@ public final class ProtoUtils {
       if (mutation.hasCondition()) {
         buildable.condition(toCondition(mutation.getCondition(), metadata));
       }
-      return buildable.consistency(toConsistency(mutation.getConsistency())).build();
+      return buildable
+          .consistency(toConsistency(mutation.getConsistency()))
+          .implicitPreReadEnabled(mutation.getImplicitPreReadEnabled())
+          .build();
     } else {
       DeleteBuilder.Buildable buildable =
           Delete.newBuilder()
@@ -453,6 +456,7 @@ public final class ProtoUtils {
     if (mutation instanceof Put) {
       builder.setType(com.scalar.db.rpc.Mutation.Type.PUT);
       ((Put) mutation).getColumns().values().forEach(c -> builder.addColumns(toColumn(c)));
+      builder.setImplicitPreReadEnabled(((Put) mutation).isImplicitPreReadEnabled());
     } else {
       builder.setType(com.scalar.db.rpc.Mutation.Type.DELETE);
     }

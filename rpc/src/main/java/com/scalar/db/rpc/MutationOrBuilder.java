@@ -185,4 +185,14 @@ public interface MutationOrBuilder extends
    */
   com.scalar.db.rpc.ColumnOrBuilder getColumnsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * only for Put operations
+   * </pre>
+   *
+   * <code>bool implicit_pre_read_enabled = 10;</code>
+   * @return The implicitPreReadEnabled.
+   */
+  boolean getImplicitPreReadEnabled();
 }

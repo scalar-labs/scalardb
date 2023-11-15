@@ -9,6 +9,7 @@ import com.scalar.db.api.OperationBuilder.ClearValues;
 import com.scalar.db.api.OperationBuilder.ClusteringKey;
 import com.scalar.db.api.OperationBuilder.Condition;
 import com.scalar.db.api.OperationBuilder.Consistency;
+import com.scalar.db.api.OperationBuilder.ImplicitPreReadEnabled;
 import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.api.OperationBuilder.Values;
@@ -76,11 +77,13 @@ public class PutBuilder {
       implements ClusteringKey<Buildable>,
           Consistency<Buildable>,
           Condition<Buildable>,
-          Values<Buildable> {
+          Values<Buildable>,
+          ImplicitPreReadEnabled<Buildable> {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
+    boolean implicitPreReadEnabled = true;
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -200,6 +203,18 @@ public class PutBuilder {
     }
 
     @Override
+    public Buildable disableImplicitPreRead() {
+      implicitPreReadEnabled = false;
+      return this;
+    }
+
+    @Override
+    public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
+      this.implicitPreReadEnabled = implicitPreReadEnabled;
+      return this;
+    }
+
+    @Override
     public Put build() {
       Put put = new Put(partitionKey, clusteringKey);
       put.forNamespace(namespaceName).forTable(tableName);
@@ -210,6 +225,7 @@ public class PutBuilder {
       if (condition != null) {
         put.withCondition(condition);
       }
+      put.setImplicitPreReadEnabled(implicitPreReadEnabled);
 
       return put;
     }
@@ -237,6 +253,7 @@ public class PutBuilder {
       this.columns.putAll(put.getColumns());
       this.consistency = put.getConsistency();
       this.condition = put.getCondition().orElse(null);
+      this.implicitPreReadEnabled = put.isImplicitPreReadEnabled();
     }
 
     @Override
@@ -389,6 +406,18 @@ public class PutBuilder {
     @Override
     public BuildableFromExisting clearNamespace() {
       this.namespaceName = null;
+      return this;
+    }
+
+    @Override
+    public Buildable disableImplicitPreRead() {
+      super.disableImplicitPreRead();
+      return this;
+    }
+
+    @Override
+    public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
+      super.implicitPreReadEnabled(implicitPreReadEnabled);
       return this;
     }
   }
