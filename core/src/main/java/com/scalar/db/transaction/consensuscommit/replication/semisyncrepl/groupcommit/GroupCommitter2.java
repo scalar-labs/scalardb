@@ -175,7 +175,9 @@ public class GroupCommitter2<K, V> {
     public synchronized void removeValueSlot(ValueSlot<K, V> valueSlot, K keyCandidate) {
       //      if (!isSizeFixed()) {
       valueSlots.remove(valueSlot);
-      size.set(size.get() - 1);
+      if (size.get() != null) {
+        size.set(size.get() - 1);
+      }
       readyValueSlots.remove(valueSlot);
       //      }
       ////// FIXME: DEBUG
