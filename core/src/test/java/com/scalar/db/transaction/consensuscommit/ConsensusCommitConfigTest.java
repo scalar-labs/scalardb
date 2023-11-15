@@ -29,6 +29,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isAsyncCommitEnabled()).isFalse();
     assertThat(config.isAsyncRollbackEnabled()).isFalse();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
+    assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
   }
 
   @Test
@@ -190,5 +191,18 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isIncludeMetadataEnabled()).isTrue();
+  }
+
+  @Test
+  public void constructor_PropertiesWithParallelImplicitPreReadEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.PARALLEL_IMPLICIT_PRE_READ, "false");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isParallelImplicitPreReadEnabled()).isFalse();
   }
 }

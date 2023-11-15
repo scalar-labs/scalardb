@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,7 +26,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -36,8 +37,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -77,7 +81,12 @@ public class CrudHandlerTest {
     MockitoAnnotations.openMocks(this).close();
     handler =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, false, mutationConditionsValidator);
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
@@ -203,11 +212,11 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void get_KeyNotExistsInCrudSetAndExceptionThrownInStorage_ShouldThrowCrudException()
-      throws CrudException, ExecutionException {
+  public void get_KeyNotContainsInReadSetAndExceptionThrownInStorage_ShouldThrowCrudException()
+      throws ExecutionException {
     // Arrange
     Get get = prepareGet();
-    when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
+    when(snapshot.containsKeyInReadSet(new Snapshot.Key(get))).thenReturn(false);
     ExecutionException toThrow = mock(ExecutionException.class);
     when(storage.get(get)).thenThrow(toThrow);
 
@@ -298,7 +307,7 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     snapshot =
         new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -347,7 +356,7 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     snapshot =
         new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -384,7 +393,7 @@ public class CrudHandlerTest {
             .build();
     Result result2 = new ResultImpl(columns, TABLE_METADATA);
 
-    Map<Snapshot.Key, Optional<TransactionResult>> readSet = new HashMap<>();
+    ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet = new ConcurrentHashMap<>();
     Map<Snapshot.Key, Delete> deleteSet = new HashMap<>();
     snapshot =
         new Snapshot(
@@ -397,7 +406,7 @@ public class CrudHandlerTest {
             new HashMap<>(),
             new HashMap<>(),
             deleteSet);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -476,45 +485,114 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void put_WithResultInReadSet_shouldCallAppropriateMethods()
-      throws UnsatisfiedConditionException {
+  public void put_PutWithoutConditionGiven_ShouldCallAppropriateMethods() throws CrudException {
     // Arrange
     Put put =
         Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "foo")).build();
-    Snapshot.Key key = new Snapshot.Key(put);
-    TransactionResult result = mock(TransactionResult.class);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    CrudHandler spied = spy(handler);
 
     // Act
-    handler.put(put);
+    spied.put(put);
 
     // Assert
+    verify(spied, never()).readUnread(any(), any());
+    verify(snapshot, never()).getFromReadSet(any());
+    verify(mutationConditionsValidator, never()).checkIfConditionIsSatisfied(any(Put.class), any());
+    verify(snapshot).put(new Snapshot.Key(put), put);
+  }
+
+  @Test
+  public void put_PutWithConditionGiven_WithResultInReadSet_ShouldCallAppropriateMethods()
+      throws CrudException {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    Snapshot.Key key = new Snapshot.Key(put);
+    when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
+    TransactionResult result = mock(TransactionResult.class);
+    when(result.isCommitted()).thenReturn(true);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    CrudHandler spied = spy(handler);
+
+    // Act
+    spied.put(put);
+
+    // Assert
+    verify(spied).readUnread(key, getForKey);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
     verify(snapshot).put(key, put);
   }
 
   @Test
-  public void put_WithoutResultInReadSet_shouldCallAppropriateMethods()
-      throws UnsatisfiedConditionException {
+  public void put_PutWithConditionGiven_WithoutResultInReadSet_ShouldCallAppropriateMethods()
+      throws CrudException {
     // Arrange
     Put put =
-        Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "foo")).build();
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.putIfExists())
+            .build();
     Snapshot.Key key = new Snapshot.Key(put);
+    when(snapshot.containsKeyInReadSet(any())).thenReturn(false);
     when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
 
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    CrudHandler spied = spy(handler);
+    doReturn(Optional.empty()).when(spied).getFromStorage(getForKey);
+
     // Act
-    handler.put(put);
+    spied.put(put);
 
     // Assert
+    verify(spied).readUnread(key, getForKey);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, null);
     verify(snapshot).put(key, put);
   }
 
   @Test
-  public void delete_WithResultInReadSet_shouldCallAppropriateMethods()
-      throws UnsatisfiedConditionException {
+  public void
+      put_PutWithImplicitPreReadDisabledAndConditionGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.putIfExists())
+            .disableImplicitPreRead()
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.put(put)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void delete_DeleteWithoutConditionGiven_ShouldCallAppropriateMethods()
+      throws CrudException {
     // Arrange
     Delete delete =
         Delete.newBuilder()
@@ -522,38 +600,256 @@ public class CrudHandlerTest {
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
             .build();
-    Snapshot.Key key = new Snapshot.Key(delete);
-    TransactionResult result = mock(TransactionResult.class);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    CrudHandler spied = spy(handler);
 
     // Act
-    handler.delete(delete);
+    spied.delete(delete);
 
     // Assert
+    verify(spied, never()).readUnread(any(), any());
+    verify(snapshot, never()).getFromReadSet(any());
+    verify(mutationConditionsValidator, never())
+        .checkIfConditionIsSatisfied(any(Delete.class), any());
+    verify(snapshot).put(new Snapshot.Key(delete), delete);
+  }
+
+  @Test
+  public void delete_DeleteWithConditionGiven_WithResultInReadSet_ShouldCallAppropriateMethods()
+      throws CrudException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .build();
+    Snapshot.Key key = new Snapshot.Key(delete);
+    when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
+    TransactionResult result = mock(TransactionResult.class);
+    when(result.isCommitted()).thenReturn(true);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    CrudHandler spied = spy(handler);
+
+    // Act
+    spied.delete(delete);
+
+    // Assert
+    verify(spied).readUnread(key, getForKey);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, result);
     verify(snapshot).put(key, delete);
   }
 
   @Test
-  public void delete_WithoutResultInReadSet_shouldCallAppropriateMethods()
-      throws UnsatisfiedConditionException {
+  public void delete_DeleteWithConditionGiven_WithoutResultInReadSet_ShouldCallAppropriateMethods()
+      throws CrudException {
     // Arrange
     Delete delete =
         Delete.newBuilder()
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.deleteIfExists())
             .build();
     Snapshot.Key key = new Snapshot.Key(delete);
+    when(snapshot.containsKeyInReadSet(any())).thenReturn(false);
     when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
 
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    CrudHandler spied = spy(handler);
+    doReturn(Optional.empty()).when(spied).getFromStorage(getForKey);
+
     // Act
-    handler.delete(delete);
+    spied.delete(delete);
 
     // Assert
+    verify(spied).readUnread(key, getForKey);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null);
     verify(snapshot).put(key, delete);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void readUnread_ContainsKeyInReadSet_ShouldCallAppropriateMethods()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Snapshot.Key key = mock(Snapshot.Key.class);
+    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    // Act
+    handler.readUnread(key, getForKey);
+
+    // Assert
+    verify(storage, never()).get(any());
+    verify(snapshot, never()).put(any(), any(Optional.class));
+  }
+
+  @Test
+  public void
+      readUnread_NotContainsKeyInReadSet_EmptyResultReturnedByStorage_ShouldCallAppropriateMethods()
+          throws CrudException, ExecutionException {
+    // Arrange
+    Snapshot.Key key = mock(Snapshot.Key.class);
+    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
+    when(storage.get(any())).thenReturn(Optional.empty());
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    // Act
+    handler.readUnread(key, getForKey);
+
+    // Assert
+    verify(storage).get(any());
+    verify(snapshot).put(key, Optional.empty());
+  }
+
+  @Test
+  public void
+      readUnread_NotContainsKeyInReadSet_CommittedRecordReturnedByStorage_ShouldCallAppropriateMethods()
+          throws CrudException, ExecutionException {
+    // Arrange
+    Snapshot.Key key = mock(Snapshot.Key.class);
+    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
+
+    Result result = mock(Result.class);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    // Act
+    handler.readUnread(key, getForKey);
+
+    // Assert
+    verify(storage).get(any());
+    verify(snapshot).put(key, Optional.of(new TransactionResult(result)));
+  }
+
+  @Test
+  public void
+      readUnread_NotContainsKeyInReadSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
+          throws ExecutionException {
+    // Arrange
+    Snapshot.Key key = mock(Snapshot.Key.class);
+    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
+
+    Result result = mock(Result.class);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.readUnread(key, getForKey))
+        .isInstanceOf(UncommittedRecordException.class);
+  }
+
+  @Test
+  public void readIfImplicitPreReadEnabled_ShouldCallAppropriateMethods() throws CrudException {
+    // Arrange
+    Put put1 = mock(Put.class);
+    when(put1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
+    when(put1.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+    when(put1.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+    when(put1.isImplicitPreReadEnabled()).thenReturn(true);
+
+    Put put2 = mock(Put.class);
+    when(put2.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
+    when(put2.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+    when(put2.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_2));
+    when(put2.isImplicitPreReadEnabled()).thenReturn(true);
+
+    Put put3 = mock(Put.class);
+    when(put3.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
+    when(put3.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+    when(put3.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_3));
+    when(put3.isImplicitPreReadEnabled()).thenReturn(false);
+
+    when(snapshot.getPutsInWriteSet()).thenReturn(Arrays.asList(put1, put2, put3));
+
+    Delete delete1 = mock(Delete.class);
+    when(delete1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
+    when(delete1.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+    when(delete1.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    Delete delete2 = mock(Delete.class);
+    when(delete2.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
+    when(delete2.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+    when(delete2.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_2));
+
+    when(snapshot.getDeletesInDeleteSet()).thenReturn(Arrays.asList(delete1, delete2));
+
+    when(snapshot.getId()).thenReturn(ANY_TX_ID);
+
+    // Act
+    handler.readIfImplicitPreReadEnabled();
+
+    // Assert
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<ParallelExecutor.ParallelExecutorTask>> tasksCaptor =
+        ArgumentCaptor.forClass(List.class);
+    ArgumentCaptor<String> transactionIdCaptor = ArgumentCaptor.forClass(String.class);
+    verify(parallelExecutor)
+        .executeImplicitPreRead(tasksCaptor.capture(), transactionIdCaptor.capture());
+
+    List<ParallelExecutor.ParallelExecutorTask> tasks = tasksCaptor.getValue();
+    assertThat(tasks.size()).isEqualTo(4);
+
+    assertThat(transactionIdCaptor.getValue()).isEqualTo(ANY_TX_ID);
   }
 }

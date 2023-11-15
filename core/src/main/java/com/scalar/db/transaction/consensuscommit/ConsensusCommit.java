@@ -13,7 +13,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -94,7 +96,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void put(List<Put> puts) throws CrudException {
-    checkArgument(puts.size() != 0);
+    checkArgument(!puts.isEmpty());
     for (Put p : puts) {
       put(p);
     }
@@ -109,7 +111,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
-    checkArgument(deletes.size() != 0);
+    checkArgument(!deletes.isEmpty());
     for (Delete d : deletes) {
       delete(d);
     }
@@ -117,7 +119,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(mutations.size() != 0);
+    checkArgument(!mutations.isEmpty());
     for (Mutation m : mutations) {
       if (m instanceof Put) {
         put((Put) m);
@@ -129,6 +131,15 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
+    // Execute implicit pre-read
+    try {
+      crud.readIfImplicitPreReadEnabled();
+    } catch (CrudConflictException e) {
+      throw new CommitConflictException("Conflict occurred while implicit pre-read", e, getId());
+    } catch (CrudException e) {
+      throw new CommitException("Failed to execute implicit pre-read", e, getId());
+    }
+
     commit.commit(crud.getSnapshot());
   }
 
