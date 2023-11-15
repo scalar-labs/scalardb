@@ -47,9 +47,6 @@ public class GroupCommitter2<K, V> {
     }
 
     public synchronized void setValue(V value) throws GroupCommitException {
-      ////// FIXME: DEBUG
-      logger.info("SET-VALUE: value={}", value);
-      ////// FIXME: DEBUG
       if (value == null) {
         throw new AssertionError("'value' is null. key=" + getKey());
       }
@@ -294,7 +291,6 @@ public class GroupCommitter2<K, V> {
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
-    logger.info("FETCHED BUFFER: buffer={}", bufferedValues);
     if (lastDebugPrint + 1000 < System.currentTimeMillis()) {
       logger.info("QUEUE STATUS: size={}", queueOfBufferedValues.size());
       lastDebugPrint = System.currentTimeMillis();
@@ -329,7 +325,8 @@ public class GroupCommitter2<K, V> {
 
     if (retryWaitInMillis != null) {
       ////////// FIXME: DEBUG LOG
-      logger.info("FETCHED BUFFER(RETRY): buffer={}, wait={}", bufferedValues, retryWaitInMillis);
+      // logger.info("FETCHED BUFFER(RETRY): buffer={}, wait={}", bufferedValues,
+      // retryWaitInMillis);
       ////////// FIXME: DEBUG LOG
       try {
         TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
@@ -400,16 +397,19 @@ public class GroupCommitter2<K, V> {
       ///////// FIXME: DEBUG
       logger.info(
           "FAILED TO CREATE VALUE #1: , bufferKey={}, key={}",
-          valueSlot.parentBuffer.key,
+          valueSlot == null ? "NULL" : valueSlot.parentBuffer.key,
           keyCandidate);
       ///////// FIXME: DEBUG
-      valueSlot.remove(keyCandidate);
+
+      if (valueSlot != null) {
+        valueSlot.remove(keyCandidate);
+      }
       throw e;
     } catch (Throwable e) {
       ///////// FIXME: DEBUG
       logger.info(
           "FAILED TO CREATE VALUE #2: , bufferKey={}, key={}",
-          valueSlot.parentBuffer.key,
+          valueSlot == null ? "NULL" : valueSlot.parentBuffer.key,
           keyCandidate);
       ///////// FIXME: DEBUG
       GroupCommitException gce =
@@ -418,7 +418,9 @@ public class GroupCommitter2<K, V> {
                   "Failed to prepare a value for group commit. keyCandidate: %s", keyCandidate),
               e);
       // valueSlot.abort(gce);
-      valueSlot.remove(keyCandidate);
+      if (valueSlot != null) {
+        valueSlot.remove(keyCandidate);
+      }
       throw gce;
     }
   }
