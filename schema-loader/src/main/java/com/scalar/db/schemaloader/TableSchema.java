@@ -20,11 +20,11 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class TableSchema {
 
-  private static final String COLUMNS = "columns";
-  private static final String TRANSACTION = "transaction";
-  private static final String PARTITION_KEY = "partition-key";
-  private static final String CLUSTERING_KEY = "clustering-key";
-  private static final String SECONDARY_INDEX = "secondary-index";
+  static final String COLUMNS = "columns";
+  static final String TRANSACTION = "transaction";
+  static final String PARTITION_KEY = "partition-key";
+  static final String CLUSTERING_KEY = "clustering-key";
+  static final String SECONDARY_INDEX = "secondary-index";
   private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
       ImmutableMap.<String, DataType>builder()
           .put("BOOLEAN", DataType.BOOLEAN)

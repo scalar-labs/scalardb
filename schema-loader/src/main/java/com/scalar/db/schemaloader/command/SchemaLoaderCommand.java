@@ -151,8 +151,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
           "Specifying the '--coordinator' option with the '--import' option is not allowed."
               + " Create coordinator tables separately");
     }
-
-    SchemaLoader.importTables(configPath, schemaFile);
+    Map<String, String> options = prepareAllOptions();
+    SchemaLoader.importTables(configPath, schemaFile, options);
   }
 
   private Map<String, String> prepareAllOptions() {

@@ -13,7 +13,6 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -408,15 +407,16 @@ public class SchemaOperator implements AutoCloseable {
     }
   }
 
-  public void importTables(List<ImportTableSchema> tableSchemaList) throws SchemaLoaderException {
+  public void importTables(List<ImportTableSchema> tableSchemaList, Map<String, String> options)
+      throws SchemaLoaderException {
     for (ImportTableSchema tableSchema : tableSchemaList) {
       String namespace = tableSchema.getNamespace();
       String table = tableSchema.getTable();
       try {
         if (tableSchema.isTransactionTable()) {
-          transactionAdmin.get().importTable(namespace, table, Collections.emptyMap());
+          transactionAdmin.get().importTable(namespace, table, options);
         } else {
-          storageAdmin.get().importTable(namespace, table, Collections.emptyMap());
+          storageAdmin.get().importTable(namespace, table, options);
         }
         logger.info("Importing the table {} in the namespace {} succeeded", table, namespace);
       } catch (ExecutionException e) {
