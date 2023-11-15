@@ -139,38 +139,6 @@ public class MutationConditionsValidatorTest {
         .doesNotThrowAnyException();
   }
 
-  @Test
-  public void
-      validateConditionIsSatisfied_WithPutWithoutConditionWhenRecordExists_ShouldNotThrow() {
-    // Act Assert
-    Assertions.assertThatCode(() -> validator.checkIfConditionIsSatisfied(put, existingRecord))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      validateConditionIsSatisfied_WithPutWithoutConditionWhenRecordDoesNotExist_ShouldNotThrow() {
-    // Act Assert
-    Assertions.assertThatCode(() -> validator.checkIfConditionIsSatisfied(put, null))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      validateConditionIsSatisfied_WithDeleteWithoutConditionWhenRecordExists_ShouldNotThrow() {
-    // Act Assert
-    Assertions.assertThatCode(() -> validator.checkIfConditionIsSatisfied(delete, existingRecord))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      validateConditionIsSatisfied_WithDeleteWithoutConditionWhenRecordDoesNotExist_ShouldNotThrow() {
-    // Act Assert
-    Assertions.assertThatCode(() -> validator.checkIfConditionIsSatisfied(delete, null))
-        .doesNotThrowAnyException();
-  }
-
   private void prepareMutationWithCondition(Mutation mutation, MutationCondition condition) {
     when(mutation.getCondition()).thenReturn(Optional.of(condition));
   }

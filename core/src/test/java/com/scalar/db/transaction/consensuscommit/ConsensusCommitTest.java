@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -16,7 +17,9 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
@@ -216,15 +219,40 @@ public class ConsensusCommitTest {
 
   @Test
   public void commit_ProcessedCrudGiven_ShouldCommitWithSnapshot()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     doNothing().when(commit).commit(any(Snapshot.class));
     when(crud.getSnapshot()).thenReturn(snapshot);
 
-    // Act Assert
+    // Act
     consensus.commit();
 
     // Assert
+    verify(crud).readIfImplicitPreReadEnabled();
     verify(commit).commit(snapshot);
+  }
+
+  @Test
+  public void
+      commit_ProcessedCrudGiven_CrudConflictExceptionThrownWhileImplicitPreRead_ShouldThrowCommitConflictException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled();
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_ProcessedCrudGiven_CrudExceptionThrownWhileImplicitPreRead_ShouldThrowCommitException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled();
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitException.class);
   }
 }

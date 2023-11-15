@@ -663,6 +663,15 @@ Put put =
         .build();
 ```
 
+{% capture notice--info %}
+**Note**
+
+If you specify `disableImplicitPreRead()` or `implicitPreReadEnabled()` in the `Put` operation builder, they will be ignored.
+
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
 #### `Delete` operation
 
 `Delete` is an operation to delete a record specified by a primary key.
