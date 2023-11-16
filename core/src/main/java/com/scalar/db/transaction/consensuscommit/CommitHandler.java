@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -119,7 +120,7 @@ public class CommitHandler {
         new GroupCommitter2<>(
             "coordinator-writer",
             groupCommitSizeFixExpirationInMillis,
-            groupCommitNumOfThreads,
+            groupCommitNumOfRetentionValues,
             10,
             groupCommitNumOfThreads,
             snapshots -> {
@@ -205,7 +206,7 @@ public class CommitHandler {
     String transactionId = snapshot.getId();
     try {
       groupCommitter.addValue(
-          transactionId,
+          UUID.randomUUID().toString(),
           parentId -> {
             // TODO?: Immutable
             snapshot.setParentId(parentId);
