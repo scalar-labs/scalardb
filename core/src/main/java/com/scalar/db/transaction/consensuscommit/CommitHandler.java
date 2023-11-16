@@ -252,6 +252,8 @@ public class CommitHandler {
             return snapshot;
           });
     } catch (GroupCommitCascadeException | GroupCommitAlreadyClosedException e) {
+      // TODO: Revisit here
+      rollbackRecords(snapshot);
       throw new CommitConflictException(e.getMessage(), e, transactionId);
     } catch (GroupCommitException e) {
       Throwable cause = e.getCause();
@@ -262,19 +264,27 @@ public class CommitHandler {
       } else if (cause instanceof TransactionException) {
         transactionEx = (TransactionException) cause;
       } else {
+        // TODO: Revisit here
+        rollbackRecords(snapshot);
         throw new CommitException("Group-commit failed", cause, transactionId);
       }
       if (transactionEx instanceof PreparationConflictException) {
+        // TODO: Revisit here
+        rollbackRecords(snapshot);
         PreparationConflictException ce = (PreparationConflictException) transactionEx;
         throw new CommitConflictException(
             "A conflict happened in the group-commit", ce, transactionId);
       }
       if (transactionEx instanceof ValidationConflictException) {
+        // TODO: Revisit here
+        rollbackRecords(snapshot);
         ValidationConflictException ce = (ValidationConflictException) transactionEx;
         throw new CommitConflictException(
             "A conflict happened in the group-commit", ce, transactionId);
       }
       if (transactionEx instanceof CommitConflictException) {
+        // TODO: Revisit here
+        rollbackRecords(snapshot);
         CommitConflictException ce = (CommitConflictException) transactionEx;
         throw new CommitConflictException(
             "A conflict happened in the group-commit", ce, transactionId);
@@ -282,8 +292,12 @@ public class CommitHandler {
       if (transactionEx instanceof UnknownTransactionStatusException) {
         throw (UnknownTransactionStatusException) transactionEx;
       }
+      // TODO: Revisit here
+      rollbackRecords(snapshot);
       throw new CommitException("Group-commit failed", transactionEx, transactionId);
     } catch (Throwable e) {
+      // TODO: Revisit here
+      rollbackRecords(snapshot);
       throw new CommitException("Group-commit failed", e, transactionId);
     }
   }
