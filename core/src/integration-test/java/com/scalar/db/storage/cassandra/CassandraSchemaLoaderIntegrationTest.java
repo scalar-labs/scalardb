@@ -46,4 +46,12 @@ public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegratio
     // one session to the other, so we need to wait
     Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
   }
+
+  @Override
+  protected List<String> getCommandArgsForUpgrade(Path configFilePath) {
+    return ImmutableList.<String>builder()
+        .addAll(super.getCommandArgsForUpgrade(configFilePath))
+        .add("--replication-factor=1")
+        .build();
+  }
 }

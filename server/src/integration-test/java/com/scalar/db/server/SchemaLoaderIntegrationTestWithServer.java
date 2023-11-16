@@ -54,4 +54,12 @@ public class SchemaLoaderIntegrationTestWithServer extends SchemaLoaderIntegrati
   @Disabled("repairAll is not supported with ScalarDB Server")
   @Override
   public void createTablesThenDropTablesThenRepairAllWithCoordinator_ShouldExecuteProperly() {}
+
+  @Test
+  @Disabled("upgrade is not supported with ScalarDB Server")
+  @Override
+  public void createThenDropNamespacesTableThenUpgrade_ShouldCreateNamespacesTableCorrectly()
+      throws Exception {
+    super.createThenDropNamespacesTableThenUpgrade_ShouldCreateNamespacesTableCorrectly();
+  }
 }

@@ -21,35 +21,37 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class ConsensusCommitManagerTest {
   private static final String ANY_TX_ID = "any_id";
 
-  @Mock
-  @SuppressWarnings("unused")
-  private DistributedStorage storage;
-
-  @Mock
-  @SuppressWarnings("unused")
-  private DistributedStorageAdmin admin;
-
-  @Mock
-  @SuppressWarnings("unused")
-  private DatabaseConfig databaseConfig;
-
+  @Mock private DistributedStorage storage;
+  @Mock private DistributedStorageAdmin admin;
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private Coordinator coordinator;
+  @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryHandler recovery;
   @Mock private CommitHandler commit;
 
-  @InjectMocks private ConsensusCommitManager manager;
+  private ConsensusCommitManager manager;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    manager =
+        new ConsensusCommitManager(
+            storage,
+            admin,
+            consensusCommitConfig,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recovery,
+            commit);
 
     when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(consensusCommitConfig.getSerializableStrategy())

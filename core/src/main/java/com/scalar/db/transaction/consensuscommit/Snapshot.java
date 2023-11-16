@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -35,6 +36,8 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -51,7 +54,7 @@ public class Snapshot {
   private final SerializableStrategy strategy;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-  private final Map<Key, Optional<TransactionResult>> readSet;
+  private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
   private final Map<Scan, List<Key>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
@@ -67,7 +70,7 @@ public class Snapshot {
     this.strategy = strategy;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
-    readSet = new HashMap<>();
+    readSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
@@ -80,7 +83,7 @@ public class Snapshot {
       SerializableStrategy strategy,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      Map<Key, Optional<TransactionResult>> readSet,
+      ConcurrentMap<Key, Optional<TransactionResult>> readSet,
       Map<Scan, List<Key>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
@@ -106,6 +109,8 @@ public class Snapshot {
     return isolation;
   }
 
+  // Although this class is not thread-safe, this method is actually thread-safe because the readSet
+  // is a concurrent map
   public void put(Key key, Optional<TransactionResult> result) {
     readSet.put(key, result);
   }
@@ -137,7 +142,15 @@ public class Snapshot {
   }
 
   public Optional<TransactionResult> getFromReadSet(Key key) {
-    return readSet.containsKey(key) ? readSet.get(key) : Optional.empty();
+    return readSet.getOrDefault(key, Optional.empty());
+  }
+
+  public List<Put> getPutsInWriteSet() {
+    return new ArrayList<>(writeSet.values());
+  }
+
+  public List<Delete> getDeletesInDeleteSet() {
+    return new ArrayList<>(deleteSet.values());
   }
 
   public Optional<TransactionResult> get(Key key) throws CrudException {
@@ -665,6 +678,16 @@ public class Snapshot {
               o.clusteringKey.orElse(null),
               Comparator.nullsFirst(Comparator.naturalOrder()))
           .result();
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("namespace", namespace)
+          .add("table", table)
+          .add("partitionKey", partitionKey)
+          .add("clusteringKey", clusteringKey)
+          .toString();
     }
   }
 }

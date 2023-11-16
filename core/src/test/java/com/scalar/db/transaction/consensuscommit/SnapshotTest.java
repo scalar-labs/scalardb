@@ -49,6 +49,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -91,7 +93,7 @@ public class SnapshotTest {
               .build());
 
   private Snapshot snapshot;
-  private Map<Snapshot.Key, Optional<TransactionResult>> readSet;
+  private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
   private Map<Scan, List<Snapshot.Key>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
@@ -118,7 +120,7 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot(Isolation isolation, SerializableStrategy strategy) {
-    readSet = new HashMap<>();
+    readSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
