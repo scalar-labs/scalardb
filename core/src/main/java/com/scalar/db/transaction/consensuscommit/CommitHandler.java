@@ -44,8 +44,12 @@ import org.slf4j.LoggerFactory;
 public class CommitHandler {
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS";
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS";
 
   private static final Logger logger = LoggerFactory.getLogger(CommitHandler.class);
   private final DistributedStorage storage;
@@ -98,13 +102,26 @@ public class CommitHandler {
           Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
     }
 
+    int groupCommitNumOfThreads = 32;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
+      groupCommitNumOfThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS));
+    }
+
+    int groupCommitSizeFixExpirationInMillis = 200;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS) != null) {
+      groupCommitSizeFixExpirationInMillis =
+          Integer.parseInt(
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS));
+    }
+
     return Optional.of(
         new GroupCommitter2<>(
             "coordinator-writer",
-            500,
-            groupCommitNumOfRetentionValues,
-            5,
-            32,
+            groupCommitSizeFixExpirationInMillis,
+            groupCommitNumOfThreads,
+            10,
+            groupCommitNumOfThreads,
             snapshots -> {
               try {
                 long startCommitState = System.currentTimeMillis();
