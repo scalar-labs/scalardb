@@ -13,6 +13,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -27,9 +28,11 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class OperationChecker {
 
+  private final DatabaseConfig config;
   private final TableMetadataManager tableMetadataManager;
 
-  public OperationChecker(TableMetadataManager tableMetadataManager) {
+  public OperationChecker(DatabaseConfig config, TableMetadataManager tableMetadataManager) {
+    this.config = config;
     this.tableMetadataManager = tableMetadataManager;
   }
 
@@ -122,6 +125,11 @@ public class OperationChecker {
   }
 
   private void check(ScanAll scanAll) throws ExecutionException {
+    if (!config.isCrossPartitionScanEnabled()) {
+      throw new IllegalArgumentException(
+          "Cross-partition scan is not enabled. Operation: " + scanAll);
+    }
+
     TableMetadata metadata = getTableMetadata(scanAll);
 
     checkProjections(scanAll, metadata);
@@ -130,8 +138,16 @@ public class OperationChecker {
       throw new IllegalArgumentException("The limit cannot be negative. Operation: " + scanAll);
     }
 
+    if (!config.isCrossPartitionScanOrderingEnabled() && !scanAll.getOrderings().isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cross-partition scan ordering is not enabled. Operation: " + scanAll);
+    }
     checkOrderings(scanAll, metadata);
 
+    if (!config.isCrossPartitionScanFilteringEnabled() && !scanAll.getConjunctions().isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cross-partition scan filtering is not enabled. Operation: " + scanAll);
+    }
     checkConjunctions(scanAll, metadata);
   }
 

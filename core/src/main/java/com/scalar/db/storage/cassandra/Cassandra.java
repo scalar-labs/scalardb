@@ -20,7 +20,6 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -45,6 +44,13 @@ public class Cassandra extends AbstractDistributedStorage {
   @Inject
   public Cassandra(DatabaseConfig config) {
     super(config);
+
+    if (config.isCrossPartitionScanFilteringEnabled()
+        || config.isCrossPartitionScanOrderingEnabled()) {
+      throw new IllegalArgumentException(
+          "Cross-partition scan with filtering or ordering is not supported in Cassandra");
+    }
+
     clusterManager = new ClusterManager(config);
     Session session = clusterManager.getSession();
 
@@ -63,7 +69,7 @@ public class Cassandra extends AbstractDistributedStorage {
         new TableMetadataManager(
             new CassandraAdmin(clusterManager, config),
             config.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new OperationChecker(config, metadataManager);
   }
 
   @VisibleForTesting
@@ -107,11 +113,6 @@ public class Cassandra extends AbstractDistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
-
-    if (ScalarDbUtils.isRelational(scan)) {
-      throw new UnsupportedOperationException(
-          "Scanning all records with orderings or conditions is not supported in Cassandra");
-    }
 
     ResultSet results = handlers.select().handle(scan);
 

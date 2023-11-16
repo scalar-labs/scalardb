@@ -17,7 +17,6 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -51,6 +50,13 @@ public class Dynamo extends AbstractDistributedStorage {
   @Inject
   public Dynamo(DatabaseConfig databaseConfig) {
     super(databaseConfig);
+
+    if (databaseConfig.isCrossPartitionScanFilteringEnabled()
+        || databaseConfig.isCrossPartitionScanOrderingEnabled()) {
+      throw new IllegalArgumentException(
+          "Cross-partition scan with filtering or ordering is not supported in DynamoDB");
+    }
+
     DynamoConfig config = new DynamoConfig(databaseConfig);
 
     DynamoDbClientBuilder builder = DynamoDbClient.builder();
@@ -67,7 +73,7 @@ public class Dynamo extends AbstractDistributedStorage {
     TableMetadataManager metadataManager =
         new TableMetadataManager(
             new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new DynamoOperationChecker(metadataManager);
+    operationChecker = new DynamoOperationChecker(databaseConfig, metadataManager);
 
     selectStatementHandler =
         new SelectStatementHandler(client, metadataManager, config.getNamespacePrefix());
@@ -127,11 +133,6 @@ public class Dynamo extends AbstractDistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
-
-    if (ScalarDbUtils.isRelational(scan)) {
-      throw new UnsupportedOperationException(
-          "Scanning all records with orderings or conditions is not supported in DynamoDB");
-    }
 
     return selectStatementHandler.handle(scan);
   }
