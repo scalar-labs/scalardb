@@ -24,6 +24,7 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitAlreadyClosedException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitCascadeException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter2;
@@ -123,48 +124,81 @@ public class CommitHandler {
             groupCommitNumOfRetentionValues,
             10,
             groupCommitNumOfThreads,
-            snapshots -> {
-              try {
-                long startCommitState = System.currentTimeMillis();
-                commitStateWithParentTxId(snapshots);
-                logger.info(
-                    "CommitState-ed(thread_id:{}, num_of_values:{}): {} ms",
-                    Thread.currentThread().getId(),
-                    snapshots.size(),
-                    System.currentTimeMillis() - startCommitState);
+            this::handleSnapshotsInGroupCommit));
+  }
 
-                long startCommitRecords = System.currentTimeMillis();
-                List<Future<Void>> futures = new ArrayList<>(snapshots.size());
-                for (Snapshot snapshot : snapshots) {
-                  Future<Void> f =
-                      executorService.submit(
-                          () -> {
-                            commitRecords(snapshot);
-                            return null;
-                          });
-                  futures.add(f);
-                }
-                for (Future<Void> f : futures) {
-                  try {
-                    f.get();
-                  } catch (Throwable e) {
-                    logger.warn(
-                        "Committing the records failed. But the state is already committed. So the record state will be recovered later",
-                        e);
-                  }
-                }
-                logger.info(
-                    "CommitRecords-ed(thread_id:{}, num_of_values:{}): {} ms",
-                    Thread.currentThread().getId(),
-                    snapshots.size(),
-                    System.currentTimeMillis() - startCommitRecords);
-              } catch (TransactionException e) {
-                throw new TransactionGroupCommitException(e);
-              } catch (Throwable e) {
-                logger.error("Failed to group-commit", e);
-                throw e;
-              }
-            }));
+  private void commitSnapshotsRecordsInParallel(List<Snapshot> snapshots) {
+    long start = System.currentTimeMillis();
+    List<Future<Void>> futures = new ArrayList<>(snapshots.size());
+    for (Snapshot snapshot : snapshots) {
+      Future<Void> f =
+          executorService.submit(
+              () -> {
+                commitRecords(snapshot);
+                return null;
+              });
+      futures.add(f);
+    }
+    for (Future<Void> f : futures) {
+      try {
+        f.get();
+      } catch (Throwable e) {
+        logger.warn(
+            "Committing the records failed. But the state is already committed. So the record state will be recovered later",
+            e);
+      }
+    }
+    logger.info(
+        "CommitRecords-ed(thread_id:{}, num_of_values:{}): {} ms",
+        Thread.currentThread().getId(),
+        snapshots.size(),
+        System.currentTimeMillis() - start);
+  }
+
+  private void rollbackSnapshotsRecordsInParallel(List<Snapshot> snapshots) {
+    long start = System.currentTimeMillis();
+    List<Future<Void>> futures = new ArrayList<>(snapshots.size());
+    for (Snapshot snapshot : snapshots) {
+      Future<Void> f =
+          executorService.submit(
+              () -> {
+                rollbackRecords(snapshot);
+                return null;
+              });
+      futures.add(f);
+    }
+    for (Future<Void> f : futures) {
+      try {
+        f.get();
+      } catch (Throwable e) {
+        logger.warn("Rolling back the records failed.", e);
+        // ignore since records are recovered lazily
+      }
+    }
+    logger.info(
+        "RollbackRecords-ed(thread_id:{}, num_of_values:{}): {} ms",
+        Thread.currentThread().getId(),
+        snapshots.size(),
+        System.currentTimeMillis() - start);
+  }
+
+  private void handleSnapshotsInGroupCommit(List<Snapshot> snapshots) {
+    try {
+      long startCommitState = System.currentTimeMillis();
+      commitStateForGroupCommit(snapshots);
+      logger.info(
+          "CommitState-ed(thread_id:{}, num_of_values:{}): {} ms",
+          Thread.currentThread().getId(),
+          snapshots.size(),
+          System.currentTimeMillis() - startCommitState);
+
+      commitSnapshotsRecordsInParallel(snapshots);
+    } catch (TransactionException e) {
+      throw new TransactionGroupCommitException(e);
+    } catch (Throwable e) {
+      logger.error("Failed to group-commit", e);
+      throw e;
+    }
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -217,7 +251,7 @@ public class CommitHandler {
             }
             return snapshot;
           });
-    } catch (GroupCommitCascadeException e) {
+    } catch (GroupCommitCascadeException | GroupCommitAlreadyClosedException e) {
       throw new CommitConflictException(e.getMessage(), e, transactionId);
     } catch (GroupCommitException e) {
       Throwable cause = e.getCause();
@@ -421,7 +455,7 @@ public class CommitHandler {
     }
   }
 
-  public void commitStateWithParentTxId(List<Snapshot> snapshots)
+  public void commitStateForGroupCommit(List<Snapshot> snapshots)
       throws CommitException, UnknownTransactionStatusException {
     // Validate parent transaction IDs
     String id = null;
@@ -452,9 +486,7 @@ public class CommitHandler {
         if (s.isPresent()) {
           TransactionState state = s.get().getState();
           if (state.equals(TransactionState.ABORTED)) {
-            for (Snapshot snapshot : snapshots) {
-              rollbackRecords(snapshot);
-            }
+            rollbackSnapshotsRecordsInParallel(snapshots);
             throw new CommitException(
                 "Committing state in coordinator failed. the transaction is aborted", e, id);
           }
