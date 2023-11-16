@@ -77,67 +77,59 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
     return new ActiveTransaction(super.decorate(transaction));
   }
 
-  private class ActiveTransaction extends AbstractDistributedTransaction
-      implements DecoratedDistributedTransaction {
-
-    private final DistributedTransaction transaction;
+  private class ActiveTransaction extends DecoratedDistributedTransaction {
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     private ActiveTransaction(DistributedTransaction transaction) throws TransactionException {
-      this.transaction = transaction;
+      super(transaction);
       add(this);
     }
 
     @Override
-    public String getId() {
-      return transaction.getId();
-    }
-
-    @Override
     public synchronized Optional<Result> get(Get get) throws CrudException {
-      return transaction.get(get);
+      return super.get(get);
     }
 
     @Override
     public synchronized List<Result> scan(Scan scan) throws CrudException {
-      return transaction.scan(scan);
+      return super.scan(scan);
     }
 
     @Override
     public synchronized void put(Put put) throws CrudException {
-      transaction.put(put);
+      super.put(put);
     }
 
     @Override
     public synchronized void put(List<Put> puts) throws CrudException {
-      transaction.put(puts);
+      super.put(puts);
     }
 
     @Override
     public synchronized void delete(Delete delete) throws CrudException {
-      transaction.delete(delete);
+      super.delete(delete);
     }
 
     @Override
     public synchronized void delete(List<Delete> deletes) throws CrudException {
-      transaction.delete(deletes);
+      super.delete(deletes);
     }
 
     @Override
     public synchronized void mutate(List<? extends Mutation> mutations) throws CrudException {
-      transaction.mutate(mutations);
+      super.mutate(mutations);
     }
 
     @Override
     public synchronized void commit() throws CommitException, UnknownTransactionStatusException {
-      transaction.commit();
+      super.commit();
       remove(getId());
     }
 
     @Override
     public synchronized void rollback() throws RollbackException {
       try {
-        transaction.rollback();
+        super.rollback();
       } finally {
         remove(getId());
       }
@@ -146,18 +138,10 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
     @Override
     public void abort() throws AbortException {
       try {
-        transaction.abort();
+        super.abort();
       } finally {
         remove(getId());
       }
-    }
-
-    @Override
-    public DistributedTransaction getOriginalTransaction() {
-      if (transaction instanceof DecoratedDistributedTransaction) {
-        return ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
-      }
-      return transaction;
     }
   }
 }
