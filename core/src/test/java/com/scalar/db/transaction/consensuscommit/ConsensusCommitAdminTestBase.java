@@ -633,7 +633,29 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void importTable_WithTableAlreadyExists_ShouldThrowIllegalArgumentException()
+  public void importTable_WithStorageTableAlreadyExists_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    String primaryKeyColumn = "pk";
+    String column = "col";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(primaryKeyColumn, DataType.INT)
+            .addColumn(column, DataType.INT)
+            .addPartitionKey(primaryKeyColumn)
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void importTable_WithTransactionTableAlreadyExists_ShouldThrowIllegalArgumentException()
       throws ExecutionException {
     // Arrange
     String primaryKeyColumn = "pk";
