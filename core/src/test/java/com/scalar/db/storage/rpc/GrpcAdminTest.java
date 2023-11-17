@@ -345,7 +345,7 @@ public class GrpcAdminTest {
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT))
         .isInstanceOf(UnsupportedOperationException.class);
-    assertThatThrownBy(() -> admin.importTable(namespace, table))
+    assertThatThrownBy(() -> admin.importTable(namespace, table, Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(() -> admin.getNamespaceNames())
         .isInstanceOf(UnsupportedOperationException.class);

@@ -6,7 +6,6 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionMetaColumns;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -208,7 +207,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table) throws ExecutionException {
+  public void importTable(String namespace, String table, Map<String, String> options)
+      throws ExecutionException {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata != null) {
       throw new IllegalArgumentException(
@@ -231,8 +231,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     }
 
     // add ScalarDB metadata
-    admin.repairTable(
-        namespace, table, buildTransactionTableMetadata(tableMetadata), ImmutableMap.of());
+    admin.repairNamespace(namespace, options);
+    admin.repairTable(namespace, table, buildTransactionTableMetadata(tableMetadata), options);
   }
 
   @Override

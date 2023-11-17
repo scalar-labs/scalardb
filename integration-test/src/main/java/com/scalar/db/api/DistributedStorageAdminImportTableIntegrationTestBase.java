@@ -53,6 +53,10 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
         admin.dropTable(getNamespace(), table);
       }
     }
+    if (!admin.namespaceExists(getNamespace())) {
+      // Create metadata to be able to delete the namespace using the Admin
+      admin.repairNamespace(getNamespace(), getCreationOptions());
+    }
     admin.dropNamespace(getNamespace());
   }
 
@@ -79,7 +83,6 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   @Test
   public void importTable_ShouldWorkProperly() throws Exception {
     // Arrange
-    admin.repairNamespace(getNamespace(), getCreationOptions());
     tables.putAll(createExistingDatabaseWithAllDataTypes());
 
     // Act Assert
@@ -98,20 +101,19 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   @Test
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
-    // Arrange
-    admin.repairNamespace(getNamespace(), getCreationOptions());
-
     // Act Assert
-    assertThatThrownBy(() -> admin.importTable(getNamespace(), "unsupported_db"))
+    assertThatThrownBy(
+            () -> admin.importTable(getNamespace(), "unsupported_db", Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
   private void importTable_ForImportableTable_ShouldImportProperly(
       String table, TableMetadata metadata) throws ExecutionException {
     // Act
-    admin.importTable(getNamespace(), table);
+    admin.importTable(getNamespace(), table, Collections.emptyMap());
 
     // Assert
+    assertThat(admin.namespaceExists(getNamespace())).isTrue();
     assertThat(admin.tableExists(getNamespace(), table)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), table)).isEqualTo(metadata);
   }
@@ -119,14 +121,15 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   private void importTable_ForNonImportableTable_ShouldThrowIllegalArgumentException(String table) {
     // Act Assert
     assertThatThrownBy(
-            () -> admin.importTable(getNamespace(), table),
+            () -> admin.importTable(getNamespace(), table, Collections.emptyMap()),
             "non-importable data type test failed: " + table)
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   private void importTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Act Assert
-    assertThatThrownBy(() -> admin.importTable(getNamespace(), "non-existing-table"))
+    assertThatThrownBy(
+            () -> admin.importTable(getNamespace(), "non-existing-table", Collections.emptyMap()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }
