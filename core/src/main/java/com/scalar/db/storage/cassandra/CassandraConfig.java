@@ -19,6 +19,10 @@ public class CassandraConfig {
     metadataKeyspace = getString(databaseConfig.getProperties(), METADATA_KEYSPACE, null);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public Optional<String> getMetadataKeyspace() {
     return Optional.ofNullable(metadataKeyspace);
   }

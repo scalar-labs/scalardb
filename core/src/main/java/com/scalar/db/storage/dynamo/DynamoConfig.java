@@ -15,6 +15,7 @@ public class DynamoConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "dynamo.";
   public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint_override";
+
   /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_NAMESPACE} instead. */
   @Deprecated
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
@@ -75,6 +76,10 @@ public class DynamoConfig {
     }
     namespacePrefix = getString(databaseConfig.getProperties(), NAMESPACE_PREFIX, null);
   }
+
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
 
   public String getRegion() {
     return region;
