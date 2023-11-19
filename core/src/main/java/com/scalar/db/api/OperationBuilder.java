@@ -281,6 +281,23 @@ class OperationBuilder {
     T clearValue(String columnName);
   }
 
+  interface ImplicitPreReadEnabled<T> {
+    /**
+     * Disable implicit pre-read for this put operation.
+     *
+     * @return the operation builder
+     */
+    T disableImplicitPreRead();
+
+    /**
+     * Sets whether implicit pre-read is enabled or not for this put operation.
+     *
+     * @param implicitPreReadEnabled whether implicit pre-read is enabled or not
+     * @return the operation builder
+     */
+    T implicitPreReadEnabled(boolean implicitPreReadEnabled);
+  }
+
   interface Limit<T> {
     /**
      * Sets the specified number of results to be returned

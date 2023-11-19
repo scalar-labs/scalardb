@@ -184,7 +184,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     Snapshot snapshot =
         new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
-        new CrudHandler(storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled);
+        new CrudHandler(
+            storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
     ConsensusCommit consensus =
         new ConsensusCommit(crud, commit, recovery, mutationOperationChecker);
     getNamespace().ifPresent(consensus::withNamespace);

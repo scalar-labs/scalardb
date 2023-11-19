@@ -7,6 +7,7 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -14,7 +15,6 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -23,11 +23,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.annotation.concurrent.ThreadSafe;
+import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ThreadSafe
+@NotThreadSafe
 public class CrudHandler {
   private static final Logger logger = LoggerFactory.getLogger(CrudHandler.class);
   private final DistributedStorage storage;
@@ -35,18 +35,21 @@ public class CrudHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final boolean isIncludeMetadataEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
+  private final ParallelExecutor parallelExecutor;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
       DistributedStorage storage,
       Snapshot snapshot,
       TransactionTableMetadataManager tableMetadataManager,
-      boolean isIncludeMetadataEnabled) {
+      boolean isIncludeMetadataEnabled,
+      ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.mutationConditionsValidator = new MutationConditionsValidator(snapshot.getId());
+    this.parallelExecutor = parallelExecutor;
   }
 
   @VisibleForTesting
@@ -55,28 +58,35 @@ public class CrudHandler {
       Snapshot snapshot,
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
-      MutationConditionsValidator mutationConditionsValidator) {
+      MutationConditionsValidator mutationConditionsValidator,
+      ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.mutationConditionsValidator = mutationConditionsValidator;
+    this.parallelExecutor = parallelExecutor;
   }
 
   public Optional<Result> get(Get get) throws CrudException {
     List<String> originalProjections = new ArrayList<>(get.getProjections());
-
-    Optional<TransactionResult> result;
     Snapshot.Key key = new Snapshot.Key(get);
+    readUnread(key, get);
+    return createGetResult(key, originalProjections);
+  }
 
-    if (snapshot.containsKeyInReadSet(key)) {
-      return createGetResult(key, originalProjections);
+  @VisibleForTesting
+  void readUnread(Snapshot.Key key, Get get) throws CrudException {
+    if (!snapshot.containsKeyInReadSet(key)) {
+      read(key, get);
     }
+  }
 
-    result = getFromStorage(get);
+  private void read(Snapshot.Key key, Get get) throws CrudException {
+    Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
       snapshot.put(key, result);
-      return createGetResult(key, originalProjections);
+      return;
     }
     throw new UncommittedRecordException(
         result.get(), "This record needs recovery", snapshot.getId());
@@ -159,19 +169,71 @@ public class CrudHandler {
         .collect(Collectors.toList());
   }
 
-  public void put(Put put) throws UnsatisfiedConditionException {
-    mutationConditionsValidator.checkIfConditionIsSatisfied(
-        put, snapshot.getFromReadSet(new Snapshot.Key(put)).orElse(null));
-    snapshot.put(new Snapshot.Key(put), put);
+  public void put(Put put) throws CrudException {
+    if (put.getCondition().isPresent() && !put.isImplicitPreReadEnabled()) {
+      throw new IllegalArgumentException(
+          "Put cannot have a condition when implicit pre-read is disabled: " + put);
+    }
+
+    Snapshot.Key key = new Snapshot.Key(put);
+
+    if (put.getCondition().isPresent()) {
+      readUnread(key, createGet(key));
+      mutationConditionsValidator.checkIfConditionIsSatisfied(
+          put, snapshot.getFromReadSet(key).orElse(null));
+    }
+
+    snapshot.put(key, put);
   }
 
-  public void delete(Delete delete) throws UnsatisfiedConditionException {
-    mutationConditionsValidator.checkIfConditionIsSatisfied(
-        delete, snapshot.getFromReadSet(new Snapshot.Key(delete)).orElse(null));
-    snapshot.put(new Snapshot.Key(delete), delete);
+  public void delete(Delete delete) throws CrudException {
+    Snapshot.Key key = new Snapshot.Key(delete);
+
+    if (delete.getCondition().isPresent()) {
+      readUnread(key, createGet(key));
+      mutationConditionsValidator.checkIfConditionIsSatisfied(
+          delete, snapshot.getFromReadSet(key).orElse(null));
+    }
+
+    snapshot.put(key, delete);
   }
 
-  private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
+  public void readIfImplicitPreReadEnabled() throws CrudException {
+    List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
+    for (Put put : snapshot.getPutsInWriteSet()) {
+      if (put.isImplicitPreReadEnabled()) {
+        Snapshot.Key key = new Snapshot.Key(put);
+        if (!snapshot.containsKeyInReadSet(key)) {
+          tasks.add(() -> read(key, createGet(key)));
+        }
+      }
+    }
+    for (Delete delete : snapshot.getDeletesInDeleteSet()) {
+      Snapshot.Key key = new Snapshot.Key(delete);
+      if (!snapshot.containsKeyInReadSet(key)) {
+        tasks.add(() -> read(key, createGet(key)));
+      }
+    }
+
+    if (!tasks.isEmpty()) {
+      parallelExecutor.executeImplicitPreRead(tasks, snapshot.getId());
+    }
+  }
+
+  private Get createGet(Snapshot.Key key) {
+    GetBuilder.BuildableGet buildableGet =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey());
+    key.getClusteringKey().ifPresent(buildableGet::clusteringKey);
+    return buildableGet.build();
+  }
+
+  // Although this class is not thread-safe, this method is actually thread-safe because the storage
+  // is thread-safe
+  @VisibleForTesting
+  Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
       get.clearProjections();
       // Retrieve only the after images columns when including the metadata is disabled, otherwise

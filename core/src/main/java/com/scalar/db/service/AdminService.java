@@ -107,8 +107,9 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table) throws ExecutionException {
-    admin.importTable(namespace, table);
+  public void importTable(String namespace, String table, Map<String, String> options)
+      throws ExecutionException {
+    admin.importTable(namespace, table, options);
   }
 
   @Override

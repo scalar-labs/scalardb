@@ -14,7 +14,9 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -86,7 +88,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void put(List<Put> puts) throws CrudException {
-    checkArgument(puts.size() != 0);
+    checkArgument(!puts.isEmpty());
     for (Put p : puts) {
       putInternal(p);
     }
@@ -105,7 +107,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
-    checkArgument(deletes.size() != 0);
+    checkArgument(!deletes.isEmpty());
     for (Delete d : deletes) {
       deleteInternal(d);
     }
@@ -119,7 +121,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(mutations.size() != 0);
+    checkArgument(!mutations.isEmpty());
     for (Mutation m : mutations) {
       if (m instanceof Put) {
         putInternal((Put) m);
@@ -131,6 +133,16 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void prepare() throws PreparationException {
+    // Execute implicit pre-read
+    try {
+      crud.readIfImplicitPreReadEnabled();
+    } catch (CrudConflictException e) {
+      throw new PreparationConflictException(
+          "Conflict occurred while implicit pre-read", e, getId());
+    } catch (CrudException e) {
+      throw new PreparationException("Failed to execute implicit pre-read", e, getId());
+    }
+
     try {
       commit.prepare(crud.getSnapshot());
     } finally {

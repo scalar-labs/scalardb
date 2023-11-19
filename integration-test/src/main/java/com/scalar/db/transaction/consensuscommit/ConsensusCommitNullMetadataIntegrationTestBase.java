@@ -24,7 +24,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.DataType;
@@ -1248,16 +1247,29 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowCommitException()
+  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldUpdateRecord()
       throws TransactionException, ExecutionException {
     // Arrange
     populateRecordsWithNullMetadata(namespace1, TABLE_1);
-    Put put = preparePut(0, 0, 1100, namespace1, TABLE_1);
+
     DistributedTransaction transaction = manager.begin();
 
-    // Act Assert
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Put put = preparePut(0, 0, expected, namespace1, TABLE_1);
     transaction.put(put);
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    Optional<Result> r = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    another.commit();
+
+    assertThat(r).isPresent();
+    TransactionResult actual = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    assertThat(getBalance(actual)).isEqualTo(expected);
+    Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(actual.getVersion()).isEqualTo(1);
   }
 
   private void putAndCommit_GetsAndPutsGiven_ShouldCommitProperly(

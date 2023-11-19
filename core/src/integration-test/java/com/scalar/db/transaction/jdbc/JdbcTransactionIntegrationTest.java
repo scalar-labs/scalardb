@@ -36,4 +36,9 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   @Disabled("JDBC transaction doesn't support rollback()")
   @Override
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
+
+  @Disabled
+  @Override
+  public void
+      putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowCommitConflictException() {}
 }

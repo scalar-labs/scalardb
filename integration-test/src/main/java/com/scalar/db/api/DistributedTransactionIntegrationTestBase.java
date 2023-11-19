@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.api.GetBuilder.BuildableGet;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -533,7 +532,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
     int expected = INITIAL_BALANCE;
-    Put put = preparePut(0, 0).withValue(BALANCE, expected);
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
     DistributedTransaction transaction = manager.start();
 
     // Act
@@ -550,28 +556,83 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
+  public void putAndCommit_PutWithImplicitPreReadDisabledGivenForNonExisting_ShouldCreateRecord()
       throws TransactionException {
     // Arrange
-    populateRecords();
-    Get get = prepareGet(0, 0);
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .disableImplicitPreRead()
+            .build();
     DistributedTransaction transaction = manager.start();
 
     // Act
-    Optional<Result> result = transaction.get(get);
+    transaction.put(put);
+    transaction.commit();
+
+    // Assert
+    Get get = prepareGet(0, 0);
+    DistributedTransaction another = manager.start();
+    Optional<Result> result = another.get(get);
+    another.commit();
     assertThat(result.isPresent()).isTrue();
-    int expected = getBalance(result.get()) + 100;
-    Put put = preparePut(0, 0).withValue(BALANCE, expected);
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void putAndCommit_PutGivenForExisting_ShouldUpdateRecord() throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.start();
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
     transaction.put(put);
     transaction.commit();
 
     // Assert
     DistributedTransaction another = manager.start();
-    Optional<Result> actual = another.get(get);
+    Optional<Result> actual = another.get(prepareGet(0, 0));
     another.commit();
 
     assertThat(actual.isPresent()).isTrue();
     assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowCommitConflictException()
+          throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE + 100)
+            .disableImplicitPreRead()
+            .build();
+    transaction.put(put);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    transaction.rollback();
   }
 
   @Test
@@ -692,49 +753,62 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void deleteAndAbort_ShouldNotDeleteRecord() throws TransactionException {
+  public void deleteAndCommit_DeleteGivenForExisting_ShouldDeleteRecord()
+      throws TransactionException {
     // Arrange
     populateRecords();
-    Get get = prepareGet(0, 0);
     Delete delete = prepareDelete(0, 0);
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    Optional<Result> result = transaction.get(get);
+    transaction.delete(delete);
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0));
+    another.commit();
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void deleteAndAbort_ShouldNotDeleteRecord() throws TransactionException {
+    // Arrange
+    populateRecords();
+    Delete delete = prepareDelete(0, 0);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
     transaction.delete(delete);
     transaction.abort();
 
     // Assert
-    assertThat(result).isPresent();
     DistributedTransaction another = manager.begin();
-    Optional<Result> result1 = another.get(get);
+    Optional<Result> result = another.get(prepareGet(0, 0));
     another.commit();
-    assertThat(result1).isPresent();
+    assertThat(result).isPresent();
   }
 
   @Test
   public void deleteAndRollback_ShouldNotDeleteRecord() throws TransactionException {
     // Arrange
     populateRecords();
-    Get get = prepareGet(0, 0);
     Delete delete = prepareDelete(0, 0);
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    Optional<Result> result = transaction.get(get);
     transaction.delete(delete);
     transaction.rollback();
 
     // Assert
-    assertThat(result).isPresent();
     DistributedTransaction another = manager.begin();
-    Optional<Result> result1 = another.get(get);
+    Optional<Result> result = another.get(prepareGet(0, 0));
     another.commit();
-    assertThat(result1).isPresent();
+    assertThat(result).isPresent();
   }
 
   @Test
-  public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
+  public void mutateAndCommit_AfterRead_ShouldMutateRecordsProperly() throws TransactionException {
     // Arrange
     populateRecords();
     Get get1 = prepareGet(0, 0);
@@ -754,6 +828,30 @@ public abstract class DistributedTransactionIntegrationTestBase {
     DistributedTransaction another = manager.begin();
     Optional<Result> result1 = another.get(get1);
     Optional<Result> result2 = another.get(get2);
+    another.commit();
+
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE - 100);
+    assertThat(result2.isPresent()).isFalse();
+  }
+
+  @Test
+  public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
+    // Arrange
+    populateRecords();
+    Put put = preparePut(0, 0).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Delete delete = prepareDelete(1, 0);
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.mutate(Arrays.asList(put, delete));
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result1 = another.get(prepareGet(0, 0));
+    Optional<Result> result2 = another.get(prepareGet(1, 0));
     another.commit();
 
     assertThat(result1.isPresent()).isTrue();
@@ -1031,7 +1129,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build();
 
     // Act
-    getThenPut(putIf);
+    put(putIf);
 
     // Assert
     Optional<Result> optResult = get(prepareGet(0, 0));
@@ -1054,9 +1152,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    // Act Assert
-    getThenPut(putIfExists);
+    // Act
+    put(putIfExists);
 
+    // Assert
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();
     Result result = optResult.get();
@@ -1073,9 +1172,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Put putIfNotExists =
         Put.newBuilder(preparePut(0, 0)).condition(ConditionBuilder.putIfNotExists()).build();
 
-    // Act Assert
-    getThenPut(putIfNotExists);
+    // Act
+    put(putIfNotExists);
 
+    // Assert
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();
     Result result = optResult.get();
@@ -1102,7 +1202,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build();
 
     // Act
-    getThenDelete(deleteIf);
+    delete(deleteIf);
 
     // Assert
     Optional<Result> optResult = get(prepareGet(0, 0));
@@ -1116,12 +1216,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Put initialData = Put.newBuilder(preparePut(0, 0)).build();
     put(initialData);
 
-    Delete deleteIf =
+    Delete deleteIfExists =
         Delete.newBuilder(prepareDelete(0, 0)).condition(ConditionBuilder.deleteIfExists()).build();
 
-    // Act Assert
-    getThenDelete(deleteIf);
+    // Act
+    delete(deleteIfExists);
 
+    //  Assert
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isFalse();
   }
@@ -1130,14 +1231,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void put_withPutIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
       throws TransactionException {
     // Arrange
-    Put put =
+    Put putIf =
         Put.newBuilder(preparePut(0, 0))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullInt()).build())
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> put(put)).isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> result = get(prepareGet(0, 0));
     assertThat(result).isNotPresent();
@@ -1147,14 +1248,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void put_withPutIfExistsWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
       throws TransactionException {
     // Arrange
-    Put put =
+    Put putIfExists =
         Put.newBuilder(preparePut(0, 0))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfExists())
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(put)).isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIfExists)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> result = get(prepareGet(0, 0));
     assertThat(result).isNotPresent();
@@ -1169,8 +1270,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Put putIfNotExists = Put.newBuilder(put).condition(ConditionBuilder.putIfNotExists()).build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(putIfNotExists))
-        .isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIfNotExists)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();
@@ -1185,11 +1285,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void
       delete_withDeleteIfExistsWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException() {
     // Arrange
-    Delete deleteIf =
+    Delete deleteIfExists =
         Delete.newBuilder(prepareDelete(0, 0)).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenDelete(deleteIf))
+    assertThatThrownBy(() -> delete(deleteIfExists))
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
@@ -1210,8 +1310,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenDelete(deleteIf))
-        .isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> delete(deleteIf)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();
@@ -1240,7 +1339,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> getThenPut(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
+    assertThatThrownBy(() -> put(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
 
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult.isPresent()).isTrue();
@@ -1274,27 +1373,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
     }
   }
 
-  protected void getThenPut(Put put) throws TransactionException {
-    getThenMutate(put);
-  }
-
-  protected void getThenDelete(Delete delete) throws TransactionException {
-    getThenMutate(delete);
-  }
-
-  protected void getThenMutate(Mutation mutation) throws TransactionException {
-    assert mutation.forNamespace().isPresent();
-    assert mutation.forTable().isPresent();
-    BuildableGet get =
-        Get.newBuilder()
-            .namespace(mutation.forNamespace().get())
-            .table(mutation.forTable().get())
-            .partitionKey(mutation.getPartitionKey());
-    mutation.getClusteringKey().ifPresent(get::clusteringKey);
+  protected void delete(Delete delete) throws TransactionException {
     DistributedTransaction tx = manager.start();
     try {
-      tx.get(get.build());
-      tx.mutate(Collections.singletonList(mutation));
+      tx.delete(delete);
       tx.commit();
     } catch (TransactionException e) {
       tx.rollback();
@@ -1310,14 +1392,18 @@ public abstract class DistributedTransactionIntegrationTestBase {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(ACCOUNT_ID, i);
-                          Key clusteringKey = new Key(ACCOUNT_TYPE, j);
+                          Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
+                          Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
                           Put put =
-                              new Put(partitionKey, clusteringKey)
-                                  .forNamespace(namespace)
-                                  .forTable(TABLE)
-                                  .withIntValue(BALANCE, INITIAL_BALANCE)
-                                  .withIntValue(SOME_COLUMN, i * j);
+                              Put.newBuilder()
+                                  .namespace(namespace)
+                                  .table(TABLE)
+                                  .partitionKey(partitionKey)
+                                  .clusteringKey(clusteringKey)
+                                  .intValue(BALANCE, INITIAL_BALANCE)
+                                  .intValue(SOME_COLUMN, i * j)
+                                  .disableImplicitPreRead()
+                                  .build();
                           try {
                             transaction.put(put);
                           } catch (CrudException e) {

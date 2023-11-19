@@ -987,7 +987,8 @@ public abstract class CosmosAdminTestBase {
     Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(namespace, table));
     Throwable thrown2 =
         catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
-    Throwable thrown3 = catchThrowable(() -> admin.importTable(namespace, table));
+    Throwable thrown3 =
+        catchThrowable(() -> admin.importTable(namespace, table, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
