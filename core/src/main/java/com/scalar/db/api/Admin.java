@@ -361,19 +361,23 @@ public interface Admin {
   }
 
   /**
-   * Repair a namespace which may be in an unknown state.
+   * Repair a namespace which may be in an unknown state, such as the namespace exists in the
+   * underlying storage but not its ScalarDB metadata or vice versa. This will recreate the
+   * namespace and its metadata if necessary.
    *
-   * @param namespace an existing namespace
+   * @param namespace a namespace
    * @param options options to repair
    * @throws ExecutionException if the operation fails
    */
   void repairNamespace(String namespace, Map<String, String> options) throws ExecutionException;
 
   /**
-   * Repair a table which may be in an unknown state.
+   * Repair a table which may be in an unknown state, such as the table exists in the underlying
+   * storage but not its ScalarDB metadata or vice versa. This will recreate the table, its
+   * secondary indexes and their metadata if necessary.
    *
-   * @param namespace an existing namespace
-   * @param table an existing table
+   * @param namespace a namespace
+   * @param table a table
    * @param metadata the metadata associated to the table to repair
    * @param options options to repair
    * @throws ExecutionException if the operation fails

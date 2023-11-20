@@ -405,6 +405,36 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Repair a namespace
+
+If a namespace is in an unknown state such as the namespace exists in the underlying storage but not its ScalarDB metadata or vice versa.
+This method will recreate the namespace and its metadata if necessary.
+
+You can repair the namespace as follows:
+
+```java
+// Repair the namespace "ns" with options.
+Map<String, String> options = ...;
+    admin.repairNamespace("ns", options);
+```
+
+### Repair a table
+
+If a table is in an unknown state such as the table exists in the underlying storage but not its ScalarDB metadata or vice versa.
+This method will recreate the table, its secondary indexes and their metadata if necessary.
+
+You can repair the table as follows:
+
+```java
+// Repair the table "ns.tbl" with options.
+TableMetadata tableMetadata =
+    TableMetadata.newBuilder()
+        ...
+        .build();
+Map<String, String> options = ...; 
+admin.repairTable("ns", "tbl", tableMetadata, options);
+```
+
 ### Implement CRUD operations
 
 The following sections describe CRUD operations.

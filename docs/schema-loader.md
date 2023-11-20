@@ -82,10 +82,9 @@ Create/Delete schemas in the storage defined in the config file
                       Path to the schema json file
       --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
-      --repair-all    Repair tables : it repairs the table metadata of
-                               existing tables. When using Cosmos DB, it
-                               additionally repairs stored procedure attached
-                               to each table
+      --repair-all    Repair namespaces and tables that are in an unknown
+                        state: it recreates namespaces, tables, secondary
+                        indexes and their metadata if necessary.          
       --replication-factor=<replicaFactor>
                       The replication factor (supported in Cassandra)
       --replication-strategy=<replicationStrategy>
@@ -387,9 +386,10 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-### Repair tables
+### Repair namespaces and tables
 
-You can repair the table metadata of existing tables by using the properties file. To repair table metadata of existing tables, run the following command, replacing the contents in the angle brackets as described:
+You can repair namespaces and tables by using the properties file. Namespaces and tables can be in an unknown state such as namespace or table exists in the underlying storage but not their ScalarDB metadata or vice versa. This command will recreate the namespaces, the tables, the secondary indexes and their metadata if necessary.
+To repair them, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] --repair-all 
@@ -663,8 +663,8 @@ public class SchemaLoaderSample {
     Map<String, String> indexCreationOptions = new HashMap<>();
     indexCreationOptions.put(DynamoAdmin.NO_SCALING, "true");
 
-    Map<String, String> tableReparationOptions = new HashMap<>();
-    indexCreationOptions.put(DynamoAdmin.NO_BACKUP, "true");
+    Map<String, String> reparationOptions = new HashMap<>();
+    reparationOptions.put(DynamoAdmin.NO_BACKUP, "true");
 
     // Create tables.
     SchemaLoader.load(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
@@ -672,8 +672,8 @@ public class SchemaLoaderSample {
     // Alter tables.
     SchemaLoader.alterTables(configFilePath, alteredSchemaFilePath, indexCreationOptions);
 
-    // Repair tables.
-    SchemaLoader.repairTables(configFilePath, schemaFilePath, tableReparationOptions, repairCoordinatorTables);
+    // Repair namespaces and tables.
+    SchemaLoader.repairAll(configFilePath, schemaFilePath, reparationOptions, repairCoordinatorTables);
 
     // Delete tables.
     SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTables);
@@ -692,8 +692,8 @@ SchemaLoader.load(configFilePath, serializedSchemaJson, tableCreationOptions, cr
 // Alter tables.
 SchemaLoader.alterTables(configFilePath, serializedAlteredSchemaFilePath, indexCreationOptions);
 
-// Repair tables.
-SchemaLoader.repairTables(configFilePath, serializedSchemaJson, tableReparationOptions, repairCoordinatorTables);
+// Repair namespaces and tables.
+SchemaLoader.repairAll(configFilePath, serializedSchemaJson, reparationOptions, repairCoordinatorTables);
 
 // Delete tables.
 SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables);
@@ -708,8 +708,8 @@ SchemaLoader.load(properties, serializedSchemaJson, tableCreationOptions, create
 // Alter tables.
 SchemaLoader.alterTables(properties, serializedAlteredSchemaFilePath, indexCreationOptions);
 
-// Repair tables.
-SchemaLoader.repairTables(properties, serializedSchemaJson, tableReparationOptions, repairCoordinatorTables);
+// Repair namespaces and tables.
+SchemaLoader.repairAll(properties, serializedSchemaJson, reparationOptions, repairCoordinatorTables);
 
 // Delete tables.
 SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);
