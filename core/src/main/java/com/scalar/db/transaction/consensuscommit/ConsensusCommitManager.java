@@ -16,6 +16,8 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +39,73 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
 
+  ////////////// For group commit >>>>>>>>>>>>>>>>>
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS";
+
+  private final GroupCommitter3<String, Snapshot> groupCommitter;
+
+  private Optional<GroupCommitter3<String, Snapshot>> prepareGroupCommitter() {
+    // TODO: Make this configurable
+    // TODO: Take care of lazy recovery
+    if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
+      return Optional.empty();
+    }
+
+    int groupCommitNumOfRetentionValues = 32;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
+      groupCommitNumOfRetentionValues =
+          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
+    }
+
+    int groupCommitNumOfThreads = 32;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
+      groupCommitNumOfThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS));
+    }
+
+    int groupCommitSizeFixExpirationInMillis = 200;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS) != null) {
+      groupCommitSizeFixExpirationInMillis =
+          Integer.parseInt(
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS));
+    }
+    return Optional.of(
+        new GroupCommitter3<>(
+            "coordinator-writer",
+            groupCommitSizeFixExpirationInMillis,
+            groupCommitNumOfRetentionValues,
+            10,
+            groupCommitNumOfThreads,
+            new KeyManipulator<String>() {
+              @Override
+              public String createParentKey() {
+                return UUID.randomUUID().toString();
+              }
+
+              @Override
+              public String createFullKey(String parentKey, String childKey) {
+                return parentKey + ":" + childKey;
+              }
+
+              @Override
+              public Keys<String> fromFullKey(String fullKey) {
+                String[] parts = fullKey.split(":");
+                if (parts.length != 2) {
+                  throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
+                }
+                return new Keys<>(parts[0], parts[1]);
+              }
+            }));
+  }
+  ////////////// For group commit <<<<<<<<<<<<<<<<<
+
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public ConsensusCommitManager(
@@ -51,7 +120,10 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    groupCommitter = prepareGroupCommitter().orElse(null);
+    commit =
+        new CommitHandler(
+            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -69,7 +141,10 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    groupCommitter = prepareGroupCommitter().orElse(null);
+    commit =
+        new CommitHandler(
+            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -96,6 +171,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
+    // TODO: Support this for integration tests
+    this.groupCommitter = null;
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);
@@ -166,7 +243,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   @VisibleForTesting
   DistributedTransaction begin(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    String txId = UUID.randomUUID().toString();
+    String txId = groupCommitter.reserve(UUID.randomUUID().toString());
     return begin(txId, isolation, strategy);
   }
 
