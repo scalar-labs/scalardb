@@ -2,12 +2,14 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.group
 
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.errorprone.annotations.concurrent.LazyInit;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator.Keys;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -15,59 +17,43 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GroupCommitter3<V> {
+public class GroupCommitter3<K, V> {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
-  private final BlockingQueue<BufferedValues<V>> queueOfBufferedValues =
+  private final BlockingQueue<BufferedValues<K, V>> queueOfBufferedValues =
       new LinkedBlockingQueue<>();
   private final long retentionTimeInMillis;
   private final int numberOfRetentionValues;
   private final long expirationCheckIntervalInMillis;
   private final ExecutorService emitExecutorService;
   private final ExecutorService expirationCheckExecutorService;
-  // FIXME
-  private final Supplier<String> parentKeyGenerator = () -> UUID.randomUUID().toString();
-  private final Emittable<V> emitter;
-  private BufferedValues<V> currentBufferedValues;
-  private Map<String, BufferedValues<V>> bufferedValuesMap;
+  private final KeyManipulator<K> keyManipulator;
+  @LazyInit private Emittable<K, V> emitter;
+  @Nullable private BufferedValues<K, V> currentBufferedValues;
+  private final Map<K, BufferedValues<K, V>> bufferedValuesMap = new ConcurrentHashMap<>();
 
-  private static class ValueSlot<V> {
-    private final BufferedValues<V> parentBuffer;
-    private final String key;
+  private static class ValueSlot<K, V> {
+    private final BufferedValues<K, V> parentBuffer;
+    private final K key;
     private final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     @Nullable private volatile V value;
 
-    public ValueSlot(String key, BufferedValues<V> parentBuffer) {
+    public ValueSlot(K key, BufferedValues<K, V> parentBuffer) {
       this.key = key;
       this.parentBuffer = parentBuffer;
     }
 
-    public String getParentKey() {
-      return parentBuffer.key;
+    public K getFullKey() {
+      return parentBuffer.getFullKey(key);
     }
 
-    public String getFullKey() {
-      // FIXME
-      return parentBuffer.key + ":" + key;
-    }
-
-    public synchronized void setValue(V value) throws GroupCommitException {
-      if (value == null) {
-        throw new AssertionError("'value' is null. key=" + getParentKey());
-      }
-      if (parentBuffer.isDone()) {
-        throw new GroupCommitAlreadyClosedException(
-            String.format(
-                "The parent buffer is already closed. parentBuffer:%s, value:%s",
-                parentBuffer, value));
-      }
-      this.value = value;
-      parentBuffer.notifyOfReadyValue(this);
+    public synchronized void putValue(V value) {
+      this.value = Objects.requireNonNull(value);
+      parentBuffer.notifyOfReadyValue();
     }
 
     public void waitUntilEmit() throws GroupCommitException, GroupCommitCascadeException {
@@ -87,29 +73,22 @@ public class GroupCommitter3<V> {
       }
     }
 
-    public void abort(Throwable e) {
-      parentBuffer.abortAll(e);
-    }
-
-    public void remove() {
-      parentBuffer.removeValueSlot(key);
-    }
-
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this).add("value", value).toString();
+      return MoreObjects.toStringHelper(this).add("key", key).toString();
     }
   }
 
-  private static class BufferedValues<V> {
+  private static class BufferedValues<K, V> {
     private final ExecutorService executorService;
-    private final Emittable<V> emitter;
+    private final Emittable<K, V> emitter;
+    private final KeyManipulator<K> keyManipulator;
     private final int capacity;
     private final AtomicReference<Integer> size = new AtomicReference<>();
-    private final String key;
+    private final K key;
     public final Instant expiredAt;
     private final AtomicBoolean done = new AtomicBoolean();
-    private final Map<String, ValueSlot<V>> valueSlots;
+    private final Map<K, ValueSlot<K, V>> valueSlots;
 
     @Override
     public String toString() {
@@ -126,38 +105,61 @@ public class GroupCommitter3<V> {
 
     BufferedValues(
         ExecutorService executorService,
-        Emittable<V> emitter,
+        Emittable<K, V> emitter,
+        KeyManipulator<K> keyManipulator,
         long retentionTimeInMillis,
-        String key,
         int capacity) {
       this.executorService = executorService;
       this.emitter = emitter;
+      this.keyManipulator = keyManipulator;
       this.capacity = capacity;
       this.expiredAt = Instant.now().plusMillis(retentionTimeInMillis);
-      if (key == null) {
-        throw new IllegalArgumentException("`key` can't be null");
-      }
-      this.key = key;
-      // TODO: Revisit the type
-      this.valueSlots = new HashMap<>(capacity);
+      this.key = keyManipulator.createParentKey();
+      this.valueSlots = new ConcurrentHashMap<>(capacity);
+    }
+
+    public K getFullKey(K childKey) {
+      return keyManipulator.createFullKey(key, childKey);
     }
 
     public synchronized boolean noMoreSlot() {
       return valueSlots.size() >= capacity;
     }
 
-    public synchronized ValueSlot<V> getValueSlot(String origKey)
-        throws GroupCommitAlreadyClosedException {
+    public synchronized K reserveNewValueSlot(K childKey) {
       if (isSizeFixed()) {
-        throw new GroupCommitAlreadyClosedException(
-            "The size of 'valueSlot' is already fixed. buffer:" + this);
+        throw new IllegalStateException("The size of 'valueSlot' is already fixed. buffer:" + this);
       }
-      ValueSlot<V> valueSlot = new ValueSlot<>(origKey, this);
-      valueSlots.put(origKey, valueSlot);
+      ValueSlot<K, V> valueSlot = new ValueSlot<>(childKey, this);
+      valueSlots.put(childKey, valueSlot);
       if (noMoreSlot()) {
         fixSize();
       }
-      return valueSlot;
+      return valueSlot.getFullKey();
+    }
+
+    public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
+      if (isDone()) {
+        throw new GroupCommitAlreadyClosedException(
+            "This value slot buffer is already closed. buffer:" + this);
+      }
+      ValueSlot<K, V> valueSlot = valueSlots.get(childKey);
+      if (valueSlot == null) {
+        // TODO: Revisit this exception class (e.g., NotFoundException)
+        throw new GroupCommitException(
+            "The value slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
+      }
+      valueSlot.putValue(value);
+      asyncEmitIfReady();
+
+      long start = System.currentTimeMillis();
+      valueSlot.waitUntilEmit();
+
+      logger.info(
+          "Waited(thread_id:{}, key:{}): {} ms",
+          getFullKey(childKey),
+          Thread.currentThread().getId(),
+          System.currentTimeMillis() - start);
     }
 
     public synchronized void fixSize() {
@@ -166,7 +168,7 @@ public class GroupCommitter3<V> {
       ////// FIXME: DEBUG
       // Current ValueSlot that `index` is pointing is not used yet.
       size.set(valueSlots.size());
-      emitIfReady();
+      asyncEmitIfReady();
     }
 
     public synchronized boolean isSizeFixed() {
@@ -174,17 +176,19 @@ public class GroupCommitter3<V> {
     }
 
     public synchronized boolean isReady() {
-      return isSizeFixed() && valueSlots.size() >= size.get();
+      return isSizeFixed()
+          && valueSlots.values().stream().filter(Objects::nonNull).count() >= size.get();
     }
 
     public synchronized boolean isDone() {
       return done.get();
     }
 
-    public synchronized void removeValueSlot(String childKey) {
-      valueSlots.remove(childKey);
-      if (size.get() != null) {
-        size.set(size.get() - 1);
+    public synchronized void removeValueSlot(K childKey) {
+      if (valueSlots.remove(childKey) != null) {
+        if (size.get() != null && size.get() > 0) {
+          size.set(size.get() - 1);
+        }
       }
       ////// FIXME: DEBUG
       logger.info(
@@ -194,10 +198,10 @@ public class GroupCommitter3<V> {
           valueSlots.size(),
           size.get());
       ////// FIXME: DEBUG
-      emitIfReady();
+      asyncEmitIfReady();
     }
 
-    public synchronized void emitIfReady() {
+    public synchronized void asyncEmitIfReady() {
       if (isDone()) {
         return;
       }
@@ -216,6 +220,7 @@ public class GroupCommitter3<V> {
                 ////// FIXME: DEBUG
                 long startEmit = System.currentTimeMillis();
                 emitter.execute(
+                    key,
                     valueSlots.values().stream().map(vs -> vs.value).collect(Collectors.toList()));
                 logger.info(
                     "Emitted (thread_id:{}, num_of_values:{}): {} ms",
@@ -224,6 +229,7 @@ public class GroupCommitter3<V> {
                     System.currentTimeMillis() - startEmit);
 
                 long startNotify = System.currentTimeMillis();
+                // Wake up the waiting threads
                 valueSlots.values().forEach(vf -> vf.completableFuture.complete(null));
                 logger.info(
                     "Notified (thread_id:{}, num_of_values:{}): {} ms",
@@ -245,14 +251,12 @@ public class GroupCommitter3<V> {
       }
     }
 
-    public synchronized void notifyOfReadyValue(ValueSlot<V> valueSlot) {
-      // FIXME
-      // readyValueSlots.add(valueSlot);
-      emitIfReady();
+    public synchronized void notifyOfReadyValue() {
+      asyncEmitIfReady();
     }
 
     public synchronized void abortAll(Throwable cause) {
-      for (ValueSlot<V> kv : valueSlots.values()) {
+      for (ValueSlot<K, V> kv : valueSlots.values()) {
         kv.completableFuture.completeExceptionally(
             new GroupCommitCascadeException(
                 "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
@@ -268,11 +272,11 @@ public class GroupCommitter3<V> {
       int numberOfRetentionValues,
       long expirationCheckIntervalInMillis,
       int numberOfThreads,
-      Emittable<V> emitter) {
+      KeyManipulator<K> keyManipulator) {
     this.retentionTimeInMillis = retentionTimeInMillis;
     this.numberOfRetentionValues = numberOfRetentionValues;
     this.expirationCheckIntervalInMillis = expirationCheckIntervalInMillis;
-    this.emitter = emitter;
+    this.keyManipulator = keyManipulator;
 
     this.emitExecutorService =
         Executors.newFixedThreadPool(
@@ -292,11 +296,15 @@ public class GroupCommitter3<V> {
     startExpirationCheckExecutorService();
   }
 
+  public void setEmitter(Emittable<K, V> emitter) {
+    this.emitter = emitter;
+  }
+
   ////////// FIXME: DEBUG LOG
   private volatile long lastDebugPrint = 0;
   ////////// FIXME: DEBUG LOG
   private boolean dequeueAndHandleBufferedValues() {
-    BufferedValues<V> bufferedValues = queueOfBufferedValues.peek();
+    BufferedValues<K, V> bufferedValues = queueOfBufferedValues.peek();
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
@@ -348,7 +356,7 @@ public class GroupCommitter3<V> {
       ////////// FIXME: DEBUG LOG
       logger.info("FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
       ////////// FIXME: DEBUG LOG
-      BufferedValues<V> removed = queueOfBufferedValues.poll();
+      BufferedValues<K, V> removed = queueOfBufferedValues.poll();
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.warn(
             "The queue returned an inconsistent return value. expected:{}, actual:{}",
@@ -370,96 +378,61 @@ public class GroupCommitter3<V> {
         });
   }
 
-  private synchronized ValueSlot<V> getValueSlot(String origKey)
-      throws GroupCommitAlreadyClosedException {
+  // Returns full key
+  private synchronized K reserveNewValueSlot(K childKey) throws GroupCommitAlreadyClosedException {
     if (currentBufferedValues == null
         || currentBufferedValues.noMoreSlot()
-        || currentBufferedValues.isDone()) {
+        || currentBufferedValues.isDone()
+        || currentBufferedValues.isSizeFixed()) {
       currentBufferedValues =
           new BufferedValues<>(
               emitExecutorService,
               emitter,
+              keyManipulator,
               retentionTimeInMillis,
-              parentKeyGenerator.get(),
               numberOfRetentionValues);
       queueOfBufferedValues.add(currentBufferedValues);
       bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
     }
-    return currentBufferedValues.getValueSlot(origKey);
+    return currentBufferedValues.reserveNewValueSlot(childKey);
   }
 
-  private ValueSlot<V> getValueSlotContainingValue(
-      String origKey, ValueGenerator<String, V> valueGeneratorFromUniqueKey)
-      throws GroupCommitException {
-    ValueSlot<V> valueSlot = null;
-    try {
-      valueSlot = getValueSlot(origKey);
-
-      long start = System.currentTimeMillis();
-      V value = valueGeneratorFromUniqueKey.execute(valueSlot.getParentKey());
-      logger.info(
-          "Created value(thread_id:{}): {} ms, bufferKey={}, key={}",
-          Thread.currentThread().getId(),
-          System.currentTimeMillis() - start,
-          valueSlot.parentBuffer.key,
-          origKey);
-      valueSlot.setValue(value);
-      return valueSlot;
-    } catch (GroupCommitAlreadyClosedException e) {
-      ///////// FIXME: DEBUG
-      logger.info(
-          "FAILED TO CREATE VALUE #1: , bufferKey={}, key={}",
-          valueSlot == null ? "NULL" : valueSlot.parentBuffer.key,
-          origKey);
-      ///////// FIXME: DEBUG
-
-      if (valueSlot != null) {
-        valueSlot.remove();
+  // Returns the full key
+  public K reserve(K childKey) {
+    int counterForDebug = 0;
+    while (true) {
+      try {
+        return reserveNewValueSlot(childKey);
+      } catch (GroupCommitAlreadyClosedException e) {
+        logger.info("Failed to reserve a new value slot. Retrying. key:{}", childKey);
+        counterForDebug++;
+        if (counterForDebug > 1000) {
+          throw new IllegalStateException("Too many retries. Something is wrong, key:" + childKey);
+        }
+      } catch (Throwable e) {
+        ///////// FIXME: DEBUG
+        logger.error("FAILED TO RESERVE SLOT #2: UNEXPECTED key={}", childKey);
+        ///////// FIXME: DEBUG
+        throw e;
       }
-      throw e;
-    } catch (Throwable e) {
-      ///////// FIXME: DEBUG
-      logger.info(
-          "FAILED TO CREATE VALUE #2: , bufferKey={}, key={}",
-          valueSlot == null ? "NULL" : valueSlot.parentBuffer.key,
-          origKey);
-      ///////// FIXME: DEBUG
-      GroupCommitException gce =
-          new GroupCommitException(
-              String.format("Failed to prepare a value for group commit. origKey: %s", origKey), e);
-      if (valueSlot != null) {
-        valueSlot.remove();
-      }
-      throw gce;
     }
   }
 
-  public String reserveSlot(String origKey) throws GroupCommitException {
+  public void ready(K fullKey, V value) throws GroupCommitException {
+    Keys<K> keys = keyManipulator.fromFullKey(fullKey);
+
+    BufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
+    if (bufferedValues == null) {
+      // TODO: Revisit this exception class
+      throw new GroupCommitException(
+          "The buffer for the reserved value slot doesn't exist. fullKey:" + fullKey);
+    }
+
     try {
-      ValueSlot<V> valueSlot = getValueSlot(origKey);
-      return valueSlot.getFullKey();
+      bufferedValues.putValueToSlotAndWait(keys.childKey, value);
     } catch (GroupCommitAlreadyClosedException e) {
-      ///////// FIXME: DEBUG
-      logger.info("FAILED TO RESERVE SLOT #1: key={}", origKey);
-      ///////// FIXME: DEBUG
-      throw e;
-    } catch (Throwable e) {
-      ///////// FIXME: DEBUG
-      logger.error("FAILED TO RESERVE SLOT #2: UNEXPECTED key={}", origKey);
+      // TODO: Move the slow transaction to a new small buffer
       throw e;
     }
-  }
-
-  // FIXME: Change this to `setValue(String fullKey, V value)`
-  public void addValue(String origKey, ValueGenerator<String, V> valueGeneratorFromUniqueKey)
-      throws GroupCommitException {
-    ValueSlot<V> valueSlot = getValueSlotContainingValue(origKey, valueGeneratorFromUniqueKey);
-
-    long start = System.currentTimeMillis();
-    valueSlot.waitUntilEmit();
-    logger.info(
-        "Waited(thread_id:{}): {} ms",
-        Thread.currentThread().getId(),
-        System.currentTimeMillis() - start);
   }
 }

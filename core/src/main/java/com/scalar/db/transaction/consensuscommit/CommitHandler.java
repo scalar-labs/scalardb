@@ -26,17 +26,14 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitAlreadyClosedException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitCascadeException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter2;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -47,15 +44,6 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class CommitHandler {
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS";
-
   private static final Logger logger = LoggerFactory.getLogger(CommitHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
@@ -65,7 +53,7 @@ public class CommitHandler {
   // FIXME
   private final LogRecorder logRecorder;
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-  private final GroupCommitter2<String, Snapshot> groupCommitter;
+  private final GroupCommitter3<String, Snapshot> groupCommitter;
   private final ExecutorService executorService =
       Executors.newCachedThreadPool(
           new ThreadFactoryBuilder()
@@ -92,41 +80,6 @@ public class CommitHandler {
 
     return Optional.of(
         new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository));
-  }
-
-  private Optional<GroupCommitter2<String, Snapshot>> prepareGroupCommitter() {
-    // TODO: Make this configurable
-    // TODO: Take care of lazy recovery
-    if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
-      return Optional.empty();
-    }
-
-    int groupCommitNumOfRetentionValues = 32;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
-      groupCommitNumOfRetentionValues =
-          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
-    }
-
-    int groupCommitNumOfThreads = 32;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
-      groupCommitNumOfThreads =
-          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS));
-    }
-
-    int groupCommitSizeFixExpirationInMillis = 200;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS) != null) {
-      groupCommitSizeFixExpirationInMillis =
-          Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS));
-    }
-    return Optional.of(
-        new GroupCommitter2<>(
-            "coordinator-writer",
-            groupCommitSizeFixExpirationInMillis,
-            groupCommitNumOfRetentionValues,
-            10,
-            groupCommitNumOfThreads,
-            this::handleSnapshotsInGroupCommit));
   }
 
   private void commitSnapshotsRecordsInParallel(List<Snapshot> snapshots) {
@@ -184,10 +137,10 @@ public class CommitHandler {
         System.currentTimeMillis() - start);
   }
 
-  private void handleSnapshotsInGroupCommit(List<Snapshot> snapshots) {
+  private void handleSnapshotsInGroupCommit(String parentId, List<Snapshot> snapshots) {
     try {
       long startCommitState = System.currentTimeMillis();
-      commitStateForGroupCommit(snapshots);
+      commitStateForGroupCommit(parentId, snapshots);
       logger.info(
           "CommitState-ed(thread_id:{}, num_of_values:{}): {} ms",
           Thread.currentThread().getId(),
@@ -203,20 +156,30 @@ public class CommitHandler {
     }
   }
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
+    this(storage, coordinator, tableMetadataManager, parallelExecutor, null);
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public CommitHandler(
+      DistributedStorage storage,
+      Coordinator coordinator,
+      TransactionTableMetadataManager tableMetadataManager,
+      ParallelExecutor parallelExecutor,
+      GroupCommitter3<String, Snapshot> groupCommitter) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
 
     // FIXME: These are only for PoC.
+    this.groupCommitter = groupCommitter;
+    groupCommitter.setEmitter(this::handleSnapshotsInGroupCommit);
     logRecorder = prepareLogRecorder().orElse(null);
-    groupCommitter = prepareGroupCommitter().orElse(null);
   }
 
   static class TransactionGroupCommitException extends RuntimeException {
@@ -229,6 +192,7 @@ public class CommitHandler {
     }
   }
 
+  /*
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
     if (groupCommitter == null) {
       normalCommit(snapshot);
@@ -354,9 +318,9 @@ public class CommitHandler {
       }
     }
   }
+   */
 
-  private void normalCommit(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
+  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
     Optional<Future<Void>> logRecordFuture;
     try {
       logRecordFuture = prepare(snapshot);
@@ -380,6 +344,7 @@ public class CommitHandler {
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
 
+    // TODO: Move this before validate()
     logRecordFuture.ifPresent(
         logRecord -> {
           try {
@@ -396,8 +361,16 @@ public class CommitHandler {
           }
         });
 
-    commitState(snapshot);
-    commitRecords(snapshot);
+    if (groupCommitter == null) {
+      commitState(snapshot);
+      commitRecords(snapshot);
+    } else {
+      try {
+        groupCommitter.ready(snapshot.getId(), snapshot);
+      } catch (GroupCommitException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   public Optional<Future<Void>> prepare(Snapshot snapshot) throws PreparationException {
@@ -490,43 +463,45 @@ public class CommitHandler {
     }
   }
 
-  private void commitStateForGroupCommit(List<Snapshot> snapshots)
+  private void commitStateForGroupCommit(String parentId, List<Snapshot> snapshots)
       throws CommitException, UnknownTransactionStatusException {
     if (snapshots.isEmpty()) {
       // This means all buffered transactions failed in the prepare phase.
-      // TODO: We must put an abort state with the parent key.
-      throw new IllegalArgumentException("'snapshot' is empty");
+      // Each call of prepare() puts ABORT state for the *full* id.
+      // So, just returning is enough...?
+      // throw new IllegalArgumentException("'snapshot' is empty");
+      return;
     }
-    String firstId = snapshots.get(0).getId();
 
     try {
       coordinator.putStateForGroupCommit(
+          parentId,
           snapshots.stream().map(Snapshot::getId).collect(Collectors.toList()),
           TransactionState.COMMITTED,
           System.currentTimeMillis());
       logger.debug(
-          "Transaction {} is committed successfully at {}", firstId, System.currentTimeMillis());
+          "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
       try {
-        Optional<Coordinator.State> s = coordinator.getState(firstId);
+        Optional<Coordinator.State> s = coordinator.getState(parentId);
         if (s.isPresent()) {
           TransactionState state = s.get().getState();
           if (state.equals(TransactionState.ABORTED)) {
             rollbackSnapshotsRecordsInParallel(snapshots);
             throw new CommitException(
-                "Committing state in coordinator failed. the transaction is aborted", e, firstId);
+                "Committing state in coordinator failed. the transaction is aborted", e, parentId);
           }
         } else {
           throw new UnknownTransactionStatusException(
               "Committing state failed with NoMutationException but the coordinator status doesn't exist",
               e,
-              firstId);
+              parentId);
         }
       } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException("Can't get the state", e1, firstId);
+        throw new UnknownTransactionStatusException("Can't get the state", e1, parentId);
       }
     } catch (CoordinatorException e) {
-      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, firstId);
+      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, parentId);
     }
   }
 
