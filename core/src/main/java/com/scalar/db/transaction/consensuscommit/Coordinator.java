@@ -21,7 +21,6 @@ import com.scalar.db.io.TextValue;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -77,6 +76,7 @@ public class Coordinator {
   }
 
   private boolean isIdForGroupCommit(String id) {
+    // TODO: Move these logics to an expert class
     return id.contains(":");
   }
 
@@ -90,6 +90,11 @@ public class Coordinator {
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
     if (isIdForGroupCommit(id)) {
+      Get get = createGetWith(id);
+      Optional<State> state = get(get);
+      if (state.isPresent()) {
+        return state;
+      }
       return getStateForGroupCommit(id);
     }
 
@@ -125,41 +130,27 @@ public class Coordinator {
   }
 
   public void putState(Coordinator.State state) throws CoordinatorException {
-    if (isIdForGroupCommit(state.getId())) {
-      putStateForGroupCommit(
-          Collections.singleton(state.getId()), state.getState(), state.getCreatedAt());
-      return;
-    }
-
     Put put = createPutWith(state);
     put(put);
   }
 
   public void putStateForGroupCommit(
-      Collection<String> ids, TransactionState transactionState, long createdAt)
+      String parentId, Collection<String> ids, TransactionState transactionState, long createdAt)
       throws CoordinatorException {
+    boolean isFirst = true;
     StringBuilder sb = new StringBuilder();
-    String firstParentId = null;
     for (String id : ids) {
       IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
-      String parentId = idForGroupCommit.parentId;
-      String childId = idForGroupCommit.childId;
-      if (firstParentId == null) {
-        firstParentId = parentId;
+      if (isFirst) {
+        isFirst = false;
       } else {
-        if (!firstParentId.equals(parentId)) {
-          throw new IllegalArgumentException(
-              String.format(
-                  "Different parent ID is found. firstParentId:%s, parentId:%s",
-                  firstParentId, parentId));
-        }
         sb.append(",");
       }
-      sb.append(childId);
+      sb.append(idForGroupCommit.childId);
     }
 
     Put put =
-        new Put(new Key(Attribute.toIdValue(firstParentId)))
+        new Put(new Key(Attribute.toIdValue(parentId)))
             .withValue(Attribute.toStateValue(transactionState))
             .withValue(Attribute.toCreatedAtValue(createdAt))
             .withValue(new TextValue("child_ids", sb.toString()))

@@ -1,27 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import javax.annotation.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class GroupCommitter2<K, V> {
+  /*
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter2.class);
   private final BlockingQueue<BufferedValues<K, V>> queueOfBufferedValues =
       new LinkedBlockingQueue<>();
@@ -439,4 +419,5 @@ public class GroupCommitter2<K, V> {
         Thread.currentThread().getId(),
         System.currentTimeMillis() - start);
   }
+   */
 }

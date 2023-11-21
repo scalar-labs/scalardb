@@ -1,7 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -48,7 +47,6 @@ import org.slf4j.LoggerFactory;
 public class Snapshot {
   private static final Logger logger = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
-  private String parentId;
   private final Isolation isolation;
   private final SerializableStrategy strategy;
   private final TransactionTableMetadataManager tableMetadataManager;
@@ -99,35 +97,7 @@ public class Snapshot {
 
   @Nonnull
   public String getId() {
-    if (parentId == null) {
-      return id;
-    } else {
-      return parentId + ":" + id;
-    }
-  }
-
-  @Nullable
-  public String getParentId() {
-    return parentId;
-  }
-
-  public void setParentId(String parentId) {
-    if (parentId == null) {
-      throw new IllegalArgumentException("`parentId` can't be set to null");
-    }
-    this.parentId = parentId;
-  }
-
-  @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("id", id)
-        .add("parentId", parentId)
-        .add("readSet", readSet)
-        .add("scanSet", scanSet)
-        .add("writeSet", writeSet)
-        .add("deleteSet", deleteSet)
-        .toString();
+    return id;
   }
 
   @VisibleForTesting
@@ -198,8 +168,7 @@ public class Snapshot {
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      // For PoC
-      throw new CrudException("Getting a table metadata failed", e, getId());
+      throw new CrudException("Getting a table metadata failed", e, id);
     }
   }
 
@@ -460,9 +429,7 @@ public class Snapshot {
               for (Result result : scanner) {
                 TransactionResult transactionResult = new TransactionResult(result);
                 // Ignore records that this transaction has prepared (and that are in the write set)
-                // FIXME: Only for PoC
-                if (transactionResult.getId() != null
-                    && transactionResult.getId().equals(getId())) {
+                if (transactionResult.getId() != null && transactionResult.getId().equals(id)) {
                   continue;
                 }
                 currentReadMap.put(new Key(scan, result), transactionResult);
@@ -548,14 +515,11 @@ public class Snapshot {
   private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
     throw new PreparationConflictException(
         "Reading empty records might cause write skew anomaly so aborting the transaction for safety",
-        // For PoC
-        getId());
+        id);
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
-    // For PoC
-    throw new ValidationConflictException(
-        "Anti-dependency found. Aborting the transaction", getId());
+    throw new ValidationConflictException("Anti-dependency found. Aborting the transaction", id);
   }
 
   private boolean isExtraReadEnabled() {
