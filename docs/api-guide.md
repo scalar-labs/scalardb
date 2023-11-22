@@ -250,6 +250,18 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Upgrade the environment to support the latest ScalarDB API
+
+You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
+you will be requested, as indicated on the release notes, to run this method after updating the 
+ScalarDB version of your application environment.
+
+```java
+// Upgrade the ScalarDB environment
+Map<String, String> options = ...;
+admin.upgrade(options);
+```
+
 ### Specify operations for the Coordinator table
 
 The Coordinator table is used by the [Transactional API](#transactional-api) to track the statuses of transactions.

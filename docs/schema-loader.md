@@ -92,6 +92,12 @@ Create/Delete schemas in the storage defined in the config file
                       The replication strategy, must be SimpleStrategy or
                         NetworkTopologyStrategy (supported in Cassandra)
       --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
+      --upgrade       Upgrades the ScalarDB environment to support the latest
+                        version of the ScalarDB API. Typically, you will be
+                        requested, as indicated on the release notes, to run
+                        this command after updating the ScalarDB version of
+                        your application environment.
+
 ```
 
 For a sample properties file, see [`database.properties`](https://github.com/scalar-labs/scalardb/blob/master/conf/database.properties).
@@ -439,6 +445,16 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
+### Upgrade the environment to support the latest ScalarDB API
+
+You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
+you will be requested, as indicated on the release notes, to run this method after updating the
+ScalarDB version of your application environment.
+
+```console
+$ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> --upgrade
+```
+
 ### Sample schema file
 
 The following is a sample schema. For a sample schema file, see [`schema_sample.json`](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json).
@@ -634,9 +650,11 @@ dependencies {
 }
 ```
 
-### Create, alter, repair, or delete tables
+### Sample usage
 
-You can create, alter, delete, or repair tables that are defined in the schema by using Schema Loader. To do this, you can pass a ScalarDB properties file, schema, and additional options, if needed, as shown below:
+With the `SchemaLoader` class, you can execute the same commands as the CLI:
+- To create, alter, delete, or repair tables that are defined in the schema, you can pass a ScalarDB properties file, schema, and additional options, if needed. 
+- To upgrade the environment, you can pass a ScalarDB properties, and additional options, if needed.
 
 ```java
 public class SchemaLoaderSample {
@@ -666,6 +684,8 @@ public class SchemaLoaderSample {
     Map<String, String> tableReparationOptions = new HashMap<>();
     indexCreationOptions.put(DynamoAdmin.NO_BACKUP, "true");
 
+    Map<String, String> upgradeOptions = new HashMap<>(tableCreationOptions);
+
     // Create tables.
     SchemaLoader.load(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
 
@@ -677,6 +697,9 @@ public class SchemaLoaderSample {
 
     // Delete tables.
     SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTables);
+
+    // Upgrade the environment
+    SchemaLoader.upgrade(configFilePath, upgradeOptions);
 
     return 0;
   }
@@ -713,4 +736,7 @@ SchemaLoader.repairTables(properties, serializedSchemaJson, tableReparationOptio
 
 // Delete tables.
 SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);
+
+// Upgrade the environment
+SchemaLoader.upgrade(properties, upgradeOptions);
 ```
