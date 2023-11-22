@@ -35,6 +35,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
@@ -146,7 +148,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
+    // For PoC
+    GroupCommitter3<String, Snapshot> groupCommitter =
+        ConsensusCommitManager.prepareGroupCommitter().orElse(null);
+    commit =
+        spy(
+            new CommitHandler(
+                storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter));
     manager =
         new ConsensusCommitManager(
             storage,
@@ -156,7 +164,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             coordinator,
             parallelExecutor,
             recovery,
-            commit);
+            commit,
+            groupCommitter);
   }
 
   private void truncateTables() throws ExecutionException {
@@ -179,6 +188,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     consensusCommitAdmin.dropTable(namespace2, TABLE_2);
     consensusCommitAdmin.dropNamespace(namespace2);
     consensusCommitAdmin.dropCoordinatorTables();
+  }
+
+  private void sleepForGroupCommitPoc() {
+    // FIXME: Delete this wait. Current code causes a live-lock when t1 and t2 wait on the same
+    // buffer.
+    try {
+      TimeUnit.MILLISECONDS.sleep(500);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Test
@@ -1416,11 +1435,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     populateRecords(namespace1, table1);
     if (differentTables) {
+      // For PoC
+      sleepForGroupCommitPoc();
+
       populateRecords(namespace2, table2);
     }
 
+    // For PoC
+    sleepForGroupCommitPoc();
+
     DistributedTransaction transaction =
         prepareTransfer(from, namespace1, table1, to, namespace2, table2, amount1);
+
+    // For PoC
+    sleepForGroupCommitPoc();
 
     // Act Assert
     assertThatCode(
@@ -1583,6 +1611,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     DistributedTransaction transaction =
         prepareDeletes(account1, namespace1, table1, account2, namespace2, table2);
+
+    // For PoC
+    sleepForGroupCommitPoc();
 
     // Act
     assertThatCode(

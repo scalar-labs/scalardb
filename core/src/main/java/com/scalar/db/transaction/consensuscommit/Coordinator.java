@@ -38,6 +38,7 @@ public class Coordinator {
           .addColumn(Attribute.ID, DataType.TEXT)
           .addColumn(Attribute.STATE, DataType.INT)
           .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
+          // For PoC
           .addColumn("child_ids", DataType.TEXT)
           .addPartitionKey(Attribute.ID)
           .build();
@@ -134,6 +135,7 @@ public class Coordinator {
     put(put);
   }
 
+  // For PoC
   public void putStateForGroupCommit(
       String parentId, Collection<String> ids, TransactionState transactionState, long createdAt)
       throws CoordinatorException {
@@ -141,6 +143,7 @@ public class Coordinator {
     StringBuilder sb = new StringBuilder();
     for (String id : ids) {
       IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
+      // TODO: Verify the parentId
       if (isFirst) {
         isFirst = false;
       } else {
@@ -234,7 +237,9 @@ public class Coordinator {
       id = result.getValue(Attribute.ID).get().getAsString().get();
       state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
       createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
-      childIds = result.getValue(Attribute.ID).get().getAsString().get().split(",");
+      // For PoC
+      Optional<String> childIdsOpt = result.getValue("child_ids").get().getAsString();
+      childIds = childIdsOpt.map(s -> s.split(",")).orElse(null);
     }
 
     public State(String id, TransactionState state) {

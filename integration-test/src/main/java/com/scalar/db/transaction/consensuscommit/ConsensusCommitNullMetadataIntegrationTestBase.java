@@ -32,6 +32,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -140,8 +141,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
+    // For PoC
+    GroupCommitter3<String, Snapshot> groupCommitter =
+        ConsensusCommitManager.prepareGroupCommitter().orElse(null);
     CommitHandler commit =
-        spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
+        spy(
+            new CommitHandler(
+                storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter));
     manager =
         new ConsensusCommitManager(
             storage,
@@ -151,7 +157,8 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             coordinator,
             parallelExecutor,
             recovery,
-            commit);
+            commit,
+            groupCommitter);
   }
 
   private void truncateTables() throws ExecutionException {
