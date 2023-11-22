@@ -18,9 +18,12 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,18 +48,30 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  @Nullable private final GroupCommitter3<String, Snapshot> groupCommitter;
   private Runnable beforeRecoveryHook;
+
+  // FIXME: For PoC
+  public ConsensusCommit(
+      CrudHandler crud,
+      CommitHandler commit,
+      RecoveryHandler recovery,
+      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
+    this(crud, commit, recovery, mutationOperationChecker, null);
+  }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ConsensusCommit(
       CrudHandler crud,
       CommitHandler commit,
       RecoveryHandler recovery,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
+      ConsensusCommitMutationOperationChecker mutationOperationChecker,
+      @Nullable GroupCommitter3<String, Snapshot> groupCommitter) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);
     this.mutationOperationChecker = mutationOperationChecker;
+    this.groupCommitter = groupCommitter;
     this.beforeRecoveryHook = () -> {};
   }
 
@@ -153,6 +168,15 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   @Override
   public void rollback() {
     // do nothing for this implementation
+    // FIXME: For PoC
+    if (groupCommitter != null) {
+      try {
+        groupCommitter.remove(crud.getSnapshot().getId());
+      } catch (GroupCommitException e) {
+        // FIXME: Change the exception type
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   @VisibleForTesting

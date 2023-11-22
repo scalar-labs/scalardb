@@ -328,6 +328,7 @@ public class CommitHandler {
     try {
       logRecordFuture = prepare(snapshot);
     } catch (PreparationException e) {
+      cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
@@ -335,10 +336,12 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
+    // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
     try {
       validate(snapshot);
     } catch (ValidationException e) {
+      cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof ValidationConflictException) {
@@ -346,6 +349,7 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
+    // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
     // TODO: Move this before validate()
     logRecordFuture.ifPresent(
@@ -371,6 +375,18 @@ public class CommitHandler {
       try {
         groupCommitter.ready(snapshot.getId(), snapshot);
       } catch (GroupCommitException e) {
+        cancelGroupCommitIfNeeded(snapshot.getId());
+        throw new CommitException("Group commit failed", e, snapshot.getId());
+      }
+    }
+  }
+
+  private void cancelGroupCommitIfNeeded(String id) {
+    if (groupCommitter != null) {
+      try {
+        groupCommitter.remove(id);
+      } catch (GroupCommitException e) {
+        // TODO: Revisit this
         throw new RuntimeException(e);
       }
     }
@@ -531,6 +547,15 @@ public class CommitHandler {
     logger.info("ABORT: id={}", id);
     /////////////// FIXME: DEBUG
     try {
+      cancelGroupCommitIfNeeded(id);
+      if (groupCommitter != null) {
+        try {
+          groupCommitter.remove(id);
+        } catch (GroupCommitException e) {
+          // FIXME: Revisit the exception
+          throw new RuntimeException(e);
+        }
+      }
       Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);
       coordinator.putState(state);
       return TransactionState.ABORTED;
