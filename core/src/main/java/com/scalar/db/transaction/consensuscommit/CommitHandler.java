@@ -38,6 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,15 +171,17 @@ public class CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      GroupCommitter3<String, Snapshot> groupCommitter) {
+      @Nullable GroupCommitter3<String, Snapshot> groupCommitter) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
 
     // FIXME: These are only for PoC.
+    if (groupCommitter != null) {
+      groupCommitter.setEmitter(this::handleSnapshotsInGroupCommit);
+    }
     this.groupCommitter = groupCommitter;
-    groupCommitter.setEmitter(this::handleSnapshotsInGroupCommit);
     logRecorder = prepareLogRecorder().orElse(null);
   }
 
