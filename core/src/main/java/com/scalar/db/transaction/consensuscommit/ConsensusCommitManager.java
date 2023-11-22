@@ -51,7 +51,9 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
 
   private final GroupCommitter3<String, Snapshot> groupCommitter;
 
-  private Optional<GroupCommitter3<String, Snapshot>> prepareGroupCommitter() {
+  // FIXME: GroupCommitter3 should be abstract
+  @VisibleForTesting
+  public static Optional<GroupCommitter3<String, Snapshot>> prepareGroupCommitter() {
     // TODO: Make this configurable
     // TODO: Take care of lazy recovery
     if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
@@ -159,7 +161,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
-      CommitHandler commit) {
+      CommitHandler commit,
+      GroupCommitter3<String, Snapshot> groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
@@ -171,8 +174,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
-    // TODO: Support this for integration tests
-    this.groupCommitter = null;
+    // For PoC
+    this.groupCommitter = groupCommitter;
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);
@@ -243,7 +246,12 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   @VisibleForTesting
   DistributedTransaction begin(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    String txId = groupCommitter.reserve(UUID.randomUUID().toString());
+    String txId;
+    if (groupCommitter != null) {
+      txId = groupCommitter.reserve(UUID.randomUUID().toString());
+    } else {
+      txId = UUID.randomUUID().toString();
+    }
     return begin(txId, isolation, strategy);
   }
 
@@ -264,7 +272,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new CrudHandler(
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
     ConsensusCommit consensus =
-        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker);
+        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
     return decorate(consensus);
