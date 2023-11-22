@@ -177,7 +177,7 @@ public class GroupCommitter3<K, V> {
 
     public synchronized boolean isReady() {
       return isSizeFixed()
-          && valueSlots.values().stream().filter(Objects::nonNull).count() >= size.get();
+          && valueSlots.values().stream().filter(v -> v.value != null).count() >= size.get();
     }
 
     public synchronized boolean isDone() {
