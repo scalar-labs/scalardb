@@ -6,6 +6,7 @@ import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator.Keys;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -24,17 +25,20 @@ import org.slf4j.LoggerFactory;
 
 public class GroupCommitter3<K, V> {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
-  private final BlockingQueue<BufferedValues<K, V>> queueOfBufferedValues =
-      new LinkedBlockingQueue<>();
+  private final BlockingQueue<BufferedValues<K, V>> queueForSizeFix = new LinkedBlockingQueue<>();
+  private final BlockingQueue<BufferedValues<K, V>> queueForTimeout = new LinkedBlockingQueue<>();
+  // TODO: Separate this for size-fix and timeout
   private final long retentionTimeInMillis;
   private final int numberOfRetentionValues;
   private final long expirationCheckIntervalInMillis;
   private final ExecutorService emitExecutorService;
-  private final ExecutorService expirationCheckExecutorService;
+  private final ExecutorService sizeFixExecutorService;
+  private final ExecutorService timeoutExecutorService;
   private final KeyManipulator<K> keyManipulator;
   @LazyInit private Emittable<K, V> emitter;
   @Nullable private BufferedValues<K, V> currentBufferedValues;
   private final Map<K, BufferedValues<K, V>> bufferedValuesMap = new ConcurrentHashMap<>();
+  private final Map<K, SlowBufferedValue<K, V>> slowBufferedValueMap = new ConcurrentHashMap<>();
 
   private static class ValueSlot<K, V> {
     private final BufferedValues<K, V> parentBuffer;
@@ -86,7 +90,8 @@ public class GroupCommitter3<K, V> {
     private final int capacity;
     private final AtomicReference<Integer> size = new AtomicReference<>();
     private final K key;
-    public final Instant expiredAt;
+    public final Instant sizeFixedAt;
+    public final Instant timeoutAt;
     private final AtomicBoolean done = new AtomicBoolean();
     private final Map<K, ValueSlot<K, V>> valueSlots;
 
@@ -95,7 +100,7 @@ public class GroupCommitter3<K, V> {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
           .add("hashCode", hashCode())
-          .add("expiredAt", expiredAt)
+          .add("expiredAt", sizeFixedAt)
           .add("done", isDone())
           .add("ready", isReady())
           .add("sizeFixed", isSizeFixed())
@@ -116,7 +121,9 @@ public class GroupCommitter3<K, V> {
       this.emitter = emitter;
       this.keyManipulator = keyManipulator;
       this.capacity = capacity;
-      this.expiredAt = Instant.now().plusMillis(retentionTimeInMillis);
+      this.sizeFixedAt = Instant.now().plusMillis(retentionTimeInMillis);
+      // FIXME
+      this.timeoutAt = Instant.now().plusMillis(retentionTimeInMillis * 4);
       this.key = keyManipulator.createParentKey();
       this.valueSlots = new ConcurrentHashMap<>(capacity);
     }
@@ -129,9 +136,11 @@ public class GroupCommitter3<K, V> {
       return valueSlots.size() >= capacity;
     }
 
-    public synchronized K reserveNewValueSlot(K childKey) {
+    public synchronized K reserveNewValueSlot(K childKey)
+        throws GroupCommitAlreadySizeFixedException {
       if (isSizeFixed()) {
-        throw new IllegalStateException("The size of 'valueSlot' is already fixed. buffer:" + this);
+        throw new GroupCommitAlreadySizeFixedException(
+            "The size of 'valueSlot' is already fixed. buffer:" + this);
       }
       ValueSlot<K, V> valueSlot = new ValueSlot<>(childKey, this);
       valueSlots.put(childKey, valueSlot);
@@ -275,6 +284,16 @@ public class GroupCommitter3<K, V> {
     }
   }
 
+  private static class SlowBufferedValue<K, V> extends BufferedValues<K, V> {
+    SlowBufferedValue(
+        ExecutorService executorService,
+        Emittable<K, V> emitter,
+        KeyManipulator<K> keyManipulator,
+        long retentionTimeInMillis) {
+      super(executorService, emitter, keyManipulator, retentionTimeInMillis, 1);
+    }
+  }
+
   public GroupCommitter3(
       String label,
       long retentionTimeInMillis,
@@ -295,14 +314,23 @@ public class GroupCommitter3<K, V> {
                 .setNameFormat(label + "-group-commit-emit-%d")
                 .build());
 
-    this.expirationCheckExecutorService =
+    this.sizeFixExecutorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
                 .setDaemon(true)
-                .setNameFormat(label + "-group-commit-expire-%d")
+                .setNameFormat(label + "-group-commit-sizefix-%d")
                 .build());
 
-    startExpirationCheckExecutorService();
+    startSizeFixExecutorService();
+
+    this.timeoutExecutorService =
+        Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat(label + "-group-commit-timeout-%d")
+                .build());
+
+    startTimeoutExecutorService();
   }
 
   public void setEmitter(Emittable<K, V> emitter) {
@@ -312,13 +340,13 @@ public class GroupCommitter3<K, V> {
   ////////// FIXME: DEBUG LOG
   private volatile long lastDebugPrint = 0;
   ////////// FIXME: DEBUG LOG
-  private boolean dequeueAndHandleBufferedValues() {
-    BufferedValues<K, V> bufferedValues = queueOfBufferedValues.peek();
+  private boolean handleQueueForSizeFix() {
+    BufferedValues<K, V> bufferedValues = queueForSizeFix.peek();
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
     if (lastDebugPrint + 1000 < System.currentTimeMillis()) {
-      logger.info("QUEUE STATUS: size={}", queueOfBufferedValues.size());
+      logger.info("[SIZE-FIX] QUEUE STATUS: size={}", queueForSizeFix.size());
       lastDebugPrint = System.currentTimeMillis();
     }
     ////////// FIXME: DEBUG LOG
@@ -326,34 +354,30 @@ public class GroupCommitter3<K, V> {
     if (bufferedValues == null) {
       retryWaitInMillis = expirationCheckIntervalInMillis;
     } else if (bufferedValues.isSizeFixed()) {
-      // Already expired. Nothing to do
+      // Already the size is fixed. Nothing to do. Handle a next element immediately
       ////////// FIXME: DEBUG LOG
-      if (bufferedValues.expiredAt.isBefore(Instant.now().minusMillis(5000))) {
+      if (bufferedValues.sizeFixedAt.isBefore(Instant.now().minusMillis(5000))) {
         logger.info(
-            "TOO OLD BUFFER: buffer.key={}, buffer.values={}",
+            "[SIZE-FIX] TOO OLD BUFFER: buffer.key={}, buffer.values={}",
             bufferedValues.key,
             bufferedValues.valueSlots);
       }
       ////////// FIXME: DEBUG LOG
     } else {
       Instant now = Instant.now();
-      if (now.isAfter(bufferedValues.expiredAt)) {
-        // Expired
+      if (now.isAfter(bufferedValues.sizeFixedAt)) {
+        // Expired. Fix the size
         bufferedValues.fixSize();
       } else {
         // Not expired. Retry
         retryWaitInMillis =
             Math.max(
-                bufferedValues.expiredAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
+                bufferedValues.sizeFixedAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
                 expirationCheckIntervalInMillis);
       }
     }
 
     if (retryWaitInMillis != null) {
-      ////////// FIXME: DEBUG LOG
-      // logger.info("FETCHED BUFFER(RETRY): buffer={}, wait={}", bufferedValues,
-      // retryWaitInMillis);
-      ////////// FIXME: DEBUG LOG
       try {
         TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
       } catch (InterruptedException e) {
@@ -363,9 +387,13 @@ public class GroupCommitter3<K, V> {
       }
     } else {
       ////////// FIXME: DEBUG LOG
-      logger.info("FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
+      logger.info("[SIZE-FIX] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
       ////////// FIXME: DEBUG LOG
-      BufferedValues<K, V> removed = queueOfBufferedValues.poll();
+      // Move the size-fixed buffer but not ready to the timeout queue
+      if (!bufferedValues.isReady()) {
+        queueForTimeout.add(bufferedValues);
+      }
+      BufferedValues<K, V> removed = queueForSizeFix.poll();
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.warn(
             "The queue returned an inconsistent return value. expected:{}, actual:{}",
@@ -376,11 +404,78 @@ public class GroupCommitter3<K, V> {
     return true;
   }
 
-  private void startExpirationCheckExecutorService() {
-    expirationCheckExecutorService.execute(
+  private boolean handleQueueForTimeout() {
+    BufferedValues<K, V> bufferedValues = queueForTimeout.peek();
+    Long retryWaitInMillis = null;
+
+    if (bufferedValues == null) {
+      retryWaitInMillis = expirationCheckIntervalInMillis;
+    } else if (bufferedValues.isReady()) {
+      // Already ready. Nothing to do. Handle a next element immediately
+    } else {
+      Instant now = Instant.now();
+      if (now.isAfter(bufferedValues.timeoutAt)) {
+        for (Entry<K, ValueSlot<K, V>> entry : bufferedValues.valueSlots.entrySet()) {
+          ValueSlot<K, V> valueSlot = entry.getValue();
+          K childKey = valueSlot.key;
+          K fullKey = valueSlot.getFullKey();
+          if (valueSlot.value == null) {
+            // TODO : Create SlowBufferedValue
+            SlowBufferedValue<K, V> newSlowBufferedValue =
+                new SlowBufferedValue<>(
+                    emitExecutorService, emitter, keyManipulator, retryWaitInMillis);
+            newSlowBufferedValue.removeValueSlot(childKey);
+            slowBufferedValueMap.put(fullKey, newSlowBufferedValue);
+          }
+        }
+      } else {
+        // Not expired. Retry
+        retryWaitInMillis =
+            Math.max(
+                bufferedValues.timeoutAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
+                expirationCheckIntervalInMillis);
+      }
+    }
+
+    if (retryWaitInMillis != null) {
+      try {
+        TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        logger.warn("Interrupted", e);
+        return false;
+      }
+    } else {
+      ////////// FIXME: DEBUG LOG
+      logger.info("[TIMEOUT] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
+      ////////// FIXME: DEBUG LOG
+      BufferedValues<K, V> removed = queueForTimeout.poll();
+      if (removed == null || !removed.equals(bufferedValues)) {
+        logger.warn(
+            "The queue returned an inconsistent return value. expected:{}, actual:{}",
+            bufferedValues,
+            removed);
+      }
+    }
+    return true;
+  }
+
+  private void startSizeFixExecutorService() {
+    sizeFixExecutorService.execute(
         () -> {
-          while (!expirationCheckExecutorService.isShutdown()) {
-            if (!dequeueAndHandleBufferedValues()) {
+          while (!sizeFixExecutorService.isShutdown()) {
+            if (!handleQueueForSizeFix()) {
+              break;
+            }
+          }
+        });
+  }
+
+  private void startTimeoutExecutorService() {
+    timeoutExecutorService.execute(
+        () -> {
+          while (!timeoutExecutorService.isShutdown()) {
+            if (!handleQueueForTimeout()) {
               break;
             }
           }
@@ -388,7 +483,8 @@ public class GroupCommitter3<K, V> {
   }
 
   // Returns full key
-  private synchronized K reserveNewValueSlot(K childKey) throws GroupCommitAlreadyClosedException {
+  private synchronized K reserveNewValueSlot(K childKey)
+      throws GroupCommitAlreadySizeFixedException {
     if (currentBufferedValues == null
         || currentBufferedValues.noMoreSlot()
         || currentBufferedValues.isDone()
@@ -403,7 +499,7 @@ public class GroupCommitter3<K, V> {
               keyManipulator,
               retentionTimeInMillis,
               numberOfRetentionValues);
-      queueOfBufferedValues.add(currentBufferedValues);
+      queueForSizeFix.add(currentBufferedValues);
       bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
       ///////// FIXME: DEBUG
       logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
@@ -428,7 +524,7 @@ public class GroupCommitter3<K, V> {
     while (true) {
       try {
         return reserveNewValueSlot(childKey);
-      } catch (GroupCommitAlreadyClosedException e) {
+      } catch (GroupCommitAlreadySizeFixedException e) {
         logger.info("Failed to reserve a new value slot. Retrying. key:{}", childKey);
         ///////// FIXME: DEBUG
         counterForDebug++;
