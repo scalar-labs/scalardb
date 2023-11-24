@@ -41,6 +41,9 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.USERNAME, username);
     properties.setProperty(DatabaseConfig.PASSWORD, password);
     properties.setProperty(DatabaseConfig.STORAGE, "cassandra");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
     return properties;
   }
 
@@ -54,6 +57,9 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.USERNAME, username);
     properties.setProperty(DatabaseConfig.PASSWORD, password);
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
 
     // Add testName as a metadata schema suffix
     properties.setProperty(

@@ -58,7 +58,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             new JdbcAdmin(tableMetadataDataSource, config),
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
-    OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
+    OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
   }

@@ -9,8 +9,8 @@ import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class CosmosConfig {
-
-  public static final String PREFIX = DatabaseConfig.PREFIX + "cosmos.";
+  public static final String STORAGE_NAME = "cosmos";
+  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   public static final String TABLE_METADATA_DATABASE = PREFIX + "table_metadata.database";
 
   private final String endpoint;
@@ -19,8 +19,9 @@ public class CosmosConfig {
 
   public CosmosConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
-    if (!"cosmos".equals(storage)) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'cosmos'");
+    if (!storage.equals(STORAGE_NAME)) {
+      throw new IllegalArgumentException(
+          DatabaseConfig.STORAGE + " should be '" + STORAGE_NAME + "'");
     }
 
     if (databaseConfig.getContactPoints().isEmpty()) {

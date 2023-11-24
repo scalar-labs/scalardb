@@ -9,7 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 public class DynamoProvider implements DistributedStorageProvider {
   @Override
   public String getName() {
-    return "dynamo";
+    return DynamoConfig.STORAGE_NAME;
   }
 
   @Override
