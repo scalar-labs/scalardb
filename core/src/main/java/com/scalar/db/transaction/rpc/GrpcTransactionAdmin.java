@@ -38,13 +38,10 @@ import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -440,57 +437,5 @@ public class GrpcTransactionAdmin implements DistributedTransactionAdmin {
     } catch (InterruptedException e) {
       logger.warn("Failed to shutdown the channel", e);
     }
-  }
-
-  @Override
-  public void createUser(String username, @Nullable String password, UserOption... userOption) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void alterUser(String username, @Nullable String password, UserOption... userOption) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void dropUser(String username) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void grant(String username, String namespaceName, Privilege... privileges) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void grant(
-      String username, String namespaceName, String tableName, Privilege... privileges) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void revoke(String username, String namespaceName, Privilege... privileges) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void revoke(
-      String username, String namespaceName, String tableName, Privilege... privileges) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public List<User> getUsers() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public EnumSet<Privilege> getPrivileges(String username, String namespaceName) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public EnumSet<Privilege> getPrivileges(String username, String namespaceName, String tableName) {
-    throw new UnsupportedOperationException();
   }
 }

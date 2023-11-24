@@ -16,13 +16,10 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -241,58 +238,6 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     admin.upgrade(options);
-  }
-
-  @Override
-  public void createUser(String username, @Nullable String password, UserOption... userOption) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public void alterUser(String username, @Nullable String password, UserOption... userOption) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public void dropUser(String username) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public void grant(String username, String namespaceName, Privilege... privileges) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public void grant(
-      String username, String namespaceName, String tableName, Privilege... privileges) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public void revoke(String username, String namespaceName, Privilege... privileges) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public void revoke(
-      String username, String namespaceName, String tableName, Privilege... privileges) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public List<User> getUsers() {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public EnumSet<Privilege> getPrivileges(String username, String namespaceName) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  @Override
-  public EnumSet<Privilege> getPrivileges(String username, String namespaceName, String tableName) {
-    throw new UnsupportedOperationException("Not supported in the community edition");
   }
 
   @Override

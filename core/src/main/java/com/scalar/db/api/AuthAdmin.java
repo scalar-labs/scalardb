@@ -20,8 +20,10 @@ public interface AuthAdmin {
    * @param userOption the user options
    * @throws ExecutionException if the operation fails
    */
-  void createUser(String username, @Nullable String password, UserOption... userOption)
-      throws ExecutionException;
+  default void createUser(String username, @Nullable String password, UserOption... userOption)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Alters a user with the given username, password and user options. If the password is null, the
@@ -32,8 +34,10 @@ public interface AuthAdmin {
    * @param userOption the user options
    * @throws ExecutionException if the operation fails
    */
-  void alterUser(String username, @Nullable String password, UserOption... userOption)
-      throws ExecutionException;
+  default void alterUser(String username, @Nullable String password, UserOption... userOption)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Drops a user with the given username.
@@ -41,7 +45,9 @@ public interface AuthAdmin {
    * @param username the username
    * @throws ExecutionException if the operation fails
    */
-  void dropUser(String username) throws ExecutionException;
+  default void dropUser(String username) throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Grants privileges to a user for the given table.
@@ -52,8 +58,11 @@ public interface AuthAdmin {
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  void grant(String username, String namespaceName, String tableName, Privilege... privileges)
-      throws ExecutionException;
+  default void grant(
+      String username, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Grants privileges to a user for the given namespace.
@@ -63,8 +72,10 @@ public interface AuthAdmin {
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  void grant(String username, String namespaceName, Privilege... privileges)
-      throws ExecutionException;
+  default void grant(String username, String namespaceName, Privilege... privileges)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Revokes privileges from a user for the given table.
@@ -75,8 +86,11 @@ public interface AuthAdmin {
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  void revoke(String username, String namespaceName, String tableName, Privilege... privileges)
-      throws ExecutionException;
+  default void revoke(
+      String username, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Revokes a privilege from a user for the given namespace.
@@ -86,8 +100,10 @@ public interface AuthAdmin {
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  void revoke(String username, String namespaceName, Privilege... privileges)
-      throws ExecutionException;
+  default void revoke(String username, String namespaceName, Privilege... privileges)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Retrieve a list of usernames.
@@ -95,7 +111,9 @@ public interface AuthAdmin {
    * @return a list of users
    * @throws ExecutionException if the operation fails
    */
-  List<User> getUsers() throws ExecutionException;
+  default List<User> getUsers() throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Retrieve privileges for the given namespace for the given user.
@@ -105,7 +123,10 @@ public interface AuthAdmin {
    * @return a set of privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  EnumSet<Privilege> getPrivileges(String username, String namespaceName) throws ExecutionException;
+  default EnumSet<Privilege> getPrivileges(String username, String namespaceName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   /**
    * Retrieve privileges for the given table for the given user.
@@ -116,8 +137,10 @@ public interface AuthAdmin {
    * @return a set of privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  EnumSet<Privilege> getPrivileges(String username, String namespaceName, String tableName)
-      throws ExecutionException;
+  default EnumSet<Privilege> getPrivileges(String username, String namespaceName, String tableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
 
   interface User {
     String getUsername();
