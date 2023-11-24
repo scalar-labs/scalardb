@@ -25,28 +25,110 @@ import org.slf4j.LoggerFactory;
 
 public class GroupCommitter3<K, V> {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
-  private final BlockingQueue<BufferedValues<K, V>> queueForSizeFix = new LinkedBlockingQueue<>();
-  private final BlockingQueue<BufferedValues<K, V>> queueForTimeout = new LinkedBlockingQueue<>();
+  // Queues
+  private final BlockingQueue<NormalBufferedValues<K, V>> queueForSizeFix =
+      new LinkedBlockingQueue<>();
+  private final BlockingQueue<NormalBufferedValues<K, V>> queueForTimeout =
+      new LinkedBlockingQueue<>();
+  // Parameters
   // TODO: Separate this for size-fix and timeout
+  private final long expirationCheckIntervalInMillis;
   private final long retentionTimeInMillis;
   private final int numberOfRetentionValues;
-  private final long expirationCheckIntervalInMillis;
+  // Executors
   private final ExecutorService emitExecutorService;
   private final ExecutorService sizeFixExecutorService;
   private final ExecutorService timeoutExecutorService;
+  // Custom operations injected by the client
   private final KeyManipulator<K> keyManipulator;
   @LazyInit private Emittable<K, V> emitter;
-  @Nullable private BufferedValues<K, V> currentBufferedValues;
-  private final Map<K, BufferedValues<K, V>> bufferedValuesMap = new ConcurrentHashMap<>();
-  private final Map<K, SlowBufferedValue<K, V>> slowBufferedValueMap = new ConcurrentHashMap<>();
+  private final BuffersManager buffersManager;
+
+  // This class is just for encapsulation of buffer accesses
+  private class BuffersManager {
+    // Buffers
+    @Nullable private NormalBufferedValues<K, V> currentBufferedValues;
+    private final Map<K, NormalBufferedValues<K, V>> bufferedValuesMap = new ConcurrentHashMap<>();
+    private final Map<K, SlowBufferedValue<K, V>> slowBufferedValueMap = new ConcurrentHashMap<>();
+
+    // Returns full key
+    private synchronized K reserveNewValueSlot(K childKey)
+        throws GroupCommitAlreadySizeFixedException {
+      if (currentBufferedValues == null
+          || currentBufferedValues.noMoreSlot()
+          || currentBufferedValues.isDone()
+          || currentBufferedValues.isSizeFixed()) {
+        ///////// FIXME: DEBUG
+        logger.info("OLD BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
+        ///////// FIXME: DEBUG
+        currentBufferedValues =
+            new NormalBufferedValues<>(
+                emitExecutorService,
+                emitter,
+                keyManipulator,
+                retentionTimeInMillis,
+                numberOfRetentionValues);
+        queueForSizeFix.add(currentBufferedValues);
+        bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
+        ///////// FIXME: DEBUG
+        logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
+        ///////// FIXME: DEBUG
+      }
+      return currentBufferedValues.reserveNewValueSlot(childKey);
+    }
+
+    private BufferedValues<K, V> getBufferedValues(Keys<K> keys) throws GroupCommitException {
+      NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
+      if (bufferedValues != null) {
+        return bufferedValues;
+      }
+
+      SlowBufferedValue<K, V> slowBufferedValue =
+          slowBufferedValueMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
+      if (slowBufferedValue != null) {
+        return slowBufferedValue;
+      }
+
+      // TODO: Revisit this exception class
+      throw new GroupCommitException(
+          "The buffer for the reserved value slot doesn't exist. keys:" + keys);
+    }
+
+    private void moveDelayedValueSlotsToDelayedBufferValues(
+        NormalBufferedValues<K, V> bufferedValues) {
+      for (Entry<K, ValueSlot<K, V>> entry : bufferedValues.valueSlots.entrySet()) {
+        ValueSlot<K, V> valueSlot = entry.getValue();
+        K childKey = valueSlot.key;
+        K fullKey = valueSlot.getFullKey();
+        if (valueSlot.value == null) {
+          // FIXME: Copy the completeFuture to the new buffer slot
+          SlowBufferedValue<K, V> newSlowBufferedValue =
+              new SlowBufferedValue<>(
+                  emitExecutorService, emitter, keyManipulator, retentionTimeInMillis, valueSlot);
+          SlowBufferedValue<K, V> old = slowBufferedValueMap.put(fullKey, newSlowBufferedValue);
+          if (old != null) {
+            logger.warn("The slow buffer value map already has the same key buffer. {}", old);
+          }
+          bufferedValues.removeValueSlot(childKey);
+          logger.info(
+              "Moved a value slot from bufferedValues to slow buffered values. valueSlot:{}",
+              valueSlot);
+        }
+      }
+      if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
+        bufferedValuesMap.remove(bufferedValues.key);
+        logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
+      }
+    }
+  }
 
   private static class ValueSlot<K, V> {
-    private final BufferedValues<K, V> parentBuffer;
+    private final NormalBufferedValues<K, V> parentBuffer;
     private final K key;
     private final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     @Nullable private volatile V value;
 
-    public ValueSlot(K key, BufferedValues<K, V> parentBuffer) {
+    public ValueSlot(K key, NormalBufferedValues<K, V> parentBuffer) {
       this.key = key;
       this.parentBuffer = parentBuffer;
     }
@@ -83,17 +165,17 @@ public class GroupCommitter3<K, V> {
     }
   }
 
-  private static class BufferedValues<K, V> {
+  protected abstract static class BufferedValues<K, V> {
     private final ExecutorService executorService;
     private final Emittable<K, V> emitter;
     private final KeyManipulator<K> keyManipulator;
     private final int capacity;
     private final AtomicReference<Integer> size = new AtomicReference<>();
-    private final K key;
+    protected final K key;
     public final Instant sizeFixedAt;
     public final Instant timeoutAt;
     private final AtomicBoolean done = new AtomicBoolean();
-    private final Map<K, ValueSlot<K, V>> valueSlots;
+    protected final Map<K, ValueSlot<K, V>> valueSlots;
 
     @Override
     public String toString() {
@@ -136,19 +218,18 @@ public class GroupCommitter3<K, V> {
       return valueSlots.size() >= capacity;
     }
 
-    public synchronized K reserveNewValueSlot(K childKey)
+    protected synchronized K reserveNewValueSlot(ValueSlot<K, V> valueSlot)
         throws GroupCommitAlreadySizeFixedException {
       if (isSizeFixed()) {
         throw new GroupCommitAlreadySizeFixedException(
             "The size of 'valueSlot' is already fixed. buffer:" + this);
       }
-      ValueSlot<K, V> valueSlot = new ValueSlot<>(childKey, this);
-      valueSlots.put(childKey, valueSlot);
+      valueSlots.put(valueSlot.key, valueSlot);
       if (noMoreSlot()) {
         fixSize();
       }
       ///////// FIXME: DEBUG
-      logger.info("RESERVE:{}, CHILDKEY:{}", this, childKey);
+      logger.info("RESERVE:{}, CHILDKEY:{}", this, valueSlot.key);
       ///////// FIXME: DEBUG
       return valueSlot.getFullKey();
     }
@@ -284,13 +365,38 @@ public class GroupCommitter3<K, V> {
     }
   }
 
+  private static class NormalBufferedValues<K, V> extends BufferedValues<K, V> {
+
+    NormalBufferedValues(
+        ExecutorService executorService,
+        Emittable<K, V> emitter,
+        KeyManipulator<K> keyManipulator,
+        long retentionTimeInMillis,
+        int capacity) {
+      super(executorService, emitter, keyManipulator, retentionTimeInMillis, capacity);
+    }
+
+    public synchronized K reserveNewValueSlot(K childKey)
+        throws GroupCommitAlreadySizeFixedException {
+      return reserveNewValueSlot(new ValueSlot<>(childKey, this));
+    }
+  }
+
   private static class SlowBufferedValue<K, V> extends BufferedValues<K, V> {
     SlowBufferedValue(
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
-        long retentionTimeInMillis) {
+        long retentionTimeInMillis,
+        ValueSlot<K, V> valueSlot) {
       super(executorService, emitter, keyManipulator, retentionTimeInMillis, 1);
+      try {
+        super.reserveNewValueSlot(valueSlot);
+      } catch (GroupCommitAlreadySizeFixedException e) {
+        // FIXME Message
+        throw new IllegalStateException(
+            "Failed to reserve a value slot. This shouldn't happen. valueSlot:" + valueSlot, e);
+      }
     }
   }
 
@@ -331,6 +437,8 @@ public class GroupCommitter3<K, V> {
                 .build());
 
     startTimeoutExecutorService();
+
+    this.buffersManager = new BuffersManager();
   }
 
   public void setEmitter(Emittable<K, V> emitter) {
@@ -341,7 +449,7 @@ public class GroupCommitter3<K, V> {
   private volatile long lastDebugPrint = 0;
   ////////// FIXME: DEBUG LOG
   private boolean handleQueueForSizeFix() {
-    BufferedValues<K, V> bufferedValues = queueForSizeFix.peek();
+    NormalBufferedValues<K, V> bufferedValues = queueForSizeFix.peek();
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
@@ -393,7 +501,7 @@ public class GroupCommitter3<K, V> {
       if (!bufferedValues.isReady()) {
         queueForTimeout.add(bufferedValues);
       }
-      BufferedValues<K, V> removed = queueForSizeFix.poll();
+      NormalBufferedValues<K, V> removed = queueForSizeFix.poll();
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.warn(
             "The queue returned an inconsistent return value. expected:{}, actual:{}",
@@ -405,7 +513,7 @@ public class GroupCommitter3<K, V> {
   }
 
   private boolean handleQueueForTimeout() {
-    BufferedValues<K, V> bufferedValues = queueForTimeout.peek();
+    NormalBufferedValues<K, V> bufferedValues = queueForTimeout.peek();
     Long retryWaitInMillis = null;
 
     if (bufferedValues == null) {
@@ -415,19 +523,7 @@ public class GroupCommitter3<K, V> {
     } else {
       Instant now = Instant.now();
       if (now.isAfter(bufferedValues.timeoutAt)) {
-        for (Entry<K, ValueSlot<K, V>> entry : bufferedValues.valueSlots.entrySet()) {
-          ValueSlot<K, V> valueSlot = entry.getValue();
-          K childKey = valueSlot.key;
-          K fullKey = valueSlot.getFullKey();
-          if (valueSlot.value == null) {
-            // TODO : Create SlowBufferedValue
-            SlowBufferedValue<K, V> newSlowBufferedValue =
-                new SlowBufferedValue<>(
-                    emitExecutorService, emitter, keyManipulator, retryWaitInMillis);
-            newSlowBufferedValue.removeValueSlot(childKey);
-            slowBufferedValueMap.put(fullKey, newSlowBufferedValue);
-          }
-        }
+        buffersManager.moveDelayedValueSlotsToDelayedBufferValues(bufferedValues);
       } else {
         // Not expired. Retry
         retryWaitInMillis =
@@ -449,7 +545,7 @@ public class GroupCommitter3<K, V> {
       ////////// FIXME: DEBUG LOG
       logger.info("[TIMEOUT] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
       ////////// FIXME: DEBUG LOG
-      BufferedValues<K, V> removed = queueForTimeout.poll();
+      NormalBufferedValues<K, V> removed = queueForTimeout.poll();
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.warn(
             "The queue returned an inconsistent return value. expected:{}, actual:{}",
@@ -482,48 +578,12 @@ public class GroupCommitter3<K, V> {
         });
   }
 
-  // Returns full key
-  private synchronized K reserveNewValueSlot(K childKey)
-      throws GroupCommitAlreadySizeFixedException {
-    if (currentBufferedValues == null
-        || currentBufferedValues.noMoreSlot()
-        || currentBufferedValues.isDone()
-        || currentBufferedValues.isSizeFixed()) {
-      ///////// FIXME: DEBUG
-      logger.info("OLD BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
-      ///////// FIXME: DEBUG
-      currentBufferedValues =
-          new BufferedValues<>(
-              emitExecutorService,
-              emitter,
-              keyManipulator,
-              retentionTimeInMillis,
-              numberOfRetentionValues);
-      queueForSizeFix.add(currentBufferedValues);
-      bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
-      ///////// FIXME: DEBUG
-      logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
-      ///////// FIXME: DEBUG
-    }
-    return currentBufferedValues.reserveNewValueSlot(childKey);
-  }
-
-  private BufferedValues<K, V> getBufferedValues(Keys<K> keys) throws GroupCommitException {
-    BufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
-    if (bufferedValues == null) {
-      // TODO: Revisit this exception class
-      throw new GroupCommitException(
-          "The buffer for the reserved value slot doesn't exist. keys:" + keys);
-    }
-    return bufferedValues;
-  }
-
   // Returns the full key
   public K reserve(K childKey) {
     int counterForDebug = 0;
     while (true) {
       try {
-        return reserveNewValueSlot(childKey);
+        return buffersManager.reserveNewValueSlot(childKey);
       } catch (GroupCommitAlreadySizeFixedException e) {
         logger.info("Failed to reserve a new value slot. Retrying. key:{}", childKey);
         ///////// FIXME: DEBUG
@@ -543,7 +603,7 @@ public class GroupCommitter3<K, V> {
 
   public void ready(K fullKey, V value) throws GroupCommitException {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
-    BufferedValues<K, V> bufferedValues = getBufferedValues(keys);
+    BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
     try {
       bufferedValues.putValueToSlotAndWait(keys.childKey, value);
     } catch (GroupCommitAlreadyClosedException e) {
@@ -554,7 +614,7 @@ public class GroupCommitter3<K, V> {
 
   public void remove(K fullKey) throws GroupCommitException {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
-    BufferedValues<K, V> bufferedValues = getBufferedValues(keys);
+    BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
     bufferedValues.removeValueSlot(keys.childKey);
   }
 }
