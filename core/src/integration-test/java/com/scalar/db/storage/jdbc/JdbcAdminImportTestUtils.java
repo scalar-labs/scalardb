@@ -107,18 +107,24 @@ public class JdbcAdminImportTestUtils {
           "geometry",
           "geography");
 
-  private final JdbcConfig config;
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
+  private final BasicDataSource dataSource;
 
   public JdbcAdminImportTestUtils(Properties properties) {
-    config = new JdbcConfig(new DatabaseConfig(properties));
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     majorVersion = getMajorVersion();
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes(String namespace)
       throws SQLException {
+    execute(rdbEngine.createSchemaSqls(namespace));
     if (rdbEngine instanceof RdbEngineMysql) {
       return createExistingMysqlDatabaseWithAllDataTypes(namespace);
     } else if (rdbEngine instanceof RdbEnginePostgresql) {
@@ -138,15 +144,13 @@ public class JdbcAdminImportTestUtils {
   }
 
   public void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-        Connection connection = dataSource.getConnection()) {
+    try (Connection connection = dataSource.getConnection()) {
       JdbcAdmin.execute(connection, sql);
     }
   }
 
   public void execute(String[] sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-        Connection connection = dataSource.getConnection()) {
+    try (Connection connection = dataSource.getConnection()) {
       JdbcAdmin.execute(connection, sql);
     }
   }
@@ -539,8 +543,7 @@ public class JdbcAdminImportTestUtils {
   }
 
   private boolean isMariaDB() {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-        Connection connection = dataSource.getConnection()) {
+    try (Connection connection = dataSource.getConnection()) {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("MariaDB");
     } catch (SQLException e) {
@@ -549,11 +552,14 @@ public class JdbcAdminImportTestUtils {
   }
 
   private int getMajorVersion() {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-        Connection connection = dataSource.getConnection()) {
+    try (Connection connection = dataSource.getConnection()) {
       return connection.getMetaData().getDatabaseMajorVersion();
     } catch (SQLException e) {
       throw new RuntimeException("Get database major version failed");
     }
+  }
+
+  public void close() throws SQLException {
+    dataSource.close();
   }
 }

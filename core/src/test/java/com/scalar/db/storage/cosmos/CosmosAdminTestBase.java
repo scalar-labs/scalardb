@@ -987,7 +987,8 @@ public abstract class CosmosAdminTestBase {
     Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(namespace, table));
     Throwable thrown2 =
         catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
-    Throwable thrown3 = catchThrowable(() -> admin.importTable(namespace, table));
+    Throwable thrown3 =
+        catchThrowable(() -> admin.importTable(namespace, table, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
@@ -1177,6 +1178,7 @@ public abstract class CosmosAdminTestBase {
             tableMetadataContainer,
             namespacesContainer,
             namespacesContainer);
+    @SuppressWarnings("unchecked")
     CosmosPagedIterable<CosmosTableMetadata> cosmosPagedIterable = mock(CosmosPagedIterable.class);
     CosmosTableMetadata tableMetadata1 = CosmosTableMetadata.newBuilder().id("ns1.tbl1").build();
     CosmosTableMetadata tableMetadata2 = CosmosTableMetadata.newBuilder().id("ns1.tbl2").build();

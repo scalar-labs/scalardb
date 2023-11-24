@@ -27,6 +27,7 @@ public class JdbcConfig {
       PREFIX + "prepared_statements_pool.max_open";
 
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+
   /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_SCHEMA} instead. */
   @Deprecated public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
 
@@ -183,6 +184,10 @@ public class JdbcConfig {
       metadataSchema = getString(databaseConfig.getProperties(), METADATA_SCHEMA, null);
     }
   }
+
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
 
   public String getJdbcUrl() {
     return jdbcUrl;

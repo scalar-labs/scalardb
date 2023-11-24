@@ -43,6 +43,10 @@ public class MultiStorageConfig {
     checkIfStorageExists(defaultStorage);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   private ImmutableMap<String, Properties> loadDatabasePropertiesMapping(Properties properties) {
     String[] storages = getStringArray(properties, STORAGES, null);
     if (storages == null) {

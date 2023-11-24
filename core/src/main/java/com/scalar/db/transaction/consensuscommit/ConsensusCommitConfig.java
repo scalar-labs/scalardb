@@ -125,6 +125,10 @@ public class ConsensusCommitConfig {
         getBoolean(databaseConfig.getProperties(), PARALLEL_IMPLICIT_PRE_READ, true);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public Isolation getIsolation() {
     return isolation;
   }

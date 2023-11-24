@@ -55,6 +55,10 @@ public class CosmosConfig {
     }
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public String getEndpoint() {
     return endpoint;
   }

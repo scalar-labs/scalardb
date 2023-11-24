@@ -9,7 +9,6 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
@@ -78,8 +77,6 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   protected String getNamespace2() {
     return NAMESPACE_2;
   }
-
-  protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   protected Map<String, Object> getImportSchemaJsonMap() {
     return ImmutableMap.of(

@@ -20,11 +20,11 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class TableSchema {
 
-  private static final String COLUMNS = "columns";
-  private static final String TRANSACTION = "transaction";
-  private static final String PARTITION_KEY = "partition-key";
-  private static final String CLUSTERING_KEY = "clustering-key";
-  private static final String SECONDARY_INDEX = "secondary-index";
+  static final String COLUMNS = "columns";
+  static final String TRANSACTION = "transaction";
+  static final String PARTITION_KEY = "partition-key";
+  static final String CLUSTERING_KEY = "clustering-key";
+  static final String SECONDARY_INDEX = "secondary-index";
   private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
       ImmutableMap.<String, DataType>builder()
           .put("BOOLEAN", DataType.BOOLEAN)
@@ -67,6 +67,10 @@ public class TableSchema {
     tableMetadata = buildTableMetadata(tableDefinition);
     this.options = buildOptions(tableDefinition, options);
   }
+
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
 
   protected TableMetadata buildTableMetadata(JsonObject tableDefinition)
       throws SchemaLoaderException {
