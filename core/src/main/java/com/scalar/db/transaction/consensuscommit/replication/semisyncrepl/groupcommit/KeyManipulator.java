@@ -1,5 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
+import com.google.common.base.MoreObjects;
+
 public interface KeyManipulator<K> {
   class Keys<K> {
     public final K parentKey;
@@ -8,6 +10,14 @@ public interface KeyManipulator<K> {
     public Keys(K parentKey, K childKey) {
       this.parentKey = parentKey;
       this.childKey = childKey;
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("parentKey", parentKey)
+          .add("childKey", childKey)
+          .toString();
     }
   }
 
