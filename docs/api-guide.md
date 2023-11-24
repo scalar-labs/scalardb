@@ -734,7 +734,7 @@ Scan scan =
 {% capture notice--info %}
 **Note**
 
-In the `where()` condition method chain, the conditions must be an and-wise junction of `ConditionalExpression` or `OrConditionSet`  (so-called conjunctive normal form) like the above example or an or-wise junction of `ConditionalExpression` or `AndConditionSet`  (so-called disjunctive normal form).
+In the `where()` condition method chain, the conditions must be an and-wise junction of `ConditionalExpression` or `OrConditionSet` (so-called conjunctive normal form) like the above example or an or-wise junction of `ConditionalExpression` or `AndConditionSet` (so-called disjunctive normal form).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>

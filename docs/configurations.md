@@ -158,6 +158,24 @@ For details about using multiple storages, see [Multi-Storage Transactions](mult
 
 For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
 
+## Cross-partition scan configurations
+
+By enabling the cross-partition scan option below, `Scan` operation can retrieve all records across partitions. In addition, you can specify arbitrary conditions and orderings in the cross-partition `Scan` operation by enabling `cross_partition_scan.filtering` and `cross_partition_scan.ordering`, respectively. Currently, the cross-partition scan with filtering and ordering is available only for JDBC databases. Note that `scalar.db.cross_partition_scan.enabled` must be `true` to enable them. See [Java API Guide - Scan operation](./api-guide.md#scan-operation) for how to use the cross-partition scan.
+
+{% capture notice--warning %}
+**Attention**
+
+Except for JDBC databases, we do not recommend enabling cross-partition scan with serializable isolation because it could make the isolation level lower (i.e., snapshot). Use it at your own risk only if the consistency does not matter for your transactions.
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
+
+| Name                                               | Description                                   | Default |
+|----------------------------------------------------|-----------------------------------------------|---------|
+| `scalar.db.cross_partition_scan.enabled`           | Enable the cross partition scan.              | `false` |
+| `scalar.db.cross_partition_scan.filtering.enabled` | Enable filtering in the cross partition scan. | `false` |
+| `scalar.db.cross_partition_scan.ordering.enabled`  | Enable ordering in the cross partition scan.  | `false` |
+
 ## Other ScalarDB configurations
 
 The following are additional configurations available for ScalarDB:
