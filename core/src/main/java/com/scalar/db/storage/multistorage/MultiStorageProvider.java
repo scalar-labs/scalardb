@@ -8,7 +8,7 @@ import com.scalar.db.config.DatabaseConfig;
 public class MultiStorageProvider implements DistributedStorageProvider {
   @Override
   public String getName() {
-    return "multi-storage";
+    return MultiStorageConfig.STORAGE_NAME;
   }
 
   @Override

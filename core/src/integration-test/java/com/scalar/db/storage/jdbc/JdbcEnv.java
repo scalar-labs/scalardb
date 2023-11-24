@@ -24,6 +24,9 @@ public final class JdbcEnv {
     props.setProperty(DatabaseConfig.USERNAME, username);
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
 
     // Add testName as a metadata schema suffix
     props.setProperty(JdbcConfig.METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);

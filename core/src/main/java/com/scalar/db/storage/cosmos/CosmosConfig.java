@@ -12,8 +12,9 @@ import org.slf4j.LoggerFactory;
 @Immutable
 public class CosmosConfig {
   private static final Logger logger = LoggerFactory.getLogger(CosmosConfig.class);
-  public static final String PREFIX = DatabaseConfig.PREFIX + "cosmos.";
 
+  public static final String STORAGE_NAME = "cosmos";
+  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_DATABASE} instead. */
   @Deprecated
   public static final String TABLE_METADATA_DATABASE = PREFIX + "table_metadata.database";
@@ -24,9 +25,10 @@ public class CosmosConfig {
   @Nullable private final String metadataDatabase;
 
   public CosmosConfig(DatabaseConfig databaseConfig) {
-    String storage = databaseConfig.getProperties().getProperty(DatabaseConfig.STORAGE);
-    if (!"cosmos".equals(storage)) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'cosmos'");
+    String storage = databaseConfig.getStorage();
+    if (!storage.equals(STORAGE_NAME)) {
+      throw new IllegalArgumentException(
+          DatabaseConfig.STORAGE + " should be '" + STORAGE_NAME + "'");
     }
 
     if (databaseConfig.getContactPoints().isEmpty()) {

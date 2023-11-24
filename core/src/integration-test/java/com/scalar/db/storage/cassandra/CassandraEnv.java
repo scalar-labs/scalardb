@@ -24,6 +24,9 @@ public final class CassandraEnv {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoints);
     props.setProperty(DatabaseConfig.USERNAME, username);
     props.setProperty(DatabaseConfig.PASSWORD, password);
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
     return props;
   }
 }

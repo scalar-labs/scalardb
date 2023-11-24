@@ -9,7 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 public class CassandraProvider implements DistributedStorageProvider {
   @Override
   public String getName() {
-    return "cassandra";
+    return CassandraConfig.STORAGE_NAME;
   }
 
   @Override
