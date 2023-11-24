@@ -9,7 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 public class CosmosProvider implements DistributedStorageProvider {
   @Override
   public String getName() {
-    return "cosmos";
+    return CosmosConfig.STORAGE_NAME;
   }
 
   @Override

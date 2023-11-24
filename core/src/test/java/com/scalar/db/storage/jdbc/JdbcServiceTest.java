@@ -141,6 +141,8 @@ public class JdbcServiceTest {
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
 
@@ -222,6 +224,8 @@ public class JdbcServiceTest {
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
 

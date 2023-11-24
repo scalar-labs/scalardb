@@ -7,14 +7,16 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 public class CassandraConfig {
-  public static final String PREFIX = DatabaseConfig.PREFIX + "cassandra.";
+  public static final String STORAGE_NAME = "cassandra";
+  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   public static final String METADATA_KEYSPACE = PREFIX + "metadata.keyspace";
   @Nullable private final String metadataKeyspace;
 
   public CassandraConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
-    if (!storage.equals("cassandra")) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'cassandra'");
+    if (!storage.equals(STORAGE_NAME)) {
+      throw new IllegalArgumentException(
+          DatabaseConfig.STORAGE + " should be '" + STORAGE_NAME + "'");
     }
     metadataKeyspace = getString(databaseConfig.getProperties(), METADATA_KEYSPACE, null);
   }

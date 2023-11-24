@@ -17,6 +17,7 @@ import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ public class DynamoOperationCheckerTest {
   private static final String COL2 = "v2";
   private static final String COL3 = "v3";
   private static final String COL4 = "v4";
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
   private DynamoOperationChecker operationChecker;
 
@@ -55,7 +57,7 @@ public class DynamoOperationCheckerTest {
             .addSecondaryIndex(COL4)
             .build();
     when(metadataManager.getTableMetadata(any())).thenReturn(tableMetadata);
-    operationChecker = new DynamoOperationChecker(metadataManager);
+    operationChecker = new DynamoOperationChecker(databaseConfig, metadataManager);
   }
 
   @Test

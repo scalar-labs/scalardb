@@ -1322,6 +1322,8 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
+    Snapshot.Key key = new Snapshot.Key(scanAll, prepareResult(ANY_ID));
+    snapshot.put(scanAll, Collections.singletonList(key));
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
@@ -1344,6 +1346,8 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME_2)
             .forTable(ANY_TABLE_NAME_2);
+    Snapshot.Key key = new Snapshot.Key(scanAll, prepareResult(ANY_ID));
+    snapshot.put(scanAll, Collections.singletonList(key));
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
