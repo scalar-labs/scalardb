@@ -13,6 +13,10 @@ public class SelectWithLimitQuery extends SimpleSelectQuery {
     this.limit = limit;
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   @Override
   public String sql() {
     return super.sql() + " LIMIT " + limit;

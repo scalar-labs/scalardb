@@ -15,6 +15,10 @@ public class Namespace {
     this.name = name;
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public static Namespace of(String prefix, String name) {
     return new Namespace(prefix, name);
   }

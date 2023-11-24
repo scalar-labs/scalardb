@@ -27,6 +27,10 @@ public class ImportTableSchema {
     }
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public String getNamespace() {
     return namespace;
   }

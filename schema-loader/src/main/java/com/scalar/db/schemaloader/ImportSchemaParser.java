@@ -33,6 +33,10 @@ public class ImportSchemaParser {
     }
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public List<ImportTableSchema> parse() throws SchemaLoaderException {
     List<ImportTableSchema> tableSchemaList = new ArrayList<>();
     for (Map.Entry<String, JsonElement> entry : schemaJson.entrySet()) {
