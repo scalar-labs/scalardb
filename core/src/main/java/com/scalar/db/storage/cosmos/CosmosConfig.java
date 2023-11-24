@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 public class CosmosConfig {
   private static final Logger logger = LoggerFactory.getLogger(CosmosConfig.class);
   public static final String PREFIX = DatabaseConfig.PREFIX + "cosmos.";
+
   /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_DATABASE} instead. */
   @Deprecated
   public static final String TABLE_METADATA_DATABASE = PREFIX + "table_metadata.database";
@@ -51,6 +52,10 @@ public class CosmosConfig {
       metadataDatabase = getString(databaseConfig.getProperties(), METADATA_DATABASE, null);
     }
   }
+
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
 
   public String getEndpoint() {
     return endpoint;
