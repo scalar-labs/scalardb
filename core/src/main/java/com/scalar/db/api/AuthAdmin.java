@@ -1,8 +1,8 @@
 package com.scalar.db.api;
 
 import com.scalar.db.exception.storage.ExecutionException;
-import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -17,10 +17,10 @@ public interface AuthAdmin {
    *
    * @param username the username
    * @param password the password. If null, the user is created without a password
-   * @param userOption the user options
+   * @param userOptions the user options
    * @throws ExecutionException if the operation fails
    */
-  default void createUser(String username, @Nullable String password, UserOption... userOption)
+  default void createUser(String username, @Nullable String password, UserOption... userOptions)
       throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
@@ -31,10 +31,10 @@ public interface AuthAdmin {
    *
    * @param username the username
    * @param password the password. If null, the password is not changed
-   * @param userOption the user options
+   * @param userOptions the user options
    * @throws ExecutionException if the operation fails
    */
-  default void alterUser(String username, @Nullable String password, UserOption... userOption)
+  default void alterUser(String username, @Nullable String password, UserOption... userOptions)
       throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
@@ -123,7 +123,7 @@ public interface AuthAdmin {
    * @return a set of privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  default EnumSet<Privilege> getPrivileges(String username, String namespaceName)
+  default Set<Privilege> getPrivileges(String username, String namespaceName)
       throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
@@ -137,13 +137,13 @@ public interface AuthAdmin {
    * @return a set of privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  default EnumSet<Privilege> getPrivileges(String username, String namespaceName, String tableName)
+  default Set<Privilege> getPrivileges(String username, String namespaceName, String tableName)
       throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
 
   interface User {
-    String getUsername();
+    String getName();
 
     boolean isSuperuser();
   }
