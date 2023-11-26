@@ -20,4 +20,12 @@ public class RollbackException extends TransactionException {
       String message, @Nullable String transactionId, boolean authenticationError) {
     super(message, transactionId, authenticationError, false, false, null);
   }
+
+  public RollbackException(
+      String message,
+      Throwable cause,
+      @Nullable String transactionId,
+      boolean authenticationError) {
+    super(message, cause, transactionId, authenticationError, false, false, null);
+  }
 }

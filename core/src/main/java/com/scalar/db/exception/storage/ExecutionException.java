@@ -12,19 +12,11 @@ public class ExecutionException extends Exception {
   @Nullable private final AuthAdmin.Privilege requiredPrivilege;
 
   public ExecutionException(String message) {
-    super(message);
-    authenticationError = false;
-    authorizationError = false;
-    superuserRequired = false;
-    requiredPrivilege = null;
+    this(message, false, false, false, null);
   }
 
   public ExecutionException(String message, Throwable cause) {
-    super(message, cause);
-    authenticationError = false;
-    authorizationError = false;
-    superuserRequired = false;
-    requiredPrivilege = null;
+    this(message, cause, false, false, false, null);
   }
 
   public ExecutionException(
@@ -34,6 +26,20 @@ public class ExecutionException extends Exception {
       boolean superuserRequired,
       @Nullable AuthAdmin.Privilege requiredPrivilege) {
     super(message);
+    this.authenticationError = authenticationError;
+    this.authorizationError = authorizationError;
+    this.superuserRequired = superuserRequired;
+    this.requiredPrivilege = requiredPrivilege;
+  }
+
+  public ExecutionException(
+      String message,
+      Throwable cause,
+      boolean authenticationError,
+      boolean authorizationError,
+      boolean superuserRequired,
+      @Nullable AuthAdmin.Privilege requiredPrivilege) {
+    super(message, cause);
     this.authenticationError = authenticationError;
     this.authorizationError = authorizationError;
     this.superuserRequired = superuserRequired;

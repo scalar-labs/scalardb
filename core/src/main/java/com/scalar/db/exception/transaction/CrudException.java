@@ -27,4 +27,21 @@ public class CrudException extends TransactionException {
     super(
         message, transactionId, authenticationError, authorizationError, false, requiredPrivileges);
   }
+
+  public CrudException(
+      String message,
+      Throwable cause,
+      @Nullable String transactionId,
+      boolean authenticationError,
+      boolean authorizationError,
+      @Nullable AuthAdmin.Privilege requiredPrivileges) {
+    super(
+        message,
+        cause,
+        transactionId,
+        authenticationError,
+        authorizationError,
+        false,
+        requiredPrivileges);
+  }
 }

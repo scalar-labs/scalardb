@@ -14,21 +14,11 @@ public class TransactionException extends Exception {
   @Nullable private final AuthAdmin.Privilege requiredPrivilege;
 
   public TransactionException(String message, @Nullable String transactionId) {
-    super(addTransactionIdToMessage(message, transactionId));
-    this.transactionId = transactionId;
-    authenticationError = false;
-    authorizationError = false;
-    superuserRequired = false;
-    requiredPrivilege = null;
+    this(message, transactionId, false, false, false, null);
   }
 
   public TransactionException(String message, Throwable cause, @Nullable String transactionId) {
-    super(addTransactionIdToMessage(message, transactionId), cause);
-    this.transactionId = transactionId;
-    authenticationError = false;
-    authorizationError = false;
-    superuserRequired = false;
-    requiredPrivilege = null;
+    this(message, cause, transactionId, false, false, false, null);
   }
 
   public TransactionException(
@@ -39,6 +29,22 @@ public class TransactionException extends Exception {
       boolean superuserRequired,
       @Nullable AuthAdmin.Privilege requiredPrivilege) {
     super(addTransactionIdToMessage(message, transactionId));
+    this.transactionId = transactionId;
+    this.authenticationError = authenticationError;
+    this.authorizationError = authorizationError;
+    this.superuserRequired = superuserRequired;
+    this.requiredPrivilege = requiredPrivilege;
+  }
+
+  public TransactionException(
+      String message,
+      Throwable cause,
+      @Nullable String transactionId,
+      boolean authenticationError,
+      boolean authorizationError,
+      boolean superuserRequired,
+      @Nullable AuthAdmin.Privilege requiredPrivilege) {
+    super(addTransactionIdToMessage(message, transactionId), cause);
     this.transactionId = transactionId;
     this.authenticationError = authenticationError;
     this.authorizationError = authorizationError;

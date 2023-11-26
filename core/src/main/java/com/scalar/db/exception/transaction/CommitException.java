@@ -21,4 +21,12 @@ public class CommitException extends TransactionException {
       String message, @Nullable String transactionId, boolean authenticationError) {
     super(message, transactionId, authenticationError, false, false, null);
   }
+
+  public CommitException(
+      String message,
+      Throwable cause,
+      @Nullable String transactionId,
+      boolean authenticationError) {
+    super(message, cause, transactionId, authenticationError, false, false, null);
+  }
 }
