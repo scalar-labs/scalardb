@@ -174,7 +174,7 @@ public interface AuthAdmin {
     /** The privilege for creating tables and indexes. */
     CREATE,
 
-    /** The privilege for dropping tables and indexes. */
+    /** The privilege for dropping databases, tables and indexes. */
     DROP,
 
     /** The privilege for truncating tables. */
@@ -183,7 +183,9 @@ public interface AuthAdmin {
     /** The privilege for altering tables. */
     ALTER,
 
-    /** The privilege for granting and revoking privileges. */
+    /**
+     * The privilege for granting and revoking privileges on databases and tables to other users.
+     */
     GRANT
   }
 }
