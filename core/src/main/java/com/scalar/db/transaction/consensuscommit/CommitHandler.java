@@ -368,7 +368,9 @@ public class CommitHandler {
           }
         });
 
-    if (groupCommitter == null) {
+    if (groupCommitter == null
+        // For the case that a transaction started with `begin(txId)`
+        || !groupCommitter.isGroupCommitFullKey(snapshot.getId())) {
       commitState(snapshot);
       commitRecords(snapshot);
     } else {
