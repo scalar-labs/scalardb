@@ -83,8 +83,8 @@ Create/Delete schemas in the storage defined in the config file
       --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
       --repair-all    Repair namespaces and tables that are in an unknown
-                        state: it recreates namespaces, tables, secondary
-                        indexes and their metadata if necessary.          
+                        state: it re-creates namespaces, tables, secondary
+                        indexes, and their metadata if necessary.          
       --replication-factor=<replicaFactor>
                       The replication factor (supported in Cassandra)
       --replication-strategy=<replicationStrategy>
@@ -388,8 +388,8 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 
 ### Repair namespaces and tables
 
-You can repair namespaces and tables by using the properties file. Namespaces and tables can be in an unknown state such as namespace or table exists in the underlying storage but not their ScalarDB metadata or vice versa. This command will recreate the namespaces, the tables, the secondary indexes and their metadata if necessary.
-To repair them, run the following command, replacing the contents in the angle brackets as described:
+You can repair namespaces and tables by using the properties file. The reason for repairing namespaces and tables is because they can be in an unknown state, such as a namespace or table exists in the underlying storage but not its ScalarDB metadata or vice versa. 
+Repairing the namespaces, the tables, the secondary indexes, and their metadata requires re-creating them if necessary. To repair them, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] --repair-all 

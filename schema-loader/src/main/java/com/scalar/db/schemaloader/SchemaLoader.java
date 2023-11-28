@@ -287,8 +287,8 @@ public class SchemaLoader {
   /**
    * Repair namespaces and tables defined in the schema that are in an unknown state, such as the
    * namespace or table exists in the underlying storage but not its ScalarDB metadata or vice
-   * versa. This will recreate the namespaces, the tables, the secondary indexes and their metadata
-   * if necessary.
+   * versa. This will re-create the namespaces, the tables, the secondary indexes, and their
+   * metadata if necessary.
    *
    * @param configProperties ScalarDB config properties
    * @param serializedSchemaJson serialized json string schema.
@@ -310,8 +310,8 @@ public class SchemaLoader {
   /**
    * Repair namespaces and tables defined in the schema that are in an unknown state, such as the
    * namespace or table exists in the underlying storage but not its ScalarDB metadata or vice
-   * versa. This will recreate the namespaces, the tables, the secondary indexes and their metadata
-   * if necessary.
+   * versa. This will re-create the namespaces, the tables, the secondary indexes, and their
+   * metadata if necessary.
    *
    * @param configProperties ScalarDB properties.
    * @param schemaPath path to the schema file.
@@ -333,8 +333,8 @@ public class SchemaLoader {
   /**
    * Repair namespaces and tables defined in the schema that are in an unknown state, such as the
    * namespace or table exists in the underlying storage but not its ScalarDB metadata or vice
-   * versa. This will recreate the namespaces, the tables, the secondary indexes and their metadata
-   * if necessary.
+   * versa. This will re-create the namespaces, the tables, the secondary indexes, and their
+   * metadata if necessary.
    *
    * @param configPath path to the ScalarDB config.
    * @param serializedSchemaJson serialized json string schema.
@@ -356,8 +356,8 @@ public class SchemaLoader {
   /**
    * Repair namespaces and tables defined in the schema that are in an unknown state, such as the
    * namespace or table exists in the underlying storage but not its ScalarDB metadata or vice
-   * versa. This will recreate the namespaces, the tables, the secondary indexes and their metadata
-   * if necessary.
+   * versa. This will re-create the namespaces, the tables, the secondary indexes, and their
+   * metadata if necessary.
    *
    * @param configPath path to the ScalarDB config.
    * @param schemaPath path to the schema file.

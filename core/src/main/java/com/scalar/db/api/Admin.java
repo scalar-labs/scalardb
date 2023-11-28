@@ -361,8 +361,8 @@ public interface Admin {
   }
 
   /**
-   * Repair a namespace which may be in an unknown state, such as the namespace exists in the
-   * underlying storage but not its ScalarDB metadata or vice versa. This will recreate the
+   * Repair a namespace that may be in an unknown state, such as the namespace exists in the
+   * underlying storage but not its ScalarDB metadata or vice versa. This will re-create the
    * namespace and its metadata if necessary.
    *
    * @param namespace a namespace
@@ -372,9 +372,9 @@ public interface Admin {
   void repairNamespace(String namespace, Map<String, String> options) throws ExecutionException;
 
   /**
-   * Repair a table which may be in an unknown state, such as the table exists in the underlying
-   * storage but not its ScalarDB metadata or vice versa. This will recreate the table, its
-   * secondary indexes and their metadata if necessary.
+   * Repair a table that may be in an unknown state, such as the table exists in the underlying
+   * storage but not its ScalarDB metadata or vice versa. This will re-create the table, its
+   * secondary indexes, and their metadata if necessary.
    *
    * @param namespace a namespace
    * @param table a table

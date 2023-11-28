@@ -407,8 +407,7 @@ TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 
 ### Repair a namespace
 
-If a namespace is in an unknown state such as the namespace exists in the underlying storage but not its ScalarDB metadata or vice versa.
-This method will recreate the namespace and its metadata if necessary.
+If a namespace is in an unknown state, such as the namespace exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the namespace and its metadata if necessary.
 
 You can repair the namespace as follows:
 
@@ -420,8 +419,7 @@ Map<String, String> options = ...;
 
 ### Repair a table
 
-If a table is in an unknown state such as the table exists in the underlying storage but not its ScalarDB metadata or vice versa.
-This method will recreate the table, its secondary indexes and their metadata if necessary.
+If a table is in an unknown state, such as the table exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the table, its secondary indexes, and their metadata if necessary.
 
 You can repair the table as follows:
 
