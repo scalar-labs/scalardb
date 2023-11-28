@@ -65,7 +65,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Grants privileges to a user for the given namespace.
+   * Grants privileges to a user for all tables in the given namespaces.
    *
    * @param username the username
    * @param namespaceName the namespace name
@@ -93,7 +93,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Revokes a privilege from a user for the given namespace.
+   * Revokes privileges from a user for all tables in the given namespace.
    *
    * @param username the username
    * @param namespaceName the namespace name
@@ -106,9 +106,9 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieve a list of usernames.
+   * Retrieve a list of {@link User}s.
    *
-   * @return a list of users
+   * @return a list of {@link User}s
    * @throws ExecutionException if the operation fails
    */
   default List<User> getUsers() throws ExecutionException {
@@ -116,7 +116,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieve privileges for the given namespace for the given user.
+   * Retrieve privileges for all tables in the given namespace for the given user.
    *
    * @param username the username
    * @param namespaceName the namespace name
@@ -174,7 +174,7 @@ public interface AuthAdmin {
     /** The privilege for creating tables and indexes. */
     CREATE,
 
-    /** The privilege for dropping databases, tables and indexes. */
+    /** The privilege for dropping tables and indexes. */
     DROP,
 
     /** The privilege for truncating tables. */
@@ -183,9 +183,7 @@ public interface AuthAdmin {
     /** The privilege for altering tables. */
     ALTER,
 
-    /**
-     * The privilege for granting and revoking privileges on databases and tables to other users.
-     */
+    /** The privilege for granting and revoking privileges on tables to other users. */
     GRANT
   }
 }
