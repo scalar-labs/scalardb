@@ -390,7 +390,7 @@ TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 
 ### Repair a table
 
-You can repair table metadata of an existing table as follows:
+You can repair the table metadata of an existing table as follows:
 
 ```java
 // Repair the table "ns.tbl" with options.
