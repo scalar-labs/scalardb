@@ -72,8 +72,8 @@ public interface AuthAdmin {
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  default void grant(String username, String namespaceName, Privilege... privileges)
-      throws ExecutionException {
+  default void grantOnAllTablesInNamespace(
+      String username, String namespaceName, Privilege... privileges) throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
 
@@ -100,8 +100,8 @@ public interface AuthAdmin {
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  default void revoke(String username, String namespaceName, Privilege... privileges)
-      throws ExecutionException {
+  default void revokeOnAllTablesInNamespace(
+      String username, String namespaceName, Privilege... privileges) throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
 
@@ -116,19 +116,6 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieve privileges for all tables in the given namespace for the given user.
-   *
-   * @param username the username
-   * @param namespaceName the namespace name
-   * @return a set of privileges
-   * @throws ExecutionException if the user does not exist or the operation fails
-   */
-  default Set<Privilege> getPrivileges(String username, String namespaceName)
-      throws ExecutionException {
-    throw new UnsupportedOperationException("Not supported in the community edition");
-  }
-
-  /**
    * Retrieve privileges for the given table for the given user.
    *
    * @param username the username
@@ -138,6 +125,19 @@ public interface AuthAdmin {
    * @throws ExecutionException if the user does not exist or the operation fails
    */
   default Set<Privilege> getPrivileges(String username, String namespaceName, String tableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("Not supported in the community edition");
+  }
+
+  /**
+   * Retrieve privileges for all tables in the given namespace for the given user.
+   *
+   * @param username the username
+   * @param namespaceName the namespace name
+   * @return a set of privileges
+   * @throws ExecutionException if the user does not exist or the operation fails
+   */
+  default Set<Privilege> getPrivilegesOnAllTablesInNamespace(String username, String namespaceName)
       throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
