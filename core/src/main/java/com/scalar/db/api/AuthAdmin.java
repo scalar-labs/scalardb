@@ -65,15 +65,15 @@ public interface AuthAdmin {
   }
 
   /**
-   * Grants privileges to a user for all tables in the given namespaces.
+   * Grants privileges to a user for all tables in the given namespace.
    *
    * @param username the username
    * @param namespaceName the namespace name
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  default void grantOnAllTablesInNamespace(
-      String username, String namespaceName, Privilege... privileges) throws ExecutionException {
+  default void grant(String username, String namespaceName, Privilege... privileges)
+      throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
 
@@ -100,8 +100,8 @@ public interface AuthAdmin {
    * @param privileges the privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  default void revokeOnAllTablesInNamespace(
-      String username, String namespaceName, Privilege... privileges) throws ExecutionException {
+  default void revoke(String username, String namespaceName, Privilege... privileges)
+      throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
 
@@ -137,7 +137,7 @@ public interface AuthAdmin {
    * @return a set of privileges
    * @throws ExecutionException if the user does not exist or the operation fails
    */
-  default Set<Privilege> getPrivilegesOnAllTablesInNamespace(String username, String namespaceName)
+  default Set<Privilege> getPrivileges(String username, String namespaceName)
       throws ExecutionException {
     throw new UnsupportedOperationException("Not supported in the community edition");
   }
