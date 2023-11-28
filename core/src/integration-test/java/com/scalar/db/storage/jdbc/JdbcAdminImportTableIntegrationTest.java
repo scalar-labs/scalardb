@@ -23,6 +23,12 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @Override
+  protected void afterAll() throws Exception {
+    super.afterAll();
+    testUtils.close();
+  }
+
+  @Override
   protected Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes()
       throws SQLException {
     return testUtils.createExistingDatabaseWithAllDataTypes(getNamespace());

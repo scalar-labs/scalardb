@@ -54,6 +54,10 @@ public class ConditionalMutator implements MutationConditionVisitor {
     rdbEngine = RdbEngineFactory.create(connection);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public boolean mutate() throws SQLException {
     mutation.getCondition().ifPresent(condition -> condition.accept(this));
     throwSQLExceptionIfOccurred();

@@ -148,6 +148,10 @@ public class Coordinator {
       this(id, state, System.currentTimeMillis());
     }
 
+    // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+    @Override
+    protected final void finalize() {}
+
     @VisibleForTesting
     State(String id, TransactionState state, long createdAt) {
       this.id = checkNotNull(id);

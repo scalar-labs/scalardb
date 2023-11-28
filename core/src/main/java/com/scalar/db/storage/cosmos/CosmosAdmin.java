@@ -622,7 +622,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table) {
+  public void importTable(String namespace, String table, Map<String, String> options) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in Cosmos DB");
   }

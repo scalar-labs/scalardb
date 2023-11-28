@@ -87,6 +87,10 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
       add(this);
     }
 
+    // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+    @Override
+    protected final void finalize() {}
+
     @Override
     public synchronized Optional<Result> get(Get get) throws CrudException {
       return super.get(get);

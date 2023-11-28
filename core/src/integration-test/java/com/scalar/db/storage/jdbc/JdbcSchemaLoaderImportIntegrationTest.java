@@ -2,7 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderImportIntegrationTestBase;
-import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
@@ -21,11 +20,6 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     rdbEngine = RdbEngineFactory.create(config);
     testUtils = new JdbcAdminImportTestUtils(properties);
     return properties;
-  }
-
-  @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new JdbcAdminTestUtils(getProperties(testName));
   }
 
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
@@ -68,6 +62,12 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   @DisabledIf("isSqlite")
   public void importTables_ImportableTablesGiven_ShouldImportProperly() throws Exception {
     super.importTables_ImportableTablesGiven_ShouldImportProperly();
+  }
+
+  @Override
+  public void afterAll() throws Exception {
+    super.afterAll();
+    testUtils.close();
   }
 
   @SuppressWarnings("unused")

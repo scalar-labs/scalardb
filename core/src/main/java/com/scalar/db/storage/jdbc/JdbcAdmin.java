@@ -543,9 +543,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table) throws ExecutionException {
+  public void importTable(String namespace, String table, Map<String, String> options)
+      throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       TableMetadata tableMetadata = getImportTableMetadata(namespace, table);
+      createNamespacesTableIfNotExists(connection);
+      upsertIntoNamespacesTable(connection, namespace);
       addTableMetadata(connection, namespace, table, tableMetadata, true, false);
     } catch (SQLException | ExecutionException e) {
       throw new ExecutionException(
@@ -763,7 +766,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       createSchemaIfNotExists(connection, namespace);
       createNamespacesTableIfNotExists(connection);
-      upsertIntoNamespaceTable(connection, namespace);
+      upsertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException(String.format("Repairing the %s schema failed", namespace), e);
     }
@@ -942,7 +945,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createNamespacesTableIfNotExists(Connection connection) throws ExecutionException {
+  @VisibleForTesting
+  void createNamespacesTableIfNotExists(Connection connection) throws ExecutionException {
     try {
       createSchemaIfNotExists(connection, metadataSchema);
       String createTableStatement =
@@ -972,8 +976,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void upsertIntoNamespaceTable(Connection connection, String namespace)
-      throws SQLException {
+  @VisibleForTesting
+  void upsertIntoNamespacesTable(Connection connection, String namespace) throws SQLException {
     try {
       insertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
@@ -1042,7 +1046,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         namespaceOfExistingTables.add(namespaceName);
       }
       for (String namespace : namespaceOfExistingTables) {
-        upsertIntoNamespaceTable(connection, namespace);
+        upsertIntoNamespacesTable(connection, namespace);
       }
     } catch (SQLException e) {
       throw new ExecutionException("Importing the namespace names of existing tables failed", e);
