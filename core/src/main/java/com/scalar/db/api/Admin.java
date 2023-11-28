@@ -436,7 +436,7 @@ public interface Admin {
 
   /**
    * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
-   * you will be requested, as indicated on the release notes, to run this method after updating the
+   * you will need, as indicated on the release notes, to run this method after updating the
    * ScalarDB version of your application environment.
    *
    * @param options options to upgrade
