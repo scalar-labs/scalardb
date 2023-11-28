@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
@@ -2694,6 +2695,55 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scanAll);
+  }
+
+  @Test
+  public void groupCommit_WithSlowTxn()
+      throws TransactionException, InterruptedException, CoordinatorException {
+    DistributedTransaction slowTxn = manager.begin();
+    DistributedTransaction fastTxn = manager.begin();
+    fastTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    fastTxn.commit();
+
+    TimeUnit.SECONDS.sleep(2);
+    slowTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+    slowTxn.commit();
+
+    TimeUnit.SECONDS.sleep(2);
+    DistributedTransaction validationTxn = manager.begin();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isPresent();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(slowTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(coordinator.getState(fastTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  public void groupCommit_WithOneAbortTxn()
+      throws TransactionException, InterruptedException, CoordinatorException {
+    DistributedTransaction failedTxn =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction successTxn =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    failedTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    failedTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+    successTxn.commit();
+    assertThat(catchThrowable(failedTxn::commit)).isInstanceOf(CommitConflictException.class);
+
+    TimeUnit.SECONDS.sleep(2);
+    DistributedTransaction validationTxn = manager.begin();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(failedTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinator.getState(successTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
   }
 
   private DistributedTransaction prepareTransfer(
