@@ -79,14 +79,29 @@ public class GroupCommitter3<K, V> {
 
     private BufferedValues<K, V> getBufferedValues(Keys<K> keys) throws GroupCommitException {
       NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
-      if (bufferedValues != null) {
-        return bufferedValues;
-      }
-
       SlowBufferedValue<K, V> slowBufferedValue =
           slowBufferedValueMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
+      // Avoid the following cases to find the value slot corresponding to pk1:ck11
+      // Case:1
+      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
+      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+      // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+      // - bufValMap.get(pk1) and check if it contains ck11, but not found
+      // - (slowBufValMap.get(pk1:ck11) should be called even if bufValMap.get(pk1) is found)
+      // - return NONE
+      // Case:2
+      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
+      // - slowBufValMap.get(pk1:ck11), but not found
+      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+      // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+      // - bufValMap.get(pk1) and check if it contains ck11, but not found
+      // - (slowBufValMap.get(pk1:ck11) should be called after bufValMap.get(pk1))
+      // - return NONE
       if (slowBufferedValue != null) {
         return slowBufferedValue;
+      }
+      if (bufferedValues != null) {
+        return bufferedValues;
       }
 
       // TODO: Revisit this exception class
@@ -101,10 +116,14 @@ public class GroupCommitter3<K, V> {
         K childKey = valueSlot.key;
         K fullKey = valueSlot.getFullKey();
         if (valueSlot.value == null) {
-          // FIXME: Copy the completeFuture to the new buffer slot
           SlowBufferedValue<K, V> newSlowBufferedValue =
               new SlowBufferedValue<>(
-                  emitExecutorService, emitter, keyManipulator, retentionTimeInMillis, valueSlot);
+                  fullKey,
+                  emitExecutorService,
+                  emitter,
+                  keyManipulator,
+                  retentionTimeInMillis,
+                  valueSlot);
           SlowBufferedValue<K, V> old = slowBufferedValueMap.put(fullKey, newSlowBufferedValue);
           if (old != null) {
             logger.warn("The slow buffer value map already has the same key buffer. {}", old);
@@ -194,6 +213,7 @@ public class GroupCommitter3<K, V> {
     }
 
     BufferedValues(
+        K key,
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
@@ -206,7 +226,7 @@ public class GroupCommitter3<K, V> {
       this.sizeFixedAt = Instant.now().plusMillis(retentionTimeInMillis);
       // FIXME
       this.timeoutAt = Instant.now().plusMillis(retentionTimeInMillis * 4);
-      this.key = keyManipulator.createParentKey();
+      this.key = key;
       this.valueSlots = new ConcurrentHashMap<>(capacity);
     }
 
@@ -373,7 +393,13 @@ public class GroupCommitter3<K, V> {
         KeyManipulator<K> keyManipulator,
         long retentionTimeInMillis,
         int capacity) {
-      super(executorService, emitter, keyManipulator, retentionTimeInMillis, capacity);
+      super(
+          keyManipulator.createParentKey(),
+          executorService,
+          emitter,
+          keyManipulator,
+          retentionTimeInMillis,
+          capacity);
     }
 
     public synchronized K reserveNewValueSlot(K childKey)
@@ -384,12 +410,13 @@ public class GroupCommitter3<K, V> {
 
   private static class SlowBufferedValue<K, V> extends BufferedValues<K, V> {
     SlowBufferedValue(
+        K fullKey,
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
         long retentionTimeInMillis,
         ValueSlot<K, V> valueSlot) {
-      super(executorService, emitter, keyManipulator, retentionTimeInMillis, 1);
+      super(fullKey, executorService, emitter, keyManipulator, retentionTimeInMillis, 1);
       try {
         super.reserveNewValueSlot(valueSlot);
       } catch (GroupCommitAlreadySizeFixedException e) {
@@ -599,6 +626,10 @@ public class GroupCommitter3<K, V> {
         throw e;
       }
     }
+  }
+
+  public boolean isGroupCommitFullKey(K fullKey) {
+    return keyManipulator.isFullKey(fullKey);
   }
 
   public void ready(K fullKey, V value) throws GroupCommitException {
