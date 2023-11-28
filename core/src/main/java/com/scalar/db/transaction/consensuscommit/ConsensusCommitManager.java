@@ -97,6 +97,12 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
               }
 
               @Override
+              public boolean isFullKey(String fullKey) {
+                String[] parts = fullKey.split(":");
+                return parts.length == 2;
+              }
+
+              @Override
               public Keys<String> fromFullKey(String fullKey) {
                 String[] parts = fullKey.split(":");
                 if (parts.length != 2) {
@@ -105,6 +111,10 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
                 return new Keys<>(parts[0], parts[1]);
               }
             }));
+  }
+
+  public boolean isGroupCommitEnabled() {
+    return groupCommitter != null;
   }
   ////////////// For group commit <<<<<<<<<<<<<<<<<
 

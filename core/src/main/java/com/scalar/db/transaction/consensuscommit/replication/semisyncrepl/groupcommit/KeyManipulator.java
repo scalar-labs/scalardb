@@ -25,5 +25,7 @@ public interface KeyManipulator<K> {
 
   K createFullKey(K parentKey, K childKey);
 
+  boolean isFullKey(K fullKey);
+
   Keys<K> fromFullKey(K fullKey);
 }

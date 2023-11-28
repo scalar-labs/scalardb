@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -43,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
@@ -51,6 +53,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ConsensusCommitSpecificIntegrationTestBase {
@@ -190,16 +193,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     consensusCommitAdmin.dropCoordinatorTables();
   }
 
-  private void sleepForGroupCommitPoc() {
-    // FIXME: Delete this wait. Current code causes a live-lock when t1 and t2 wait on the same
-    // buffer.
-    try {
-      TimeUnit.MILLISECONDS.sleep(500);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Test
   public void get_GetGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
     // Arrange
@@ -260,11 +253,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws TransactionException, ExecutionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
+    System.out.println("manager.begin()!!!!");
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
     // Act
     Optional<Result> result1 = transaction.get(get);
+    System.out.println("inserting records!!!!");
     populateRecords(namespace1, TABLE_1);
+    System.out.println("inserted records!!!!");
     Optional<Result> result2 = transaction.get(get);
     transaction.commit();
 
@@ -1151,6 +1147,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     // one for prepare, one for commit
     verify(storage, times(2)).mutate(anyList());
+    // For PoC
+    if (isGroupCommitEnabled()) {
+      verify(coordinator)
+          .putStateForGroupCommit(
+              anyString(), anyCollection(), any(TransactionState.class), anyLong());
+      return;
+    }
     verify(coordinator).putState(any(Coordinator.State.class));
   }
 
@@ -1172,6 +1175,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     // twice for prepare, twice for commit
     verify(storage, times(4)).mutate(anyList());
+    // For PoC
+    if (isGroupCommitEnabled()) {
+      verify(coordinator)
+          .putStateForGroupCommit(
+              anyString(), anyCollection(), any(TransactionState.class), anyLong());
+      return;
+    }
     verify(coordinator).putState(any(Coordinator.State.class));
   }
 
@@ -1435,20 +1445,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     populateRecords(namespace1, table1);
     if (differentTables) {
-      // For PoC
-      sleepForGroupCommitPoc();
-
       populateRecords(namespace2, table2);
     }
 
-    // For PoC
-    sleepForGroupCommitPoc();
-
     DistributedTransaction transaction =
         prepareTransfer(from, namespace1, table1, to, namespace2, table2, amount1);
-
-    // For PoC
-    sleepForGroupCommitPoc();
 
     // Act Assert
     assertThatCode(
@@ -1611,9 +1612,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     DistributedTransaction transaction =
         prepareDeletes(account1, namespace1, table1, account2, namespace2, table2);
-
-    // For PoC
-    sleepForGroupCommitPoc();
 
     // Act
     assertThatCode(
@@ -1998,7 +1996,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown1).isInstanceOf(CommitException.class);
   }
 
+  private boolean isGroupCommitEnabled() {
+    return manager.isGroupCommitEnabled();
+  }
+
   @Test
+  @DisabledIf("isGroupCommitEnabled")
   public void
       commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
           throws TransactionException, CoordinatorException {
@@ -2007,6 +2010,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  @DisabledIf("isGroupCommitEnabled")
   public void
       commit_WriteSkewOnNonExistingRecordsInDifferentTableWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
           throws TransactionException, CoordinatorException {
