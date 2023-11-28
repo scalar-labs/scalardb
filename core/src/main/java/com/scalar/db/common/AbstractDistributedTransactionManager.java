@@ -94,8 +94,7 @@ public abstract class AbstractDistributedTransactionManager
    * layer.
    */
   @VisibleForTesting
-  static class StateManagedTransaction extends AbstractDistributedTransaction
-      implements DecoratedDistributedTransaction {
+  static class StateManagedTransaction extends DecoratedDistributedTransaction {
 
     private enum Status {
       ACTIVE,
@@ -104,67 +103,61 @@ public abstract class AbstractDistributedTransactionManager
       ROLLED_BACK
     }
 
-    private final DistributedTransaction transaction;
     private Status status;
 
     @VisibleForTesting
     StateManagedTransaction(DistributedTransaction transaction) {
-      this.transaction = transaction;
+      super(transaction);
       status = Status.ACTIVE;
-    }
-
-    @Override
-    public String getId() {
-      return transaction.getId();
     }
 
     @Override
     public Optional<Result> get(Get get) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      return transaction.get(get);
+      return super.get(get);
     }
 
     @Override
     public List<Result> scan(Scan scan) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      return transaction.scan(scan);
+      return super.scan(scan);
     }
 
     @Override
     public void put(Put put) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.put(put);
+      super.put(put);
     }
 
     @Override
     public void put(List<Put> puts) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.put(puts);
+      super.put(puts);
     }
 
     @Override
     public void delete(Delete delete) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.delete(delete);
+      super.delete(delete);
     }
 
     @Override
     public void delete(List<Delete> deletes) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.delete(deletes);
+      super.delete(deletes);
     }
 
     @Override
     public void mutate(List<? extends Mutation> mutations) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.mutate(mutations);
+      super.mutate(mutations);
     }
 
     @Override
     public void commit() throws CommitException, UnknownTransactionStatusException {
       checkStatus("The transaction is not active", Status.ACTIVE);
       try {
-        transaction.commit();
+        super.commit();
         status = Status.COMMITTED;
       } catch (Exception e) {
         status = Status.COMMIT_FAILED;
@@ -179,7 +172,7 @@ public abstract class AbstractDistributedTransactionManager
             "The transaction has already been committed or rolled back");
       }
       try {
-        transaction.rollback();
+        super.rollback();
       } finally {
         status = Status.ROLLED_BACK;
       }
@@ -191,7 +184,7 @@ public abstract class AbstractDistributedTransactionManager
         throw new IllegalStateException("The transaction has already been committed or aborted");
       }
       try {
-        transaction.abort();
+        super.abort();
       } finally {
         status = Status.ROLLED_BACK;
       }
@@ -202,14 +195,6 @@ public abstract class AbstractDistributedTransactionManager
       if (!expected) {
         throw new IllegalStateException(message);
       }
-    }
-
-    @Override
-    public DistributedTransaction getOriginalTransaction() {
-      if (transaction instanceof DecoratedDistributedTransaction) {
-        return ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
-      }
-      return transaction;
     }
   }
 }
