@@ -33,7 +33,7 @@ public interface SelectQuery extends Query {
     boolean isRangeQuery;
     Optional<String> indexedColumn = Optional.empty();
     boolean isConditionalQuery;
-    boolean isRelationalQuery;
+    boolean isCrossPartitionQuery;
     Set<Conjunction> conjunctions = Collections.emptySet();
 
     Builder(RdbEngineStrategy rdbEngine, List<String> projections) {
@@ -124,10 +124,10 @@ public interface SelectQuery extends Query {
     }
 
     /*
-     * Assumes this is called by relational scan operations
+     * Assumes this is called by cross-partition scan operations
      */
     public Builder where(Set<Conjunction> conjunctions) {
-      isRelationalQuery = true;
+      isCrossPartitionQuery = true;
       this.conjunctions = ImmutableSet.copyOf(conjunctions);
       return this;
     }

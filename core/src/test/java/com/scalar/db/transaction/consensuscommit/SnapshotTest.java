@@ -192,11 +192,11 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME);
   }
 
-  private Scan prepareRelationalScan() {
-    return prepareRelationalScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME);
+  private Scan prepareCrossPartitionScan() {
+    return prepareCrossPartitionScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME);
   }
 
-  private Scan prepareRelationalScan(String namespace, String table) {
+  private Scan prepareCrossPartitionScan(String namespace, String table) {
     return Scan.newBuilder()
         .namespace(namespace)
         .table(table)
@@ -1382,13 +1382,13 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verify_RelationalScanGivenAndPutInSameTable_ShouldThrowException() {
+  public void verify_CrossPartitionScanGivenAndPutInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
-    Scan scan = prepareRelationalScan();
+    Scan scan = prepareCrossPartitionScan();
     Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
     snapshot.put(scan, Collections.singletonList(key));
 
@@ -1400,13 +1400,13 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verify_RelationalScanGivenAndPutInDifferentNamespace_ShouldNotThrowException() {
+  public void verify_CrossPartitionScanGivenAndPutInDifferentNamespace_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
-    Scan scan = prepareRelationalScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
+    Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
     Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
     snapshot.put(scan, Collections.singletonList(key));
 
@@ -1418,13 +1418,13 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verify_RelationalScanGivenAndPutInDifferentTable_ShouldNotThrowException() {
+  public void verify_CrossPartitionScanGivenAndPutInDifferentTable_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
-    Scan scan = prepareRelationalScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
+    Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
     Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
     snapshot.put(scan, Collections.singletonList(key));
 
@@ -1437,14 +1437,14 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_RelationalScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException() {
+      verify_CrossPartitionScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan())
+        Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
             .where(
                 ConditionSetBuilder.andConditionSet(
@@ -1471,14 +1471,14 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_RelationalScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException() {
+      verify_CrossPartitionScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan())
+        Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
             .or(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_4))
@@ -1494,14 +1494,14 @@ public class SnapshotTest {
 
   @Test
   public void
-      validate_RelationalScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
+      validate_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan())
+        Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
             .where(ConditionBuilder.column(ANY_NAME_3).isLikeText("text%"))
             .and(ConditionBuilder.column(ANY_NAME_4).isNotLikeText("text"))
@@ -1517,14 +1517,14 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_RelationalScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
+      verify_CrossPartitionScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan())
+        Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
             .where(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_1))
             .or(ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_1))
@@ -1540,13 +1540,13 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_RelationalScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException() {
+      verify_CrossPartitionScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
-    Scan scan = Scan.newBuilder(prepareRelationalScan()).clearConditions().build();
+    Scan scan = Scan.newBuilder(prepareCrossPartitionScan()).clearConditions().build();
     snapshot.put(scan, Collections.emptyList());
 
     // Act

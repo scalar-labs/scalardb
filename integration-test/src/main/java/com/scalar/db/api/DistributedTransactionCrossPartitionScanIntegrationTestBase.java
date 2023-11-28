@@ -32,9 +32,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
+public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBase {
 
-  protected static final String NAMESPACE_BASE_NAME = "int_rscan_tx_test_";
+  protected static final String NAMESPACE_BASE_NAME = "int_cpscan_tx_test_";
   protected static final String TABLE = "test_table";
   protected static final String TABLE_WITH_TEXT = "test_table_with_text";
   protected static final String ACCOUNT_ID = "account_id";
@@ -120,12 +120,12 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   }
 
   @Test
-  public void scan_RelationalScanGivenForCommittedRecord_ShouldReturnRecords()
+  public void scan_CrossPartitionScanGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Scan scan = prepareRelationalScan(1, 0, 2);
+    Scan scan = prepareCrossPartitionScan(1, 0, 2);
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -137,13 +137,13 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   }
 
   @Test
-  public void scan_RelationalScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
+  public void scan_CrossPartitionScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan(1, 0, 2))
+        Scan.newBuilder(prepareCrossPartitionScan(1, 0, 2))
             .projection(ACCOUNT_ID)
             .projection(ACCOUNT_TYPE)
             .projection(BALANCE)
@@ -166,13 +166,13 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   }
 
   @Test
-  public void scan_RelationalScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords()
+  public void scan_CrossPartitionScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan(1, 0, 2))
+        Scan.newBuilder(prepareCrossPartitionScan(1, 0, 2))
             .ordering(Ordering.desc(ACCOUNT_TYPE))
             .build();
 
@@ -199,13 +199,13 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   }
 
   @Test
-  public void scan_RelationalScanWithLimitGivenForCommittedRecord_ShouldReturnRecords()
+  public void scan_CrossPartitionScanWithLimitGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan(1, 0, 2))
+        Scan.newBuilder(prepareCrossPartitionScan(1, 0, 2))
             .ordering(Ordering.asc(ACCOUNT_TYPE))
             .limit(2)
             .build();
@@ -228,12 +228,12 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   }
 
   @Test
-  public void scan_RelationalScanGivenForNonExisting_ShouldReturnEmpty()
+  public void scan_CrossPartitionScanGivenForNonExisting_ShouldReturnEmpty()
       throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Scan scan = prepareRelationalScan(0, 4, 6);
+    Scan scan = prepareCrossPartitionScan(0, 4, 6);
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -245,13 +245,13 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
 
   @Test
   public void
-      scan_RelationalScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
+      scan_CrossPartitionScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     populateSingleRecord();
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan(0, 0, 0))
+        Scan.newBuilder(prepareCrossPartitionScan(0, 0, 0))
             .projections(Arrays.asList(BALANCE, SOME_COLUMN))
             .build();
 
@@ -269,14 +269,14 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
   }
 
   @Test
-  public void scan_RelationalScanWithLikeGivenForCommittedRecord_ShouldReturnRecords()
+  public void scan_CrossPartitionScanWithLikeGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
     populateRecordsForLike();
     DistributedTransaction transaction = manager.start();
-    Scan scan1 = prepareRelationalScanWithLike(true, "%scalar[$]");
-    Scan scan2 = prepareRelationalScanWithLike(true, "+_scalar[$]", "+");
-    Scan scan3 = prepareRelationalScanWithLike(false, "\\_scalar[$]");
+    Scan scan1 = prepareCrossPartitionScanWithLike(true, "%scalar[$]");
+    Scan scan2 = prepareCrossPartitionScanWithLike(true, "+_scalar[$]", "+");
+    Scan scan3 = prepareCrossPartitionScanWithLike(false, "\\_scalar[$]");
 
     // Act
     List<Result> actual1 = transaction.scan(scan1);
@@ -385,7 +385,7 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
         .build();
   }
 
-  protected Scan prepareRelationalScan(int offset, int fromType, int toType) {
+  protected Scan prepareCrossPartitionScan(int offset, int fromType, int toType) {
     return Scan.newBuilder()
         .namespace(namespace)
         .table(TABLE)
@@ -398,7 +398,7 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
         .build();
   }
 
-  protected Scan prepareRelationalScanWithLike(boolean isLike, String pattern) {
+  protected Scan prepareCrossPartitionScanWithLike(boolean isLike, String pattern) {
     LikeExpression condition =
         isLike
             ? ConditionBuilder.column(ACCOUNT_NAME).isLikeText(pattern)
@@ -413,7 +413,7 @@ public abstract class DistributedTransactionRelationalScanIntegrationTestBase {
         .build();
   }
 
-  protected Scan prepareRelationalScanWithLike(boolean isLike, String pattern, String escape) {
+  protected Scan prepareCrossPartitionScanWithLike(boolean isLike, String pattern, String escape) {
     LikeExpression condition =
         isLike
             ? ConditionBuilder.column(ACCOUNT_NAME).isLikeText(pattern, escape)
