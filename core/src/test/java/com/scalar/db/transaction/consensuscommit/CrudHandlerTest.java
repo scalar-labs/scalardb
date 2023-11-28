@@ -108,7 +108,7 @@ public class CrudHandlerTest {
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
-  private Scan prepareRelationalScan() {
+  private Scan prepareCrossPartitionScan() {
     return Scan.newBuilder()
         .namespace(ANY_NAMESPACE_NAME)
         .table(ANY_TABLE_NAME)
@@ -440,10 +440,10 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      scan_RelationalScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndValidateThenReturn()
+      scan_CrossPartitionScanndResultFromStorageGiven_ShouldUpdateSnapshotAndValidateThenReturn()
           throws ExecutionException, CrudException {
     // Arrange
-    Scan scan = prepareRelationalScan();
+    Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.COMMITTED);
     Snapshot.Key key = new Snapshot.Key(scan, result);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
@@ -467,10 +467,10 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      scan_RelationalScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorValidateButThrowUncommittedRecordException()
+      scan_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorValidateButThrowUncommittedRecordException()
           throws ExecutionException {
     // Arrange
-    Scan scan = prepareRelationalScan();
+    Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.PREPARED);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);

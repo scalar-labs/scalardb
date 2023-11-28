@@ -160,7 +160,8 @@ public class JdbcServiceTest {
   }
 
   @Test
-  public void whenGetScannerExecuted_withRelationalScan_shouldCallQueryBuilder() throws Exception {
+  public void whenGetScannerExecuted_withCrossPartitionScan_shouldCallQueryBuilder()
+      throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
@@ -243,7 +244,7 @@ public class JdbcServiceTest {
   }
 
   @Test
-  public void whenScanExecuted_withRelationalScan_shouldCallQueryBuilder() throws Exception {
+  public void whenScanExecuted_withCrossPartitionScan_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);

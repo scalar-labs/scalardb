@@ -8,8 +8,8 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionCrossPartitionScanIntegrationTestBase;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.DistributedTransactionRelationalScanIntegrationTestBase;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -27,8 +27,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-public abstract class ConsensusCommitRelationalScanIntegrationTestBase
-    extends DistributedTransactionRelationalScanIntegrationTestBase {
+public abstract class ConsensusCommitCrossPartitionScanIntegrationTestBase
+    extends DistributedTransactionCrossPartitionScanIntegrationTestBase {
   private DistributedTransactionManager managerWithIncludeMetadataEnabled;
 
   @BeforeAll
@@ -80,7 +80,7 @@ public abstract class ConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutAndOverlappedRelationalScanGiven_ShouldThrowException()
+  public void scan_PutAndOverlappedCrossPartitionScanGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecords();
@@ -109,13 +109,13 @@ public abstract class ConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutResultNonOverlappedWithRelationalScanGiven_ShouldThrowException()
+  public void scan_PutResultNonOverlappedWithCrossPartitionScanGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Put put = preparePut(10, NUM_TYPES);
-    Scan scan = prepareRelationalScan(1, 0, NUM_TYPES - 1);
+    Scan scan = prepareCrossPartitionScan(1, 0, NUM_TYPES - 1);
 
     // Act
     Throwable thrown =
@@ -131,13 +131,13 @@ public abstract class ConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutResultOverlappedWithRelationalScanGiven_ShouldThrowException()
+  public void scan_PutResultOverlappedWithCrossPartitionScanGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Put put = preparePut(10, NUM_TYPES);
-    Scan scan = prepareRelationalScan(1, NUM_TYPES, NUM_TYPES);
+    Scan scan = prepareCrossPartitionScan(1, NUM_TYPES, NUM_TYPES);
 
     // Act
     Throwable thrown =
@@ -153,13 +153,13 @@ public abstract class ConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutNonOverlappedWithRelationalScanWithLikeGiven_ShouldNotThrowAnyException()
+  public void scan_PutNonOverlappedWithCrossPartitionScanWithLikeGiven_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
     populateRecordsForLike();
     DistributedTransaction transaction = manager.start();
     Put put = preparePut(999, "\\scalar[$]");
-    Scan scan = prepareRelationalScanWithLike(true, "\\_scalar[$]", "");
+    Scan scan = prepareCrossPartitionScanWithLike(true, "\\_scalar[$]", "");
 
     // Act Assert
     assertDoesNotThrow(
@@ -171,13 +171,13 @@ public abstract class ConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutResultOverlappedWithRelationalScanWithLikeGiven_ShouldThrowException()
+  public void scan_PutResultOverlappedWithCrossPartitionScanWithLikeGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecordsForLike();
     DistributedTransaction transaction = manager.start();
     Put put = preparePut(999, "\\scalar[$]");
-    Scan scan = prepareRelationalScanWithLike(true, "\\%scalar[$]", "");
+    Scan scan = prepareCrossPartitionScanWithLike(true, "\\%scalar[$]", "");
 
     // Act
     Throwable thrown =
@@ -224,7 +224,7 @@ public abstract class ConsensusCommitRelationalScanIntegrationTestBase
 
     // Act Assert
     BuildableScanOrScanAllFromExisting scanBuilder =
-        Scan.newBuilder(prepareRelationalScan(0, 0, 1));
+        Scan.newBuilder(prepareCrossPartitionScan(0, 0, 1));
     if (hasProjections) {
       scanBuilder.projections(projections);
     }

@@ -37,7 +37,7 @@ public class SimpleSelectQuery implements SelectQuery {
   private final boolean isRangeQuery;
   private final Optional<String> indexedColumn;
   private final boolean isConditionalQuery;
-  private final boolean isRelationalQuery;
+  private final boolean isCrossPartitionQuery;
   private final Set<Conjunction> conjunctions;
 
   SimpleSelectQuery(Builder builder) {
@@ -57,7 +57,7 @@ public class SimpleSelectQuery implements SelectQuery {
     isRangeQuery = builder.isRangeQuery;
     indexedColumn = builder.indexedColumn;
     isConditionalQuery = builder.isConditionalQuery;
-    isRelationalQuery = builder.isRelationalQuery;
+    isCrossPartitionQuery = builder.isCrossPartitionQuery;
     conjunctions = builder.conjunctions;
   }
 
@@ -68,12 +68,12 @@ public class SimpleSelectQuery implements SelectQuery {
             .append(projectionSqlString())
             .append(" FROM ")
             .append(rdbEngine.encloseFullTableName(schema, table));
-    if (isRelationalQuery) {
-      // for relational abstraction
-      builder.append(relationalConditionSqlString());
-      builder.append(relationalOrderBySqlString());
+    if (isCrossPartitionQuery) {
+      // for cross-partition scan
+      builder.append(crossPartitionConditionSqlString());
+      builder.append(crossPartitionOrderBySqlString());
     } else {
-      // for multi-dimensional map abstraction
+      // for multi-dimensional map scan
       if (isConditionalQuery) {
         builder.append(" WHERE ");
         builder.append(conditionSqlString());
@@ -106,7 +106,7 @@ public class SimpleSelectQuery implements SelectQuery {
     return String.join(" AND ", conditions);
   }
 
-  private String relationalConditionSqlString() {
+  private String crossPartitionConditionSqlString() {
     if (conjunctions.isEmpty()) {
       return "";
     }
@@ -200,7 +200,7 @@ public class SimpleSelectQuery implements SelectQuery {
             .collect(Collectors.joining(","));
   }
 
-  private String relationalOrderBySqlString() {
+  private String crossPartitionOrderBySqlString() {
     if (orderings.isEmpty()) {
       return "";
     }

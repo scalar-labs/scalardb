@@ -1,12 +1,12 @@
 package com.scalar.db.transaction.jdbc;
 
-import com.scalar.db.api.DistributedTransactionRelationalScanIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionCrossPartitionScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.util.Properties;
 
-public class JdbcTransactionRelationalScanIntegrationTest
-    extends DistributedTransactionRelationalScanIntegrationTestBase {
+public class JdbcTransactionCrossPartitionScanIntegrationTest
+    extends DistributedTransactionCrossPartitionScanIntegrationTestBase {
 
   @Override
   protected String getTestName() {
