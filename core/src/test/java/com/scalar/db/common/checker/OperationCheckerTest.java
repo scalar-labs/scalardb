@@ -18,9 +18,11 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
@@ -50,6 +52,7 @@ public class OperationCheckerTest {
   private static final String COL2 = "v2";
   private static final String COL3 = "v3";
 
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
   private OperationChecker operationChecker;
 
@@ -75,7 +78,7 @@ public class OperationCheckerTest {
                 .addSecondaryIndex(COL1)
                 .build());
 
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
   }
 
   @Test
@@ -959,7 +962,7 @@ public class OperationCheckerTest {
                 .addClusteringKey(CKEY1)
                 .build());
 
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
 
     Key partitionKey = new Key(PKEY1, (byte[]) null);
     Key clusteringKey = new Key(CKEY1, new byte[] {1, 1, 1});
@@ -990,7 +993,7 @@ public class OperationCheckerTest {
                 .addClusteringKey(CKEY1)
                 .build());
 
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
 
     Key partitionKey = new Key(PKEY1, new byte[0]);
     Key clusteringKey = new Key(CKEY1, new byte[] {1, 1, 1});
@@ -1021,7 +1024,7 @@ public class OperationCheckerTest {
                 .addClusteringKey(CKEY1)
                 .build());
 
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
 
     Key partitionKey = new Key(PKEY1, new byte[] {1, 1, 1});
     Key clusteringKey = new Key(CKEY1, (byte[]) null);
@@ -1052,7 +1055,7 @@ public class OperationCheckerTest {
                 .addClusteringKey(CKEY1)
                 .build());
 
-    operationChecker = new OperationChecker(metadataManager);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
 
     Key partitionKey = new Key(PKEY1, new byte[] {1, 1, 1});
     Key clusteringKey = new Key(CKEY1, new byte[0]);
@@ -1698,6 +1701,8 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scanAll)).doesNotThrowAnyException();
@@ -1715,6 +1720,8 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scanAll))
@@ -1733,6 +1740,72 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithCrossPartitionScanDisabled_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .limit(10)
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(false);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithOrderingsButCrossPartitionScanOrderingDisabled_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .ordering(Ordering.desc(COL1))
+            .limit(10)
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(false);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithConjunctionsButCrossPartitionScanFilteringDisabled_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(COL3).isEqualToText("aaa"))
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .limit(10)
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    when(databaseConfig.isCrossPartitionScanFilteringEnabled()).thenReturn(false);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scanAll))

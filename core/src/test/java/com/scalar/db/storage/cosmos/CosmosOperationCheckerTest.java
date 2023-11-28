@@ -17,6 +17,7 @@ import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +34,7 @@ public class CosmosOperationCheckerTest {
   private static final String CKEY1 = "c1";
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
+  @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
   private CosmosOperationChecker operationChecker;
 
@@ -50,7 +52,7 @@ public class CosmosOperationCheckerTest {
             .addSecondaryIndex(COL1)
             .build();
     when(metadataManager.getTableMetadata(any())).thenReturn(tableMetadata);
-    operationChecker = new CosmosOperationChecker(metadataManager);
+    operationChecker = new CosmosOperationChecker(databaseConfig, metadataManager);
   }
 
   @Test

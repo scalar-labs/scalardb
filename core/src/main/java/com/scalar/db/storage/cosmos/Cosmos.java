@@ -20,7 +20,6 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -47,6 +46,13 @@ public class Cosmos extends AbstractDistributedStorage {
   @Inject
   public Cosmos(DatabaseConfig databaseConfig) {
     super(databaseConfig);
+
+    if (databaseConfig.isCrossPartitionScanFilteringEnabled()
+        || databaseConfig.isCrossPartitionScanOrderingEnabled()) {
+      throw new IllegalArgumentException(
+          "Cross-partition scan with filtering or ordering is not supported in Cosmos DB");
+    }
+
     CosmosConfig config = new CosmosConfig(databaseConfig);
 
     client =
@@ -60,7 +66,7 @@ public class Cosmos extends AbstractDistributedStorage {
     TableMetadataManager metadataManager =
         new TableMetadataManager(
             new CosmosAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new CosmosOperationChecker(metadataManager);
+    operationChecker = new CosmosOperationChecker(databaseConfig, metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     putStatementHandler = new PutStatementHandler(client, metadataManager);
@@ -88,6 +94,10 @@ public class Cosmos extends AbstractDistributedStorage {
     this.operationChecker = operationChecker;
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
@@ -107,11 +117,6 @@ public class Cosmos extends AbstractDistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
-
-    if (ScalarDbUtils.isRelational(scan)) {
-      throw new UnsupportedOperationException(
-          "Scanning all records with orderings or conditions is not supported in Cosmos DB");
-    }
 
     return selectStatementHandler.handle(scan);
   }

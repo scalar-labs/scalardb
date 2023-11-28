@@ -16,13 +16,12 @@ public class MultiStorageConfig {
 
   private static final Logger logger = LoggerFactory.getLogger(MultiStorageConfig.class);
 
+  public static final String STORAGE_NAME = "multi-storage";
   public static final String PREFIX = DatabaseConfig.PREFIX + "multi_storage.";
   public static final String STORAGES = PREFIX + "storages";
   public static final String TABLE_MAPPING = PREFIX + "table_mapping";
   public static final String NAMESPACE_MAPPING = PREFIX + "namespace_mapping";
   public static final String DEFAULT_STORAGE = PREFIX + "default_storage";
-
-  private static final String MULTI_STORAGE = "multi-storage";
 
   private final ImmutableMap<String, Properties> databasePropertiesMap;
   private final ImmutableMap<String, String> tableStorageMap;
@@ -31,9 +30,9 @@ public class MultiStorageConfig {
 
   public MultiStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
-    if (!MULTI_STORAGE.equals(storage)) {
+    if (!storage.equals(STORAGE_NAME)) {
       throw new IllegalArgumentException(
-          DatabaseConfig.STORAGE + " should be '" + MULTI_STORAGE + "'");
+          DatabaseConfig.STORAGE + " should be '" + STORAGE_NAME + "'");
     }
 
     databasePropertiesMap = loadDatabasePropertiesMapping(databaseConfig.getProperties());
@@ -65,9 +64,9 @@ public class MultiStorageConfig {
         }
       }
 
-      if (dbProps.getProperty(DatabaseConfig.STORAGE).equals(MULTI_STORAGE)) {
+      if (dbProps.getProperty(DatabaseConfig.STORAGE).equals(STORAGE_NAME)) {
         throw new IllegalArgumentException(
-            "Does not support nested " + MULTI_STORAGE + ": " + storage);
+            "Does not support nested " + STORAGE_NAME + ": " + storage);
       }
       builder.put(storage, dbProps);
     }

@@ -56,6 +56,9 @@ public final class ServerEnv {
     properties.setProperty(DatabaseConfig.USERNAME, jdbcUsername);
     properties.setProperty(DatabaseConfig.PASSWORD, jdbcPassword);
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc"); // use JDBC storage
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
 
     properties.setProperty(ServerConfig.PORT, DEFAULT_GRPC_CONTACT_PORT_SERVER1);
     properties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
