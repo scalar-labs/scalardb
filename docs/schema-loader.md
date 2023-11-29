@@ -93,8 +93,8 @@ Create/Delete schemas in the storage defined in the config file
                         NetworkTopologyStrategy (supported in Cassandra)
       --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
       --upgrade       Upgrades the ScalarDB environment to support the latest
-                        version of the ScalarDB API. Typically, you will be
-                        requested, as indicated on the release notes, to run
+                        version of the ScalarDB API. Typically, you will
+                        need, as indicated on the release notes, to run
                         this command after updating the ScalarDB version of
                         your application environment.
 
@@ -447,9 +447,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 
 ### Upgrade the environment to support the latest ScalarDB API
 
-You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
-you will need, as indicated on the release notes, to run this method after updating the
-ScalarDB version of your application environment.
+You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically, you will need, as indicated in the release notes, to run this method after updating the ScalarDB version that your application environment uses.
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> --upgrade
@@ -652,9 +650,10 @@ dependencies {
 
 ### Sample usage
 
-With the `SchemaLoader` class, you can execute the same commands as the CLI:
+By using the `SchemaLoader` class, you can execute the same commands as the CLI:
+
 - To create, alter, delete, or repair tables that are defined in the schema, you can pass a ScalarDB properties file, schema, and additional options, if needed. 
-- To upgrade the environment, you can pass a ScalarDB properties, and additional options, if needed.
+- To upgrade the environment, you can pass a ScalarDB properties and additional options, if needed.
 
 ```java
 public class SchemaLoaderSample {

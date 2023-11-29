@@ -252,12 +252,10 @@ TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 
 ### Upgrade the environment to support the latest ScalarDB API
 
-You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
-you will need, as indicated on the release notes, to run this method after updating the 
-ScalarDB version of your application environment.
+You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically, you will need, as indicated in the release notes, to run this method after updating the ScalarDB version that your application environment uses.
 
 ```java
-// Upgrade the ScalarDB environment
+// Upgrade the ScalarDB environment.
 Map<String, String> options = ...;
 admin.upgrade(options);
 ```
