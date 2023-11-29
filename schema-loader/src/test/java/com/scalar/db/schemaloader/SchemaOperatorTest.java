@@ -513,10 +513,10 @@ public class SchemaOperatorTest {
     when(importTableSchema.getTable()).thenReturn("tb");
 
     // Act
-    operator.importTables(tableSchemaList);
+    operator.importTables(tableSchemaList, options);
 
     // Assert
-    verify(transactionAdmin, times(3)).importTable("ns", "tb");
+    verify(transactionAdmin, times(3)).importTable("ns", "tb", options);
     verifyNoInteractions(storageAdmin);
   }
 
@@ -530,10 +530,10 @@ public class SchemaOperatorTest {
     when(importTableSchema.getTable()).thenReturn("tb");
 
     // Act
-    operator.importTables(tableSchemaList);
+    operator.importTables(tableSchemaList, options);
 
     // Assert
-    verify(storageAdmin, times(3)).importTable("ns", "tb");
+    verify(storageAdmin, times(3)).importTable("ns", "tb", options);
     verifyNoInteractions(transactionAdmin);
   }
 }

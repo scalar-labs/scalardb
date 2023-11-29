@@ -1183,7 +1183,8 @@ public abstract class DynamoAdminTestBase {
     Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(NAMESPACE, TABLE));
     Throwable thrown2 =
         catchThrowable(() -> admin.addRawColumnToTable(NAMESPACE, TABLE, "c1", DataType.INT));
-    Throwable thrown3 = catchThrowable(() -> admin.importTable(NAMESPACE, TABLE));
+    Throwable thrown3 =
+        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);

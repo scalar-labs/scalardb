@@ -196,8 +196,9 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table) throws ExecutionException {
-    getAdmin(namespace, table).importTable(namespace, table);
+  public void importTable(String namespace, String table, Map<String, String> options)
+      throws ExecutionException {
+    getAdmin(namespace, table).importTable(namespace, table, options);
   }
 
   private DistributedStorageAdmin getAdmin(String namespace) {

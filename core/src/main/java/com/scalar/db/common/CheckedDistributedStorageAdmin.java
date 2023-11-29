@@ -290,7 +290,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table) throws ExecutionException {
+  public void importTable(String namespace, String table, Map<String, String> options)
+      throws ExecutionException {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata != null) {
       throw new IllegalArgumentException(
@@ -298,7 +299,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     }
 
     try {
-      admin.importTable(namespace, table);
+      admin.importTable(namespace, table, options);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           "Importing the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);

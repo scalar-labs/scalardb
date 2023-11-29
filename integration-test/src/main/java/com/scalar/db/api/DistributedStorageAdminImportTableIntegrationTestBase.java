@@ -102,14 +102,15 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
     admin.createNamespace(getNamespace(), getCreationOptions());
 
     // Act Assert
-    assertThatThrownBy(() -> admin.importTable(getNamespace(), "unsupported_db"))
+    assertThatThrownBy(
+            () -> admin.importTable(getNamespace(), "unsupported_db", Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
   private void importTable_ForImportableTable_ShouldImportProperly(
       String table, TableMetadata metadata) throws ExecutionException {
     // Act
-    admin.importTable(getNamespace(), table);
+    admin.importTable(getNamespace(), table, Collections.emptyMap());
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), table)).isTrue();
@@ -119,14 +120,15 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   private void importTable_ForNonImportableTable_ShouldThrowIllegalArgumentException(String table) {
     // Act Assert
     assertThatThrownBy(
-            () -> admin.importTable(getNamespace(), table),
+            () -> admin.importTable(getNamespace(), table, Collections.emptyMap()),
             "non-importable data type test failed: " + table)
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   private void importTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Act Assert
-    assertThatThrownBy(() -> admin.importTable(getNamespace(), "non-existing-table"))
+    assertThatThrownBy(
+            () -> admin.importTable(getNamespace(), "non-existing-table", Collections.emptyMap()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

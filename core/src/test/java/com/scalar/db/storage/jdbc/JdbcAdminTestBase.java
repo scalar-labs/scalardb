@@ -2519,7 +2519,7 @@ public abstract class JdbcAdminTestBase {
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
-    admin.importTable(NAMESPACE, TABLE);
+    admin.importTable(NAMESPACE, TABLE, Collections.emptyMap());
 
     // Assert
     for (int i = 0; i < expectedSqlStatements.size(); i++) {
@@ -2536,7 +2536,8 @@ public abstract class JdbcAdminTestBase {
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
 
     // Act
-    Throwable thrown = catchThrowable(() -> admin.importTable(NAMESPACE, TABLE));
+    Throwable thrown =
+        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(UnsupportedOperationException.class);

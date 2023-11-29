@@ -1,7 +1,7 @@
 package com.scalar.db.storage.rpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -340,15 +340,12 @@ public class GrpcAdminTest {
     String table = "tbl";
     String column = "col";
 
-    // Act
-    Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(namespace, table));
-    Throwable thrown2 =
-        catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
-    Throwable thrown3 = catchThrowable(() -> admin.importTable(namespace, table));
-
-    // Assert
-    assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(namespace, table))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> admin.importTable(namespace, table, Collections.emptyMap()))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }
