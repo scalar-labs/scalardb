@@ -654,6 +654,14 @@ You can't specify clustering-key boundaries and orderings in `Scan` without spec
 
 `Put` is an operation to put a record specified by a primary key. The operation behaves as an upsert operation for a record, in which the operation updates the record if the record exists or inserts the record if the record does not exist.
 
+{% capture notice--info %}
+**Note**
+
+When you update an existing record, you need to read the record by using `Get` or `Scan` before using a `Put` operation. Otherwise, the operation will fail due to a conflict. This occurs because ScalarDB assumes that another transaction wrote the record. Instead of reading the record explicitly, you can enable implicit pre-read. See [Enable implicit pre-read for `Put` operations](#enable-implicit-pre-read-for-put-operations) for details.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
 You need to create a `Put` object first, and then you can execute the object by using the `transaction.put()` method as follows:
 
 ```java
@@ -689,13 +697,11 @@ Put put =
         .build();
 ```
 
-##### Disable implicit pre-read for `Put` operations
+##### Enable implicit pre-read for `Put` operations
 
-In Consensus Commit, an application must read a record before mutating the record with `Put` and `Delete` operations to obtain the latest states of the record if the record exists. If an application does not read the record explicitly in a transaction, ScalarDB will read the record on behalf of the application before committing the transaction. We call this feature *implicit pre-read*.
+In Consensus Commit, an application must read a record before mutating the record with `Put` and `Delete` operations to obtain the latest states of the record if the record exists. Instead of reading the record explicitly, you can enable *implicit pre-read*. By enabling implicit pre-read, if an application does not read the record explicitly in a transaction, ScalarDB will read the record on behalf of the application before committing the transaction.
 
-If you are certain that a record you are trying to mutate does not exist, you can disable implicit pre-read for the `Put` operation for better performance. For example, if you load initial data, you can and should disable implicit pre-read. A `Put` operation without implicit pre-read is faster than a regular `Put` operation because the operation skips an unnecessary read. However, if the record exists, the operation will fail due to a conflict. This occurs because ScalarDB assumes that another transaction wrote the record.
-
-You can disable implicit pre-read for a `Put` operation by specifying `disableImplicitPreRead()` in the `Put` operation builder as follows:
+You can enable implicit pre-read for a `Put` operation by specifying `enableImplicitPreRead()` in the `Put` operation builder as follows:
 
 ```java
 Put put =
@@ -706,13 +712,23 @@ Put put =
         .clusteringKey(clusteringKey)
         .floatValue("c4", 1.23F)
         .doubleValue("c5", 4.56)
-        .disableImplicitPreRead()
+        .enableImplicitPreRead()
         .build();
 ```
+
+Note that if you are certain that a record you are trying to mutate does not exist, you should not enable implicit pre-read for the `Put` operation for better performance. For example, if you load initial data, you should not enable implicit pre-read. A `Put` operation without implicit pre-read is faster than `Put` operation with implicit pre-read because the operation skips an unnecessary read.
 
 #### `Delete` operation
 
 `Delete` is an operation to delete a record specified by a primary key.
+
+{% capture notice--info %}
+**Note**
+
+When you delete a record, you don't have to read the record beforehand because implicit pre-read is always enabled for `Delete` operations.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 You need to create a `Delete` object first, and then you can execute the object by using the `transaction.delete()` method as follows:
 

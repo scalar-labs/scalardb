@@ -108,7 +108,7 @@ class OperationBuilder {
 
   interface ClearProjections<T> {
     /**
-     * Clear the list of projections
+     * Clears the list of projections
      *
      * @return the operation builder
      */
@@ -127,7 +127,7 @@ class OperationBuilder {
 
   interface ClearCondition<T> {
     /**
-     * Remove the condition
+     * Removes the condition
      *
      * @return the operation builder
      */
@@ -266,14 +266,14 @@ class OperationBuilder {
 
   interface ClearValues<T> {
     /**
-     * Clear the list of values
+     * Clears the list of values
      *
      * @return the operation builder
      */
     T clearValues();
 
     /**
-     * Clear the value for the given column
+     * Clears the value for the given column
      *
      * @param columnName a column name
      * @return the operation builder
@@ -283,11 +283,18 @@ class OperationBuilder {
 
   interface ImplicitPreReadEnabled<T> {
     /**
-     * Disable implicit pre-read for this put operation.
+     * Disables implicit pre-read for this put operation.
      *
      * @return the operation builder
      */
     T disableImplicitPreRead();
+
+    /**
+     * Enables implicit pre-read for this put operation.
+     *
+     * @return the operation builder
+     */
+    T enableImplicitPreRead();
 
     /**
      * Sets whether implicit pre-read is enabled or not for this put operation.
@@ -338,7 +345,7 @@ class OperationBuilder {
 
   interface ClearOrderings<T> {
     /**
-     * Clear the list of orderings
+     * Clears the list of orderings
      *
      * @return the scan operation builder
      */
@@ -387,14 +394,14 @@ class OperationBuilder {
 
   interface ClearBoundaries<T> {
     /**
-     * Remove the scan starting boundary
+     * Removes the scan starting boundary
      *
      * @return the scan operation builder
      */
     T clearStart();
 
     /**
-     * Remove the scan ending boundary
+     * Removes the scan ending boundary
      *
      * @return the scan operation builder
      */
@@ -403,7 +410,7 @@ class OperationBuilder {
 
   interface All<T> {
     /**
-     * Specify the Scan operation will retrieve all the entries of the database
+     * Specifies the Scan operation will retrieve all the entries of the database
      *
      * @return the scan operation builder
      */
@@ -504,7 +511,7 @@ class OperationBuilder {
 
   interface ClearConditions<T> {
     /**
-     * Clear all conditions
+     * Clears all conditions
      *
      * @return the scan operation builder
      */

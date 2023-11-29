@@ -1102,7 +1102,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldUpdateRecord()
+  public void putAndCommit_PutWithImplicitPreReadEnabledGivenForExisting_ShouldUpdateRecord()
       throws TransactionException, ExecutionException {
     // Arrange
     populateRecords(namespace1, TABLE_1);
@@ -1110,7 +1110,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act
     int expected = INITIAL_BALANCE + 100;
-    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected);
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
+            .build();
     transaction.put(put);
     transaction.commit();
 

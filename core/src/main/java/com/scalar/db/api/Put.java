@@ -39,7 +39,7 @@ public class Put extends Mutation {
 
   private final Map<String, Column<?>> columns;
 
-  private boolean implicitPreReadEnabled = true;
+  private boolean implicitPreReadEnabled;
 
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
