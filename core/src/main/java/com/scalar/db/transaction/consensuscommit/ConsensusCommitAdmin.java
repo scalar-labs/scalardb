@@ -209,7 +209,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException {
-    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    TableMetadata tableMetadata = admin.getTableMetadata(namespace, table);
     if (tableMetadata != null) {
       throw new IllegalArgumentException(
           "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));

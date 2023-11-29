@@ -56,6 +56,10 @@ public class GrpcConfig {
         getInt(databaseConfig.getProperties(), MAX_INBOUND_METADATA_SIZE, null);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public String getHost() {
     return host;
   }

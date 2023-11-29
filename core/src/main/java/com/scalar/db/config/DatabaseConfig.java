@@ -1,6 +1,7 @@
 package com.scalar.db.config;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
@@ -32,6 +33,9 @@ public class DatabaseConfig {
   private long metadataCacheExpirationTimeSecs;
   private long activeTransactionManagementExpirationTimeMillis;
   @Nullable private String defaultNamespaceName;
+  private boolean crossPartitionScanEnabled;
+  private boolean crossPartitionScanFilteringEnabled;
+  private boolean crossPartitionScanOrderingEnabled;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -45,6 +49,10 @@ public class DatabaseConfig {
   public static final String ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS =
       PREFIX + "active_transaction_management.expiration_time_millis";
   public static final String DEFAULT_NAMESPACE_NAME = PREFIX + "default_namespace_name";
+  public static final String SCAN_PREFIX = PREFIX + "cross_partition_scan.";
+  public static final String CROSS_PARTITION_SCAN = SCAN_PREFIX + "enabled";
+  public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
+  public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -70,6 +78,10 @@ public class DatabaseConfig {
     this(propertiesPath.toFile());
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public Properties getProperties() {
     Properties ret = new Properties();
     ret.putAll(props);
@@ -90,6 +102,18 @@ public class DatabaseConfig {
     activeTransactionManagementExpirationTimeMillis =
         getLong(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, -1);
     defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
+    crossPartitionScanEnabled = getBoolean(getProperties(), CROSS_PARTITION_SCAN, false);
+    crossPartitionScanFilteringEnabled =
+        getBoolean(getProperties(), CROSS_PARTITION_SCAN_FILTERING, false);
+    crossPartitionScanOrderingEnabled =
+        getBoolean(getProperties(), CROSS_PARTITION_SCAN_ORDERING, false);
+
+    if (!crossPartitionScanEnabled
+        && (crossPartitionScanFilteringEnabled || crossPartitionScanOrderingEnabled)) {
+      throw new IllegalArgumentException(
+          CROSS_PARTITION_SCAN
+              + " must be enabled to use cross-partition scan with filtering or ordering");
+    }
   }
 
   public List<String> getContactPoints() {
@@ -126,5 +150,17 @@ public class DatabaseConfig {
 
   public Optional<String> getDefaultNamespaceName() {
     return Optional.ofNullable(defaultNamespaceName);
+  }
+
+  public boolean isCrossPartitionScanEnabled() {
+    return crossPartitionScanEnabled;
+  }
+
+  public boolean isCrossPartitionScanFilteringEnabled() {
+    return crossPartitionScanFilteringEnabled;
+  }
+
+  public boolean isCrossPartitionScanOrderingEnabled() {
+    return crossPartitionScanOrderingEnabled;
   }
 }

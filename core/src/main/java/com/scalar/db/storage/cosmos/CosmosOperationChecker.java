@@ -7,12 +7,14 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 
 public class CosmosOperationChecker extends OperationChecker {
-  public CosmosOperationChecker(TableMetadataManager metadataManager) {
-    super(metadataManager);
+  public CosmosOperationChecker(
+      DatabaseConfig databaseConfig, TableMetadataManager metadataManager) {
+    super(databaseConfig, metadataManager);
   }
 
   @Override

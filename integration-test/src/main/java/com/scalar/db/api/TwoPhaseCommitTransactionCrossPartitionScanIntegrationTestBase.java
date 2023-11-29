@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase {
+public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTestBase {
 
   protected static final String NAMESPACE_BASE_NAME = "int_rscan_2pc_test_";
   protected static final String TABLE_1 = "test_table1";
@@ -137,7 +137,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
-    Scan scan = prepareRelationalScan(namespace1, TABLE_1, 1, 0, 2);
+    Scan scan = prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, 2);
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -157,7 +157,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan(namespace1, TABLE_1, 1, 0, 2))
+        Scan.newBuilder(prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, 2))
             .projection(ACCOUNT_ID)
             .projection(ACCOUNT_TYPE)
             .projection(BALANCE)
@@ -181,7 +181,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scan =
-        Scan.newBuilder(prepareRelationalScan(namespace1, TABLE_1, 1, 0, 2))
+        Scan.newBuilder(prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, 2))
             .ordering(Ordering.desc(ACCOUNT_TYPE))
             .build();
 
@@ -214,7 +214,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
-    Scan scan = prepareRelationalScan(namespace1, TABLE_1, 0, 4, 4);
+    Scan scan = prepareCrossPartitionScan(namespace1, TABLE_1, 0, 4, 4);
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -227,14 +227,14 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_RelationalScanWithLikeGivenForCommittedRecord_ShouldReturnRecords()
+  public void scan_CrossPartitionScanWithLikeGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
     populateRecordsForLike(manager2, namespace2, TABLE_2);
     TwoPhaseCommitTransaction transaction = manager2.start();
-    Scan scan1 = prepareRelationalScanWithLike(namespace2, TABLE_2, true, "%scalar[$]");
-    Scan scan2 = prepareRelationalScanWithLike(namespace2, TABLE_2, true, "+_scalar[$]", "+");
-    Scan scan3 = prepareRelationalScanWithLike(namespace2, TABLE_2, false, "\\_scalar[$]");
+    Scan scan1 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "%scalar[$]");
+    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "+_scalar[$]", "+");
+    Scan scan3 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, false, "\\_scalar[$]");
 
     // Act
     List<Result> actual1 = transaction.scan(scan1);
@@ -342,7 +342,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
         .build();
   }
 
-  protected Scan prepareRelationalScan(
+  protected Scan prepareCrossPartitionScan(
       String namespaceName, String tableName, int offset, int fromType, int toType) {
     return Scan.newBuilder()
         .namespace(namespaceName)
@@ -356,7 +356,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
         .build();
   }
 
-  protected Scan prepareRelationalScanWithLike(
+  protected Scan prepareCrossPartitionScanWithLike(
       String namespaceName, String tableName, boolean isLike, String pattern) {
     LikeExpression condition =
         isLike
@@ -372,7 +372,7 @@ public abstract class TwoPhaseCommitTransactionRelationalScanIntegrationTestBase
         .build();
   }
 
-  protected Scan prepareRelationalScanWithLike(
+  protected Scan prepareCrossPartitionScanWithLike(
       String namespaceName, String tableName, boolean isLike, String pattern, String escape) {
     LikeExpression condition =
         isLike

@@ -51,7 +51,7 @@ public class QueryBuilderTest {
           .addSecondaryIndex("v2")
           .build();
 
-  private static final TableMetadata RELATIONAL_TABLE_METADATA =
+  private static final TableMetadata CROSS_PARTITION_TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn("p1", DataType.TEXT)
           .addColumn("p2", DataType.INT)
@@ -346,7 +346,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(ImmutableSet.of())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("SELECT * FROM n1.t1", rdbEngine));
@@ -354,7 +354,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(ImmutableSet.of())
             .orderBy(
                 Arrays.asList(
@@ -367,7 +367,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Arrays.asList("v1", "v2"))
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(ImmutableSet.of())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("SELECT v1,v2 FROM n1.t1", rdbEngine));
@@ -376,7 +376,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1))))
             .build();
@@ -388,7 +388,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(
@@ -405,7 +405,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1)),
@@ -421,7 +421,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(
@@ -444,7 +444,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(
@@ -469,7 +469,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(
@@ -498,7 +498,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(
@@ -548,7 +548,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(
@@ -598,7 +598,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(
@@ -646,7 +646,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .select(Collections.emptyList())
-            .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
                     Scan.Conjunction.of(

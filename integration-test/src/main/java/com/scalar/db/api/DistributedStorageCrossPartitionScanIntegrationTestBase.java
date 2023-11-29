@@ -56,9 +56,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DistributedStorageRelationalScanIntegrationTestBase {
+public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
-  private static final String TEST_NAME = "storage_relational_scan";
+  private static final String TEST_NAME = "storage_cross_partition_scan";
   private static final String NAMESPACE_BASE_NAME = "int_test_" + TEST_NAME + "_";
   private static final String CONDITION_TEST_TABLE = "condition_test_table";
   private static final String PARTITION_KEY_NAME = "pk";
@@ -98,7 +98,7 @@ public abstract class DistributedStorageRelationalScanIntegrationTestBase {
     createTableForConditionTests();
     createTablesForOrderingTests();
     seed = System.currentTimeMillis();
-    System.out.println("The seed used in the relational scan integration test is " + seed);
+    System.out.println("The seed used in the cross-partition scan integration test is " + seed);
     random = ThreadLocal.withInitial(Random::new);
   }
 

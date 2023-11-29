@@ -39,6 +39,9 @@ public final class DynamoEnv {
     props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
 
     // Add testName as a metadata namespace suffix
     props.setProperty(

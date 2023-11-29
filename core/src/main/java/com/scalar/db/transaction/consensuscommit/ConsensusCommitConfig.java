@@ -5,8 +5,11 @@ import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.multistorage.MultiStorageConfig;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
@@ -77,6 +80,9 @@ public class ConsensusCommitConfig {
                         "scalar.db.isolation_level", // for backward compatibility
                         Isolation.SNAPSHOT.toString()))
                 .toUpperCase(Locale.ROOT));
+    if (isolation.equals(Isolation.SERIALIZABLE)) {
+      validateCrossPartitionScanConfig(databaseConfig);
+    }
     strategy =
         SerializableStrategy.valueOf(
             getString(
@@ -118,6 +124,10 @@ public class ConsensusCommitConfig {
     parallelImplicitPreReadEnabled =
         getBoolean(databaseConfig.getProperties(), PARALLEL_IMPLICIT_PRE_READ, true);
   }
+
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
 
   public Isolation getIsolation() {
     return isolation;
@@ -165,5 +175,31 @@ public class ConsensusCommitConfig {
 
   public boolean isParallelImplicitPreReadEnabled() {
     return parallelImplicitPreReadEnabled;
+  }
+
+  private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {
+    // It might be better to let each storage have metadata (e.g., linearizable cross-partition scan
+    // is supported or not) and check it rather than checking specific storage types. We will
+    // revisit here when supporting metadata management in DistributedStorage.
+    if (databaseConfig.getStorage().equals(MultiStorageConfig.STORAGE_NAME)) {
+      MultiStorageConfig multiStorageConfig = new MultiStorageConfig(databaseConfig);
+      for (Properties props : multiStorageConfig.getDatabasePropertiesMap().values()) {
+        DatabaseConfig c = new DatabaseConfig(props);
+        if (!c.getStorage().equals(JdbcConfig.STORAGE_NAME) && c.isCrossPartitionScanEnabled()) {
+          warnCrossPartitionScan(c.getStorage());
+        }
+      }
+    } else if (!databaseConfig.getStorage().equals(JdbcConfig.STORAGE_NAME)
+        && databaseConfig.isCrossPartitionScanEnabled()) {
+      warnCrossPartitionScan(databaseConfig.getStorage());
+    }
+  }
+
+  private void warnCrossPartitionScan(String storageName) {
+    logger.warn(
+        "Enabling cross-partition scan for '{}' in production is not recommended "
+            + "because it makes transaction isolation level lower (i.e., snapshot). "
+            + "Use it at your own risk only if the consistency does not matter for your transactions",
+        storageName);
   }
 }
