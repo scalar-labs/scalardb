@@ -302,7 +302,7 @@ You can import an existing table to ScalarDB as follows:
 ```java
 // Import the table "ns.tbl". If the table is already managed by ScalarDB, the target table does not
 // exist, or the table does not meet the requirement of ScalarDB table, an exception will be thrown.
-admin.importTable("ns", "tbl");
+admin.importTable("ns", "tbl", options);
 ```
 
 {% capture notice--warning %}
@@ -642,7 +642,7 @@ You can't specify clustering-key boundaries and orderings in `Scan` by using a s
 
 ##### Execute cross-partition `Scan` without specifying a partition key to retrieve all the records of a table
 
-You can execute a `Scan` operation across all partitions without specifying a partition key by enabling the following property in the ScalarDB configuration.
+You can execute a `Scan` operation across all partitions, which we call cross-partition scan, without specifying a partition key by enabling the following property in the ScalarDB configuration.
 
 ```properties
 scalar.db.cross_partition_scan.enabled=true
@@ -651,7 +651,7 @@ scalar.db.cross_partition_scan.enabled=true
 {% capture notice--warning %}
 **Attention**
 
-Except for JDBC databases, we do not recommend enabling cross-partition scan with serializable isolation because it could make the isolation level lower (i.e., snapshot). Use it at your own risk only if the consistency does not matter for your transactions.
+We do not recommend enabling the cross-partition scan with serializable isolation for non-JDBC databases because transactions could be executed with lower isolation (i.e., snapshot). Use it at your own risk only if the consistency does not matter for your transactions.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>

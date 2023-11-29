@@ -748,7 +748,7 @@ public class SchemaLoaderSample {
     // Import tables.
     // You can also use a Properties object instead of configFilePath and a serialized-schema JSON
     // string instead of schemaFilePath.
-    SchemaLoader.load(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
+    SchemaLoader.importTables(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
 
     return 0;
   }

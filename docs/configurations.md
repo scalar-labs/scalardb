@@ -165,7 +165,7 @@ By enabling the cross-partition scan option below, `Scan` operation can retrieve
 {% capture notice--warning %}
 **Attention**
 
-Except for JDBC databases, we do not recommend enabling cross-partition scan with serializable isolation because it could make the isolation level lower (i.e., snapshot). Use it at your own risk only if the consistency does not matter for your transactions.
+We do not recommend enabling the cross-partition scan with serializable isolation for non-JDBC databases because transactions could be executed with lower isolation (i.e., snapshot). Use it at your own risk only if the consistency does not matter for your transactions.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>

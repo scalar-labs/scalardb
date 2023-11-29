@@ -16,6 +16,7 @@ You should carefully plan to import a table to ScalarDB in production because it
 
 - ScalarDB metadata tables: ScalarDB manages namespace names and table metadata in an namespace (schema or database in underlying databases) called 'scalardb'.
 - Transaction metadata columns: the Consensus Commit transaction manager requires metadata (for example, transaction ID, record version, and transaction status) stored along with the actual records to handle transactions properly. Thus, this tool adds the metadata columns if you use the Consensus Commit transaction manager.
+- Keep in mind that the tool only changes database metadata; thus, the processing time does not increase in proportion to the database size and usually takes only several seconds.
 
 ### Requirements
 
