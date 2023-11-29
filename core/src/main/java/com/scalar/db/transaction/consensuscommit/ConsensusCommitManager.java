@@ -317,5 +317,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     storage.close();
     admin.close();
     parallelExecutor.close();
+    // For PoC
+    groupCommitter.close();
   }
 }
