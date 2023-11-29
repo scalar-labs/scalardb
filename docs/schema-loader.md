@@ -388,8 +388,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 
 ### Repair namespaces and tables
 
-You can repair namespaces and tables by using the properties file. The reason for repairing namespaces and tables is because they can be in an unknown state, such as a namespace or table exists in the underlying storage but not its ScalarDB metadata or vice versa. 
-Repairing the namespaces, the tables, the secondary indexes, and their metadata requires re-creating them if necessary. To repair them, run the following command, replacing the contents in the angle brackets as described:
+You can repair namespaces and tables by using the properties file. The reason for repairing namespaces and tables is because they can be in an unknown state, such as a namespace or table exists in the underlying storage but not its ScalarDB metadata or vice versa. Repairing the namespaces, the tables, the secondary indexes, and their metadata requires re-creating them if necessary. To repair them, run the following command, replacing the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> -f <PATH_TO_SCHEMA_FILE> [--coordinator] --repair-all 
