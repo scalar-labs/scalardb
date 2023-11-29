@@ -53,6 +53,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,6 +91,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private Coordinator coordinator;
   private RecoveryHandler recovery;
   private CommitHandler commit;
+  private GroupCommitter3<String, Snapshot> groupCommitter;
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -153,8 +155,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     // For PoC
-    GroupCommitter3<String, Snapshot> groupCommitter =
-        ConsensusCommitManager.prepareGroupCommitter().orElse(null);
+    groupCommitter = ConsensusCommitManager.prepareGroupCommitter().orElse(null);
     commit =
         spy(
             new CommitHandler(
@@ -170,6 +171,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             recovery,
             commit,
             groupCommitter);
+  }
+
+  // For PoC
+  @AfterEach
+  public void tearDown() {
+    groupCommitter.close();
   }
 
   private void truncateTables() throws ExecutionException {
@@ -254,14 +261,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws TransactionException, ExecutionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
-    System.out.println("manager.begin()!!!!");
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
     // Act
     Optional<Result> result1 = transaction.get(get);
-    System.out.println("inserting records!!!!");
     populateRecords(namespace1, TABLE_1);
-    System.out.println("inserted records!!!!");
     Optional<Result> result2 = transaction.get(get);
     transaction.commit();
 

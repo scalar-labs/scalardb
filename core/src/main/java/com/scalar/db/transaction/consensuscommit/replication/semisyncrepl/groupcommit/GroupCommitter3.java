@@ -1,9 +1,11 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator.Keys;
+import java.io.Closeable;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -23,7 +25,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GroupCommitter3<K, V> {
+public class GroupCommitter3<K, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
   // Queues
   private final BlockingQueue<NormalBufferedValues<K, V>> queueForSizeFix =
@@ -647,5 +649,20 @@ public class GroupCommitter3<K, V> {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
     BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
     bufferedValues.removeValueSlot(keys.childKey);
+  }
+
+  // The ExecutorServices are created as daemon, so calling this method isn't needed.
+  // But for testing, this should be called for resources.
+  @Override
+  public void close() {
+    if (emitExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(emitExecutorService, 5, TimeUnit.SECONDS);
+    }
+    if (sizeFixExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(sizeFixExecutorService, 5, TimeUnit.SECONDS);
+    }
+    if (timeoutExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(timeoutExecutorService, 5, TimeUnit.SECONDS);
+    }
   }
 }
