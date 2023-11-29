@@ -738,17 +738,17 @@ You should carefully plan to import a table to ScalarDB in production because it
 An import sample is as follows:
 
 ```java
-public class SchemaLoaderSample {
+public class SchemaLoaderImportSample {
   public static int main(String... args) throws SchemaLoaderException {
     Path configFilePath = Paths.get("database.properties");
     // "import_sample_schema.json" can be found in the "/sample" directory.
     Path schemaFilePath = Paths.get("import_sample_schema.json");
-    Map<String, String> tableCreationOptions = new HashMap<>();
+    Map<String, String> tableImportOptions = new HashMap<>();
 
     // Import tables.
     // You can also use a Properties object instead of configFilePath and a serialized-schema JSON
     // string instead of schemaFilePath.
-    SchemaLoader.importTables(configFilePath, schemaFilePath, tableCreationOptions, createCoordinatorTables);
+    SchemaLoader.importTables(configFilePath, schemaFilePath, tableImportOptions);
 
     return 0;
   }
