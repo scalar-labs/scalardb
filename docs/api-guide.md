@@ -657,7 +657,7 @@ You can't specify clustering-key boundaries and orderings in `Scan` without spec
 {% capture notice--info %}
 **Note**
 
-When you update an existing record, you need to read the record by using `Get` or `Scan` before using a `Put` operation. Otherwise, the operation will fail due to a conflict. This occurs because ScalarDB assumes that another transaction wrote the record. Instead of reading the record explicitly, you can enable implicit pre-read. See [Enable implicit pre-read for `Put` operations](#enable-implicit-pre-read-for-put-operations) for details.
+When you update an existing record, you need to read the record by using `Get` or `Scan` before using a `Put` operation. Otherwise, the operation will fail due to a conflict. This occurs because of the specification of ScalarDB to manage transactions properly. Instead of reading the record explicitly, you can enable implicit pre-read. See [Enable implicit pre-read for `Put` operations](#enable-implicit-pre-read-for-put-operations) for details.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
