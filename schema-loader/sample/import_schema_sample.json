@@ -1,0 +1,11 @@
+{
+  "sample_namespace1.sample_table1": {
+    "transaction": true
+  },
+  "sample_namespace1.sample_table2": {
+    "transaction": true
+  },
+  "sample_namespace2.sample_table3": {
+    "transaction": false
+  }
+}
