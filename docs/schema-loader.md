@@ -79,6 +79,8 @@ Create/Delete schemas in the storage defined in the config file
       --coordinator   Create/delete/repair Coordinator tables
   -D, --delete-all    Delete tables
   -f, --schema-file=<schemaFile>
+  -I, --import        Import tables : it will import existing non-ScalarDB
+                        tables to ScalarDB.
                       Path to the schema json file
       --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
@@ -438,6 +440,10 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
+### Import tables
+
+You can import an existing table in JDBC databases to ScalarDB by using the `--import` option and an import-specific schema file. For details, see [Importing Existing Tables to ScalarDB by Using ScalarDB Schema Loader](./schema-loader-import.md).
+
 ### Sample schema file
 
 The following is a sample schema. For a sample schema file, see [`schema_sample.json`](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/sample/schema_sample.json).
@@ -712,4 +718,36 @@ SchemaLoader.repairAll(properties, serializedSchemaJson, reparationOptions, repa
 
 // Delete tables.
 SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);
+```
+
+### Import tables
+
+You can import an existing JDBC database table to ScalarDB by using the `--import` option and an import-specific schema file, in a similar manner as shown in [Sample schema file](#sample-schema-file). For details, see [Importing Existing Tables to ScalarDB by Using ScalarDB Schema Loader](./schema-loader-import.md).
+
+{% capture notice--warning %}
+**Attention**
+
+You should carefully plan to import a table to ScalarDB in production because it will add transaction metadata columns to your database tables and the ScalarDB metadata tables. In this case, there would also be several differences between your database and ScalarDB, as well as some limitations.
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
+
+The following is an import sample:
+
+```java
+public class SchemaLoaderImportSample {
+  public static int main(String... args) throws SchemaLoaderException {
+    Path configFilePath = Paths.get("database.properties");
+    // "import_sample_schema.json" can be found in the "/sample" directory.
+    Path schemaFilePath = Paths.get("import_sample_schema.json");
+    Map<String, String> tableImportOptions = new HashMap<>();
+
+    // Import tables.
+    // You can also use a Properties object instead of configFilePath and a serialized-schema JSON
+    // string instead of schemaFilePath.
+    SchemaLoader.importTables(configFilePath, schemaFilePath, tableImportOptions);
+
+    return 0;
+  }
+}
 ```

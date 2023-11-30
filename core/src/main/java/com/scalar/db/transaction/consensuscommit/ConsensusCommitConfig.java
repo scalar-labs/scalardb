@@ -197,9 +197,9 @@ public class ConsensusCommitConfig {
 
   private void warnCrossPartitionScan(String storageName) {
     logger.warn(
-        "Enabling cross-partition scan for '{}' in production is not recommended "
-            + "because it makes transaction isolation level lower (i.e., snapshot). "
-            + "Use it at your own risk only if the consistency does not matter for your transactions",
+        "Enabling the cross-partition scan for '{}' with the 'SERIALIZABLE' isolation level is not recommended "
+            + "because transactions could be executed at a lower isolation level (that is, 'SNAPSHOT'). "
+            + "When using non-JDBC databases, use cross-partition scan at your own risk only if consistency does not matter for your transactions.",
         storageName);
   }
 }
