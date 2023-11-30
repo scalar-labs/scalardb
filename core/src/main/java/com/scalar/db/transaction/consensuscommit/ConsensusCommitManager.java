@@ -46,8 +46,10 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS";
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS";
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS =
+      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS";
 
   private final GroupCommitter3<String, Snapshot> groupCommitter;
 
@@ -73,15 +75,23 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     }
 
     int groupCommitSizeFixExpirationInMillis = 200;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS) != null) {
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS) != null) {
       groupCommitSizeFixExpirationInMillis =
           Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZE_FIX_EXPIRATION_IN_MILLIS));
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS));
+    }
+
+    int groupCommitTimeoutExpirationInMillis = 2000;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS) != null) {
+      groupCommitTimeoutExpirationInMillis =
+          Integer.parseInt(
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS));
     }
     return Optional.of(
         new GroupCommitter3<>(
             "coordinator-writer",
             groupCommitSizeFixExpirationInMillis,
+            groupCommitTimeoutExpirationInMillis,
             groupCommitNumOfRetentionValues,
             10,
             groupCommitNumOfThreads,
