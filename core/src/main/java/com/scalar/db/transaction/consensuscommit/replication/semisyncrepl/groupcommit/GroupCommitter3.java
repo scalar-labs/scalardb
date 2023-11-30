@@ -33,9 +33,9 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final BlockingQueue<NormalBufferedValues<K, V>> queueForTimeout =
       new LinkedBlockingQueue<>();
   // Parameters
-  // TODO: Separate this for size-fix and timeout
   private final long expirationCheckIntervalInMillis;
-  private final long retentionTimeInMillis;
+  private final long sizeFixExpirationInMillis;
+  private final long timeoutExpirationInMillis;
   private final int numberOfRetentionValues;
   // Executors
   private final ExecutorService emitExecutorService;
@@ -68,7 +68,8 @@ public class GroupCommitter3<K, V> implements Closeable {
                 emitExecutorService,
                 emitter,
                 keyManipulator,
-                retentionTimeInMillis,
+                sizeFixExpirationInMillis,
+                timeoutExpirationInMillis,
                 numberOfRetentionValues);
         queueForSizeFix.add(currentBufferedValues);
         bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
@@ -124,7 +125,8 @@ public class GroupCommitter3<K, V> implements Closeable {
                   emitExecutorService,
                   emitter,
                   keyManipulator,
-                  retentionTimeInMillis,
+                  sizeFixExpirationInMillis,
+                  timeoutExpirationInMillis,
                   valueSlot);
           SlowBufferedValue<K, V> old = slowBufferedValueMap.put(fullKey, newSlowBufferedValue);
           if (old != null) {
@@ -219,15 +221,15 @@ public class GroupCommitter3<K, V> implements Closeable {
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
-        long retentionTimeInMillis,
+        long sizeFixExpirationInMillis,
+        long timeoutExpirationInMillis,
         int capacity) {
       this.executorService = executorService;
       this.emitter = emitter;
       this.keyManipulator = keyManipulator;
       this.capacity = capacity;
-      this.sizeFixedAt = Instant.now().plusMillis(retentionTimeInMillis);
-      // FIXME
-      this.timeoutAt = Instant.now().plusMillis(retentionTimeInMillis * 4);
+      this.sizeFixedAt = Instant.now().plusMillis(sizeFixExpirationInMillis);
+      this.timeoutAt = Instant.now().plusMillis(timeoutExpirationInMillis);
       this.key = key;
       this.valueSlots = new ConcurrentHashMap<>(capacity);
     }
@@ -393,14 +395,16 @@ public class GroupCommitter3<K, V> implements Closeable {
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
-        long retentionTimeInMillis,
+        long sizeFixExpirationInMillis,
+        long timeoutExpirationInMillis,
         int capacity) {
       super(
           keyManipulator.createParentKey(),
           executorService,
           emitter,
           keyManipulator,
-          retentionTimeInMillis,
+          sizeFixExpirationInMillis,
+          timeoutExpirationInMillis,
           capacity);
     }
 
@@ -416,9 +420,17 @@ public class GroupCommitter3<K, V> implements Closeable {
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
-        long retentionTimeInMillis,
+        long sizeFixExpirationInMillis,
+        long timeoutExpirationInMillis,
         ValueSlot<K, V> valueSlot) {
-      super(fullKey, executorService, emitter, keyManipulator, retentionTimeInMillis, 1);
+      super(
+          fullKey,
+          executorService,
+          emitter,
+          keyManipulator,
+          sizeFixExpirationInMillis,
+          timeoutExpirationInMillis,
+          1);
       try {
         super.reserveNewValueSlot(valueSlot);
       } catch (GroupCommitAlreadySizeFixedException e) {
@@ -431,12 +443,14 @@ public class GroupCommitter3<K, V> implements Closeable {
 
   public GroupCommitter3(
       String label,
-      long retentionTimeInMillis,
+      long sizeFixExpirationInMillis,
+      long timeoutExpirationInMillis,
       int numberOfRetentionValues,
       long expirationCheckIntervalInMillis,
       int numberOfThreads,
       KeyManipulator<K> keyManipulator) {
-    this.retentionTimeInMillis = retentionTimeInMillis;
+    this.sizeFixExpirationInMillis = sizeFixExpirationInMillis;
+    this.timeoutExpirationInMillis = timeoutExpirationInMillis;
     this.numberOfRetentionValues = numberOfRetentionValues;
     this.expirationCheckIntervalInMillis = expirationCheckIntervalInMillis;
     this.keyManipulator = keyManipulator;
@@ -475,16 +489,16 @@ public class GroupCommitter3<K, V> implements Closeable {
   }
 
   ////////// FIXME: DEBUG LOG
-  private volatile long lastDebugPrint = 0;
+  private volatile long lastDebugPrintForSizeFixQueue = 0;
   ////////// FIXME: DEBUG LOG
   private boolean handleQueueForSizeFix() {
     NormalBufferedValues<K, V> bufferedValues = queueForSizeFix.peek();
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
-    if (lastDebugPrint + 1000 < System.currentTimeMillis()) {
+    if (lastDebugPrintForSizeFixQueue + 1000 < System.currentTimeMillis()) {
       logger.info("[SIZE-FIX] QUEUE STATUS: size={}", queueForSizeFix.size());
-      lastDebugPrint = System.currentTimeMillis();
+      lastDebugPrintForSizeFixQueue = System.currentTimeMillis();
     }
     ////////// FIXME: DEBUG LOG
 
@@ -541,9 +555,19 @@ public class GroupCommitter3<K, V> implements Closeable {
     return true;
   }
 
+  ////////// FIXME: DEBUG LOG
+  private volatile long lastDebugPrintForTimeoutQueue = 0;
+  ////////// FIXME: DEBUG LOG
   private boolean handleQueueForTimeout() {
     NormalBufferedValues<K, V> bufferedValues = queueForTimeout.peek();
     Long retryWaitInMillis = null;
+
+    ////////// FIXME: DEBUG LOG
+    if (lastDebugPrintForTimeoutQueue + 1000 < System.currentTimeMillis()) {
+      logger.info("[TIMEOUT] QUEUE STATUS: size={}", queueForTimeout.size());
+      lastDebugPrintForTimeoutQueue = System.currentTimeMillis();
+    }
+    ////////// FIXME: DEBUG LOG
 
     if (bufferedValues == null) {
       retryWaitInMillis = expirationCheckIntervalInMillis;
