@@ -651,7 +651,7 @@ scalar.db.cross_partition_scan.enabled=true
 {% capture notice--warning %}
 **Attention**
 
-We do not recommend enabling the cross-partition scan with serializable isolation for non-JDBC databases because transactions could be executed with lower isolation (i.e., snapshot). Use it at your own risk only if the consistency does not matter for your transactions.
+We do not recommend enabling the cross-partition scan with `SERIALIAZABLE` isolation level for non-JDBC databases because transactions could be executed with lower isolation level (i.e., `SNAPSHOT`). Use it at your own risk only if the consistency does not matter for your transactions.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
