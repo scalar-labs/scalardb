@@ -108,7 +108,7 @@ class OperationBuilder {
 
   interface ClearProjections<T> {
     /**
-     * Clears the list of projections
+     * Clears the list of projections.
      *
      * @return the operation builder
      */
@@ -127,7 +127,7 @@ class OperationBuilder {
 
   interface ClearCondition<T> {
     /**
-     * Removes the condition
+     * Removes the condition.
      *
      * @return the operation builder
      */
@@ -266,14 +266,14 @@ class OperationBuilder {
 
   interface ClearValues<T> {
     /**
-     * Clears the list of values
+     * Clears the list of values.
      *
      * @return the operation builder
      */
     T clearValues();
 
     /**
-     * Clears the value for the given column
+     * Clears the value for the given column.
      *
      * @param columnName a column name
      * @return the operation builder
@@ -345,7 +345,7 @@ class OperationBuilder {
 
   interface ClearOrderings<T> {
     /**
-     * Clears the list of orderings
+     * Clears the list of orderings.
      *
      * @return the scan operation builder
      */
@@ -394,14 +394,14 @@ class OperationBuilder {
 
   interface ClearBoundaries<T> {
     /**
-     * Removes the scan starting boundary
+     * Removes the scan starting boundary.
      *
      * @return the scan operation builder
      */
     T clearStart();
 
     /**
-     * Removes the scan ending boundary
+     * Removes the scan ending boundary.
      *
      * @return the scan operation builder
      */
@@ -410,7 +410,7 @@ class OperationBuilder {
 
   interface All<T> {
     /**
-     * Specifies the Scan operation will retrieve all the entries of the database
+     * Specifies the Scan operation will retrieve all the entries of the database.
      *
      * @return the scan operation builder
      */
@@ -511,7 +511,7 @@ class OperationBuilder {
 
   interface ClearConditions<T> {
     /**
-     * Clears all conditions
+     * Clears all conditions.
      *
      * @return the scan operation builder
      */

@@ -657,7 +657,7 @@ You can't specify clustering-key boundaries and orderings in `Scan` without spec
 {% capture notice--info %}
 **Note**
 
-When you update an existing record, you need to read the record by using `Get` or `Scan` before using a `Put` operation. Otherwise, the operation will fail due to a conflict. This occurs because of the specification of ScalarDB to manage transactions properly. Instead of reading the record explicitly, you can enable implicit pre-read. See [Enable implicit pre-read for `Put` operations](#enable-implicit-pre-read-for-put-operations) for details.
+When you update an existing record, you need to read the record by using `Get` or `Scan` before using a `Put` operation. Otherwise, the operation will fail due to a conflict. This occurs because of the specification of ScalarDB to manage transactions properly. Instead of reading the record explicitly, you can enable implicit pre-read. For details, see [Enable implicit pre-read for `Put` operations](#enable-implicit-pre-read-for-put-operations).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
@@ -716,7 +716,13 @@ Put put =
         .build();
 ```
 
-Note that if you are certain that a record you are trying to mutate does not exist, you should not enable implicit pre-read for the `Put` operation for better performance. For example, if you load initial data, you should not enable implicit pre-read. A `Put` operation without implicit pre-read is faster than `Put` operation with implicit pre-read because the operation skips an unnecessary read.
+{% capture notice--info %}
+**Note**
+
+If you are certain that a record you are trying to mutate does not exist, you should not enable implicit pre-read for the `Put` operation for better performance. For example, if you load initial data, you should not enable implicit pre-read. A `Put` operation without implicit pre-read is faster than `Put` operation with implicit pre-read because the operation skips an unnecessary read.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 #### `Delete` operation
 
