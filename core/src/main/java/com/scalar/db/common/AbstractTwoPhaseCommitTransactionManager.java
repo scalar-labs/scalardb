@@ -96,8 +96,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
    * layer.
    */
   @VisibleForTesting
-  static class StateManagedTransaction extends AbstractTwoPhaseCommitTransaction
-      implements DecoratedTwoPhaseCommitTransaction {
+  static class StateManagedTransaction extends DecoratedTwoPhaseCommitTransaction {
 
     private enum Status {
       ACTIVE,
@@ -110,67 +109,61 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
       ROLLED_BACK
     }
 
-    private final TwoPhaseCommitTransaction transaction;
     private Status status;
 
     @VisibleForTesting
     StateManagedTransaction(TwoPhaseCommitTransaction transaction) {
-      this.transaction = transaction;
+      super(transaction);
       status = Status.ACTIVE;
-    }
-
-    @Override
-    public String getId() {
-      return transaction.getId();
     }
 
     @Override
     public Optional<Result> get(Get get) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      return transaction.get(get);
+      return super.get(get);
     }
 
     @Override
     public List<Result> scan(Scan scan) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      return transaction.scan(scan);
+      return super.scan(scan);
     }
 
     @Override
     public void put(Put put) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.put(put);
+      super.put(put);
     }
 
     @Override
     public void put(List<Put> puts) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.put(puts);
+      super.put(puts);
     }
 
     @Override
     public void delete(Delete delete) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.delete(delete);
+      super.delete(delete);
     }
 
     @Override
     public void delete(List<Delete> deletes) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.delete(deletes);
+      super.delete(deletes);
     }
 
     @Override
     public void mutate(List<? extends Mutation> mutations) throws CrudException {
       checkStatus("The transaction is not active", Status.ACTIVE);
-      transaction.mutate(mutations);
+      super.mutate(mutations);
     }
 
     @Override
     public void prepare() throws PreparationException {
       checkStatus("The transaction is not active", Status.ACTIVE);
       try {
-        transaction.prepare();
+        super.prepare();
         status = Status.PREPARED;
       } catch (Exception e) {
         status = Status.PREPARE_FAILED;
@@ -182,7 +175,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     public void validate() throws ValidationException {
       checkStatus("The transaction is not prepared", Status.PREPARED);
       try {
-        transaction.validate();
+        super.validate();
         status = Status.VALIDATED;
       } catch (Exception e) {
         status = Status.VALIDATION_FAILED;
@@ -195,7 +188,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
       checkStatus(
           "The transaction is not prepared or validated.", Status.PREPARED, Status.VALIDATED);
       try {
-        transaction.commit();
+        super.commit();
         status = Status.COMMITTED;
       } catch (Exception e) {
         status = Status.COMMIT_FAILED;
@@ -210,7 +203,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
             "The transaction has already been committed or rolled back");
       }
       try {
-        transaction.rollback();
+        super.rollback();
       } finally {
         status = Status.ROLLED_BACK;
       }
@@ -222,7 +215,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
         throw new IllegalStateException("The transaction has already been committed or aborted");
       }
       try {
-        transaction.abort();
+        super.abort();
       } finally {
         status = Status.ROLLED_BACK;
       }
@@ -233,14 +226,6 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
       if (!expected) {
         throw new IllegalStateException(message);
       }
-    }
-
-    @Override
-    public TwoPhaseCommitTransaction getOriginalTransaction() {
-      if (transaction instanceof DecoratedTwoPhaseCommitTransaction) {
-        return ((DecoratedTwoPhaseCommitTransaction) transaction).getOriginalTransaction();
-      }
-      return transaction;
     }
   }
 }

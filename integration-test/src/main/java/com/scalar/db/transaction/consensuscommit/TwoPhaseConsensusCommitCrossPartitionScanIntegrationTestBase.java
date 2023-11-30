@@ -13,8 +13,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionCrossPartitionScanIntegrationTestBase;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
-import com.scalar.db.api.TwoPhaseCommitTransactionRelationalScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
@@ -27,8 +27,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
-    extends TwoPhaseCommitTransactionRelationalScanIntegrationTestBase {
+public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBase
+    extends TwoPhaseCommitTransactionCrossPartitionScanIntegrationTestBase {
   private TwoPhaseCommitTransactionManager managerWithWithIncludeMetadataEnabled;
 
   @BeforeAll
@@ -98,7 +98,7 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutAndOverlappedRelationalScanGiven_ShouldThrowException()
+  public void scan_PutAndOverlappedCrossPartitionScanGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
@@ -127,13 +127,13 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutResultNonOverlappedWithRelationalScanGiven_ShouldThrowException()
+  public void scan_PutResultNonOverlappedWithCrossPartitionScanGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Put put = preparePut(namespace1, TABLE_1, 10, NUM_TYPES);
-    Scan scan = prepareRelationalScan(namespace1, TABLE_1, 1, 0, NUM_TYPES - 1);
+    Scan scan = prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, NUM_TYPES - 1);
 
     // Act
     Throwable thrown =
@@ -149,13 +149,13 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutResultOverlappedWithRelationalScanGiven_ShouldThrowException()
+  public void scan_PutResultOverlappedWithCrossPartitionScanGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Put put = preparePut(namespace1, TABLE_1, 10, NUM_TYPES);
-    Scan scan = prepareRelationalScan(namespace1, TABLE_1, 1, NUM_TYPES, NUM_TYPES);
+    Scan scan = prepareCrossPartitionScan(namespace1, TABLE_1, 1, NUM_TYPES, NUM_TYPES);
 
     // Act
     Throwable thrown =
@@ -171,13 +171,13 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutNonOverlappedWithRelationalScanWithLikeGiven_ShouldNotThrowAnyException()
+  public void scan_PutNonOverlappedWithCrossPartitionScanWithLikeGiven_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecordsForLike(manager2, namespace2, TABLE_2);
-    Scan scan1 = Scan.newBuilder(prepareRelationalScan(namespace1, TABLE_1, 1, 0, 2)).build();
-    Scan scan2 = prepareRelationalScanWithLike(namespace2, TABLE_2, true, "\\_scalar[$]", "");
+    Scan scan1 = Scan.newBuilder(prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, 2)).build();
+    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "\\_scalar[$]", "");
     Put put = preparePut(namespace2, TABLE_2, 999, "\\scalar[$]");
 
     TwoPhaseCommitTransaction transaction1 = manager1.start();
@@ -206,13 +206,13 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
   }
 
   @Test
-  public void scan_PutResultOverlappedWithRelationalScanWithLikeGiven_ShouldThrowException()
+  public void scan_PutResultOverlappedWithCrossPartitionScanWithLikeGiven_ShouldThrowException()
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecordsForLike(manager2, namespace2, TABLE_2);
-    Scan scan1 = Scan.newBuilder(prepareRelationalScan(namespace1, TABLE_1, 1, 0, 2)).build();
-    Scan scan2 = prepareRelationalScanWithLike(namespace2, TABLE_2, true, "\\scalar[$]", "");
+    Scan scan1 = Scan.newBuilder(prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, 2)).build();
+    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "\\scalar[$]", "");
     Put put = preparePut(namespace2, TABLE_2, 999, "\\scalar[$]");
 
     TwoPhaseCommitTransaction transaction1 = manager1.start();
@@ -267,7 +267,7 @@ public abstract class TwoPhaseConsensusCommitRelationalScanIntegrationTestBase
 
     // Act Assert
     BuildableScanOrScanAllFromExisting scanBuilder =
-        Scan.newBuilder(prepareRelationalScan(namespace1, TABLE_1, 0, 0, 1));
+        Scan.newBuilder(prepareCrossPartitionScan(namespace1, TABLE_1, 0, 0, 1));
     if (hasProjections) {
       scanBuilder.projections(projections);
     }

@@ -39,6 +39,10 @@ public class SchemaParser {
     this.options = ImmutableMap.copyOf(options);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public List<TableSchema> parse() throws SchemaLoaderException {
     ArrayList<TableSchema> tableSchemaList = new ArrayList<>();
     for (Map.Entry<String, JsonElement> entry : schemaJson.entrySet()) {

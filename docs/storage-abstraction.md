@@ -405,6 +405,34 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Repair a namespace
+
+If a namespace is in an unknown state, such as the namespace exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the namespace and its metadata if necessary.
+
+You can repair the namespace as follows:
+
+```java
+// Repair the namespace "ns" with options.
+Map<String, String> options = ...;
+    admin.repairNamespace("ns", options);
+```
+
+### Repair a table
+
+If a table is in an unknown state, such as the table exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the table, its secondary indexes, and their metadata if necessary.
+
+You can repair the table as follows:
+
+```java
+// Repair the table "ns.tbl" with options.
+TableMetadata tableMetadata =
+    TableMetadata.newBuilder()
+        ...
+        .build();
+Map<String, String> options = ...; 
+admin.repairTable("ns", "tbl", tableMetadata, options);
+```
+
 ### Upgrade the environment to support the latest ScalarDB API
 
 You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically, as indicated in the release notes, you will need to run this method after updating the ScalarDB version that your application environment uses.

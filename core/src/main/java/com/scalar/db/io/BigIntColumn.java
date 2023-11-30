@@ -38,6 +38,10 @@ public class BigIntColumn implements Column<Long> {
     this.hasNullValue = hasNullValue;
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   @Override
   public String getName() {
     return name;

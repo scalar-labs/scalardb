@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.api.DistributedStorageRelationalScanIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -8,8 +8,8 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.util.Properties;
 import java.util.Random;
 
-public class JdbcDatabaseRelationalScanIntegrationTest
-    extends DistributedStorageRelationalScanIntegrationTestBase {
+public class JdbcDatabaseCrossPartitionScanIntegrationTest
+    extends DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
 

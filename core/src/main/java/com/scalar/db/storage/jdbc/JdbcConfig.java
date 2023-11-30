@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
 @Immutable
 public class JdbcConfig {
   private static final Logger logger = LoggerFactory.getLogger(JdbcConfig.class);
-  public static final String PREFIX = DatabaseConfig.PREFIX + "jdbc.";
+
+  public static final String STORAGE_NAME = "jdbc";
+  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
   public static final String CONNECTION_POOL_MAX_IDLE = PREFIX + "connection_pool.max_idle";
   public static final String CONNECTION_POOL_MAX_TOTAL = PREFIX + "connection_pool.max_total";
@@ -25,6 +27,7 @@ public class JdbcConfig {
       PREFIX + "prepared_statements_pool.max_open";
 
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+
   /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_SCHEMA} instead. */
   @Deprecated public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
 
@@ -81,12 +84,14 @@ public class JdbcConfig {
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
     String transactionManager = databaseConfig.getTransactionManager();
-    if (!"jdbc".equals(storage) && !"jdbc".equals(transactionManager)) {
+    if (!storage.equals(STORAGE_NAME) && !transactionManager.equals(STORAGE_NAME)) {
       throw new IllegalArgumentException(
           DatabaseConfig.STORAGE
               + " or "
               + DatabaseConfig.TRANSACTION_MANAGER
-              + " should be 'jdbc'");
+              + " should be '"
+              + STORAGE_NAME
+              + "'");
     }
 
     if (databaseConfig.getContactPoints().isEmpty()) {
@@ -179,6 +184,10 @@ public class JdbcConfig {
       metadataSchema = getString(databaseConfig.getProperties(), METADATA_SCHEMA, null);
     }
   }
+
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
 
   public String getJdbcUrl() {
     return jdbcUrl;

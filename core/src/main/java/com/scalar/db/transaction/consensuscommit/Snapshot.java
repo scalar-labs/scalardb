@@ -209,9 +209,7 @@ public class Snapshot {
   }
 
   public void verify(Scan scan) {
-    boolean isRelational = ScalarDbUtils.isRelational(scan);
-    if ((isRelational && isWriteSetOverlappedWithRelational(scan))
-        || (!isRelational && isWriteSetOverlappedWith(scan))) {
+    if (isWriteSetOverlappedWith(scan)) {
       throw new IllegalArgumentException("Reading already written data is not allowed");
     }
   }
@@ -233,14 +231,12 @@ public class Snapshot {
   }
 
   private boolean isWriteSetOverlappedWith(Scan scan) {
+    if (scan instanceof ScanAll) {
+      return isWriteSetOverlappedWith((ScanAll) scan);
+    }
+
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       Put put = entry.getValue();
-
-      if (scan instanceof ScanAll
-          && put.forNamespace().equals(scan.forNamespace())
-          && put.forTable().equals(scan.forTable())) {
-        return true;
-      }
 
       if (!put.forNamespace().equals(scan.forNamespace())
           || !put.forTable().equals(scan.forTable())
@@ -294,7 +290,7 @@ public class Snapshot {
     return false;
   }
 
-  private boolean isWriteSetOverlappedWithRelational(Scan scan) {
+  private boolean isWriteSetOverlappedWith(ScanAll scan) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       // We need to consider three cases here to prevent scan-after-write.
       //   1) A put operation overlaps the scan range regardless of the update (put) results.

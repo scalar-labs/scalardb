@@ -79,7 +79,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     @Option(
         names = {"--repair-all"},
         description =
-            "Repair namespaces and tables that are in an unknown state: it recreates namespaces, tables, secondary indexes and their metadata if necessary.",
+            "Repair namespaces and tables that are in an unknown state: it re-creates namespaces, tables, secondary indexes, and their metadata if necessary.",
         defaultValue = "false")
     boolean repairAll;
 

@@ -250,6 +250,34 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Repair a namespace
+
+If a namespace is in an unknown state, such as the namespace exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the namespace and its metadata if necessary.
+
+You can repair the namespace as follows:
+
+```java
+// Repair the namespace "ns" with options.
+Map<String, String> options = ...;
+admin.repairNamespace("ns", options);
+```
+
+### Repair a table
+
+If a table is in an unknown state, such as the table exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the table, its secondary indexes, and their metadata if necessary.
+
+You can repair the table as follows:
+
+```java
+// Repair the table "ns.tbl" with options.
+TableMetadata tableMetadata =
+    TableMetadata.newBuilder()
+        ...
+        .build();
+Map<String, String> options = ...;
+admin.repairTable("ns", "tbl", tableMetadata, options);
+```
+
 ### Upgrade the environment to support the latest ScalarDB API
 
 You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically, as indicated in the release notes, you will need to run this method after updating the ScalarDB version that your application environment uses.
@@ -304,6 +332,25 @@ admin.dropCoordinatorTables();
 boolean ifExist = true;
 admin.dropCoordinatorTables(ifExist);
 ```
+
+### Import a table
+
+You can import an existing table to ScalarDB as follows:
+
+```java
+// Import the table "ns.tbl". If the table is already managed by ScalarDB, the target table does not
+// exist, or the table does not meet the requirements of the ScalarDB table, an exception will be thrown.
+admin.importTable("ns", "tbl", options);
+```
+
+{% capture notice--warning %}
+**Attention**
+
+You should carefully plan to import a table to ScalarDB in production because it will add transaction metadata columns to your database tables and the ScalarDB metadata tables. In this case, there would also be several differences between your database and ScalarDB, as well as some limitations. For details, see [Importing Existing Tables to ScalarDB by Using ScalarDB Schema Loader](./schema-loader-import.md).
+
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 ## Transactional API
 
@@ -631,9 +678,21 @@ You can't specify clustering-key boundaries and orderings in `Scan` by using a s
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-##### Execute `Scan` without specifying a partition key to retrieve all the records of a table
+##### Execute cross-partition `Scan` without specifying a partition key to retrieve all the records of a table
 
-You can execute a `Scan` operation without specifying a partition key.
+You can execute a `Scan` operation across all partitions, which we call *cross-partition scan*, without specifying a partition key by enabling the following configuration in the ScalarDB properties file.
+
+```properties
+scalar.db.cross_partition_scan.enabled=true
+```
+
+{% capture notice--warning %}
+**Attention**
+
+For non-JDBC databases, we do not recommend enabling cross-partition scan with the `SERIALIAZABLE` isolation level because transactions could be executed at a lower isolation level (that is, `SNAPSHOT`). When using non-JDBC databases, use cross-partition scan at your own risk only if consistency does not matter for your transactions.
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 Instead of calling the `partitionKey()` method in the builder, you can call the `all()` method to scan a table without specifying a partition key as follows:
 
@@ -655,10 +714,70 @@ List<Result> results = transaction.scan(scan);
 {% capture notice--info %}
 **Note**
 
-You can't specify clustering-key boundaries and orderings in `Scan` without specifying a partition key.
+You can't specify any filtering conditions and orderings in cross-partition `Scan` except for when using JDBC databases. For details on how to use cross-partition `Scan` with filtering or ordering for JDBC databases, see [Execute cross-partition `Scan` with filtering and ordering](#execute-cross-partition-scan-with-filtering-and-ordering).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
+
+##### Execute cross-partition `Scan` with filtering and ordering
+
+By enabling the cross-partition scan option with filtering and ordering for JDBC databases as follows, you can execute a cross-partition `Scan` operation with flexible conditions and orderings:
+
+```properties
+scalar.db.cross_partition_scan.enabled=true
+scalar.db.cross_partition_scan.filtering.enabled=true
+scalar.db.cross_partition_scan.ordering.enabled=true
+```
+
+You can call the `where()` and `ordering()` methods after calling the `all()` method to specify arbitrary conditions and orderings as follows:
+
+```java
+// Create a `Scan` operation with arbitrary conditions and orderings.
+Scan scan =
+    Scan.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .all()
+        .where(ConditionBuilder.column("c1").isNotEqualToInt(10))
+        .projections("c1", "c2", "c3", "c4")
+        .orderings(Scan.Ordering.desc("c3"), Scan.Ordering.asc("c4"))
+        .limit(10)
+        .build();
+
+// Execute the `Scan` operation.
+List<Result> results = transaction.scan(scan);
+```
+
+As an argument of the `where()` method, you can specify a condition, an and-wise condition set, or an or-wise condition set. After calling the `where()` method, you can add more conditions or condition sets by using the `and()` method or `or()` method as follows:
+
+```java
+// Create a `Scan` operation with condition sets.
+Scan scan =
+    Scan.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .all()
+        .where(
+            ConditionSetBuilder.condition(ConditionBuilder.column("c1").isLessThanInt(10))
+                .or(ConditionBuilder.column("c1").isGreaterThanInt(20))
+                .build())
+        .and(
+            ConditionSetBuilder.condition(ConditionBuilder.column("c2").isLikeText("a%"))
+                .or(ConditionBuilder.column("c2").isLikeText("b%"))
+                .build())
+        .limit(10)
+        .build();
+```
+
+{% capture notice--info %}
+**Note**
+
+In the `where()` condition method chain, the conditions must be an and-wise junction of `ConditionalExpression` or `OrConditionSet` (known as conjunctive normal form) like the above example or an or-wise junction of `ConditionalExpression` or `AndConditionSet` (known as disjunctive normal form).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+For more details about available conditions and condition sets, see the `ConditionBuilder` and `ConditionSetBuilder` page in the [Javadoc](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) of the version of ScalarDB that you're using.
 
 #### `Put` operation
 
