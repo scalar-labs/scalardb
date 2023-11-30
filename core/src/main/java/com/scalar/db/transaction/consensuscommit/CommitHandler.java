@@ -140,14 +140,7 @@ public class CommitHandler {
 
   private void handleSnapshotsInGroupCommit(String parentId, List<Snapshot> snapshots) {
     try {
-      long startCommitState = System.currentTimeMillis();
       commitStateForGroupCommit(parentId, snapshots);
-      logger.info(
-          "CommitState-ed(thread_id:{}, num_of_values:{}): {} ms",
-          Thread.currentThread().getId(),
-          snapshots.size(),
-          System.currentTimeMillis() - startCommitState);
-
       commitSnapshotsRecordsInParallel(snapshots);
     } catch (TransactionException e) {
       throw new TransactionGroupCommitException(e);
@@ -326,7 +319,14 @@ public class CommitHandler {
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
     Optional<Future<Void>> logRecordFuture;
     try {
+      long start = System.currentTimeMillis();
       logRecordFuture = prepare(snapshot);
+
+      // For PoC
+      logger.info(
+          "Prepared(thread_id:{}): {} ms",
+          Thread.currentThread().getId(),
+          System.currentTimeMillis() - start);
     } catch (PreparationException e) {
       cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
@@ -339,7 +339,14 @@ public class CommitHandler {
     // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
     try {
+      long start = System.currentTimeMillis();
       validate(snapshot);
+
+      // For PoC
+      logger.info(
+          "Validated(thread_id:{}): {} ms",
+          Thread.currentThread().getId(),
+          System.currentTimeMillis() - start);
     } catch (ValidationException e) {
       cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
@@ -495,11 +502,19 @@ public class CommitHandler {
     }
 
     try {
+      long start = System.currentTimeMillis();
       coordinator.putStateForGroupCommit(
           parentId,
           snapshots.stream().map(Snapshot::getId).collect(Collectors.toList()),
           TransactionState.COMMITTED,
           System.currentTimeMillis());
+
+      logger.info(
+          "CommitState-ed(thread_id:{}, num_of_values:{}): {} ms",
+          Thread.currentThread().getId(),
+          snapshots.size(),
+          System.currentTimeMillis() - start);
+
       logger.debug(
           "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
