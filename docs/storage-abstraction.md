@@ -683,7 +683,7 @@ Put put =
 {% capture notice--info %}
 **Note**
 
-If you specify `disableImplicitPreRead()` or `implicitPreReadEnabled()` in the `Put` operation builder, they will be ignored.
+If you specify `enableImplicitPreRead()`, `disableImplicitPreRead()`, or `implicitPreReadEnabled()` in the `Put` operation builder, they will be ignored.
 
 {% endcapture %}
 

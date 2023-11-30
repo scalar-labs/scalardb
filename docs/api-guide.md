@@ -755,6 +755,15 @@ You can write arbitrary conditions (for example, a bank account balance must be 
 
 When a `Put` or `Delete` operation includes a condition, the operation is executed only if the specified condition is met. If the condition is not met when the operation is executed, an exception called `UnsatisfiedConditionException` will be thrown.
 
+{% capture notice--info %}
+**Note**
+
+When you specify a condition in a `Put` operation, you need to read the record beforehand or enable implicit pre-read.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+
 ##### Conditions for `Put`
 
 You can specify a condition in a `Put` operation as follows:
