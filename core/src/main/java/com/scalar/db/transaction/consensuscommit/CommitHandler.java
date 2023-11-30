@@ -324,8 +324,9 @@ public class CommitHandler {
 
       // For PoC
       logger.info(
-          "Prepared(thread_id:{}): {} ms",
+          "Prepared(thread_id:{}, txid:{}): {} ms",
           Thread.currentThread().getId(),
+          snapshot.getId(),
           System.currentTimeMillis() - start);
     } catch (PreparationException e) {
       cancelGroupCommitIfNeeded(snapshot.getId());
@@ -344,8 +345,9 @@ public class CommitHandler {
 
       // For PoC
       logger.info(
-          "Validated(thread_id:{}): {} ms",
+          "Validated(thread_id:{}, txid:{}): {} ms",
           Thread.currentThread().getId(),
+          snapshot.getId(),
           System.currentTimeMillis() - start);
     } catch (ValidationException e) {
       cancelGroupCommitIfNeeded(snapshot.getId());
