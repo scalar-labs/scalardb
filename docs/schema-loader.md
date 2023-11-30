@@ -443,9 +443,7 @@ $ java -jar scalardb-schema-loader-<VERSION>.jar --jdbc -j <JDBC_URL> -u <USER> 
 
 ### Import tables
 
-You can import an existing table in JDBC databases to ScalarDB using `--import` option and an import-specific schema file. See the following document for the details.
-
-- [Importing existing tables to ScalarDB using ScalarDB Schema Loader](./schema-loader-import.md)
+You can import an existing table in JDBC databases to ScalarDB by using the `--import` option and an import-specific schema file. For details, see [Importing Existing Tables to ScalarDB by Using ScalarDB Schema Loader](./schema-loader-import.md).
 
 ### Sample schema file
 
@@ -725,17 +723,17 @@ SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTables);
 
 ### Import tables
 
-You can import an existing JDBC database table to ScalarDB in a similar manner as the above sample. Note that the schema must be import-specific. See also the following document for the details.
+You can import an existing JDBC database table to ScalarDB by using the `--import` option and an import-specific schema file, in a similar manner as shown in [Sample schema file](#sample-schema-file). For details, see [Importing Existing Tables to ScalarDB by Using ScalarDB Schema Loader](./schema-loader-import.md).
 
-- [Importing existing tables to ScalarDB using ScalarDB Schema Loader](./schema-loader-import.md)
+{% capture notice--warning %}
+**Attention**
 
-{% capture notice--warning %} Attention
+You should carefully plan to import a table to ScalarDB in production because it will add transaction metadata columns to your database tables and the ScalarDB metadata tables. In this case, there would also be several differences between your database and ScalarDB, as well as some limitations.
+{% endcapture %}
 
-You should carefully plan to import a table to ScalarDB in production because it will add transaction metadata columns to your database tables and the ScalarDB metadata tables. There would also be several differences between your database and ScalarDB and limitations.
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
-{{ notice--warning | markdownify }}
-
-An import sample is as follows:
+The following is an import sample:
 
 ```java
 public class SchemaLoaderImportSample {

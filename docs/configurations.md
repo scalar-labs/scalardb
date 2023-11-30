@@ -160,21 +160,23 @@ For details about client configurations, see the ScalarDB Cluster [client config
 
 ## Cross-partition scan configurations
 
-By enabling the cross-partition scan option below, `Scan` operation can retrieve all records across partitions. In addition, you can specify arbitrary conditions and orderings in the cross-partition `Scan` operation by enabling `cross_partition_scan.filtering` and `cross_partition_scan.ordering`, respectively. Currently, the cross-partition scan with filtering and ordering is available only for JDBC databases. Note that `scalar.db.cross_partition_scan.enabled` must be `true` to enable them. See [Java API Guide - Scan operation](./api-guide.md#scan-operation) for how to use the cross-partition scan.
+By enabling the cross-partition scan option below, the `Scan` operation can retrieve all records across partitions. In addition, you can specify arbitrary conditions and orderings in the cross-partition `Scan` operation by enabling `cross_partition_scan.filtering` and `cross_partition_scan.ordering`, respectively. Currently, the cross-partition scan with filtering and ordering is available only for JDBC databases. To enable filtering and ordering, `scalar.db.cross_partition_scan.enabled` must be set to `true`.
+
+For details on how to use cross-partition scan, see [Scan operation](./api-guide.md#scan-operation).
 
 {% capture notice--warning %}
 **Attention**
 
-We do not recommend enabling the cross-partition scan with `SERIALIAZABLE` isolation level for non-JDBC databases because transactions could be executed with lower isolation level (i.e., `SNAPSHOT`). Use it at your own risk only if the consistency does not matter for your transactions.
+For non-JDBC databases, we do not recommend enabling cross-partition scan with the `SERIALIAZABLE` isolation level because transactions could be executed at a lower isolation level (that is, `SNAPSHOT`). When using non-JDBC databases, use cross-partition scan at your own risk only if consistency does not matter for your transactions.
 {% endcapture %}
 
 <div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 | Name                                               | Description                                   | Default |
 |----------------------------------------------------|-----------------------------------------------|---------|
-| `scalar.db.cross_partition_scan.enabled`           | Enable the cross partition scan.              | `false` |
-| `scalar.db.cross_partition_scan.filtering.enabled` | Enable filtering in the cross partition scan. | `false` |
-| `scalar.db.cross_partition_scan.ordering.enabled`  | Enable ordering in the cross partition scan.  | `false` |
+| `scalar.db.cross_partition_scan.enabled`           | Enable cross-partition scan.                  | `false` |
+| `scalar.db.cross_partition_scan.filtering.enabled` | Enable filtering in cross-partition scan.     | `false` |
+| `scalar.db.cross_partition_scan.ordering.enabled`  | Enable ordering in cross-partition scan.      | `false` |
 
 ## Other ScalarDB configurations
 
