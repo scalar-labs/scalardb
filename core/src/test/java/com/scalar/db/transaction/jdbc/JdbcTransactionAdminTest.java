@@ -235,9 +235,9 @@ public class JdbcTransactionAdminTest {
     String table = "tbl";
 
     // Act
-    admin.importTable(namespace, table);
+    admin.importTable(namespace, table, Collections.emptyMap());
 
     // Assert
-    verify(jdbcAdmin).importTable(namespace, table);
+    verify(jdbcAdmin).importTable(namespace, table, Collections.emptyMap());
   }
 }

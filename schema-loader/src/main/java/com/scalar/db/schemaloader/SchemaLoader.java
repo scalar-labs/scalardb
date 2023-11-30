@@ -513,13 +513,15 @@ public class SchemaLoader {
    *
    * @param configProperties ScalarDB config properties
    * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for importing.
    * @throws SchemaLoaderException thrown when importing tables fails.
    */
-  public static void importTables(Properties configProperties, String serializedSchemaJson)
+  public static void importTables(
+      Properties configProperties, String serializedSchemaJson, Map<String, String> options)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    importTables(config, schema);
+    importTables(config, schema, options);
   }
 
   /**
@@ -527,13 +529,15 @@ public class SchemaLoader {
    *
    * @param configProperties ScalarDB properties.
    * @param schemaPath path to the schema file.
+   * @param options specific options for importing.
    * @throws SchemaLoaderException thrown when importing tables fails.
    */
-  public static void importTables(Properties configProperties, Path schemaPath)
+  public static void importTables(
+      Properties configProperties, Path schemaPath, Map<String, String> options)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaPath);
-    importTables(config, schema);
+    importTables(config, schema, options);
   }
 
   /**
@@ -541,13 +545,15 @@ public class SchemaLoader {
    *
    * @param configPath path to the ScalarDB config.
    * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for importing.
    * @throws SchemaLoaderException thrown when importing tables fails.
    */
-  public static void importTables(Path configPath, String serializedSchemaJson)
+  public static void importTables(
+      Path configPath, String serializedSchemaJson, Map<String, String> options)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configPath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    importTables(config, schema);
+    importTables(config, schema, options);
   }
 
   /**
@@ -555,22 +561,25 @@ public class SchemaLoader {
    *
    * @param configPath path to the ScalarDB config.
    * @param schemaPath path to the schema file.
+   * @param options specific options for importing.
    * @throws SchemaLoaderException thrown when importing tables fails.
    */
-  public static void importTables(Path configPath, Path schemaPath) throws SchemaLoaderException {
+  public static void importTables(Path configPath, Path schemaPath, Map<String, String> options)
+      throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configPath);
     Either<Path, String> schema = new Left<>(schemaPath);
-    importTables(config, schema);
+    importTables(config, schema, options);
   }
 
-  private static void importTables(Either<Path, Properties> config, Either<Path, String> schema)
+  private static void importTables(
+      Either<Path, Properties> config, Either<Path, String> schema, Map<String, String> options)
       throws SchemaLoaderException {
     // Parse the schema
-    List<ImportTableSchema> tableSchemaList = getImportTableSchemaList(schema);
+    List<ImportTableSchema> tableSchemaList = getImportTableSchemaList(schema, options);
 
     // Import tables
     try (SchemaOperator operator = getSchemaOperator(config)) {
-      operator.importTables(tableSchemaList);
+      operator.importTables(tableSchemaList, options);
     }
   }
 
@@ -612,25 +621,25 @@ public class SchemaLoader {
     }
   }
 
-  private static List<ImportTableSchema> getImportTableSchemaList(Either<Path, String> schema)
-      throws SchemaLoaderException {
+  private static List<ImportTableSchema> getImportTableSchemaList(
+      Either<Path, String> schema, Map<String, String> options) throws SchemaLoaderException {
     if ((schema.isLeft() && schema.getLeft() != null)
         || (schema.isRight() && schema.getRight() != null)) {
-      ImportSchemaParser schemaParser = getImportSchemaParser(schema);
+      ImportSchemaParser schemaParser = getImportSchemaParser(schema, options);
       return schemaParser.parse();
     }
     return Collections.emptyList();
   }
 
   @VisibleForTesting
-  static ImportSchemaParser getImportSchemaParser(Either<Path, String> schema)
-      throws SchemaLoaderException {
+  static ImportSchemaParser getImportSchemaParser(
+      Either<Path, String> schema, Map<String, String> options) throws SchemaLoaderException {
     assert (schema.isLeft() && schema.getLeft() != null)
         || (schema.isRight() && schema.getRight() != null);
     if (schema.isLeft()) {
-      return new ImportSchemaParser(schema.getLeft());
+      return new ImportSchemaParser(schema.getLeft(), options);
     } else {
-      return new ImportSchemaParser(schema.getRight());
+      return new ImportSchemaParser(schema.getRight(), options);
     }
   }
 }

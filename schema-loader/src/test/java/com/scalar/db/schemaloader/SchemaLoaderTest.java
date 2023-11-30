@@ -2,6 +2,7 @@ package com.scalar.db.schemaloader;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mockStatic;
@@ -46,7 +47,7 @@ public class SchemaLoaderTest {
         .when(() -> SchemaLoader.getSchemaParser(any(), anyMap()))
         .thenReturn(parser);
     schemaLoaderMockedStatic
-        .when(() -> SchemaLoader.getImportSchemaParser(any()))
+        .when(() -> SchemaLoader.getImportSchemaParser(any(), anyMap()))
         .thenReturn(importSchemaParser);
     when(parser.parse()).thenReturn(Collections.emptyList());
     when(importSchemaParser.parse()).thenReturn(Collections.emptyList());
@@ -719,11 +720,11 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.importTables(configProperties, SERIALIZED_SCHEMA_JSON);
+    SchemaLoader.importTables(configProperties, SERIALIZED_SCHEMA_JSON, options);
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList());
+    verify(operator).importTables(anyList(), eq(options));
   }
 
   @Test
@@ -733,11 +734,11 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.importTables(configFilePath, SERIALIZED_SCHEMA_JSON);
+    SchemaLoader.importTables(configFilePath, SERIALIZED_SCHEMA_JSON, options);
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList());
+    verify(operator).importTables(anyList(), eq(options));
   }
 
   @Test
@@ -747,11 +748,11 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.importTables(configProperties, schemaFilePath);
+    SchemaLoader.importTables(configProperties, schemaFilePath, options);
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList());
+    verify(operator).importTables(anyList(), eq(options));
   }
 
   @Test
@@ -760,10 +761,10 @@ public class SchemaLoaderTest {
     // Arrange
 
     // Act
-    SchemaLoader.importTables(configFilePath, schemaFilePath);
+    SchemaLoader.importTables(configFilePath, schemaFilePath, options);
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList());
+    verify(operator).importTables(anyList(), eq(options));
   }
 }

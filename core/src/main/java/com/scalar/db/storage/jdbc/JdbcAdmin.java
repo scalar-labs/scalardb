@@ -5,7 +5,6 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -490,11 +489,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table) throws ExecutionException {
+  public void importTable(String namespace, String table, Map<String, String> options)
+      throws ExecutionException {
     TableMetadata tableMetadata = getImportTableMetadata(namespace, table);
 
     // add ScalarDB metadata
-    repairTable(namespace, table, tableMetadata, ImmutableMap.of());
+    repairTable(namespace, table, tableMetadata, options);
   }
 
   private String getSelectColumnsStatement() {
