@@ -586,8 +586,8 @@ public class SchemaLoader {
 
   /**
    * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
-   * you will need, as indicated on the release notes, to run this method after updating the
-   * ScalarDB version of your application environment.
+   * as indicated in the release notes, you will need to run this method after updating the ScalarDB
+   * version that your application environment uses.
    *
    * @param configPath path to the ScalarDB config properties.
    * @param options specific options for upgrading.
@@ -601,8 +601,8 @@ public class SchemaLoader {
 
   /**
    * Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically,
-   * you will need, as indicated on the release notes, to run this method after updating the
-   * ScalarDB version of your application environment.
+   * as indicated in the release notes, you will need to run this method after updating the ScalarDB
+   * version that your application environment uses.
    *
    * @param configProperties ScalarDB config properties.
    * @param options specific options for upgrading.
