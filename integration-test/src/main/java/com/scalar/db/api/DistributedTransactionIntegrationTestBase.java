@@ -599,6 +599,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
             .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
             .build();
     transaction.put(put);
     transaction.commit();
@@ -839,7 +840,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
     // Arrange
     populateRecords();
-    Put put = preparePut(0, 0).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Put put =
+        Put.newBuilder(preparePut(0, 0))
+            .intValue(BALANCE, INITIAL_BALANCE - 100)
+            .enableImplicitPreRead()
+            .build();
     Delete delete = prepareDelete(1, 0);
 
     DistributedTransaction transaction = manager.begin();
@@ -1126,6 +1131,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
                         ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                     .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
                     .build())
+            .enableImplicitPreRead()
             .build();
 
     // Act
@@ -1150,6 +1156,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         Put.newBuilder(put)
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
             .build();
 
     // Act
@@ -1170,7 +1177,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
       throws TransactionException {
     // Arrange
     Put putIfNotExists =
-        Put.newBuilder(preparePut(0, 0)).condition(ConditionBuilder.putIfNotExists()).build();
+        Put.newBuilder(preparePut(0, 0))
+            .condition(ConditionBuilder.putIfNotExists())
+            .enableImplicitPreRead()
+            .build();
 
     // Act
     put(putIfNotExists);
@@ -1235,6 +1245,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         Put.newBuilder(preparePut(0, 0))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullInt()).build())
+            .enableImplicitPreRead()
             .build();
 
     // Act Assert
@@ -1252,6 +1263,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
         Put.newBuilder(preparePut(0, 0))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
             .build();
 
     // Act Assert
@@ -1267,7 +1279,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     Put put = preparePut(0, 0);
     put(put);
-    Put putIfNotExists = Put.newBuilder(put).condition(ConditionBuilder.putIfNotExists()).build();
+    Put putIfNotExists =
+        Put.newBuilder(put)
+            .condition(ConditionBuilder.putIfNotExists())
+            .enableImplicitPreRead()
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> put(putIfNotExists)).isInstanceOf(UnsatisfiedConditionException.class);
@@ -1336,6 +1352,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
                         ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                     .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
                     .build())
+            .enableImplicitPreRead()
             .build();
 
     // Act Assert

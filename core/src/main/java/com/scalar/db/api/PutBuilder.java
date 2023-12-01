@@ -83,7 +83,7 @@ public class PutBuilder {
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
-    boolean implicitPreReadEnabled = true;
+    boolean implicitPreReadEnabled;
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -205,6 +205,12 @@ public class PutBuilder {
     @Override
     public Buildable disableImplicitPreRead() {
       implicitPreReadEnabled = false;
+      return this;
+    }
+
+    @Override
+    public Buildable enableImplicitPreRead() {
+      implicitPreReadEnabled = true;
       return this;
     }
 
@@ -410,13 +416,19 @@ public class PutBuilder {
     }
 
     @Override
-    public Buildable disableImplicitPreRead() {
+    public BuildableFromExisting disableImplicitPreRead() {
       super.disableImplicitPreRead();
       return this;
     }
 
     @Override
-    public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
+    public BuildableFromExisting enableImplicitPreRead() {
+      super.enableImplicitPreRead();
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting implicitPreReadEnabled(boolean implicitPreReadEnabled) {
       super.implicitPreReadEnabled(implicitPreReadEnabled);
       return this;
     }

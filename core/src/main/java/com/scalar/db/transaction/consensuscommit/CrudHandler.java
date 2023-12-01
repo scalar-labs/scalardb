@@ -171,15 +171,20 @@ public class CrudHandler {
   }
 
   public void put(Put put) throws CrudException {
-    if (put.getCondition().isPresent() && !put.isImplicitPreReadEnabled()) {
-      throw new IllegalArgumentException(
-          "Put cannot have a condition when implicit pre-read is disabled: " + put);
-    }
-
     Snapshot.Key key = new Snapshot.Key(put);
 
+    if (put.getCondition().isPresent()
+        && (!put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key))) {
+      throw new IllegalArgumentException(
+          "Put cannot have a condition when the target record is unread and implicit pre-read is disabled."
+              + " Please read the target record beforehand or enable implicit pre-read: "
+              + put);
+    }
+
     if (put.getCondition().isPresent()) {
-      readUnread(key, createGet(key));
+      if (put.isImplicitPreReadEnabled()) {
+        readUnread(key, createGet(key));
+      }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           put, snapshot.getFromReadSet(key).orElse(null));
     }

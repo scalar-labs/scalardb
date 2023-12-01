@@ -1247,7 +1247,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldUpdateRecord()
+  public void putAndCommit_PutWithImplicitPreReadEnabledGivenForExisting_ShouldUpdateRecord()
       throws TransactionException, ExecutionException {
     // Arrange
     populateRecordsWithNullMetadata(namespace1, TABLE_1);
@@ -1256,7 +1256,10 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
     // Act
     int expected = INITIAL_BALANCE + 100;
-    Put put = preparePut(0, 0, expected, namespace1, TABLE_1);
+    Put put =
+        Put.newBuilder(preparePut(0, 0, expected, namespace1, TABLE_1))
+            .enableImplicitPreRead()
+            .build();
     transaction.put(put);
     transaction.commit();
 

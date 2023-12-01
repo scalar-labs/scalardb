@@ -503,8 +503,9 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void put_PutWithConditionGiven_WithResultInReadSet_ShouldCallAppropriateMethods()
-      throws CrudException {
+  public void
+      put_PutWithConditionAndImplicitPreReadEnabledGiven_WithResultInReadSet_ShouldCallAppropriateMethods()
+          throws CrudException {
     // Arrange
     Put put =
         Put.newBuilder()
@@ -512,6 +513,7 @@ public class CrudHandlerTest {
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
     when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
@@ -539,8 +541,9 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void put_PutWithConditionGiven_WithoutResultInReadSet_ShouldCallAppropriateMethods()
-      throws CrudException {
+  public void
+      put_PutWithConditionAndImplicitPreReadEnabledGiven_WithoutResultInReadSet_ShouldCallAppropriateMethods()
+          throws CrudException {
     // Arrange
     Put put =
         Put.newBuilder()
@@ -548,10 +551,13 @@ public class CrudHandlerTest {
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
     when(snapshot.containsKeyInReadSet(any())).thenReturn(false);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
+    TransactionResult result = mock(TransactionResult.class);
+    when(result.isCommitted()).thenReturn(true);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
 
     Get getForKey =
         Get.newBuilder()
@@ -569,13 +575,50 @@ public class CrudHandlerTest {
     // Assert
     verify(spied).readUnread(key, getForKey);
     verify(snapshot).getFromReadSet(key);
-    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, null);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
     verify(snapshot).put(key, put);
   }
 
   @Test
   public void
-      put_PutWithImplicitPreReadDisabledAndConditionGiven_ShouldThrowIllegalArgumentException() {
+      put_PutWithConditionAndImplicitPreReadDisabledGiven_WithResultInReadSet_ShouldCallAppropriateMethods()
+          throws CrudException {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("c1", "foo"))
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    Snapshot.Key key = new Snapshot.Key(put);
+    when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
+    TransactionResult result = mock(TransactionResult.class);
+    when(result.isCommitted()).thenReturn(true);
+    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+
+    CrudHandler spied = spy(handler);
+
+    // Act
+    spied.put(put);
+
+    // Assert
+    verify(spied, never()).readUnread(key, getForKey);
+    verify(snapshot).getFromReadSet(key);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
+    verify(snapshot).put(key, put);
+  }
+
+  @Test
+  public void
+      put_PutWithConditionAndImplicitPreReadDisabledGiven_WithoutResultInReadSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     Put put =
         Put.newBuilder()
