@@ -31,6 +31,10 @@ public class ScannerImpl implements Scanner {
     results = stream.openScanner(scan);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   @Override
   public Optional<Result> one() throws ExecutionException {
     if (results.isEmpty()) {

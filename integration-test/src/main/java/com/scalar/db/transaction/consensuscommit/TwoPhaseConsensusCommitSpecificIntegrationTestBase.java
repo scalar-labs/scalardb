@@ -1100,7 +1100,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldUpdateRecord()
+  public void putAndCommit_PutWithImplicitPreReadEnabledGivenForExisting_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
     populate(manager1, namespace1, TABLE_1);
@@ -1109,7 +1109,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     // Act
     int afterBalance = INITIAL_BALANCE + 100;
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, afterBalance));
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, afterBalance)
+            .enableImplicitPreRead()
+            .build();
+    transaction.put(put);
     transaction.prepare();
     transaction.commit();
 

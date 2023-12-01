@@ -250,6 +250,34 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Repair a namespace
+
+If a namespace is in an unknown state, such as the namespace exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the namespace and its metadata if necessary.
+
+You can repair the namespace as follows:
+
+```java
+// Repair the namespace "ns" with options.
+Map<String, String> options = ...;
+admin.repairNamespace("ns", options);
+```
+
+### Repair a table
+
+If a table is in an unknown state, such as the table exists in the underlying storage but not its ScalarDB metadata or vice versa, this method will re-create the table, its secondary indexes, and their metadata if necessary.
+
+You can repair the table as follows:
+
+```java
+// Repair the table "ns.tbl" with options.
+TableMetadata tableMetadata =
+    TableMetadata.newBuilder()
+        ...
+        .build();
+Map<String, String> options = ...;
+admin.repairTable("ns", "tbl", tableMetadata, options);
+```
+
 ### Specify operations for the Coordinator table
 
 The Coordinator table is used by the [Transactional API](#transactional-api) to track the statuses of transactions.
@@ -294,6 +322,25 @@ admin.dropCoordinatorTables();
 boolean ifExist = true;
 admin.dropCoordinatorTables(ifExist);
 ```
+
+### Import a table
+
+You can import an existing table to ScalarDB as follows:
+
+```java
+// Import the table "ns.tbl". If the table is already managed by ScalarDB, the target table does not
+// exist, or the table does not meet the requirements of the ScalarDB table, an exception will be thrown.
+admin.importTable("ns", "tbl", options);
+```
+
+{% capture notice--warning %}
+**Attention**
+
+You should carefully plan to import a table to ScalarDB in production because it will add transaction metadata columns to your database tables and the ScalarDB metadata tables. In this case, there would also be several differences between your database and ScalarDB, as well as some limitations. For details, see [Importing Existing Tables to ScalarDB by Using ScalarDB Schema Loader](./schema-loader-import.md).
+
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 ## Transactional API
 
@@ -621,9 +668,21 @@ You can't specify clustering-key boundaries and orderings in `Scan` by using a s
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-##### Execute `Scan` without specifying a partition key to retrieve all the records of a table
+##### Execute cross-partition `Scan` without specifying a partition key to retrieve all the records of a table
 
-You can execute a `Scan` operation without specifying a partition key.
+You can execute a `Scan` operation across all partitions, which we call *cross-partition scan*, without specifying a partition key by enabling the following configuration in the ScalarDB properties file.
+
+```properties
+scalar.db.cross_partition_scan.enabled=true
+```
+
+{% capture notice--warning %}
+**Attention**
+
+For non-JDBC databases, we do not recommend enabling cross-partition scan with the `SERIALIAZABLE` isolation level because transactions could be executed at a lower isolation level (that is, `SNAPSHOT`). When using non-JDBC databases, use cross-partition scan at your own risk only if consistency does not matter for your transactions.
+{% endcapture %}
+
+<div class="notice--warning">{{ notice--warning | markdownify }}</div>
 
 Instead of calling the `partitionKey()` method in the builder, you can call the `all()` method to scan a table without specifying a partition key as follows:
 
@@ -645,14 +704,82 @@ List<Result> results = transaction.scan(scan);
 {% capture notice--info %}
 **Note**
 
-You can't specify clustering-key boundaries and orderings in `Scan` without specifying a partition key.
+You can't specify any filtering conditions and orderings in cross-partition `Scan` except for when using JDBC databases. For details on how to use cross-partition `Scan` with filtering or ordering for JDBC databases, see [Execute cross-partition `Scan` with filtering and ordering](#execute-cross-partition-scan-with-filtering-and-ordering).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
+##### Execute cross-partition `Scan` with filtering and ordering
+
+By enabling the cross-partition scan option with filtering and ordering for JDBC databases as follows, you can execute a cross-partition `Scan` operation with flexible conditions and orderings:
+
+```properties
+scalar.db.cross_partition_scan.enabled=true
+scalar.db.cross_partition_scan.filtering.enabled=true
+scalar.db.cross_partition_scan.ordering.enabled=true
+```
+
+You can call the `where()` and `ordering()` methods after calling the `all()` method to specify arbitrary conditions and orderings as follows:
+
+```java
+// Create a `Scan` operation with arbitrary conditions and orderings.
+Scan scan =
+    Scan.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .all()
+        .where(ConditionBuilder.column("c1").isNotEqualToInt(10))
+        .projections("c1", "c2", "c3", "c4")
+        .orderings(Scan.Ordering.desc("c3"), Scan.Ordering.asc("c4"))
+        .limit(10)
+        .build();
+
+// Execute the `Scan` operation.
+List<Result> results = transaction.scan(scan);
+```
+
+As an argument of the `where()` method, you can specify a condition, an and-wise condition set, or an or-wise condition set. After calling the `where()` method, you can add more conditions or condition sets by using the `and()` method or `or()` method as follows:
+
+```java
+// Create a `Scan` operation with condition sets.
+Scan scan =
+    Scan.newBuilder()
+        .namespace("ns")
+        .table("tbl")
+        .all()
+        .where(
+            ConditionSetBuilder.condition(ConditionBuilder.column("c1").isLessThanInt(10))
+                .or(ConditionBuilder.column("c1").isGreaterThanInt(20))
+                .build())
+        .and(
+            ConditionSetBuilder.condition(ConditionBuilder.column("c2").isLikeText("a%"))
+                .or(ConditionBuilder.column("c2").isLikeText("b%"))
+                .build())
+        .limit(10)
+        .build();
+```
+
+{% capture notice--info %}
+**Note**
+
+In the `where()` condition method chain, the conditions must be an and-wise junction of `ConditionalExpression` or `OrConditionSet` (known as conjunctive normal form) like the above example or an or-wise junction of `ConditionalExpression` or `AndConditionSet` (known as disjunctive normal form).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
+For more details about available conditions and condition sets, see the `ConditionBuilder` and `ConditionSetBuilder` page in the [Javadoc](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) of the version of ScalarDB that you're using.
+
 #### `Put` operation
 
 `Put` is an operation to put a record specified by a primary key. The operation behaves as an upsert operation for a record, in which the operation updates the record if the record exists or inserts the record if the record does not exist.
+
+{% capture notice--info %}
+**Note**
+
+When you update an existing record, you need to read the record by using `Get` or `Scan` before using a `Put` operation. Otherwise, the operation will fail due to a conflict. This occurs because of the specification of ScalarDB to manage transactions properly. Instead of reading the record explicitly, you can enable implicit pre-read. For details, see [Enable implicit pre-read for `Put` operations](#enable-implicit-pre-read-for-put-operations).
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 You need to create a `Put` object first, and then you can execute the object by using the `transaction.put()` method as follows:
 
@@ -689,13 +816,11 @@ Put put =
         .build();
 ```
 
-##### Disable implicit pre-read for `Put` operations
+##### Enable implicit pre-read for `Put` operations
 
-In Consensus Commit, an application must read a record before mutating the record with `Put` and `Delete` operations to obtain the latest states of the record if the record exists. If an application does not read the record explicitly in a transaction, ScalarDB will read the record on behalf of the application before committing the transaction. We call this feature *implicit pre-read*.
+In Consensus Commit, an application must read a record before mutating the record with `Put` and `Delete` operations to obtain the latest states of the record if the record exists. Instead of reading the record explicitly, you can enable *implicit pre-read*. By enabling implicit pre-read, if an application does not read the record explicitly in a transaction, ScalarDB will read the record on behalf of the application before committing the transaction.
 
-If you are certain that a record you are trying to mutate does not exist, you can disable implicit pre-read for the `Put` operation for better performance. For example, if you load initial data, you can and should disable implicit pre-read. A `Put` operation without implicit pre-read is faster than a regular `Put` operation because the operation skips an unnecessary read. However, if the record exists, the operation will fail due to a conflict. This occurs because ScalarDB assumes that another transaction wrote the record.
-
-You can disable implicit pre-read for a `Put` operation by specifying `disableImplicitPreRead()` in the `Put` operation builder as follows:
+You can enable implicit pre-read for a `Put` operation by specifying `enableImplicitPreRead()` in the `Put` operation builder as follows:
 
 ```java
 Put put =
@@ -706,13 +831,29 @@ Put put =
         .clusteringKey(clusteringKey)
         .floatValue("c4", 1.23F)
         .doubleValue("c5", 4.56)
-        .disableImplicitPreRead()
+        .enableImplicitPreRead()
         .build();
 ```
+
+{% capture notice--info %}
+**Note**
+
+If you are certain that a record you are trying to mutate does not exist, you should not enable implicit pre-read for the `Put` operation for better performance. For example, if you load initial data, you should not enable implicit pre-read. A `Put` operation without implicit pre-read is faster than `Put` operation with implicit pre-read because the operation skips an unnecessary read.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 #### `Delete` operation
 
 `Delete` is an operation to delete a record specified by a primary key.
+
+{% capture notice--info %}
+**Note**
+
+When you delete a record, you don't have to read the record beforehand because implicit pre-read is always enabled for `Delete` operations.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 You need to create a `Delete` object first, and then you can execute the object by using the `transaction.delete()` method as follows:
 
@@ -738,6 +879,15 @@ transaction.delete(delete);
 You can write arbitrary conditions (for example, a bank account balance must be equal to or more than zero) that you require a transaction to meet before being committed by implementing logic that checks the conditions in the transaction. Alternatively, you can write simple conditions in a mutation operation, such as `Put` and `Delete`.
 
 When a `Put` or `Delete` operation includes a condition, the operation is executed only if the specified condition is met. If the condition is not met when the operation is executed, an exception called `UnsatisfiedConditionException` will be thrown.
+
+{% capture notice--info %}
+**Note**
+
+When you specify a condition in a `Put` operation, you need to read the record beforehand or enable implicit pre-read.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
+
 
 ##### Conditions for `Put`
 

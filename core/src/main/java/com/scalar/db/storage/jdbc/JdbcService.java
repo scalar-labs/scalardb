@@ -18,7 +18,6 @@ import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -123,18 +122,9 @@ public class JdbcService {
 
   private SelectQuery buildSelectQuery(Scan scan, TableMetadata tableMetadata) {
     if (scan instanceof ScanAll) {
-      ScanAll scanAll = (ScanAll) scan;
-      if (ScalarDbUtils.isRelational(scan)) {
-        return buildSelectQueryForRelationalScan(scanAll, tableMetadata);
-      } else {
-        return buildSelectQueryForScanAll(scanAll, tableMetadata);
-      }
-    } else {
-      return buildSelectQueryForScan(scan, tableMetadata);
+      return buildSelectQuery((ScanAll) scan, tableMetadata);
     }
-  }
 
-  private SelectQuery buildSelectQueryForScan(Scan scan, TableMetadata tableMetadata) {
     return queryBuilder
         .select(scan.getProjections())
         .from(scan.forNamespace().get(), scan.forTable().get(), tableMetadata)
@@ -149,15 +139,7 @@ public class JdbcService {
         .build();
   }
 
-  private SelectQuery buildSelectQueryForScanAll(ScanAll scanAll, TableMetadata tableMetadata) {
-    return queryBuilder
-        .select(scanAll.getProjections())
-        .from(scanAll.forNamespace().get(), scanAll.forTable().get(), tableMetadata)
-        .limit(scanAll.getLimit())
-        .build();
-  }
-
-  private SelectQuery buildSelectQueryForRelationalScan(ScanAll scan, TableMetadata tableMetadata) {
+  private SelectQuery buildSelectQuery(ScanAll scan, TableMetadata tableMetadata) {
     return queryBuilder
         .select(scan.getProjections())
         .from(scan.forNamespace().get(), scan.forTable().get(), tableMetadata)

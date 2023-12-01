@@ -516,6 +516,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
             .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
             .build();
     transaction.put(put);
     transaction.prepare();
@@ -788,7 +789,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
-    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE - 100)
+            .enableImplicitPreRead()
+            .build();
     Delete delete = prepareDelete(1, 0, namespace1, TABLE_1);
 
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -819,7 +824,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecords(manager2, namespace2, TABLE_2);
 
-    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE - 100)
+            .enableImplicitPreRead()
+            .build();
     Delete delete = prepareDelete(1, 0, namespace2, TABLE_2);
 
     TwoPhaseCommitTransaction transaction1 = manager1.begin();
@@ -871,7 +880,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecords(manager2, namespace2, TABLE_2);
 
-    Put put = preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE - 100)
+            .enableImplicitPreRead()
+            .build();
     Delete delete = prepareDelete(1, 0, namespace2, TABLE_2);
 
     TwoPhaseCommitTransaction transaction1 = manager1.begin();
@@ -1356,6 +1369,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                         ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                     .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
                     .build())
+            .enableImplicitPreRead()
             .build();
 
     // Act
@@ -1389,6 +1403,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                         ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                     .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
                     .build())
+            .enableImplicitPreRead()
             .build();
 
     // Act Assert
@@ -1412,6 +1427,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullText()).build())
+            .enableImplicitPreRead()
             .build();
 
     // Act Assert
@@ -1429,6 +1445,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
             .build();
 
     // Act Assert
@@ -1447,6 +1464,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         Put.newBuilder(put)
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
             .build();
 
     // Act
@@ -1469,6 +1487,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     Put putIfNotExists =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
             .condition(ConditionBuilder.putIfNotExists())
+            .enableImplicitPreRead()
             .build();
 
     // Act
@@ -1494,6 +1513,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         Put.newBuilder(put)
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(ConditionBuilder.putIfNotExists())
+            .enableImplicitPreRead()
             .build();
 
     // Act Assert

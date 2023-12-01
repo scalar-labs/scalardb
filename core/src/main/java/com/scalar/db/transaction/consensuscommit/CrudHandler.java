@@ -104,11 +104,12 @@ public class CrudHandler {
     List<Result> results = scanInternal(scan);
 
     // We verify if this scan does not overlap previous writes after the actual scan. For a
-    // relational scan, this must be done here, using the obtained keys in the scan set and scan
-    // condition. This is because the condition (i.e., where clause) is arbitrary in the relational
-    // scan, and thus, the write command may not have columns used in the condition, which are
-    // necessary to determine overlaps. For a scan with clustering keys, we can determine overlaps
-    // without the actual scan, but we also check it here for consistent logic and readability.
+    // cross-partition scan, this must be done here, using the obtained keys in the scan set and
+    // scan condition. This is because the condition (i.e., where clause) is arbitrary in the
+    // cross-partition scan, and thus, the write command may not have columns used in the condition,
+    // which are necessary to determine overlaps. For a scan with clustering keys, we can determine
+    // overlaps without the actual scan, but we also check it here for consistent logic and
+    // readability.
     snapshot.verify(scan);
 
     return results;
@@ -170,15 +171,20 @@ public class CrudHandler {
   }
 
   public void put(Put put) throws CrudException {
-    if (put.getCondition().isPresent() && !put.isImplicitPreReadEnabled()) {
-      throw new IllegalArgumentException(
-          "Put cannot have a condition when implicit pre-read is disabled: " + put);
-    }
-
     Snapshot.Key key = new Snapshot.Key(put);
 
+    if (put.getCondition().isPresent()
+        && (!put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key))) {
+      throw new IllegalArgumentException(
+          "Put cannot have a condition when the target record is unread and implicit pre-read is disabled."
+              + " Please read the target record beforehand or enable implicit pre-read: "
+              + put);
+    }
+
     if (put.getCondition().isPresent()) {
-      readUnread(key, createGet(key));
+      if (put.isImplicitPreReadEnabled()) {
+        readUnread(key, createGet(key));
+      }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           put, snapshot.getFromReadSet(key).orElse(null));
     }

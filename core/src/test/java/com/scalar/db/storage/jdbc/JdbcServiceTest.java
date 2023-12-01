@@ -141,6 +141,8 @@ public class JdbcServiceTest {
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
 
@@ -158,7 +160,8 @@ public class JdbcServiceTest {
   }
 
   @Test
-  public void whenGetScannerExecuted_withRelationalScan_shouldCallQueryBuilder() throws Exception {
+  public void whenGetScannerExecuted_withCrossPartitionScan_shouldCallQueryBuilder()
+      throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
@@ -222,6 +225,8 @@ public class JdbcServiceTest {
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
 
@@ -239,7 +244,7 @@ public class JdbcServiceTest {
   }
 
   @Test
-  public void whenScanExecuted_withRelationalScan_shouldCallQueryBuilder() throws Exception {
+  public void whenScanExecuted_withCrossPartitionScan_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);

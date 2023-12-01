@@ -1178,6 +1178,7 @@ public abstract class CosmosAdminTestBase {
             tableMetadataContainer,
             namespacesContainer,
             namespacesContainer);
+    @SuppressWarnings("unchecked")
     CosmosPagedIterable<CosmosTableMetadata> cosmosPagedIterable = mock(CosmosPagedIterable.class);
     CosmosTableMetadata tableMetadata1 = CosmosTableMetadata.newBuilder().id("ns1.tbl1").build();
     CosmosTableMetadata tableMetadata2 = CosmosTableMetadata.newBuilder().id("ns1.tbl2").build();

@@ -43,6 +43,10 @@ public class SchemaOperator implements AutoCloseable {
     this(StorageFactory.create(properties), TransactionFactory.create(properties));
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   @VisibleForTesting
   SchemaOperator(StorageFactory storageFactory, TransactionFactory transactionFactory) {
     storageAdmin =

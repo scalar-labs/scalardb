@@ -9,7 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 public class JdbcProvider implements DistributedStorageProvider {
   @Override
   public String getName() {
-    return "jdbc";
+    return JdbcConfig.STORAGE_NAME;
   }
 
   @Override
