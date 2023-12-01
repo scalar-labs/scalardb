@@ -911,7 +911,7 @@ public class ProtoUtilsTest {
                             .build())
                     .build())
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_EVENTUAL)
-            .setImplicitPreReadEnabled(false)
+            .setImplicitPreReadEnabled(true)
             .setNamespace("ns")
             .setTable("tbl")
             .build();
@@ -945,7 +945,7 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col7").isNotNullBlob())
                         .build())
                 .consistency(Consistency.EVENTUAL)
-                .disableImplicitPreRead()
+                .enableImplicitPreRead()
                 .build());
   }
 
@@ -1016,7 +1016,7 @@ public class ProtoUtilsTest {
                         .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF_NOT_EXISTS))
                 .setNamespace("ns")
                 .setTable("tbl")
-                .setImplicitPreReadEnabled(true)
+                .setImplicitPreReadEnabled(false)
                 .build());
   }
 
@@ -1057,7 +1057,7 @@ public class ProtoUtilsTest {
                 MutateCondition.newBuilder()
                     .setType(com.scalar.db.rpc.MutateCondition.Type.PUT_IF_NOT_EXISTS))
             .setConsistency(com.scalar.db.rpc.Consistency.CONSISTENCY_EVENTUAL)
-            .setImplicitPreReadEnabled(true)
+            .setImplicitPreReadEnabled(false)
             .setNamespace("ns")
             .setTable("tbl")
             .build();
@@ -1082,7 +1082,7 @@ public class ProtoUtilsTest {
                 .blobValue("col7", (byte[]) null)
                 .condition(ConditionBuilder.putIfNotExists())
                 .consistency(Consistency.EVENTUAL)
-                .implicitPreReadEnabled(true)
+                .disableImplicitPreRead()
                 .build());
   }
 
@@ -1317,7 +1317,7 @@ public class ProtoUtilsTest {
                         .and(ConditionBuilder.column("col5").isLessThanOrEqualToDouble(4.56))
                         .build())
                 .consistency(Consistency.EVENTUAL)
-                .implicitPreReadEnabled(true)
+                .enableImplicitPreRead()
                 .build());
   }
 
