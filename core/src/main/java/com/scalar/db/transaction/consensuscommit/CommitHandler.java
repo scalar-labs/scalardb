@@ -24,6 +24,7 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitAlreadyClosedException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
@@ -383,6 +384,10 @@ public class CommitHandler {
     } else {
       try {
         groupCommitter.ready(snapshot.getId(), snapshot);
+      } catch (GroupCommitAlreadyClosedException e) {
+        cancelGroupCommitIfNeeded(snapshot.getId());
+        throw new CommitConflictException(
+            "Group commit failed due to a conflict", e, snapshot.getId());
       } catch (GroupCommitException e) {
         cancelGroupCommitIfNeeded(snapshot.getId());
         throw new CommitException("Group commit failed", e, snapshot.getId());
