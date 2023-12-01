@@ -7,6 +7,8 @@ import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -51,7 +53,8 @@ public class GroupCommitter3<K, V> implements Closeable {
     // Buffers
     @Nullable private NormalBufferedValues<K, V> currentBufferedValues;
     private final Map<K, NormalBufferedValues<K, V>> bufferedValuesMap = new ConcurrentHashMap<>();
-    private final Map<K, SlowBufferedValue<K, V>> slowBufferedValueMap = new ConcurrentHashMap<>();
+    private final Map<K, DelayedBufferedValue<K, V>> delayedBufferedValueMap =
+        new ConcurrentHashMap<>();
 
     // Returns full key
     private synchronized K reserveNewValueSlot(K childKey)
@@ -82,8 +85,8 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     private BufferedValues<K, V> getBufferedValues(Keys<K> keys) throws GroupCommitException {
       NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
-      SlowBufferedValue<K, V> slowBufferedValue =
-          slowBufferedValueMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
+      DelayedBufferedValue<K, V> delayedBufferedValue =
+          delayedBufferedValueMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
       // Avoid the following cases to find the value slot corresponding to pk1:ck11
       // Case:1
       // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
@@ -100,8 +103,8 @@ public class GroupCommitter3<K, V> implements Closeable {
       // - bufValMap.get(pk1) and check if it contains ck11, but not found
       // - (slowBufValMap.get(pk1:ck11) should be called after bufValMap.get(pk1))
       // - return NONE
-      if (slowBufferedValue != null) {
-        return slowBufferedValue;
+      if (delayedBufferedValue != null) {
+        return delayedBufferedValue;
       }
       if (bufferedValues != null) {
         return bufferedValues;
@@ -112,32 +115,55 @@ public class GroupCommitter3<K, V> implements Closeable {
           "The buffer for the reserved value slot doesn't exist. keys:" + keys);
     }
 
-    private void moveDelayedValueSlotsToDelayedBufferValues(
-        NormalBufferedValues<K, V> bufferedValues) {
-      for (Entry<K, ValueSlot<K, V>> entry : bufferedValues.valueSlots.entrySet()) {
-        ValueSlot<K, V> valueSlot = entry.getValue();
-        K childKey = valueSlot.key;
-        K fullKey = valueSlot.getFullKey();
-        if (valueSlot.value == null) {
-          SlowBufferedValue<K, V> newSlowBufferedValue =
-              new SlowBufferedValue<>(
-                  fullKey,
-                  emitExecutorService,
-                  emitter,
-                  keyManipulator,
-                  sizeFixExpirationInMillis,
-                  timeoutExpirationInMillis,
-                  valueSlot);
-          SlowBufferedValue<K, V> old = slowBufferedValueMap.put(fullKey, newSlowBufferedValue);
-          if (old != null) {
-            logger.warn("The slow buffer value map already has the same key buffer. {}", old);
+    // TODO: Create cleanup queue and worker to call this
+    private void unregisterBufferedValues(Keys<K> keys) throws GroupCommitException {
+      K fullKey = keyManipulator.createFullKey(keys.parentKey, keys.childKey);
+      NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
+      if (bufferedValues != null) {
+        synchronized (bufferedValues) {
+          if (bufferedValues.isDone()) {
+            bufferedValuesMap.remove(fullKey);
           }
-          bufferedValues.removeValueSlot(childKey);
-          logger.info(
-              "Moved a value slot from bufferedValues to slow buffered values. valueSlot:{}",
-              valueSlot);
         }
       }
+
+      DelayedBufferedValue<K, V> delayedBufferedValue = delayedBufferedValueMap.get(fullKey);
+      if (delayedBufferedValue != null) {
+        synchronized (delayedBufferedValue) {
+          if (delayedBufferedValue.isDone()) {
+            delayedBufferedValueMap.remove(fullKey);
+          }
+        }
+      }
+
+      if (bufferedValues == null && delayedBufferedValue == null) {
+        // TODO: Revisit this exception class
+        throw new GroupCommitException(
+            "The buffer for the reserved value slot doesn't exist. keys:" + keys);
+      }
+    }
+
+    private void moveDelayedValueSlotsToDelayedBufferValues(
+        NormalBufferedValues<K, V> bufferedValues) {
+      List<ValueSlot<K, V>> notReadyValueSlots = bufferedValues.removeNotReadyValueSlots();
+      for (ValueSlot<K, V> notReadyValueSlot : notReadyValueSlots) {
+        K fullKey = notReadyValueSlot.getFullKey();
+        DelayedBufferedValue<K, V> newDelayedBufferedValue =
+            new DelayedBufferedValue<>(
+                fullKey,
+                emitExecutorService,
+                emitter,
+                keyManipulator,
+                sizeFixExpirationInMillis,
+                timeoutExpirationInMillis,
+                notReadyValueSlot);
+        DelayedBufferedValue<K, V> old =
+            delayedBufferedValueMap.put(fullKey, newDelayedBufferedValue);
+        if (old != null) {
+          logger.warn("The slow buffer value map already has the same key buffer. {}", old);
+        }
+      }
+      // TODO: Replace this with cleanup queue and worker
       if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
         bufferedValuesMap.remove(bufferedValues.key);
         logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
@@ -162,7 +188,6 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     public synchronized void putValue(V value) {
       this.value = Objects.requireNonNull(value);
-      parentBuffer.notifyOfReadyValue();
     }
 
     public void waitUntilEmit() throws GroupCommitException, GroupCommitCascadeException {
@@ -249,12 +274,12 @@ public class GroupCommitter3<K, V> implements Closeable {
             "The size of 'valueSlot' is already fixed. buffer:" + this);
       }
       valueSlots.put(valueSlot.key, valueSlot);
-      if (noMoreSlot()) {
-        fixSize();
-      }
       ///////// FIXME: DEBUG
       logger.info("RESERVE:{}, CHILDKEY:{}", this, valueSlot.key);
       ///////// FIXME: DEBUG
+      if (noMoreSlot()) {
+        fixSize();
+      }
       return valueSlot.getFullKey();
     }
 
@@ -263,13 +288,19 @@ public class GroupCommitter3<K, V> implements Closeable {
         throw new GroupCommitAlreadyClosedException(
             "This value slot buffer is already closed. buffer:" + this);
       }
-      ValueSlot<K, V> valueSlot = valueSlots.get(childKey);
-      if (valueSlot == null) {
-        // TODO: Revisit this exception class (e.g., NotFoundException)
-        throw new GroupCommitException(
-            "The value slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
+
+      ValueSlot<K, V> valueSlot;
+      // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
+      synchronized (this) {
+        valueSlot = valueSlots.get(childKey);
+        if (valueSlot == null) {
+          // TODO: Revisit this exception class (e.g., NotFoundException)
+          throw new GroupCommitException(
+              "The value slot doesn't exist. fullKey:"
+                  + keyManipulator.createFullKey(key, childKey));
+        }
+        valueSlot.putValue(value);
       }
-      valueSlot.putValue(value);
       asyncEmitIfReady();
       ///////// FIXME: DEBUG
       logger.info("PUT VALUE:{}, CHILDKEY:{}", this, childKey);
@@ -412,10 +443,28 @@ public class GroupCommitter3<K, V> implements Closeable {
         throws GroupCommitAlreadySizeFixedException {
       return reserveNewValueSlot(new ValueSlot<>(childKey, this));
     }
+
+    public synchronized List<ValueSlot<K, V>> removeNotReadyValueSlots() {
+      // Lazy instantiation might be better, but it's likely there is a not-ready value slot since
+      // it's already timed-out.
+      List<ValueSlot<K, V>> removed = new ArrayList<>();
+      for (Entry<K, ValueSlot<K, V>> entry : valueSlots.entrySet()) {
+        ValueSlot<K, V> valueSlot = entry.getValue();
+        K childKey = valueSlot.key;
+        if (valueSlot.value == null) {
+          removed.add(valueSlot);
+          removeValueSlot(childKey);
+          logger.info(
+              "Removed a value slot from bufferedValues to move it to slow buffered values. valueSlot:{}",
+              valueSlot);
+        }
+      }
+      return removed;
+    }
   }
 
-  private static class SlowBufferedValue<K, V> extends BufferedValues<K, V> {
-    SlowBufferedValue(
+  private static class DelayedBufferedValue<K, V> extends BufferedValues<K, V> {
+    DelayedBufferedValue(
         K fullKey,
         ExecutorService executorService,
         Emittable<K, V> emitter,
@@ -662,6 +711,8 @@ public class GroupCommitter3<K, V> implements Closeable {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
     BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
     try {
+      // TODO: This can throw an exception in a race condition when the value slot is moved to
+      // delayed buffer values. So, retry should be needed.
       bufferedValues.putValueToSlotAndWait(keys.childKey, value);
     } catch (GroupCommitAlreadyClosedException e) {
       // TODO: Move the slow transaction to a new small buffer
