@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// TODO: K should be separate into PARENT_KEY, CHILD_KEY and FULL_KEY
 public class GroupCommitter3<K, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
   // Queues
