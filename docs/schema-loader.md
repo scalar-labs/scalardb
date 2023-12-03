@@ -452,7 +452,7 @@ You can import an existing table in JDBC databases to ScalarDB by using the `--i
 
 ### Upgrade the environment to support the latest ScalarDB API
 
-You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically, as indicated in the release notes, you will need to run this method after updating the ScalarDB version that your application environment uses.
+You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically, as indicated in the release notes, you will need to run this command after updating the ScalarDB version that your application environment uses. When running the following command, be sure to replace the contents in the angle brackets as described:
 
 ```console
 $ java -jar scalardb-schema-loader-<VERSION>.jar --config <PATH_TO_SCALARDB_PROPERTIES_FILE> --upgrade
