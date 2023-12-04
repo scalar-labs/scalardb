@@ -6,10 +6,10 @@ import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -79,15 +79,19 @@ class GroupCommitter3Test {
     int maxCommitWaitInMillis = 40;
     Random rand = new Random();
     AtomicInteger retry = new AtomicInteger();
-    Set<String> emittedKeys = new CopyOnWriteArraySet<>();
+    Map<String, Boolean> emittedKeys = new ConcurrentHashMap<>();
 
     GroupCommitter3<String, Value> groupCommitter =
         new GroupCommitter3<>("test", 10, 400, 32, 5, 64, new MyKeyManipulator());
     groupCommitter.setEmitter(
         ((parentKey, values) -> {
-          TimeUnit.MILLISECONDS.sleep(rand.nextInt(maxCommitWaitInMillis));
+          try {
+            TimeUnit.MILLISECONDS.sleep(rand.nextInt(maxCommitWaitInMillis));
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
           for (Value v : values) {
-            if (!emittedKeys.add(v.v)) {
+            if (emittedKeys.put(v.v, true) != null) {
               throw new RuntimeException(v + " is already set");
             }
           }
@@ -148,16 +152,20 @@ class GroupCommitter3Test {
         throw e;
       }
     }
+    System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
+    System.err.println("Retry: " + retry.get());
 
+    start = System.currentTimeMillis();
     for (int i = 0; i < numOfRequests; i++) {
       String expectedKey = "ORIG-KEY: " + String.format("%016d", i);
-      if (!emittedKeys.contains(expectedKey)) {
+      if (!emittedKeys.containsKey(expectedKey)) {
         throw new AssertionError(expectedKey + " is not found");
       }
+      // System.err.println("Confirmed the key is contained: Key=" + expectedKey);
     }
     assertEquals(numOfRequests, emittedKeys.size());
 
+    System.err.println("Checked all the keys");
     System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
-    System.err.println("Retry: " + retry.get());
   }
 }
