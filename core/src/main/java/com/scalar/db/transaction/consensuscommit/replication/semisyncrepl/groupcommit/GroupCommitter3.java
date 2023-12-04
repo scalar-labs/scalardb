@@ -8,6 +8,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupc
 import java.io.Closeable;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -53,9 +54,9 @@ public class GroupCommitter3<K, V> implements Closeable {
   private class BuffersManager {
     // Buffers
     @Nullable private NormalBufferedValues<K, V> currentBufferedValues;
-    private final Map<K, NormalBufferedValues<K, V>> bufferedValuesMap = new ConcurrentHashMap<>();
-    private final Map<K, DelayedBufferedValue<K, V>> delayedBufferedValueMap =
-        new ConcurrentHashMap<>();
+    // Using ConcurrentHashMap results in less performance.
+    private final Map<K, NormalBufferedValues<K, V>> bufferedValuesMap = new HashMap<>();
+    private final Map<K, DelayedBufferedValue<K, V>> delayedBufferedValueMap = new HashMap<>();
 
     // Returns full key
     private synchronized K reserveNewValueSlot(K childKey)
@@ -84,7 +85,9 @@ public class GroupCommitter3<K, V> implements Closeable {
       return currentBufferedValues.reserveNewValueSlot(childKey);
     }
 
-    private BufferedValues<K, V> getBufferedValues(Keys<K> keys) throws GroupCommitException {
+    private synchronized BufferedValues<K, V> getBufferedValues(Keys<K> keys)
+        throws GroupCommitException {
+      // TODO: The following logic can be simplified since it's in synchronized block
       NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
       DelayedBufferedValue<K, V> delayedBufferedValue =
           delayedBufferedValueMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
@@ -117,7 +120,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     // TODO: Create cleanup queue and worker to call this
-    private void unregisterBufferedValues(Keys<K> keys) throws GroupCommitException {
+    private synchronized void unregisterBufferedValues(Keys<K> keys) throws GroupCommitException {
       K fullKey = keyManipulator.createFullKey(keys.parentKey, keys.childKey);
       NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
       if (bufferedValues != null) {
@@ -144,7 +147,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     }
 
-    private void moveDelayedValueSlotsToDelayedBufferValues(
+    private synchronized void moveDelayedValueSlotsToDelayedBufferValues(
         NormalBufferedValues<K, V> bufferedValues) {
       List<ValueSlot<K, V>> notReadyValueSlots = bufferedValues.removeNotReadyValueSlots();
       for (ValueSlot<K, V> notReadyValueSlot : notReadyValueSlots) {
