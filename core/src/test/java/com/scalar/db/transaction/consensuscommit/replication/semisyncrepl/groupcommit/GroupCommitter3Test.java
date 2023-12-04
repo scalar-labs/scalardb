@@ -149,7 +149,9 @@ class GroupCommitter3Test {
       groupCommitter.setEmitter(
           ((parentKey, values) -> {
             try {
-              TimeUnit.MILLISECONDS.sleep(bmMaxCommitWaitInMillis);
+              if (bmMaxCommitWaitInMillis > 0) {
+                TimeUnit.MILLISECONDS.sleep(bmMaxCommitWaitInMillis);
+              }
             } catch (InterruptedException e) {
               throw new RuntimeException(e);
             }
@@ -189,8 +191,10 @@ class GroupCommitter3Test {
                               (int)
                                   (bmAveragePrepareWaitInMillis
                                       + rand.nextGaussian() * bmMultiplexerInMillis);
-                          TimeUnit.MILLISECONDS.sleep(
-                              Math.max(waitInMillis, bmAveragePrepareWaitInMillis));
+                          if (waitInMillis > 0 || bmAveragePrepareWaitInMillis > 0) {
+                            TimeUnit.MILLISECONDS.sleep(
+                                Math.max(waitInMillis, bmAveragePrepareWaitInMillis));
+                          }
                           groupCommitter.ready(fullKey, value);
                           break;
                         } catch (GroupCommitAlreadyClosedException
