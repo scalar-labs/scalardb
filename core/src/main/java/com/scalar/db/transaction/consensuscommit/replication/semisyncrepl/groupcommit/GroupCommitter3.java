@@ -15,7 +15,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,7 +22,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -168,6 +166,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         }
       }
       // TODO: Replace this with cleanup queue and worker
+      // FIXME: stream() is a bit slow
       if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
         bufferedValuesMap.remove(bufferedValues.key);
         logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
@@ -239,9 +238,9 @@ public class GroupCommitter3<K, V> implements Closeable {
           .add("ready", isReady())
           .add("sizeFixed", isSizeFixed())
           .add("valueSlots.size", valueSlots.size())
-          .add(
-              "valueSlots.size(ready)",
-              valueSlots.values().stream().filter(v -> v.value != null).count())
+          //          .add(
+          //              "valueSlots.size(ready)",
+          //              valueSlots.values().stream().filter(v -> v.value != null).count())
           .toString();
     }
 
@@ -260,7 +259,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       this.sizeFixedAt = Instant.now().plusMillis(sizeFixExpirationInMillis);
       this.timeoutAt = Instant.now().plusMillis(timeoutExpirationInMillis);
       this.key = key;
-      this.valueSlots = new ConcurrentHashMap<>(capacity);
+      this.valueSlots = new HashMap<>(capacity);
     }
 
     public K getFullKey(K childKey) {
@@ -403,9 +402,12 @@ public class GroupCommitter3<K, V> implements Closeable {
                 logger.info("EMIT: buffer={}", this);
                 ////// FIXME: DEBUG
                 long startEmit = System.currentTimeMillis();
-                emitter.execute(
-                    key,
-                    valueSlots.values().stream().map(vs -> vs.value).collect(Collectors.toList()));
+                List<V> values = new ArrayList<>(valueSlots.size());
+                // Avoid using java.util.Collection.stream since it's a bit slow
+                for (ValueSlot<K, V> valueSlot : valueSlots.values()) {
+                  values.add(valueSlot.value);
+                }
+                emitter.execute(key, values);
                 logger.info(
                     "Emitted (thread_id:{}, num_of_values:{}): {} ms",
                     Thread.currentThread().getId(),
@@ -482,11 +484,14 @@ public class GroupCommitter3<K, V> implements Closeable {
         K childKey = valueSlot.key;
         if (valueSlot.value == null) {
           removed.add(valueSlot);
-          removeValueSlot(childKey);
-          logger.info(
-              "Removed a value slot from bufferedValues to move it to slow buffered values. valueSlot:{}",
-              valueSlot);
         }
+      }
+
+      for (ValueSlot<K, V> valueSlot : removed) {
+        removeValueSlot(valueSlot.key);
+        logger.info(
+            "Removed a value slot from bufferedValues to move it to slow buffered values. valueSlot:{}",
+            valueSlot);
       }
       return removed;
     }
