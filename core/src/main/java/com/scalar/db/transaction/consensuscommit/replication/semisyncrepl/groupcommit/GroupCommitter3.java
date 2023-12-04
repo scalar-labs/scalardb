@@ -305,9 +305,13 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
-      ValueSlot<K, V> valueSlot = putValueToSlot(childKey, value);
+      ValueSlot<K, V> valueSlot;
+      synchronized (this) {
+        valueSlot = putValueToSlot(childKey, value);
 
-      asyncEmitIfReady();
+        // This is in this block since it results in better performance
+        asyncEmitIfReady();
+      }
       ///////// FIXME: DEBUG
       logger.info("PUT VALUE:{}, CHILDKEY:{}", this, childKey);
       ///////// FIXME: DEBUG
@@ -326,11 +330,12 @@ public class GroupCommitter3<K, V> implements Closeable {
       synchronized (this) {
         // Current ValueSlot that `index` is pointing is not used yet.
         size.set(valueSlots.size());
+        ////// FIXME: DEBUG
+        logger.info("GC FIX-SIZE: buffer={}", this);
+        ////// FIXME: DEBUG
+        // This is in this block since it results in better performance
+        asyncEmitIfReady();
       }
-      ////// FIXME: DEBUG
-      logger.info("GC FIX-SIZE: buffer={}", this);
-      ////// FIXME: DEBUG
-      asyncEmitIfReady();
     }
 
     public boolean isSizeFixed() {
@@ -363,16 +368,17 @@ public class GroupCommitter3<K, V> implements Closeable {
             size.set(size.get() - 1);
           }
         }
+        ////// FIXME: DEBUG
+        logger.info(
+            "REMOVE VS: key={}, childKey={}, valueSlotsSize={}, size={}",
+            this.key,
+            childKey,
+            valueSlots.size(),
+            size.get());
+        ////// FIXME: DEBUG
+        // This is in this block since it results in better performance
+        asyncEmitIfReady();
       }
-      ////// FIXME: DEBUG
-      logger.info(
-          "REMOVE VS: key={}, childKey={}, valueSlotsSize={}, size={}",
-          this.key,
-          childKey,
-          valueSlots.size(),
-          size.get());
-      ////// FIXME: DEBUG
-      asyncEmitIfReady();
     }
 
     public synchronized void asyncEmitIfReady() {
