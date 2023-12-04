@@ -1,7 +1,5 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
@@ -17,9 +15,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.Test;
 
-class GroupCommitter3Test {
+class GroupCommitterBench {
   static class MyKeyManipulator implements KeyManipulator<String> {
     @Override
     public String createParentKey() {
@@ -69,7 +66,6 @@ class GroupCommitter3Test {
 
   // $ ./gradlew core:cleanTest core:test --tests
   // 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3Test'
-  @Test
   void benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     // Warmup
     benchmarkInternal(
@@ -233,10 +229,20 @@ class GroupCommitter3Test {
         }
         // System.err.println("Confirmed the key is contained: Key=" + expectedKey);
       }
-      assertEquals(bmNumOfRequests, emittedKeys.size());
+
+      if (bmNumOfRequests != emittedKeys.size()) {
+        throw new AssertionError(
+            String.format(
+                "bmNumOfRequests:%d, emittedKeys.size():%d", bmNumOfRequests, emittedKeys.size()));
+      }
 
       System.err.println("Checked all the keys");
       System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
     }
+  }
+
+  public static void main(String[] args)
+      throws ExecutionException, InterruptedException, TimeoutException {
+    new GroupCommitterBench().benchmark();
   }
 }
