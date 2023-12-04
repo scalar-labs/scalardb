@@ -187,7 +187,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       return parentBuffer.getFullKey(key);
     }
 
-    public synchronized void putValue(V value) {
+    public void putValue(V value) {
       this.value = Objects.requireNonNull(value);
     }
 
@@ -264,17 +264,19 @@ public class GroupCommitter3<K, V> implements Closeable {
       return keyManipulator.createFullKey(key, childKey);
     }
 
-    public synchronized boolean noMoreSlot() {
+    public boolean noMoreSlot() {
       return valueSlots.size() >= capacity;
     }
 
-    protected synchronized K reserveNewValueSlot(ValueSlot<K, V> valueSlot)
+    protected K reserveNewValueSlot(ValueSlot<K, V> valueSlot)
         throws GroupCommitAlreadySizeFixedException {
-      if (isSizeFixed()) {
-        throw new GroupCommitAlreadySizeFixedException(
-            "The size of 'valueSlot' is already fixed. buffer:" + this);
+      synchronized (this) {
+        if (isSizeFixed()) {
+          throw new GroupCommitAlreadySizeFixedException(
+              "The size of 'valueSlot' is already fixed. buffer:" + this);
+        }
+        valueSlots.put(valueSlot.key, valueSlot);
       }
-      valueSlots.put(valueSlot.key, valueSlot);
       ///////// FIXME: DEBUG
       logger.info("RESERVE:{}, CHILDKEY:{}", this, valueSlot.key);
       ///////// FIXME: DEBUG
@@ -284,24 +286,27 @@ public class GroupCommitter3<K, V> implements Closeable {
       return valueSlot.getFullKey();
     }
 
-    public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
+    // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
+    private synchronized ValueSlot<K, V> putValueToSlot(K childKey, V value)
+        throws GroupCommitException {
       if (isDone()) {
         throw new GroupCommitAlreadyClosedException(
             "This value slot buffer is already closed. buffer:" + this);
       }
 
-      ValueSlot<K, V> valueSlot;
-      // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
-      synchronized (this) {
-        valueSlot = valueSlots.get(childKey);
-        if (valueSlot == null) {
-          // TODO: Revisit this exception class (e.g., NotFoundException)
-          throw new GroupCommitException(
-              "The value slot doesn't exist. fullKey:"
-                  + keyManipulator.createFullKey(key, childKey));
-        }
-        valueSlot.putValue(value);
+      ValueSlot<K, V> valueSlot = valueSlots.get(childKey);
+      if (valueSlot == null) {
+        // TODO: Revisit this exception class (e.g., NotFoundException)
+        throw new GroupCommitException(
+            "The value slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
       }
+      valueSlot.putValue(value);
+      return valueSlot;
+    }
+
+    public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
+      ValueSlot<K, V> valueSlot = putValueToSlot(childKey, value);
+
       asyncEmitIfReady();
       ///////// FIXME: DEBUG
       logger.info("PUT VALUE:{}, CHILDKEY:{}", this, childKey);
@@ -317,32 +322,46 @@ public class GroupCommitter3<K, V> implements Closeable {
           System.currentTimeMillis() - start);
     }
 
-    public synchronized void fixSize() {
-      // Current ValueSlot that `index` is pointing is not used yet.
-      size.set(valueSlots.size());
+    public void fixSize() {
+      synchronized (this) {
+        // Current ValueSlot that `index` is pointing is not used yet.
+        size.set(valueSlots.size());
+      }
       ////// FIXME: DEBUG
       logger.info("GC FIX-SIZE: buffer={}", this);
       ////// FIXME: DEBUG
       asyncEmitIfReady();
     }
 
-    public synchronized boolean isSizeFixed() {
+    public boolean isSizeFixed() {
       return size.get() != null;
     }
 
     public synchronized boolean isReady() {
-      return isSizeFixed()
-          && valueSlots.values().stream().filter(v -> v.value != null).count() >= size.get();
+      if (isSizeFixed()) {
+        int readySlotCount = 0;
+        for (ValueSlot<K, V> valueSlot : valueSlots.values()) {
+          if (valueSlot.value != null) {
+            readySlotCount++;
+            if (readySlotCount >= size.get()) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     }
 
-    public synchronized boolean isDone() {
+    public boolean isDone() {
       return done.get();
     }
 
-    public synchronized void removeValueSlot(K childKey) {
-      if (valueSlots.remove(childKey) != null) {
-        if (size.get() != null && size.get() > 0) {
-          size.set(size.get() - 1);
+    public void removeValueSlot(K childKey) {
+      synchronized (this) {
+        if (valueSlots.remove(childKey) != null) {
+          if (size.get() != null && size.get() > 0) {
+            size.set(size.get() - 1);
+          }
         }
       }
       ////// FIXME: DEBUG
@@ -363,6 +382,7 @@ public class GroupCommitter3<K, V> implements Closeable {
 
       if (isReady()) {
         if (valueSlots.isEmpty()) {
+          // In this case, each transaction has aborted with the full transaction ID.
           logger.warn("'valueSlots' is empty. Nothing to do. bufferedValue:{}", this);
           done.set(true);
           return;
@@ -440,8 +460,7 @@ public class GroupCommitter3<K, V> implements Closeable {
           capacity);
     }
 
-    public synchronized K reserveNewValueSlot(K childKey)
-        throws GroupCommitAlreadySizeFixedException {
+    public K reserveNewValueSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
       return reserveNewValueSlot(new ValueSlot<>(childKey, this));
     }
 

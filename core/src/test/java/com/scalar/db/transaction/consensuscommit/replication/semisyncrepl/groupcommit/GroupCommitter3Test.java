@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,35 +88,38 @@ class GroupCommitter3Test {
         100,
         64);
 
-    /*
-    // Benchmark for Micro-benchmark
-    benchmarkInternal(
-        // For Benchmarker:
-        // NumOfThreads,NumOfRequests
-        4096, 100000,
-        // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
-        0, 0, 0,
-        // For Group Commit
-        // NumOfRetentionValues,SizeFixExpirationInMillis,TimeoutExpirationInMillis,NumOfThreads
-        32, 80, 800, 64);
-     */
-
-    // Benchmark for Production case
-    benchmarkInternal(
-        // For Benchmarker:
-        // NumOfThreads,NumOfRequests
-        4096,
-        100000,
-        // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
-        40,
-        400,
-        40,
-        // For Group Commit
-        // NumOfRetentionValues,SizeFixExpirationInMillis,TimeoutExpirationInMillis,NumOfThreads
-        32,
-        80,
-        800,
-        64);
+    boolean microBenchmark = true;
+    if (microBenchmark) {
+      // Benchmark for Micro-benchmark
+      benchmarkInternal(
+          // For Benchmarker:
+          4096, // NumOfThreads
+          100000, // NumOfRequests
+          0, // AveragePrepareWaitInMillis
+          0, // MultiplexerInMillis
+          0, // MaxCommitWaitInMillis
+          // For Group Commit
+          32, // NumOfRetentionValues
+          80, // SizeFixExpirationInMillis
+          800, // TimeoutExpirationInMillis
+          64 // NumOfThreads
+          );
+    } else {
+      // Benchmark for Production case
+      benchmarkInternal(
+          // For Benchmarker:
+          4096, // NumOfThreads
+          100000, // NumOfRequests
+          40, // AveragePrepareWaitInMillis
+          400, // MultiplexerInMillis
+          40, // MaxCommitWaitInMillis
+          // For Group Commit
+          32, // NumOfRetentionValues
+          80, // SizeFixExpirationInMillis
+          800, // TimeoutExpirationInMillis
+          64 // NumOfThreads
+          );
+    }
   }
 
   void benchmarkInternal(
@@ -159,11 +161,13 @@ class GroupCommitter3Test {
           }));
 
       List<KeyAndFuture> futures = new ArrayList<>();
+      /*
       ScheduledExecutorService monitor =
           Executors.newSingleThreadScheduledExecutor(
               new ThreadFactoryBuilder().setDaemon(true).build());
       monitor.scheduleAtFixedRate(
           () -> System.err.println("future.size:" + futures.size()), 1, 1, TimeUnit.SECONDS);
+       */
 
       ExecutorService executorService =
           Executors.newFixedThreadPool(
