@@ -93,7 +93,7 @@ class GroupCommitter3Test {
       // Benchmark for Micro-benchmark
       benchmarkInternal(
           // For Benchmarker:
-          4096, // NumOfThreads
+          32, // NumOfThreads
           100000, // NumOfRequests
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
