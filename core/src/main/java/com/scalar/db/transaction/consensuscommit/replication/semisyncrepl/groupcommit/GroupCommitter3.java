@@ -219,7 +219,7 @@ public class GroupCommitter3<K, V> implements Closeable {
   protected abstract static class BufferedValues<K, V> {
     private final ExecutorService executorService;
     private final Emittable<K, V> emitter;
-    private final KeyManipulator<K> keyManipulator;
+    protected final KeyManipulator<K> keyManipulator;
     private final int capacity;
     private final AtomicReference<Integer> size = new AtomicReference<>();
     protected final K key;
@@ -234,6 +234,7 @@ public class GroupCommitter3<K, V> implements Closeable {
           .add("key", key)
           .add("hashCode", hashCode())
           .add("expiredAt", sizeFixedAt)
+          .add("timeoutAt", timeoutAt)
           .add("done", isDone())
           .add("ready", isReady())
           .add("sizeFixed", isSizeFixed())
@@ -262,9 +263,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       this.valueSlots = new HashMap<>(capacity);
     }
 
-    public K getFullKey(K childKey) {
-      return keyManipulator.createFullKey(key, childKey);
-    }
+    public abstract K getFullKey(K childKey);
 
     public boolean noMoreSlot() {
       return valueSlots.size() >= capacity;
@@ -322,9 +321,9 @@ public class GroupCommitter3<K, V> implements Closeable {
       valueSlot.waitUntilEmit();
 
       logger.info(
-          "Waited(thread_id:{}, key:{}): {} ms",
-          getFullKey(childKey),
+          "Waited(thread_id:{}, childKey:{}): {} ms",
           Thread.currentThread().getId(),
+          childKey,
           System.currentTimeMillis() - start);
     }
 
@@ -471,6 +470,10 @@ public class GroupCommitter3<K, V> implements Closeable {
           capacity);
     }
 
+    public K getFullKey(K childKey) {
+      return keyManipulator.createFullKey(key, childKey);
+    }
+
     public K reserveNewValueSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
       return reserveNewValueSlot(new ValueSlot<>(childKey, this));
     }
@@ -521,6 +524,10 @@ public class GroupCommitter3<K, V> implements Closeable {
         throw new IllegalStateException(
             "Failed to reserve a value slot. This shouldn't happen. valueSlot:" + valueSlot, e);
       }
+    }
+
+    public K getFullKey(K childKey) {
+      throw new AssertionError("This method must not be called in this class");
     }
   }
 
@@ -605,9 +612,12 @@ public class GroupCommitter3<K, V> implements Closeable {
       } else {
         // Not expired. Retry
         retryWaitInMillis =
-            Math.max(
-                bufferedValues.sizeFixedAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
-                expirationCheckIntervalInMillis);
+            // FIXME
+            //            Math.max(
+            //
+            // bufferedValues.sizeFixedAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
+            //                expirationCheckIntervalInMillis);
+            expirationCheckIntervalInMillis;
       }
     }
 
@@ -646,6 +656,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
+    logger.info("[TIMEOUT] NEW BV:{}, SIZE:{}", bufferedValues, queueForTimeout.size());
     if (lastDebugPrintForTimeoutQueue + 1000 < System.currentTimeMillis()) {
       logger.info("[TIMEOUT] QUEUE STATUS: size={}", queueForTimeout.size());
       lastDebugPrintForTimeoutQueue = System.currentTimeMillis();
@@ -653,7 +664,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     ////////// FIXME: DEBUG LOG
 
     if (bufferedValues == null) {
-      retryWaitInMillis = expirationCheckIntervalInMillis;
+      retryWaitInMillis = expirationCheckIntervalInMillis * 2;
     } else if (bufferedValues.isReady()) {
       // Already ready. Nothing to do. Handle a next element immediately
     } else {
@@ -663,9 +674,12 @@ public class GroupCommitter3<K, V> implements Closeable {
       } else {
         // Not expired. Retry
         retryWaitInMillis =
-            Math.max(
-                bufferedValues.timeoutAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
-                expirationCheckIntervalInMillis);
+            // FIXME
+            //            Math.max(
+            //
+            // bufferedValues.timeoutAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
+            //                expirationCheckIntervalInMillis);
+            expirationCheckIntervalInMillis * 2;
       }
     }
 
