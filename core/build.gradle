@@ -246,5 +246,11 @@ if (!project.gradle.startParameter.taskNames.isEmpty() &&
 // TODO: This is for replication test. Remove this.
 application {
     mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitterBench'
-    applicationDefaultJvmArgs = ['-Dorg.slf4j.simpleLogger.defaultLogLevel=INFO', '-Dorg.slf4j.simpleLogger.showDateTime=true', '-Dorg.slf4j.simpleLogger.dateTimeFormat=yyyy-MM-dd HH:mm:ss:SSS Z']
+    applicationDefaultJvmArgs = [
+      '-Dorg.slf4j.simpleLogger.defaultLogLevel=INFO',
+      '-Dorg.slf4j.simpleLogger.showDateTime=true',
+      '-Dorg.slf4j.simpleLogger.dateTimeFormat=yyyy-MM-dd HH:mm:ss:SSS Z',
+      '-XX:+PrintGCDateStamps',
+      '-Xloggc:/tmp/gc.log'
+    ]
 }
