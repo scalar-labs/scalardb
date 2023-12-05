@@ -35,8 +35,8 @@ public final class CosmosEnv {
     if (databasePrefix.isPresent()) {
       // Add the prefix and testName as a metadata database suffix
       props.setProperty(
-          CosmosConfig.METADATA_DATABASE,
-          databasePrefix.get() + CosmosAdmin.METADATA_DATABASE + "_" + testName);
+          DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+          databasePrefix.get() + DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
       props.setProperty(
           ConsensusCommitConfig.COORDINATOR_NAMESPACE,
@@ -44,7 +44,8 @@ public final class CosmosEnv {
     } else {
       // Add testName as a metadata database suffix
       props.setProperty(
-          CosmosConfig.METADATA_DATABASE, CosmosAdmin.METADATA_DATABASE + "_" + testName);
+          DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+          DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
     }
 
     return props;

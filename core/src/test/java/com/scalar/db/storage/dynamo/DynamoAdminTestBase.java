@@ -71,9 +71,11 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 /**
  * Abstraction that defines unit tests for the {@link DynamoAdmin}. The class purpose is to be able
  * to run the {@link DynamoAdmin} unit tests with different values for the {@link DynamoConfig},
- * notably {@link DynamoConfig#NAMESPACE_PREFIX} and {@link DynamoConfig#METADATA_NAMESPACE}
+ * notably {@link DynamoConfig#NAMESPACE_PREFIX}.
  */
 public abstract class DynamoAdminTestBase {
+
+  private static final String METADATA_NAMESPACE = "scalardb";
 
   private static final String NAMESPACE = "namespace";
   private static final String TABLE = "table";
@@ -89,7 +91,7 @@ public abstract class DynamoAdminTestBase {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(config.getNamespacePrefix()).thenReturn(getNamespacePrefixConfig());
-    when(config.getMetadataNamespace()).thenReturn(getMetadataNamespaceConfig());
+    when(config.getMetadataNamespace()).thenReturn(METADATA_NAMESPACE);
 
     // prepare tableIsActiveResponse
     TableDescription tableDescription = mock(TableDescription.class);
@@ -108,13 +110,6 @@ public abstract class DynamoAdminTestBase {
   }
 
   /**
-   * This sets the {@link DynamoConfig#METADATA_NAMESPACE} value that will be used to run the tests
-   *
-   * @return {@link DynamoConfig#METADATA_NAMESPACE} value
-   */
-  abstract Optional<String> getMetadataNamespaceConfig();
-
-  /**
    * This sets the {@link DynamoConfig#NAMESPACE_PREFIX} value that will be used to run the tests
    *
    * @return {@link DynamoConfig#NAMESPACE_PREFIX} value
@@ -131,16 +126,20 @@ public abstract class DynamoAdminTestBase {
 
   private String getFullMetadataTableName() {
     return getNamespacePrefixConfig().orElse("")
-        + getMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
+        + METADATA_NAMESPACE
         + "."
         + DynamoAdmin.METADATA_TABLE;
   }
 
   private String getFullNamespaceTableName() {
     return getNamespacePrefixConfig().orElse("")
-        + getMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
+        + METADATA_NAMESPACE
         + "."
         + DynamoAdmin.NAMESPACES_TABLE;
+  }
+
+  private String getPrefixedMetadataNamespace() {
+    return getNamespacePrefixConfig().orElse("") + METADATA_NAMESPACE;
   }
 
   @Test
@@ -1330,6 +1329,15 @@ public abstract class DynamoAdminTestBase {
                 .item(
                     ImmutableMap.of(
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedMetadataNamespace()).build()))
+                .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .item(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s(getPrefixedNamespace()).build()))
                 .build());
   }
@@ -1595,6 +1603,15 @@ public abstract class DynamoAdminTestBase {
                 .item(
                     ImmutableMap.of(
                         DynamoAdmin.NAMESPACES_ATTR_NAME,
+                        AttributeValue.builder().s(getPrefixedMetadataNamespace()).build()))
+                .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullNamespaceTableName())
+                .item(
+                    ImmutableMap.of(
+                        DynamoAdmin.NAMESPACES_ATTR_NAME,
                         AttributeValue.builder().s(getPrefixedNamespace()).build()))
                 .build());
   }
@@ -1721,15 +1738,23 @@ public abstract class DynamoAdminTestBase {
                 .build());
     ArgumentCaptor<PutItemRequest> putItemRequestCaptor =
         ArgumentCaptor.forClass(PutItemRequest.class);
-    verify(client, times(2)).putItem(putItemRequestCaptor.capture());
+
+    verify(client, times(3)).putItem(putItemRequestCaptor.capture());
     PutItemRequest actualPutItemRequest1 = putItemRequestCaptor.getAllValues().get(0);
     assertThat(actualPutItemRequest1.tableName()).isEqualTo(getFullNamespaceTableName());
     assertThat(actualPutItemRequest1.item())
         .containsExactly(
-            entry(DynamoAdmin.NAMESPACES_ATTR_NAME, AttributeValue.builder().s("ns1").build()));
+            entry(
+                DynamoAdmin.NAMESPACES_ATTR_NAME,
+                AttributeValue.builder().s(getPrefixedMetadataNamespace()).build()));
     PutItemRequest actualPutItemRequest2 = putItemRequestCaptor.getAllValues().get(1);
     assertThat(actualPutItemRequest2.tableName()).isEqualTo(getFullNamespaceTableName());
     assertThat(actualPutItemRequest2.item())
+        .containsExactly(
+            entry(DynamoAdmin.NAMESPACES_ATTR_NAME, AttributeValue.builder().s("ns1").build()));
+    PutItemRequest actualPutItemRequest3 = putItemRequestCaptor.getAllValues().get(2);
+    assertThat(actualPutItemRequest3.tableName()).isEqualTo(getFullNamespaceTableName());
+    assertThat(actualPutItemRequest3.item())
         .containsExactly(
             entry(DynamoAdmin.NAMESPACES_ATTR_NAME, AttributeValue.builder().s("ns2").build()));
   }

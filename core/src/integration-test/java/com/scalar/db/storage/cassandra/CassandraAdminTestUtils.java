@@ -17,16 +17,14 @@ public class CassandraAdminTestUtils extends AdminTestUtils {
     DatabaseConfig databaseConfig = new DatabaseConfig(properties);
     clusterManager = new ClusterManager(databaseConfig);
     CassandraConfig cassandraConfig = new CassandraConfig(databaseConfig);
-    metadataKeyspace =
-        cassandraConfig.getMetadataKeyspace().orElse(CassandraAdmin.METADATA_KEYSPACE);
+    metadataKeyspace = cassandraConfig.getMetadataKeyspace();
   }
 
   public CassandraAdminTestUtils(Properties properties, ClusterManager clusterManager) {
     super(properties);
     this.clusterManager = clusterManager;
     CassandraConfig cassandraConfig = new CassandraConfig(new DatabaseConfig(properties));
-    metadataKeyspace =
-        cassandraConfig.getMetadataKeyspace().orElse(CassandraAdmin.METADATA_KEYSPACE);
+    metadataKeyspace = cassandraConfig.getMetadataKeyspace();
   }
 
   @Override

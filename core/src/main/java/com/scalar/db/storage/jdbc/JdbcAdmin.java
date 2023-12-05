@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
-  public static final String METADATA_SCHEMA = "scalardb";
   public static final String METADATA_TABLE = "metadata";
 
   @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
@@ -68,14 +67,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     JdbcConfig config = new JdbcConfig(databaseConfig);
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-    metadataSchema = config.getMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema = config.getMetadataSchema();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema = config.getMetadataSchema();
   }
 
   @Override
@@ -947,6 +946,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   void createNamespacesTableIfNotExists(Connection connection) throws ExecutionException {
+    if (tableExistsInternal(connection, metadataSchema, NAMESPACES_TABLE)) {
+      return;
+    }
+
     try {
       createSchemaIfNotExists(connection, metadataSchema);
       String createTableStatement =
@@ -961,6 +964,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               + enclose(NAMESPACE_COL_NAMESPACE_NAME)
               + "))";
       createTable(connection, createTableStatement, true);
+
+      // Insert the system namespace to the namespaces table
+      insertIntoNamespacesTable(connection, metadataSchema);
     } catch (SQLException e) {
       throw new ExecutionException("Creating the namespace table failed", e);
     }

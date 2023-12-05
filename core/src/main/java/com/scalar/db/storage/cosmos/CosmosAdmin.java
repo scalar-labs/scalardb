@@ -52,7 +52,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public static final String NO_SCALING = "no-scaling";
   public static final String DEFAULT_NO_SCALING = "false";
 
-  public static final String METADATA_DATABASE = "scalardb";
   public static final String TABLE_METADATA_CONTAINER = "metadata";
   public static final String NAMESPACES_CONTAINER = "namespaces";
   private static final String ID = "id";
@@ -78,12 +77,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
-    metadataDatabase = config.getMetadataDatabase().orElse(METADATA_DATABASE);
+    metadataDatabase = config.getMetadataDatabase();
   }
 
   CosmosAdmin(CosmosClient client, CosmosConfig config) {
     this.client = client;
-    metadataDatabase = config.getMetadataDatabase().orElse(METADATA_DATABASE);
+    metadataDatabase = config.getMetadataDatabase();
   }
 
   @Override
@@ -675,10 +674,17 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   private void createMetadataDatabaseAndNamespaceContainerIfNotExists() {
+    if (containerExists(metadataDatabase, NAMESPACES_CONTAINER)) {
+      return;
+    }
+
     ThroughputProperties manualThroughput =
         ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_REQUEST_UNIT));
     client.createDatabaseIfNotExists(metadataDatabase, manualThroughput);
     client.getDatabase(metadataDatabase).createContainerIfNotExists(NAMESPACES_CONTAINER, "/id");
+
+    // Insert the system namespace to the namespaces table
+    getNamespacesContainer().createItem(new CosmosNamespace(metadataDatabase));
   }
 
   private CosmosContainer getNamespacesContainer() {

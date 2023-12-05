@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
-import com.scalar.db.storage.cosmos.CosmosConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.HashMap;
@@ -102,8 +101,8 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
     // For test
     if (tableMetadataDatabasePrefix != null) {
       props.setProperty(
-          CosmosConfig.METADATA_DATABASE,
-          tableMetadataDatabasePrefix + CosmosAdmin.METADATA_DATABASE);
+          DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+          tableMetadataDatabasePrefix + DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     }
     if (coordinatorNamespacePrefix != null) {
       props.setProperty(

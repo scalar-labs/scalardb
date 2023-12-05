@@ -107,7 +107,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private static final String SCALING_TYPE_INDEX_READ = "index-read";
   private static final String SCALING_TYPE_INDEX_WRITE = "index-write";
 
-  public static final String METADATA_NAMESPACE = "scalardb";
   public static final String METADATA_TABLE = "metadata";
   @VisibleForTesting static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
   @VisibleForTesting static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
@@ -171,9 +170,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .build();
 
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace = config.getNamespacePrefix().orElse("") + config.getMetadataNamespace();
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -182,9 +179,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace = config.getNamespacePrefix().orElse("") + config.getMetadataNamespace();
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -196,9 +191,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       DynamoConfig config) {
     this.client = client;
     this.applicationAutoScalingClient = applicationAutoScalingClient;
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config.getMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace = config.getNamespacePrefix().orElse("") + config.getMetadataNamespace();
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = 0;
   }
@@ -1432,6 +1425,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                 .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
                 .build());
         waitForTableCreation(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
+
+        // Insert the system namespace to the namespaces table
+        upsertIntoNamespacesTable(Namespace.of(metadataNamespace));
       }
     } catch (Exception e) {
       throw new ExecutionException("Creating the namespaces table failed", e);

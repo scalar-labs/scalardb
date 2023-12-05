@@ -41,6 +41,8 @@ public class MultiStorageAdminIntegrationTest {
   private DistributedStorageAdmin jdbcAdmin;
   private MultiStorageAdmin multiStorageAdmin;
 
+  private String systemNamespaceName;
+
   @BeforeAll
   public void beforeAll() throws ExecutionException {
     initCassandraAdmin();
@@ -136,7 +138,10 @@ public class MultiStorageAdminIntegrationTest {
     // The default storage is cassandra
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
-    multiStorageAdmin = new MultiStorageAdmin(new DatabaseConfig(props));
+    DatabaseConfig databaseConfig = new DatabaseConfig(props);
+    multiStorageAdmin = new MultiStorageAdmin(databaseConfig);
+
+    systemNamespaceName = databaseConfig.getSystemNamespaceName();
   }
 
   @AfterAll
@@ -359,6 +364,6 @@ public class MultiStorageAdminIntegrationTest {
     Set<String> namespaces = multiStorageAdmin.getNamespaceNames();
 
     // Assert
-    assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2);
+    assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2, systemNamespaceName);
   }
 }

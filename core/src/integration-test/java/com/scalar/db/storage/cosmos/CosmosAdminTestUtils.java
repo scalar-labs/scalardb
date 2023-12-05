@@ -32,10 +32,7 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
-    metadataDatabase =
-        new CosmosConfig(new DatabaseConfig(properties))
-            .getMetadataDatabase()
-            .orElse(CosmosAdmin.METADATA_DATABASE);
+    metadataDatabase = config.getMetadataDatabase();
   }
 
   @Override

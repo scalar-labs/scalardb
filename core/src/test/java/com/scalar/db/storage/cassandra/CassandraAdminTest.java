@@ -44,7 +44,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import org.assertj.core.api.Assertions;
@@ -54,42 +53,25 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-/**
- * Abstraction that defines unit tests for the {@link CassandraAdmin}. The class purpose is to be
- * able to run the {@link CassandraAdmin} unit tests with different values for the {@link
- * CassandraAdmin}, notably {@link CassandraAdmin#METADATA_KEYSPACE}.
- */
-public abstract class CassandraAdminTestBase {
+public class CassandraAdminTest {
+
+  private static final String METADATA_KEYSPACE = "scalardb";
 
   private CassandraAdmin cassandraAdmin;
-  private String metadataKeyspaceName;
   @Mock private ClusterManager clusterManager;
   @Mock private Session cassandraSession;
   @Mock private Cluster cluster;
   @Mock private Metadata metadata;
   @Mock private KeyspaceMetadata keyspaceMetadata;
 
-  /**
-   * This sets the {@link CassandraConfig#METADATA_KEYSPACE} value that will be used to run the
-   * tests.
-   *
-   * @return {@link CassandraConfig#METADATA_KEYSPACE} value
-   */
-  abstract Optional<String> getMetadataKeyspaceConfig();
-
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(clusterManager.getSession()).thenReturn(cassandraSession);
     Properties cassandraConfigProperties = new Properties();
-    getMetadataKeyspaceConfig()
-        .ifPresent(
-            metadataKeyspace ->
-                cassandraConfigProperties.setProperty(
-                    CassandraConfig.METADATA_KEYSPACE, metadataKeyspace));
+    cassandraConfigProperties.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, METADATA_KEYSPACE);
     cassandraAdmin =
         new CassandraAdmin(clusterManager, new DatabaseConfig(cassandraConfigProperties));
-    metadataKeyspaceName = getMetadataKeyspaceConfig().orElse(CassandraAdmin.METADATA_KEYSPACE);
   }
 
   @Test
@@ -141,6 +123,7 @@ public abstract class CassandraAdminTestBase {
     verify(cassandraSession).execute(query.getQueryString());
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
@@ -170,6 +153,7 @@ public abstract class CassandraAdminTestBase {
     verify(cassandraSession).execute(query.getQueryString());
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
@@ -193,6 +177,7 @@ public abstract class CassandraAdminTestBase {
     verify(cassandraSession).execute(query.getQueryString());
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
@@ -216,12 +201,13 @@ public abstract class CassandraAdminTestBase {
     verify(cassandraSession).execute(query.getQueryString());
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
   private void verifyCreateMetadataKeyspaceQuery(Map<String, Object> replicationOptions) {
     CreateKeyspace query =
-        SchemaBuilder.createKeyspace(quoteIfNecessary(metadataKeyspaceName)).ifNotExists();
+        SchemaBuilder.createKeyspace(quoteIfNecessary(METADATA_KEYSPACE)).ifNotExists();
     String queryString = query.with().replication(replicationOptions).getQueryString();
     verify(cassandraSession).execute(queryString);
   }
@@ -229,9 +215,8 @@ public abstract class CassandraAdminTestBase {
   private void verifyCreateKeyspacesTableQuery() {
     String query =
         SchemaBuilder.createTable(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
-            .ifNotExists()
             .addPartitionKey(
                 CassandraAdmin.NAMESPACES_NAME_COL, com.datastax.driver.core.DataType.text())
             .getQueryString();
@@ -241,7 +226,7 @@ public abstract class CassandraAdminTestBase {
   private void verifyInsertIntoKeyspacesTableQuery(String keyspace) {
     String query =
         QueryBuilder.insertInto(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .value(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
             .toString();
@@ -520,7 +505,7 @@ public abstract class CassandraAdminTestBase {
     String query =
         QueryBuilder.delete()
             .from(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
             .toString();
@@ -531,7 +516,7 @@ public abstract class CassandraAdminTestBase {
     String query =
         QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .limit(1)
             .getQueryString();
@@ -539,8 +524,7 @@ public abstract class CassandraAdminTestBase {
   }
 
   private void verifyDropMetadataKeyspaceQuery() {
-    String query =
-        SchemaBuilder.dropKeyspace(quoteIfNecessary(metadataKeyspaceName)).getQueryString();
+    String query = SchemaBuilder.dropKeyspace(quoteIfNecessary(METADATA_KEYSPACE)).getQueryString();
     verify(cassandraSession).execute(query);
   }
 
@@ -614,11 +598,11 @@ public abstract class CassandraAdminTestBase {
     // Assert
     assertThat(cassandraAdmin.namespaceExists(namespace)).isTrue();
 
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
+    verify(clusterManager).getMetadata(METADATA_KEYSPACE, CassandraAdmin.NAMESPACES_TABLE);
     String query =
         QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
             .toString();
@@ -640,11 +624,11 @@ public abstract class CassandraAdminTestBase {
     // Assert
     assertThat(cassandraAdmin.namespaceExists(namespace)).isFalse();
 
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
+    verify(clusterManager).getMetadata(METADATA_KEYSPACE, CassandraAdmin.NAMESPACES_TABLE);
     String query =
         QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
             .toString();
@@ -662,7 +646,7 @@ public abstract class CassandraAdminTestBase {
     // Assert
     assertThat(cassandraAdmin.namespaceExists(namespace)).isFalse();
 
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
+    verify(clusterManager).getMetadata(METADATA_KEYSPACE, CassandraAdmin.NAMESPACES_TABLE);
   }
 
   @Test
@@ -786,7 +770,7 @@ public abstract class CassandraAdminTestBase {
 
     // Assert
     assertThat(actualKeyspaceNames).isEmpty();
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
+    verify(clusterManager).getMetadata(METADATA_KEYSPACE, CassandraAdmin.NAMESPACES_TABLE);
   }
 
   @Test
@@ -808,11 +792,11 @@ public abstract class CassandraAdminTestBase {
 
     // Assert
     assertThat(actualKeyspaceNames).containsOnly("ns1", "ns2");
-    verify(clusterManager).getMetadata(metadataKeyspaceName, CassandraAdmin.NAMESPACES_TABLE);
+    verify(clusterManager).getMetadata(METADATA_KEYSPACE, CassandraAdmin.NAMESPACES_TABLE);
     String selectQuery =
         QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .getQueryString();
     verify(cassandraSession).execute(selectQuery);
@@ -861,6 +845,7 @@ public abstract class CassandraAdminTestBase {
     verify(cassandraSession).execute(query.getQueryString());
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
@@ -887,6 +872,7 @@ public abstract class CassandraAdminTestBase {
     verify(cassandraSession).execute(query.getQueryString());
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
@@ -916,6 +902,7 @@ public abstract class CassandraAdminTestBase {
     verify(cassandraSession).execute(query.getQueryString());
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
     verifyInsertIntoKeyspacesTableQuery(namespace);
   }
 
@@ -940,7 +927,7 @@ public abstract class CassandraAdminTestBase {
     when(metadata.getKeyspaces())
         .thenReturn(ImmutableList.of(keyspace1, keyspace2, keyspace3, keyspace4));
     when(keyspace1.getName()).thenReturn("system_foo");
-    when(keyspace2.getName()).thenReturn(metadataKeyspaceName);
+    when(keyspace2.getName()).thenReturn(METADATA_KEYSPACE);
     when(keyspace3.getName()).thenReturn("ks1");
     when(keyspace4.getName()).thenReturn("ks2");
 
@@ -953,17 +940,18 @@ public abstract class CassandraAdminTestBase {
     replicationOptions.put("replication_factor", replicationFactor);
     verifyCreateMetadataKeyspaceQuery(replicationOptions);
     verifyCreateKeyspacesTableQuery();
-    verify(clusterManager, times(5)).getSession();
+    verifyInsertIntoKeyspacesTableQuery(METADATA_KEYSPACE);
+    verify(clusterManager, times(6)).getSession();
     String upsertKs1Query =
         QueryBuilder.insertInto(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .value(CassandraAdmin.NAMESPACES_NAME_COL, "ks1")
             .toString();
 
     String upsertKs2Query =
         QueryBuilder.insertInto(
-                quoteIfNecessary(metadataKeyspaceName),
+                quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
             .value(CassandraAdmin.NAMESPACES_NAME_COL, "ks2")
             .toString();

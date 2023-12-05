@@ -40,7 +40,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String REPLICATION_STRATEGY = "replication-strategy";
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
-  public static final String METADATA_KEYSPACE = "scalardb";
   public static final String NAMESPACES_TABLE = "namespaces";
   public static final String NAMESPACES_NAME_COL = "name";
   private static final String DEFAULT_REPLICATION_FACTOR = "3";
@@ -56,7 +55,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
     this.clusterManager = clusterManager;
     CassandraConfig cassandraConfig = new CassandraConfig(config);
-    metadataKeyspace = cassandraConfig.getMetadataKeyspace().orElse(METADATA_KEYSPACE);
+    metadataKeyspace = cassandraConfig.getMetadataKeyspace();
   }
 
   @Override
@@ -427,13 +426,19 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   private void createNamespacesTableIfNotExists() {
+    if (clusterManager.getMetadata(metadataKeyspace, NAMESPACES_TABLE) != null) {
+      return;
+    }
+
     String createTableQuery =
         SchemaBuilder.createTable(
                 quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .ifNotExists()
             .addPartitionKey(NAMESPACES_NAME_COL, com.datastax.driver.core.DataType.text())
             .getQueryString();
     clusterManager.getSession().execute(createTableQuery);
+
+    // Insert the system namespace to the namespaces table
+    upsertIntoNamespacesTable(metadataKeyspace);
   }
 
   private void dropNamespacesTableIfEmpty() {

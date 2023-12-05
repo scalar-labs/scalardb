@@ -38,12 +38,11 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     super(cassandraProperties);
     CassandraConfig cassandraConfig = new CassandraConfig(new DatabaseConfig(cassandraProperties));
     clusterManager = new ClusterManager(new DatabaseConfig(cassandraProperties));
-    cassandraMetadataNamespace =
-        cassandraConfig.getMetadataKeyspace().orElse(CassandraAdmin.METADATA_KEYSPACE);
+    cassandraMetadataNamespace = cassandraConfig.getMetadataKeyspace();
 
     // for JDBC
     JdbcConfig jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
-    jdbcMetadataSchema = jdbcConfig.getMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
+    jdbcMetadataSchema = jdbcConfig.getMetadataSchema();
     rdbEngine = RdbEngineFactory.create(jdbcConfig);
     dataSource = JdbcUtils.initDataSourceForAdmin(jdbcConfig, rdbEngine);
   }
