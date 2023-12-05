@@ -433,6 +433,16 @@ Map<String, String> options = ...;
 admin.repairTable("ns", "tbl", tableMetadata, options);
 ```
 
+### Upgrade the environment to support the latest ScalarDB API
+
+You can upgrade the ScalarDB environment to support the latest version of the ScalarDB API. Typically, as indicated in the release notes, you will need to run this method after updating the ScalarDB version that your application environment uses.
+
+```java
+// Upgrade the ScalarDB environment.
+Map<String, String> options = ...;
+admin.upgrade(options);
+```
+
 ### Implement CRUD operations
 
 The following sections describe CRUD operations.
