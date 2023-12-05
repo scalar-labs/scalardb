@@ -48,6 +48,7 @@ public class GroupCommitter3<K, V> implements Closeable {
   @LazyInit private Emittable<K, V> emitter;
   private final BuffersManager buffersManager;
 
+  // FIXME: This single instance can be a performance bottleneck. Try multi-partitions.
   // This class is just for encapsulation of buffer accesses
   private class BuffersManager {
     // Buffers
@@ -147,6 +148,7 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     private synchronized void moveDelayedValueSlotsToDelayedBufferValues(
         NormalBufferedValues<K, V> bufferedValues) {
+      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#1 BV:{}", bufferedValues);
       List<ValueSlot<K, V>> notReadyValueSlots = bufferedValues.removeNotReadyValueSlots();
       for (ValueSlot<K, V> notReadyValueSlot : notReadyValueSlots) {
         K fullKey = notReadyValueSlot.getFullKey();
@@ -165,12 +167,16 @@ public class GroupCommitter3<K, V> implements Closeable {
           logger.warn("The slow buffer value map already has the same key buffer. {}", old);
         }
       }
+      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#2 BV:{}", bufferedValues);
       // TODO: Replace this with cleanup queue and worker
       // FIXME: stream() is a bit slow
+      /*
       if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
         bufferedValuesMap.remove(bufferedValues.key);
         logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
       }
+       */
+      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#3 BV:{}", bufferedValues);
     }
   }
 
@@ -193,13 +199,15 @@ public class GroupCommitter3<K, V> implements Closeable {
       this.value = Objects.requireNonNull(value);
     }
 
-    public void waitUntilEmit() throws GroupCommitException, GroupCommitCascadeException {
+    public void waitUntilEmit() throws GroupCommitException {
       try {
         completableFuture.get();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw new GroupCommitException("Group commit was interrupted", e);
+        // TODO: Unified the error message
+        throw new RuntimeException("Group commit was interrupted", e);
       } catch (ExecutionException e) {
+        // TODO: Sort these exceptions
         Throwable cause = e.getCause();
         if (cause instanceof GroupCommitCascadeException) {
           throw (GroupCommitCascadeException) cause;
@@ -289,7 +297,7 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
     private synchronized ValueSlot<K, V> putValueToSlot(K childKey, V value)
-        throws GroupCommitException {
+        throws GroupCommitAlreadyClosedException, GroupCommitTargetNotFoundException {
       if (isDone()) {
         throw new GroupCommitAlreadyClosedException(
             "This value slot buffer is already closed. buffer:" + this);
@@ -297,8 +305,7 @@ public class GroupCommitter3<K, V> implements Closeable {
 
       ValueSlot<K, V> valueSlot = valueSlots.get(childKey);
       if (valueSlot == null) {
-        // TODO: Revisit this exception class (e.g., NotFoundException)
-        throw new GroupCommitException(
+        throw new GroupCommitTargetNotFoundException(
             "The value slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
       }
       valueSlot.putValue(value);
@@ -321,8 +328,9 @@ public class GroupCommitter3<K, V> implements Closeable {
       valueSlot.waitUntilEmit();
 
       logger.info(
-          "Waited(thread_id:{}, childKey:{}): {} ms",
+          "Waited(thread_id:{}, parentKey:{}, childKey:{}): {} ms",
           Thread.currentThread().getId(),
+          key,
           childKey,
           System.currentTimeMillis() - start);
     }
@@ -332,7 +340,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         // Current ValueSlot that `index` is pointing is not used yet.
         size.set(valueSlots.size());
         ////// FIXME: DEBUG
-        logger.info("GC FIX-SIZE: buffer={}", this);
+        logger.info("Fixed size: buffer={}", this);
         ////// FIXME: DEBUG
         // This is in this block since it results in better performance
         asyncEmitIfReady();
@@ -626,6 +634,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
+        // TODO: Unified the error message
         logger.warn("Interrupted", e);
         return false;
       }
@@ -670,7 +679,14 @@ public class GroupCommitter3<K, V> implements Closeable {
     } else {
       Instant now = Instant.now();
       if (now.isAfter(bufferedValues.timeoutAt)) {
+        ////////// FIXME: DEBUG LOG
+        long start = System.currentTimeMillis();
         buffersManager.moveDelayedValueSlotsToDelayedBufferValues(bufferedValues);
+        logger.info(
+            "[TIMEOUT] MOVED BV:{} TO DELAYED BUFFERS, DURATION:{}ms, SIZE:{}",
+            bufferedValues,
+            (System.currentTimeMillis() - start),
+            queueForTimeout.size());
       } else {
         // Not expired. Retry
         retryWaitInMillis =
@@ -688,6 +704,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
+        // TODO: Unified the error message
         logger.warn("Interrupted", e);
         return false;
       }
@@ -757,14 +774,32 @@ public class GroupCommitter3<K, V> implements Closeable {
 
   public void ready(K fullKey, V value) throws GroupCommitException {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
-    BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
-    try {
-      // TODO: This can throw an exception in a race condition when the value slot is moved to
-      // delayed buffer values. So, retry should be needed.
-      bufferedValues.putValueToSlotAndWait(keys.childKey, value);
-    } catch (GroupCommitAlreadyClosedException e) {
-      // TODO: Move the slow transaction to a new small buffer
-      throw e;
+    int retry = 0;
+    while (true) {
+      BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
+      try {
+        bufferedValues.putValueToSlotAndWait(keys.childKey, value);
+        return;
+      } catch (GroupCommitAlreadyClosedException | GroupCommitTargetNotFoundException e) {
+        // This can throw an exception in a race condition when the value slot is moved to
+        // delayed buffer values. So, retry should be needed.
+        if (bufferedValues instanceof NormalBufferedValues) {
+          if (++retry >= 4) {
+            throw new GroupCommitException(
+                String.format("Retry over for putting a value to the slot. fullKey=%s", fullKey),
+                e);
+          }
+          try {
+            TimeUnit.MILLISECONDS.sleep(10);
+          } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            // TODO: Unified the error message
+            throw new RuntimeException(ex);
+          }
+          continue;
+        }
+        throw e;
+      }
     }
   }
 
