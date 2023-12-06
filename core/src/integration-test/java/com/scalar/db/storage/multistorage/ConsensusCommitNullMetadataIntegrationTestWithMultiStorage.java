@@ -13,15 +13,15 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
 
   @Override
   protected Properties getProperties(String testName) {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     // Define storages, cassandra and jdbc
-    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
+    properties.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
 
     Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(testName);
     for (String propertyName : propertiesForCassandra.stringPropertyNames()) {
-      props.setProperty(
+      properties.setProperty(
           MultiStorageConfig.STORAGES
               + ".cassandra."
               + propertyName.substring(DatabaseConfig.PREFIX.length()),
@@ -30,7 +30,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
 
     Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(testName);
     for (String propertyName : propertiesForJdbc.stringPropertyNames()) {
-      props.setProperty(
+      properties.setProperty(
           MultiStorageConfig.STORAGES
               + ".jdbc."
               + propertyName.substring(DatabaseConfig.PREFIX.length()),
@@ -39,7 +39,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
 
     // Define namespace mapping from namespace1 to cassandra, from namespace2 to jdbc, and from
     // the coordinator namespace to cassandra
-    props.setProperty(
+    properties.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
         getNamespace1()
             + ":cassandra,"
@@ -49,9 +49,14 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
             + ":cassandra");
 
     // The default storage is cassandra
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+    properties.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
-    return props;
+    // Add testName as a metadata schema suffix
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
+
+    return properties;
   }
 
   @Override

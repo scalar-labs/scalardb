@@ -14,7 +14,7 @@ public final class CassandraEnv {
 
   private CassandraEnv() {}
 
-  public static Properties getProperties(@SuppressWarnings("unused") String testName) {
+  public static Properties getProperties(String testName) {
     String contactPoints =
         System.getProperty(PROP_CASSANDRA_CONTACT_POINTS, DEFAULT_CASSANDRA_CONTACT_POINTS);
     String username = System.getProperty(PROP_CASSANDRA_USERNAME, DEFAULT_CASSANDRA_USERNAME);

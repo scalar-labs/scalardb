@@ -19,28 +19,28 @@ public final class JdbcEnv {
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
 
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
-    props.setProperty(DatabaseConfig.USERNAME, username);
-    props.setProperty(DatabaseConfig.PASSWORD, password);
-    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.USERNAME, username);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
 
     // Add testName as a metadata schema suffix
-    props.setProperty(
+    properties.setProperty(
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
-    return props;
+    return properties;
   }
 
   public static boolean isSqlite() {
-    Properties props = new Properties();
-    props.setProperty(
+    Properties properties = new Properties();
+    properties.setProperty(
         DatabaseConfig.CONTACT_POINTS, System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL));
-    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(props)));
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(properties)));
   }
 }
