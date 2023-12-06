@@ -42,6 +42,12 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+
+    // Add testName as a metadata schema suffix
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
+
     return properties;
   }
 
