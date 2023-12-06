@@ -38,6 +38,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -90,6 +92,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
+      createMetadataDatabaseAndNamespaceContainerIfNotExists();
       createTableInternal(namespace, table, metadata, false);
     } catch (IllegalArgumentException e) {
       throw e;
@@ -303,6 +306,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     try {
       database.getContainer(table).delete();
       deleteTableMetadata(namespace, table);
+      deleteMetadataDatabaseIfEmpty();
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format("Deleting the %s container failed", getFullTableName(namespace, table)), e);
@@ -341,13 +345,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       client.getDatabase(namespace).delete();
       getNamespacesContainer()
           .deleteItem(new CosmosNamespace(namespace), new CosmosItemRequestOptions());
-      dropNamespacesTableIfEmpty();
+      deleteMetadataDatabaseIfEmpty();
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("Deleting the %s database failed", namespace), e);
     }
   }
 
-  private void dropNamespacesTableIfEmpty() {
+  private void deleteMetadataDatabaseIfEmpty() {
     Set<String> namespaces =
         getNamespacesContainer()
             .queryItems(
@@ -357,8 +361,28 @@ public class CosmosAdmin implements DistributedStorageAdmin {
             .stream()
             .map(CosmosNamespace::getId)
             .collect(Collectors.toSet());
-    if (namespaces.isEmpty() || (namespaces.size() == 1 && namespaces.contains(metadataDatabase))) {
-      client.getDatabase(metadataDatabase).delete();
+
+    boolean onlyMetadataNamespaceLeft =
+        namespaces.size() == 1 && namespaces.contains(metadataDatabase);
+    if (!onlyMetadataNamespaceLeft) {
+      return;
+    }
+
+    // Delete the metadata database if there is only the namespaces container left
+    CosmosDatabase database = client.getDatabase(metadataDatabase);
+    Iterator<CosmosContainerProperties> iterator = database.readAllContainers().iterator();
+
+    Set<String> containers = new HashSet<>();
+    int count = 0;
+    while (iterator.hasNext()) {
+      containers.add(iterator.next().getId());
+      // Only need to fetch the first two containers
+      if (count++ == 2) {
+        break;
+      }
+    }
+    if (containers.size() == 1 && containers.contains(NAMESPACES_CONTAINER)) {
+      database.delete();
     }
   }
 

@@ -97,6 +97,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
+      createNamespacesTableIfNotExists(connection);
       createTableInternal(connection, namespace, table, metadata, false);
       addTableMetadata(connection, namespace, table, metadata, true, false);
     } catch (SQLException e) {
@@ -340,6 +341,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       dropTableInternal(connection, namespace, table);
       deleteTableMetadata(connection, namespace, table);
+      deleteNamespacesTableAndMetadataSchemaIfEmpty(connection);
     } catch (SQLException e) {
       throw new ExecutionException(
           "Dropping the " + getFullTableName(namespace, table) + " table failed", e);
@@ -409,7 +411,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.dropNamespaceSql(namespace));
       deleteFromNamespacesTable(connection, namespace);
-      deleteNamespacesTableIfEmpty(connection);
+      deleteNamespacesTableAndMetadataSchemaIfEmpty(connection);
     } catch (SQLException e) {
       rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
     }
@@ -1008,20 +1010,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void deleteNamespacesTableIfEmpty(Connection connection) throws SQLException {
-    if (isNamespacesTableEmpty(connection)) {
+  private void deleteNamespacesTableAndMetadataSchemaIfEmpty(Connection connection)
+      throws SQLException {
+    if (areNamespacesTableAndMetadataSchemaEmpty(connection)) {
       deleteTable(connection, encloseFullTableName(metadataSchema, NAMESPACES_TABLE));
       deleteMetadataSchema(connection);
     }
   }
 
-  private boolean isNamespacesTableEmpty(Connection connection) throws SQLException {
+  private boolean areNamespacesTableAndMetadataSchemaEmpty(Connection connection)
+      throws SQLException {
     String selectAllTables =
         "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
 
     Set<String> namespaces = new HashSet<>();
-    try (PreparedStatement preparedStatement = connection.prepareStatement(selectAllTables);
-        ResultSet results = preparedStatement.executeQuery()) {
+    try (Statement statement = connection.createStatement();
+        ResultSet results = statement.executeQuery(selectAllTables)) {
       int count = 0;
       while (results.next()) {
         namespaces.add(results.getString(NAMESPACE_COL_NAMESPACE_NAME));
@@ -1032,7 +1036,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
     }
 
-    return namespaces.isEmpty() || (namespaces.size() == 1 && namespaces.contains(metadataSchema));
+    boolean onlyMetadataNamespaceLeft =
+        namespaces.size() == 1 && namespaces.contains(metadataSchema);
+    if (!onlyMetadataNamespaceLeft) {
+      return false;
+    }
+
+    // Check if the metadata table exists. If it does not, the metadata schema is empty.
+    String sql =
+        rdbEngine.tableExistsInternalTableCheckSql(
+            encloseFullTableName(metadataSchema, METADATA_TABLE));
+    try {
+      execute(connection, sql);
+      return false;
+    } catch (SQLException e) {
+      // An exception will be thrown if the table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return true;
+      }
+      throw e;
+    }
   }
 
   @Override

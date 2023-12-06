@@ -42,7 +42,6 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -440,7 +439,10 @@ public class JdbcAdminTest {
 
     // Act
     // Assert
-    assertThatThrownBy(() -> admin.createTable(namespace, table, metadata, new HashMap<>()))
+    assertThatThrownBy(
+            () ->
+                admin.createTableInternal(
+                    mock(Connection.class), namespace, table, metadata, false))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -1318,7 +1320,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
         "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
-        "DROP TABLE `" + METADATA_SCHEMA + "`.`metadata`");
+        "DROP TABLE `" + METADATA_SCHEMA + "`.`metadata`",
+        "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
   }
 
   @Test
@@ -1332,7 +1335,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"");
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1346,7 +1350,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
         "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
-        "DROP TABLE [" + METADATA_SCHEMA + "].[metadata]");
+        "DROP TABLE [" + METADATA_SCHEMA + "].[metadata]",
+        "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]");
   }
 
   @Test
@@ -1359,7 +1364,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"");
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1372,7 +1378,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
-        "DROP TABLE \"" + METADATA_SCHEMA + "$metadata\"");
+        "DROP TABLE \"" + METADATA_SCHEMA + "$metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
   }
 
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
@@ -1399,6 +1406,13 @@ public class JdbcAdminTest {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
+    ResultSet resultSetForSelectAllNamespacesTable =
+        mockResultSet(
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA),
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace));
+    when(mockedStatements.get(mockedStatements.size() - 1).executeQuery(anyString()))
+        .thenReturn(resultSetForSelectAllNamespacesTable);
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
@@ -1424,7 +1438,8 @@ public class JdbcAdminTest {
         "DELETE FROM `"
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`");
+        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
+        "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
   }
 
   @Test
@@ -1437,7 +1452,8 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1450,7 +1466,8 @@ public class JdbcAdminTest {
         "DELETE FROM ["
             + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]");
+        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]");
   }
 
   @Test
@@ -1463,7 +1480,8 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1476,7 +1494,8 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
   }
 
   private void
@@ -1504,6 +1523,13 @@ public class JdbcAdminTest {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
+    ResultSet resultSetForSelectAllNamespacesTable =
+        mockResultSet(
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA),
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace));
+    when(mockedStatements.get(mockedStatements.size() - 1).executeQuery(anyString()))
+        .thenReturn(resultSetForSelectAllNamespacesTable);
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
@@ -1520,53 +1546,56 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void
-      dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForMysql_shouldDropSchemaAndNamespacesTable()
-          throws Exception {
-    dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
+  public void dropNamespace_WithOnlyNamespaceSchemaLeftForMysql_shouldDropSchemaAndNamespacesTable()
+      throws Exception {
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.MYSQL,
         "DROP SCHEMA `my_ns`",
         "DELETE FROM `" + METADATA_SCHEMA + "`.`namespaces` WHERE `namespace_name` = ?",
         "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`",
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`metadata` LIMIT 1",
         "DROP TABLE `" + METADATA_SCHEMA + "`.`namespaces`",
         "DROP SCHEMA `" + METADATA_SCHEMA + "`");
   }
 
   @Test
   public void
-      dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForPostgresql_shouldDropSchemaAndNamespacesTable()
+      dropNamespace_WithOnlyNamespaceSchemaLeftForPostgresql_shouldDropSchemaAndNamespacesTable()
           throws Exception {
-    dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.POSTGRESQL,
         "DROP SCHEMA \"my_ns\"",
         "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
         "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
         "DROP TABLE \"" + METADATA_SCHEMA + "\".\"namespaces\"",
         "DROP SCHEMA \"" + METADATA_SCHEMA + "\"");
   }
 
   @Test
   public void
-      dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForSqlServer_shouldDropSchemaAndNamespacesTable()
+      dropNamespace_WithOnlyNamespaceSchemaLeftForSqlServer_shouldDropSchemaAndNamespacesTable()
           throws Exception {
-    dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.SQL_SERVER,
         "DROP SCHEMA [my_ns]",
         "DELETE FROM [" + METADATA_SCHEMA + "].[namespaces] WHERE [namespace_name] = ?",
         "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[metadata]",
         "DROP TABLE [" + METADATA_SCHEMA + "].[namespaces]",
         "DROP SCHEMA [" + METADATA_SCHEMA + "]");
   }
 
   @Test
   public void
-      dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForOracle_shouldDropSchemaAndNamespacesTable()
+      dropNamespace_WithOnlyNamespaceSchemaLeftForOracle_shouldDropSchemaAndNamespacesTable()
           throws Exception {
-    dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.ORACLE,
         "DROP USER \"my_ns\"",
         "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
         "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
         "DROP TABLE \"" + METADATA_SCHEMA + "\".\"namespaces\"",
         "DROP USER \"" + METADATA_SCHEMA + "\"");
   }
@@ -1578,6 +1607,8 @@ public class JdbcAdminTest {
         "DELETE FROM \"" + METADATA_SCHEMA + "$namespaces\" WHERE \"namespace_name\" = ?";
     String selectAllFromNamespaceTableQuery =
         "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"";
+    String selectAllFromMetadataTableQuery =
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$metadata\" LIMIT 1";
     String dropNamespaceTableQuery = "DROP TABLE \"" + METADATA_SCHEMA + "$namespaces\"";
 
     String namespace = "my_ns";
@@ -1585,94 +1616,36 @@ public class JdbcAdminTest {
 
     Connection connection = mock(Connection.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
-    PreparedStatement selectAllFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
+    Statement selectAllFromMetadataTablePrepStmt = mock(Statement.class);
     Statement dropNamespaceTableStmt = mock(Statement.class);
-    when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement()).thenReturn(dropNamespaceTableStmt);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTablePrepStmt, selectAllFromNamespaceTablePrepStmt);
-    when(dataSource.getConnection()).thenReturn(connection);
-    // Namespaces table is empty
-    ResultSet resultSet =
-        mockResultSet(new SelectFullTableNameFromMetadataTableResultSetMocker.Row[0]);
-    when(selectAllFromNamespaceTablePrepStmt.executeQuery()).thenReturn(resultSet);
-
-    // Act
-    admin.dropNamespace(namespace);
-
-    // Assert
-    verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
-    verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
-    verify(connection).prepareStatement(selectAllFromNamespaceTableQuery);
-    verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
-  }
-
-  private void
-      dropNamespace_WithNoSchemaLeftOrOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
-          RdbEngine rdbEngine,
-          String dropNamespaceQuery,
-          String deleteFromNamespaceTableQuery,
-          String selectAllFromNamespaceTableQuery,
-          String dropNamespaceTableQuery,
-          String dropMetadataSchemaQuery)
-          throws Exception {
-    dropNamespace_WithNoSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
-        rdbEngine,
-        dropNamespaceQuery,
-        deleteFromNamespaceTableQuery,
-        selectAllFromNamespaceTableQuery,
-        dropNamespaceTableQuery,
-        dropMetadataSchemaQuery);
-    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
-        rdbEngine,
-        dropNamespaceQuery,
-        deleteFromNamespaceTableQuery,
-        selectAllFromNamespaceTableQuery,
-        dropNamespaceTableQuery,
-        dropMetadataSchemaQuery);
-  }
-
-  private void dropNamespace_WithNoSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
-      RdbEngine rdbEngine,
-      String dropNamespaceQuery,
-      String deleteFromNamespaceTableQuery,
-      String selectAllFromNamespaceTableQuery,
-      String dropNamespaceTableQuery,
-      String dropMetadataSchemaQuery)
-      throws Exception {
-    // Arrange
-    String namespace = "my_ns";
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-
-    Connection connection = mock(Connection.class);
-    Statement dropNamespaceStmt = mock(Statement.class);
-    PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
-    PreparedStatement selectAllFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
-    Statement dropNamespaceTableStmt = mock(Statement.class);
-    Statement dropMetadataSchemaStmt = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement())
-        .thenReturn(dropNamespaceStmt, dropNamespaceTableStmt, dropMetadataSchemaStmt);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTablePrepStmt, selectAllFromNamespaceTablePrepStmt);
+        .thenReturn(
+            selectAllFromNamespaceTablePrepStmt,
+            selectAllFromMetadataTablePrepStmt,
+            dropNamespaceTableStmt);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
-    // Namespaces table is empty
-    ResultSet resultSet =
-        mockResultSet(new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row[0]);
-    when(selectAllFromNamespaceTablePrepStmt.executeQuery()).thenReturn(resultSet);
+    // Only the metadata schema is left
+    ResultSet resultSet1 =
+        mockResultSet(
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA));
+    when(selectAllFromNamespaceTablePrepStmt.executeQuery(anyString())).thenReturn(resultSet1);
+
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(RdbEngine.SQLITE, sqlException);
+    when(selectAllFromMetadataTablePrepStmt.execute(anyString())).thenThrow(sqlException);
 
     // Act
     admin.dropNamespace(namespace);
 
     // Assert
-    verify(dropNamespaceStmt).execute(dropNamespaceQuery);
     verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
     verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
-    verify(deleteFromNamespaceTablePrepStmt).execute();
-    verify(connection).prepareStatement(selectAllFromNamespaceTableQuery);
-    verify(selectAllFromNamespaceTablePrepStmt).executeQuery();
+    verify(selectAllFromNamespaceTablePrepStmt).executeQuery(selectAllFromNamespaceTableQuery);
+    verify(selectAllFromMetadataTablePrepStmt).execute(selectAllFromMetadataTableQuery);
     verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
-    verify(dropMetadataSchemaStmt).execute(dropMetadataSchemaQuery);
   }
 
   private void dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
@@ -1680,6 +1653,7 @@ public class JdbcAdminTest {
       String dropNamespaceQuery,
       String deleteFromNamespaceTableQuery,
       String selectAllFromNamespaceTableQuery,
+      String selectAllFromMetadataTableQuery,
       String dropNamespaceTableQuery,
       String dropMetadataSchemaQuery)
       throws Exception {
@@ -1690,20 +1664,29 @@ public class JdbcAdminTest {
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStmt = mock(Statement.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
-    PreparedStatement selectAllFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
+    Statement selectAllFromMetadataTablePrepStmt = mock(Statement.class);
     Statement dropNamespaceTableStmt = mock(Statement.class);
     Statement dropMetadataSchemaStmt = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement())
-        .thenReturn(dropNamespaceStmt, dropNamespaceTableStmt, dropMetadataSchemaStmt);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTablePrepStmt, selectAllFromNamespaceTablePrepStmt);
+        .thenReturn(
+            dropNamespaceStmt,
+            selectAllFromNamespaceTablePrepStmt,
+            selectAllFromMetadataTablePrepStmt,
+            dropNamespaceTableStmt,
+            dropMetadataSchemaStmt);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
     // Only the metadata schema is left
     ResultSet resultSet =
         mockResultSet(
             new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA));
-    when(selectAllFromNamespaceTablePrepStmt.executeQuery()).thenReturn(resultSet);
+    when(selectAllFromNamespaceTablePrepStmt.executeQuery(anyString())).thenReturn(resultSet);
+
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(selectAllFromMetadataTablePrepStmt.execute(anyString())).thenThrow(sqlException);
 
     // Act
     admin.dropNamespace(namespace);
@@ -1713,8 +1696,8 @@ public class JdbcAdminTest {
     verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
     verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
     verify(deleteFromNamespaceTablePrepStmt).execute();
-    verify(connection).prepareStatement(selectAllFromNamespaceTableQuery);
-    verify(selectAllFromNamespaceTablePrepStmt).executeQuery();
+    verify(selectAllFromNamespaceTablePrepStmt).executeQuery(selectAllFromNamespaceTableQuery);
+    verify(selectAllFromMetadataTablePrepStmt).execute(selectAllFromMetadataTableQuery);
     verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
     verify(dropMetadataSchemaStmt).execute(dropMetadataSchemaQuery);
   }
@@ -1782,18 +1765,20 @@ public class JdbcAdminTest {
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStatementMock = mock(Statement.class);
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
-    PreparedStatement selectNamespaceStatementMock = mock(PreparedStatement.class);
+    Statement selectNamespaceStatementMock = mock(Statement.class);
     if (rdbEngine != RdbEngine.SQLITE) {
-      when(connection.createStatement()).thenReturn(dropNamespaceStatementMock);
+      when(connection.createStatement())
+          .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+    } else {
+      when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
     }
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTableMock, selectNamespaceStatementMock);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
     ResultSet resultSet =
         mockResultSet(
             new SelectFullTableNameFromMetadataTableResultSetMocker.Row(namespace + ".tbl1"));
-    when(selectNamespaceStatementMock.executeQuery()).thenReturn(resultSet);
+    when(selectNamespaceStatementMock.executeQuery(anyString())).thenReturn(resultSet);
 
     // Act
     admin.dropNamespace(namespace);
@@ -1805,8 +1790,7 @@ public class JdbcAdminTest {
     verify(connection).prepareStatement(deleteFromNamespaceTable);
     verify(deleteFromNamespaceTableMock).setString(1, namespace);
     verify(deleteFromNamespaceTableMock).execute();
-    verify(connection).prepareStatement(selectNamespaceStatement);
-    verify(selectNamespaceStatementMock).executeQuery();
+    verify(selectNamespaceStatementMock).executeQuery(selectNamespaceStatement);
   }
 
   @Test

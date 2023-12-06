@@ -25,6 +25,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -64,6 +65,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
+      createNamespacesTableIfNotExists();
       createTableInternal(namespace, table, metadata, false, options);
       createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), false);
     } catch (RuntimeException e) {
@@ -128,11 +130,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    String dropTableQuery =
-        SchemaBuilder.dropTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
-            .getQueryString();
     try {
+      String dropTableQuery =
+          SchemaBuilder.dropTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .getQueryString();
       clusterManager.getSession().execute(dropTableQuery);
+
+      dropMetadataKeyspaceIfEmpty();
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format("Dropping the %s table failed", getFullTableName(namespace, table)), e);
@@ -144,7 +148,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     try {
       dropKeyspace(namespace);
       deleteFromNamespacesTable(namespace);
-      dropNamespacesTableIfEmpty();
+      dropMetadataKeyspaceIfEmpty();
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("Dropping the %s keyspace failed", namespace), e);
     }
@@ -442,17 +446,32 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     upsertIntoNamespacesTable(metadataKeyspace);
   }
 
-  private void dropNamespacesTableIfEmpty() {
+  private void dropMetadataKeyspaceIfEmpty() {
     String selectQuery =
         QueryBuilder.select(NAMESPACES_NAME_COL)
             .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
             .limit(2)
             .getQueryString();
-
     List<Row> rows = clusterManager.getSession().execute(selectQuery).all();
-    if (rows.isEmpty()
-        || (rows.size() == 1
-            && rows.get(0).getString(NAMESPACES_NAME_COL).equals(metadataKeyspace))) {
+
+    boolean onlyMetadataNamespaceLeft =
+        rows.size() == 1 && rows.get(0).getString(NAMESPACES_NAME_COL).equals(metadataKeyspace);
+    if (!onlyMetadataNamespaceLeft) {
+      return;
+    }
+
+    // Drop the metadata keyspace if there is only the namespaces table left
+    KeyspaceMetadata keyspace =
+        clusterManager
+            .getSession()
+            .getCluster()
+            .getMetadata()
+            .getKeyspace(quoteIfNecessary(metadataKeyspace));
+    if (keyspace == null) {
+      return;
+    }
+    Collection<com.datastax.driver.core.TableMetadata> tables = keyspace.getTables();
+    if (tables.size() == 1 && tables.iterator().next().getName().equals(NAMESPACES_TABLE)) {
       dropKeyspace(metadataKeyspace);
     }
   }

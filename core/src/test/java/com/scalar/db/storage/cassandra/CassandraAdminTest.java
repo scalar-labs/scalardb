@@ -252,6 +252,7 @@ public class CassandraAdminTest {
             .addSecondaryIndex("c2")
             .addSecondaryIndex("c4")
             .build();
+
     // Act
     cassandraAdmin.createTableInternal(namespace, table, tableMetadata, false, new HashMap<>());
 
@@ -418,12 +419,21 @@ public class CassandraAdminTest {
     String namespace = "sample_ns";
     String table = "sample_table";
 
+    ResultSet selectQueryResult = mock(ResultSet.class);
+    Row row1 = mock(Row.class);
+    when(row1.getString("name")).thenReturn(METADATA_KEYSPACE);
+    Row row2 = mock(Row.class);
+    when(row2.getString("name")).thenReturn(namespace);
+    when(selectQueryResult.all()).thenReturn(Arrays.asList(row1, row2));
+    when(cassandraSession.execute(anyString())).thenReturn(null, selectQueryResult);
+
     // Act
     cassandraAdmin.dropTable(namespace, table);
 
     // Assert
     String dropTableStatement = SchemaBuilder.dropTable(namespace, table).getQueryString();
     verify(cassandraSession).execute(dropTableStatement);
+    verifySelectTwoFromKeyspacesTableQuery();
   }
 
   @Test
@@ -432,6 +442,14 @@ public class CassandraAdminTest {
     String namespace = "keyspace";
     String table = "table";
 
+    ResultSet selectQueryResult = mock(ResultSet.class);
+    Row row1 = mock(Row.class);
+    when(row1.getString("name")).thenReturn(METADATA_KEYSPACE);
+    Row row2 = mock(Row.class);
+    when(row2.getString("name")).thenReturn(namespace);
+    when(selectQueryResult.all()).thenReturn(Arrays.asList(row1, row2));
+    when(cassandraSession.execute(anyString())).thenReturn(null, selectQueryResult);
+
     // Act
     cassandraAdmin.dropTable(namespace, table);
 
@@ -439,27 +457,7 @@ public class CassandraAdminTest {
     String dropTableStatement =
         SchemaBuilder.dropTable(quote(namespace), quote(table)).getQueryString();
     verify(cassandraSession).execute(dropTableStatement);
-  }
-
-  @Test
-  public void
-      dropNamespace_WithCorrectParametersWithNoMoreKeyspacesLeft_ShouldDropKeyspaceAndMetadataKeyspace()
-          throws ExecutionException {
-    // Arrange
-    String namespace = "sample_ns";
-    ResultSet selectQueryResult = mock(ResultSet.class);
-    when(selectQueryResult.all()).thenReturn(Collections.emptyList());
-    when(cassandraSession.execute(anyString())).thenReturn(null, null, selectQueryResult, null);
-
-    // Act
-    cassandraAdmin.dropNamespace(namespace);
-
-    // Assert
-    String dropKeyspaceStatement = SchemaBuilder.dropKeyspace(namespace).getQueryString();
-    verify(cassandraSession).execute(dropKeyspaceStatement);
-    verifyDeleteFromKeyspacesTableQuery(namespace);
-    verifySelectOneFromKeyspacesTableQuery();
-    verifyDropMetadataKeyspaceQuery();
+    verifySelectTwoFromKeyspacesTableQuery();
   }
 
   @Test
@@ -474,6 +472,15 @@ public class CassandraAdminTest {
     when(selectQueryResult.all()).thenReturn(Collections.singletonList(row));
     when(cassandraSession.execute(anyString())).thenReturn(null, null, selectQueryResult, null);
 
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    when(tableMetadata.getName()).thenReturn(CassandraAdmin.NAMESPACES_TABLE);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTables()).thenReturn(Collections.singletonList(tableMetadata));
+
     // Act
     cassandraAdmin.dropNamespace(namespace);
 
@@ -481,7 +488,8 @@ public class CassandraAdminTest {
     String dropKeyspaceStatement = SchemaBuilder.dropKeyspace(namespace).getQueryString();
     verify(cassandraSession).execute(dropKeyspaceStatement);
     verifyDeleteFromKeyspacesTableQuery(namespace);
-    verifySelectOneFromKeyspacesTableQuery();
+    verifySelectTwoFromKeyspacesTableQuery();
+    verifyGetTablesInMetadataKeyspace();
     verifyDropMetadataKeyspaceQuery();
   }
 
@@ -501,7 +509,7 @@ public class CassandraAdminTest {
     String dropKeyspaceStatement = SchemaBuilder.dropKeyspace(namespace).getQueryString();
     verify(cassandraSession).execute(dropKeyspaceStatement);
     verifyDeleteFromKeyspacesTableQuery(namespace);
-    verifySelectOneFromKeyspacesTableQuery();
+    verifySelectTwoFromKeyspacesTableQuery();
   }
 
   @Test
@@ -510,8 +518,19 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "keyspace";
     ResultSet selectQueryResult = mock(ResultSet.class);
-    when(selectQueryResult.one()).thenReturn(null);
+    Row row = mock(Row.class);
+    when(row.getString("name")).thenReturn(METADATA_KEYSPACE);
+    when(selectQueryResult.all()).thenReturn(Collections.singletonList(row));
     when(cassandraSession.execute(anyString())).thenReturn(null, null, selectQueryResult, null);
+
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    when(tableMetadata.getName()).thenReturn(CassandraAdmin.NAMESPACES_TABLE);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTables()).thenReturn(Collections.singletonList(tableMetadata));
 
     // Act
     cassandraAdmin.dropNamespace(namespace);
@@ -520,7 +539,8 @@ public class CassandraAdminTest {
     String dropKeyspaceStatement = SchemaBuilder.dropKeyspace(quote(namespace)).getQueryString();
     verify(cassandraSession).execute(dropKeyspaceStatement);
     verifyDeleteFromKeyspacesTableQuery(namespace);
-    verifySelectOneFromKeyspacesTableQuery();
+    verifySelectTwoFromKeyspacesTableQuery();
+    verifyGetTablesInMetadataKeyspace();
     verifyDropMetadataKeyspaceQuery();
   }
 
@@ -535,7 +555,7 @@ public class CassandraAdminTest {
     verify(cassandraSession).execute(query);
   }
 
-  private void verifySelectOneFromKeyspacesTableQuery() {
+  private void verifySelectTwoFromKeyspacesTableQuery() {
     String query =
         QueryBuilder.select(CassandraAdmin.NAMESPACES_NAME_COL)
             .from(
@@ -544,6 +564,13 @@ public class CassandraAdminTest {
             .limit(2)
             .getQueryString();
     verify(cassandraSession).execute(query);
+  }
+
+  private void verifyGetTablesInMetadataKeyspace() {
+    verify(cassandraSession).getCluster();
+    verify(cluster).getMetadata();
+    verify(metadata).getKeyspace(METADATA_KEYSPACE);
+    verify(keyspaceMetadata).getTables();
   }
 
   private void verifyDropMetadataKeyspaceQuery() {

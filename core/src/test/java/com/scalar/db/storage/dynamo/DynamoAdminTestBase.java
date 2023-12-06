@@ -257,46 +257,9 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
-  public void dropNamespace_WithNoNamespacesLeft_ShouldDropNamespaceAndNamespacesTable()
-      throws ExecutionException {
-    // Arrange
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames()).thenReturn(Collections.emptyList());
-    ScanResponse scanResponse = mock(ScanResponse.class);
-    when(scanResponse.items()).thenReturn(Collections.emptyList());
-    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
-
-    // Act
-    admin.dropNamespace(NAMESPACE);
-
-    // Assert
-    verify(client)
-        .deleteItem(
-            DeleteItemRequest.builder()
-                .tableName(getFullNamespaceTableName())
-                .key(
-                    ImmutableMap.of(
-                        DynamoAdmin.NAMESPACES_ATTR_NAME,
-                        AttributeValue.builder().s(getPrefixedNamespace()).build()))
-                .build());
-
-    verify(client)
-        .scan(ScanRequest.builder().tableName(getFullNamespaceTableName()).limit(2).build());
-    verify(client)
-        .deleteTable(DeleteTableRequest.builder().tableName(getFullNamespaceTableName()).build());
-  }
-
-  @Test
   public void dropNamespace_WithOnlyMetadataNamespacesLeft_ShouldDropNamespaceAndNamespacesTable()
       throws ExecutionException {
     // Arrange
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames()).thenReturn(Collections.emptyList());
-
     ScanResponse scanResponse = mock(ScanResponse.class);
     when(scanResponse.items())
         .thenReturn(
@@ -305,6 +268,15 @@ public abstract class DynamoAdminTestBase {
                     DynamoAdmin.NAMESPACES_ATTR_NAME,
                     AttributeValue.builder().s(getPrefixedMetadataNamespace()).build())));
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
+    when(listTablesResponse.tableNames())
+        .thenReturn(
+            Collections.singletonList(
+                getPrefixedMetadataNamespace() + "." + DynamoAdmin.NAMESPACES_TABLE))
+        .thenReturn(Collections.emptyList());
 
     // Act
     admin.dropNamespace(NAMESPACE);
@@ -361,6 +333,9 @@ public abstract class DynamoAdminTestBase {
     admin.createTable(NAMESPACE, TABLE, metadata);
 
     // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
     ArgumentCaptor<CreateTableRequest> createTableRequestCaptor =
         ArgumentCaptor.forClass(CreateTableRequest.class);
     verify(client, times(2)).createTable(createTableRequestCaptor.capture());
@@ -547,6 +522,9 @@ public abstract class DynamoAdminTestBase {
     admin.createTable(NAMESPACE, TABLE, metadata, options);
 
     // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
     ArgumentCaptor<CreateTableRequest> createTableRequestCaptor =
         ArgumentCaptor.forClass(CreateTableRequest.class);
     verify(client).createTable(createTableRequestCaptor.capture());
@@ -759,13 +737,28 @@ public abstract class DynamoAdminTestBase {
     // for the table metadata table
     ScanResponse scanResponse = mock(ScanResponse.class);
     when(scanResponse.count()).thenReturn(1);
-    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(client.scan(ScanRequest.builder().tableName(getFullMetadataTableName()).limit(1).build()))
+        .thenReturn(scanResponse);
 
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
     when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
     when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     List<String> tableList = Collections.emptyList();
     when(listTablesResponse.tableNames()).thenReturn(tableList);
+
+    // for the namespaces table
+    ScanResponse scanResponseForNamespacesTable = mock(ScanResponse.class);
+    when(scanResponseForNamespacesTable.items())
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.NAMESPACES_ATTR_NAME,
+                    AttributeValue.builder().s(getPrefixedMetadataNamespace()).build()),
+                ImmutableMap.of(
+                    DynamoAdmin.NAMESPACES_ATTR_NAME,
+                    AttributeValue.builder().s(getPrefixedNamespace()).build())));
+    when(client.scan(ScanRequest.builder().tableName(getFullNamespaceTableName()).limit(2).build()))
+        .thenReturn(scanResponseForNamespacesTable);
 
     // Act
     admin.dropTable(NAMESPACE, TABLE);
@@ -842,13 +835,28 @@ public abstract class DynamoAdminTestBase {
     // for the table metadata table
     ScanResponse scanResponse = mock(ScanResponse.class);
     when(scanResponse.count()).thenReturn(0);
-    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(client.scan(ScanRequest.builder().tableName(getFullMetadataTableName()).limit(1).build()))
+        .thenReturn(scanResponse);
 
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
     when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
     when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     List<String> tableList = Collections.emptyList();
     when(listTablesResponse.tableNames()).thenReturn(tableList);
+
+    // for the namespaces table
+    ScanResponse scanResponseForNamespacesTable = mock(ScanResponse.class);
+    when(scanResponseForNamespacesTable.items())
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.NAMESPACES_ATTR_NAME,
+                    AttributeValue.builder().s(getPrefixedMetadataNamespace()).build()),
+                ImmutableMap.of(
+                    DynamoAdmin.NAMESPACES_ATTR_NAME,
+                    AttributeValue.builder().s(getPrefixedNamespace()).build())));
+    when(client.scan(ScanRequest.builder().tableName(getFullNamespaceTableName()).limit(2).build()))
+        .thenReturn(scanResponseForNamespacesTable);
 
     // Act
     admin.dropTable(NAMESPACE, TABLE);
@@ -1393,8 +1401,6 @@ public abstract class DynamoAdminTestBase {
   public void createNamespace_WithExistingNamespacesTable_ShouldAddNamespace()
       throws ExecutionException {
     // Arrange
-    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(backupIsEnabledResponse);
 
     // Act
     admin.createNamespace(NAMESPACE, Collections.emptyMap());
@@ -1403,11 +1409,6 @@ public abstract class DynamoAdminTestBase {
     verify(client)
         .describeTable(
             DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
-    verify(client)
-        .describeContinuousBackups(
-            DescribeContinuousBackupsRequest.builder()
-                .tableName(getFullNamespaceTableName())
-                .build());
     verify(client)
         .putItem(
             PutItemRequest.builder()
@@ -1667,8 +1668,6 @@ public abstract class DynamoAdminTestBase {
   public void repairNamespace_WithExistingNamespacesTable_ShouldAddNamespace()
       throws ExecutionException {
     // Arrange
-    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(backupIsEnabledResponse);
 
     // Act
     admin.repairNamespace(NAMESPACE, Collections.emptyMap());
@@ -1677,11 +1676,6 @@ public abstract class DynamoAdminTestBase {
     verify(client)
         .describeTable(
             DescribeTableRequest.builder().tableName(getFullNamespaceTableName()).build());
-    verify(client)
-        .describeContinuousBackups(
-            DescribeContinuousBackupsRequest.builder()
-                .tableName(getFullNamespaceTableName())
-                .build());
     verify(client)
         .putItem(
             PutItemRequest.builder()
