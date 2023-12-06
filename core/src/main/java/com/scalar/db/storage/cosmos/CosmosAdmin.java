@@ -339,24 +339,26 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public void dropNamespace(String namespace) throws ExecutionException {
     try {
       client.getDatabase(namespace).delete();
-      CosmosContainer namespacesContainer = getNamespacesContainer();
-      namespacesContainer.deleteItem(
-          new CosmosNamespace(namespace), new CosmosItemRequestOptions());
-
-      // Delete the namespaces container and metadata database if there is no more existing
-      // namespaces
-      if (!namespacesContainer
-          .queryItems(
-              "SELECT 1 FROM container OFFSET 0 LIMIT 1",
-              new CosmosQueryRequestOptions(),
-              Object.class)
-          .stream()
-          .findFirst()
-          .isPresent()) {
-        client.getDatabase(metadataDatabase).delete();
-      }
+      getNamespacesContainer()
+          .deleteItem(new CosmosNamespace(namespace), new CosmosItemRequestOptions());
+      dropNamespacesTableIfEmpty();
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("Deleting the %s database failed", namespace), e);
+    }
+  }
+
+  private void dropNamespacesTableIfEmpty() {
+    Set<String> namespaces =
+        getNamespacesContainer()
+            .queryItems(
+                "SELECT * FROM container OFFSET 0 LIMIT 2",
+                new CosmosQueryRequestOptions(),
+                CosmosNamespace.class)
+            .stream()
+            .map(CosmosNamespace::getId)
+            .collect(Collectors.toSet());
+    if (namespaces.isEmpty() || (namespaces.size() == 1 && namespaces.contains(metadataDatabase))) {
+      client.getDatabase(metadataDatabase).delete();
     }
   }
 

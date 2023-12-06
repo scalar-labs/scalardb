@@ -28,6 +28,7 @@ import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -445,10 +446,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String selectQuery =
         QueryBuilder.select(NAMESPACES_NAME_COL)
             .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .limit(1)
+            .limit(2)
             .getQueryString();
-    boolean isKeyspacesTableEmpty = clusterManager.getSession().execute(selectQuery).one() == null;
-    if (isKeyspacesTableEmpty) {
+
+    List<Row> rows = clusterManager.getSession().execute(selectQuery).all();
+    if (rows.isEmpty()
+        || (rows.size() == 1
+            && rows.get(0).getString(NAMESPACES_NAME_COL).equals(metadataKeyspace))) {
       dropKeyspace(metadataKeyspace);
     }
   }

@@ -448,7 +448,30 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "sample_ns";
     ResultSet selectQueryResult = mock(ResultSet.class);
-    when(selectQueryResult.one()).thenReturn(null);
+    when(selectQueryResult.all()).thenReturn(Collections.emptyList());
+    when(cassandraSession.execute(anyString())).thenReturn(null, null, selectQueryResult, null);
+
+    // Act
+    cassandraAdmin.dropNamespace(namespace);
+
+    // Assert
+    String dropKeyspaceStatement = SchemaBuilder.dropKeyspace(namespace).getQueryString();
+    verify(cassandraSession).execute(dropKeyspaceStatement);
+    verifyDeleteFromKeyspacesTableQuery(namespace);
+    verifySelectOneFromKeyspacesTableQuery();
+    verifyDropMetadataKeyspaceQuery();
+  }
+
+  @Test
+  public void
+      dropNamespace_WithCorrectParametersWithOnlyMetadataKeyspacesLeft_ShouldDropKeyspaceAndMetadataKeyspace()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    ResultSet selectQueryResult = mock(ResultSet.class);
+    Row row = mock(Row.class);
+    when(row.getString("name")).thenReturn(METADATA_KEYSPACE);
+    when(selectQueryResult.all()).thenReturn(Collections.singletonList(row));
     when(cassandraSession.execute(anyString())).thenReturn(null, null, selectQueryResult, null);
 
     // Act
@@ -468,7 +491,7 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "sample_ns";
     ResultSet selectQueryResult = mock(ResultSet.class);
-    when(selectQueryResult.one()).thenReturn(mock(Row.class));
+    when(selectQueryResult.all()).thenReturn(Arrays.asList(mock(Row.class), mock(Row.class)));
     when(cassandraSession.execute(anyString())).thenReturn(null, null, selectQueryResult, null);
 
     // Act
@@ -518,7 +541,7 @@ public class CassandraAdminTest {
             .from(
                 quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
-            .limit(1)
+            .limit(2)
             .getQueryString();
     verify(cassandraSession).execute(query);
   }

@@ -1018,10 +1018,21 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private boolean isNamespacesTableEmpty(Connection connection) throws SQLException {
     String selectAllTables =
         "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
+
+    Set<String> namespaces = new HashSet<>();
     try (PreparedStatement preparedStatement = connection.prepareStatement(selectAllTables);
         ResultSet results = preparedStatement.executeQuery()) {
-      return !results.next();
+      int count = 0;
+      while (results.next()) {
+        namespaces.add(results.getString(NAMESPACE_COL_NAMESPACE_NAME));
+        // Only need to fetch the first two rows
+        if (count++ == 2) {
+          break;
+        }
+      }
     }
+
+    return namespaces.isEmpty() || (namespaces.size() == 1 && namespaces.contains(metadataSchema));
   }
 
   @Override
