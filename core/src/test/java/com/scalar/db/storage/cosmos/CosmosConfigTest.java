@@ -21,7 +21,7 @@ public class CosmosConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_ENDPOINT);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
     props.setProperty(DatabaseConfig.STORAGE, COSMOS_STORAGE);
-    props.setProperty(CosmosConfig.METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
+    props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_DATABASE);
 
     // Act
     CosmosConfig config = new CosmosConfig(new DatabaseConfig(props));
@@ -29,8 +29,7 @@ public class CosmosConfigTest {
     // Assert
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
     assertThat(config.getKey()).isEqualTo(ANY_KEY);
-    assertThat(config.getMetadataDatabase()).isPresent();
-    assertThat(config.getMetadataDatabase().get()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
+    assertThat(config.getMetadataDatabase()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
   }
 
   @Test
@@ -39,7 +38,6 @@ public class CosmosConfigTest {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_ENDPOINT);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
-    props.setProperty(CosmosConfig.METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
 
     // Act Assert
     assertThatThrownBy(() -> new CosmosConfig(new DatabaseConfig(props)))
@@ -60,23 +58,8 @@ public class CosmosConfigTest {
     // Assert
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
     assertThat(config.getKey()).isEqualTo(ANY_KEY);
-    assertThat(config.getMetadataDatabase()).isNotPresent();
-  }
-
-  @Test
-  public void
-      constructor_WithTableMetadataDatabaseAndMetadataDatabaseGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_ENDPOINT);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
-    props.setProperty(DatabaseConfig.STORAGE, COSMOS_STORAGE);
-    props.setProperty(CosmosConfig.METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
-    props.setProperty(CosmosConfig.TABLE_METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
-
-    // Act Assert
-    assertThatThrownBy(() -> new CosmosConfig(new DatabaseConfig(props)))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(config.getMetadataDatabase())
+        .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Test
@@ -94,8 +77,7 @@ public class CosmosConfigTest {
     // Assert
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
     assertThat(config.getKey()).isEqualTo(ANY_KEY);
-    assertThat(config.getMetadataDatabase()).isPresent();
-    assertThat(config.getMetadataDatabase().get()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
+    assertThat(config.getMetadataDatabase()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
   }
 
   @Test

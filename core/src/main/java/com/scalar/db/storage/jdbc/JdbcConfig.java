@@ -28,10 +28,9 @@ public class JdbcConfig {
 
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
 
-  /** @deprecated As of 5.0, will be removed. Use {@link #METADATA_SCHEMA} instead. */
+  /** @deprecated As of 5.0, will be removed. */
   @Deprecated public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
 
-  public static final String METADATA_SCHEMA = PREFIX + "metadata.schema";
   public static final String TABLE_METADATA_CONNECTION_POOL_MIN_IDLE =
       PREFIX + "table_metadata.connection_pool.min_idle";
   public static final String TABLE_METADATA_CONNECTION_POOL_MAX_IDLE =
@@ -72,7 +71,7 @@ public class JdbcConfig {
 
   @Nullable private final Isolation isolation;
 
-  @Nullable private final String metadataSchema;
+  private final String metadataSchema;
   private final int tableMetadataConnectionPoolMinIdle;
   private final int tableMetadataConnectionPoolMaxIdle;
   private final int tableMetadataConnectionPoolMaxTotal;
@@ -166,22 +165,19 @@ public class JdbcConfig {
             ADMIN_CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
 
-    if (databaseConfig.getProperties().containsKey(METADATA_SCHEMA)
-        && databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
-      throw new IllegalArgumentException(
-          "Use either " + METADATA_SCHEMA + " or " + TABLE_METADATA_SCHEMA + " but not both");
-    }
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
           "The configuration property \""
               + TABLE_METADATA_SCHEMA
-              + "\" is deprecated and will be removed in 5.0.0. Please use \""
-              + METADATA_SCHEMA
-              + "\" instead");
+              + "\" is deprecated and will be removed in 5.0.0.");
 
-      metadataSchema = getString(databaseConfig.getProperties(), TABLE_METADATA_SCHEMA, null);
+      metadataSchema =
+          getString(
+              databaseConfig.getProperties(),
+              TABLE_METADATA_SCHEMA,
+              DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     } else {
-      metadataSchema = getString(databaseConfig.getProperties(), METADATA_SCHEMA, null);
+      metadataSchema = databaseConfig.getSystemNamespaceName();
     }
   }
 
@@ -225,8 +221,8 @@ public class JdbcConfig {
     return Optional.ofNullable(isolation);
   }
 
-  public Optional<String> getMetadataSchema() {
-    return Optional.ofNullable(metadataSchema);
+  public String getMetadataSchema() {
+    return metadataSchema;
   }
 
   public int getTableMetadataConnectionPoolMinIdle() {

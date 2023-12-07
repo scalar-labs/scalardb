@@ -1,8 +1,6 @@
 package com.scalar.db.storage.multistorage;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcAdmin;
-import com.scalar.db.storage.jdbc.JdbcConfig;
 import java.util.Properties;
 
 public final class MultiStorageEnv {
@@ -44,6 +42,12 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+
+    // Add testName as a metadata schema suffix
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
+
     return properties;
   }
 
@@ -62,7 +66,9 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
 
     // Add testName as a metadata schema suffix
-    properties.setProperty(JdbcConfig.METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return properties;
   }

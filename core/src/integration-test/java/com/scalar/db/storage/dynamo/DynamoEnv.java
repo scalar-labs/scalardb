@@ -31,23 +31,24 @@ public final class DynamoEnv {
     String secretAccessKey =
         System.getProperty(PROP_DYNAMO_SECRET_ACCESS_KEY, DEFAULT_DYNAMO_SECRET_ACCESS_KEY);
 
-    Properties props = new Properties();
+    Properties properties = new Properties();
     if (endpointOverride != null) {
-      props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
+      properties.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
-    props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
-    props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
-    props.setProperty(DatabaseConfig.STORAGE, "dynamo");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    properties.setProperty(DatabaseConfig.USERNAME, accessKeyId);
+    properties.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
+    properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
 
     // Add testName as a metadata namespace suffix
-    props.setProperty(
-        DynamoConfig.METADATA_NAMESPACE, DynamoAdmin.METADATA_NAMESPACE + "_" + testName);
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
-    return props;
+    return properties;
   }
 
   public static Map<String, String> getCreationOptions() {

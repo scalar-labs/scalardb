@@ -102,15 +102,15 @@ public class MultiStorageIntegrationTest {
   }
 
   private void initMultiStorage() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     // Define storages, cassandra and jdbc
-    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
+    properties.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
 
     Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(TEST_NAME);
     for (String propertyName : propertiesForCassandra.stringPropertyNames()) {
-      props.setProperty(
+      properties.setProperty(
           MultiStorageConfig.STORAGES
               + ".cassandra."
               + propertyName.substring(DatabaseConfig.PREFIX.length()),
@@ -119,7 +119,7 @@ public class MultiStorageIntegrationTest {
 
     Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(TEST_NAME);
     for (String propertyName : propertiesForJdbc.stringPropertyNames()) {
-      props.setProperty(
+      properties.setProperty(
           MultiStorageConfig.STORAGES
               + ".jdbc."
               + propertyName.substring(DatabaseConfig.PREFIX.length()),
@@ -127,17 +127,22 @@ public class MultiStorageIntegrationTest {
     }
 
     // Define table mapping from table1 to cassandra, and from table2 to jdbc
-    props.setProperty(
+    properties.setProperty(
         MultiStorageConfig.TABLE_MAPPING,
         NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":jdbc");
 
     // Define namespace mapping from namespace2 to jdbc
-    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":jdbc");
+    properties.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":jdbc");
 
     // The default storage is cassandra
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+    properties.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
-    multiStorage = new MultiStorage(new DatabaseConfig(props));
+    // Add testName as a metadata schema suffix
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + TEST_NAME);
+
+    multiStorage = new MultiStorage(new DatabaseConfig(properties));
   }
 
   @BeforeEach

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
@@ -72,15 +73,18 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected String namespace1;
   protected String namespace2;
   protected String namespace3;
+  protected String systemNamespaceName;
 
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
-    transactionFactory = TransactionFactory.create(getProperties(TEST_NAME));
+    Properties properties = getProperties(TEST_NAME);
+    transactionFactory = TransactionFactory.create(properties);
     admin = transactionFactory.getTransactionAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
+    systemNamespaceName = new DatabaseConfig(properties).getSystemNamespaceName();
     createTables();
   }
 
@@ -854,7 +858,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     Set<String> namespaces = admin.getNamespaceNames();
 
     // Assert
-    assertThat(namespaces).containsOnly(namespace1, namespace2);
+    assertThat(namespaces).containsOnly(namespace1, namespace2, systemNamespaceName);
   }
 
   @Test
@@ -870,7 +874,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.upgrade(getCreationOptions());
 
       // Assert
-      assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
+      assertThat(admin.getNamespaceNames())
+          .containsOnly(namespace1, namespace2, systemNamespaceName);
     } finally {
       adminTestUtils.close();
     }

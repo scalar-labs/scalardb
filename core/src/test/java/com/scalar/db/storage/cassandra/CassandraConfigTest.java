@@ -20,14 +20,13 @@ public class CassandraConfigTest {
   public void constructor_MetadataNamespaceGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(CassandraConfig.METADATA_KEYSPACE, ANY_METADATA_NAMESPACE);
+    props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_METADATA_NAMESPACE);
 
     // Act
     CassandraConfig config = new CassandraConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getMetadataKeyspace()).isPresent();
-    assertThat(config.getMetadataKeyspace().get()).isEqualTo(ANY_METADATA_NAMESPACE);
+    assertThat(config.getMetadataKeyspace()).isEqualTo(ANY_METADATA_NAMESPACE);
   }
 
   @Test
@@ -39,6 +38,7 @@ public class CassandraConfigTest {
     CassandraConfig config = new CassandraConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.getMetadataKeyspace()).isEmpty();
+    assertThat(config.getMetadataKeyspace())
+        .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 }

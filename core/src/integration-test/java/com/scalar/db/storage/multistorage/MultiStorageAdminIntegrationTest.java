@@ -41,6 +41,8 @@ public class MultiStorageAdminIntegrationTest {
   private DistributedStorageAdmin jdbcAdmin;
   private MultiStorageAdmin multiStorageAdmin;
 
+  private String systemNamespaceName;
+
   @BeforeAll
   public void beforeAll() throws ExecutionException {
     initCassandraAdmin();
@@ -99,15 +101,15 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   private void initMultiStorageAdmin() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     // Define storages, cassandra and jdbc
-    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
+    properties.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
 
     Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(TEST_NAME);
     for (String propertyName : propertiesForCassandra.stringPropertyNames()) {
-      props.setProperty(
+      properties.setProperty(
           MultiStorageConfig.STORAGES
               + ".cassandra."
               + propertyName.substring(DatabaseConfig.PREFIX.length()),
@@ -116,7 +118,7 @@ public class MultiStorageAdminIntegrationTest {
 
     Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(TEST_NAME);
     for (String propertyName : propertiesForJdbc.stringPropertyNames()) {
-      props.setProperty(
+      properties.setProperty(
           MultiStorageConfig.STORAGES
               + ".jdbc."
               + propertyName.substring(DatabaseConfig.PREFIX.length()),
@@ -125,18 +127,26 @@ public class MultiStorageAdminIntegrationTest {
 
     // Define table mapping from table1 in namespace1 to cassandra, and from table2 in namespace1 to
     // jdbc
-    props.setProperty(
+    properties.setProperty(
         MultiStorageConfig.TABLE_MAPPING,
         NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":jdbc");
 
     // Define namespace mapping from namespace2 and namespace3 to jdbc
-    props.setProperty(
+    properties.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":jdbc," + NAMESPACE3 + ":jdbc");
 
     // The default storage is cassandra
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+    properties.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
-    multiStorageAdmin = new MultiStorageAdmin(new DatabaseConfig(props));
+    // Add testName as a metadata schema suffix
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + TEST_NAME);
+
+    DatabaseConfig databaseConfig = new DatabaseConfig(properties);
+    multiStorageAdmin = new MultiStorageAdmin(databaseConfig);
+
+    systemNamespaceName = databaseConfig.getSystemNamespaceName();
   }
 
   @AfterAll
@@ -359,6 +369,6 @@ public class MultiStorageAdminIntegrationTest {
     Set<String> namespaces = multiStorageAdmin.getNamespaceNames();
 
     // Assert
-    assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2);
+    assertThat(namespaces).containsExactlyInAnyOrder(NAMESPACE1, NAMESPACE2, systemNamespaceName);
   }
 }
