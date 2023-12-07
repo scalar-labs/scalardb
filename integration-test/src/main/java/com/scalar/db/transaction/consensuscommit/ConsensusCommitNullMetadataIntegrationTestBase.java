@@ -81,10 +81,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     Properties properties = getProperties(TEST_NAME);
 
     // Add testName as a coordinator namespace suffix
-    String coordinatorNamespace =
-        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
-    properties.setProperty(
-        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + TEST_NAME);
+    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
 
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
