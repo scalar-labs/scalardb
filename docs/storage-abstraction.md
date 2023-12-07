@@ -388,6 +388,20 @@ You can get table metadata as follows:
 TableMetadata tableMetadata = admin.getTableMetadata("ns", "tbl");
 ```
 
+### Repair a table
+
+You can repair the table metadata of an existing table as follows:
+
+```java
+// Repair the table "ns.tbl" with options.
+TableMetadata tableMetadata =
+    TableMetadata.newBuilder()
+        ...
+        .build();
+Map<String, String> options = ...;
+admin.repairTable("ns", "tbl", tableMetadata, options);
+```
+
 ### Implement CRUD operations
 
 The following sections describe CRUD operations.
