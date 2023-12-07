@@ -100,8 +100,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     @Option(
         names = {"--upgrade"},
         description =
-            "Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically, you will be requested, as indicated on the release notes, to run this command after"
-                + " updating the ScalarDB version of your application environment.",
+            "Upgrades the ScalarDB environment to support the latest version of the ScalarDB API. Typically, as indicated in the release notes, you will need to run this command after"
+                + " updating the ScalarDB version that your application environment uses.",
         defaultValue = "false")
     boolean upgrade;
   }
