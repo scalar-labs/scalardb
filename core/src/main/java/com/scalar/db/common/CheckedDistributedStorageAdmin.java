@@ -2,10 +2,12 @@ package com.scalar.db.common;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -13,15 +15,20 @@ import javax.annotation.Nullable;
 public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
 
   private final DistributedStorageAdmin admin;
+  private final String systemNamespaceName;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin) {
+  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin, DatabaseConfig config) {
     this.admin = admin;
+    systemNamespaceName = config.getSystemNamespaceName();
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
+    if (systemNamespaceName.equals(namespace)) {
+      throw new IllegalArgumentException(namespace + " is the system namespace name");
+    }
     if (namespaceExists(namespace)) {
       throw new IllegalArgumentException("Namespace already exists: " + namespace);
     }
@@ -70,6 +77,9 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
+    if (systemNamespaceName.equals(namespace)) {
+      throw new IllegalArgumentException(namespace + " is the system namespace name");
+    }
     if (!namespaceExists(namespace)) {
       throw new IllegalArgumentException("Namespace does not exist: " + namespace);
     }
@@ -189,6 +199,9 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
+    if (systemNamespaceName.equals(namespace)) {
+      return true;
+    }
     try {
       return admin.namespaceExists(namespace);
     } catch (ExecutionException e) {
@@ -278,7 +291,14 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
-      return admin.getNamespaceNames();
+      Set<String> namespaceNames = admin.getNamespaceNames();
+      if (namespaceNames.contains(systemNamespaceName)) {
+        return namespaceNames;
+      }
+
+      namespaceNames = new HashSet<>(namespaceNames);
+      namespaceNames.add(systemNamespaceName);
+      return namespaceNames;
     } catch (ExecutionException e) {
       throw new ExecutionException("Getting the namespace names failed", e);
     }

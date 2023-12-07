@@ -19,7 +19,6 @@ public class DynamoProvider implements DistributedStorageProvider {
 
   @Override
   public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    // Set the namespace check to false because DynamoDB does not support namespaces.
-    return new CheckedDistributedStorageAdmin(new DynamoAdmin(config));
+    return new CheckedDistributedStorageAdmin(new DynamoAdmin(config), config);
   }
 }

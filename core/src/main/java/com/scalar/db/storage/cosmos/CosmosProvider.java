@@ -19,6 +19,6 @@ public class CosmosProvider implements DistributedStorageProvider {
 
   @Override
   public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    return new CheckedDistributedStorageAdmin(new CosmosAdmin(config));
+    return new CheckedDistributedStorageAdmin(new CosmosAdmin(config), config);
   }
 }

@@ -19,6 +19,6 @@ public class JdbcProvider implements DistributedStorageProvider {
 
   @Override
   public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    return new CheckedDistributedStorageAdmin(new JdbcAdmin(config));
+    return new CheckedDistributedStorageAdmin(new JdbcAdmin(config), config);
   }
 }
