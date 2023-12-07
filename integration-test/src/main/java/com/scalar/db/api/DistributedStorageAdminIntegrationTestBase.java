@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -71,15 +72,18 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private String namespace1;
   private String namespace2;
   private String namespace3;
+  private String systemNamespaceName;
 
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
-    storageFactory = StorageFactory.create(getProperties(TEST_NAME));
+    Properties properties = getProperties(TEST_NAME);
+    storageFactory = StorageFactory.create(properties);
     admin = storageFactory.getAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
+    systemNamespaceName = new DatabaseConfig(properties).getSystemNamespaceName();
     createTables();
   }
 
@@ -745,7 +749,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     Set<String> namespaces = admin.getNamespaceNames();
 
     // Assert
-    assertThat(namespaces).containsOnly(namespace1, namespace2);
+    assertThat(namespaces).containsOnly(namespace1, namespace2, systemNamespaceName);
   }
 
   @Test
@@ -781,7 +785,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       admin.upgrade(getCreationOptions());
 
       // Assert
-      assertThat(admin.getNamespaceNames()).containsOnly(namespace1, namespace2);
+      assertThat(admin.getNamespaceNames())
+          .containsOnly(namespace1, namespace2, systemNamespaceName);
     } finally {
       adminTestUtils.close();
     }

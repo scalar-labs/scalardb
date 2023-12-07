@@ -24,30 +24,31 @@ public final class CosmosEnv {
     String password = System.getProperty(PROP_COSMOS_PASSWORD);
     Optional<String> databasePrefix = getDatabasePrefix();
 
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
-    props.setProperty(DatabaseConfig.PASSWORD, password);
-    props.setProperty(DatabaseConfig.STORAGE, "cosmos");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, "cosmos");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
 
     if (databasePrefix.isPresent()) {
       // Add the prefix and testName as a metadata database suffix
-      props.setProperty(
-          CosmosConfig.METADATA_DATABASE,
-          databasePrefix.get() + CosmosAdmin.METADATA_DATABASE + "_" + testName);
+      properties.setProperty(
+          DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+          databasePrefix.get() + DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
-      props.setProperty(
+      properties.setProperty(
           ConsensusCommitConfig.COORDINATOR_NAMESPACE,
           databasePrefix.get() + Coordinator.NAMESPACE);
     } else {
       // Add testName as a metadata database suffix
-      props.setProperty(
-          CosmosConfig.METADATA_DATABASE, CosmosAdmin.METADATA_DATABASE + "_" + testName);
+      properties.setProperty(
+          DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+          DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
     }
 
-    return props;
+    return properties;
   }
 
   public static Optional<String> getDatabasePrefix() {

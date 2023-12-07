@@ -36,6 +36,7 @@ public class DatabaseConfig {
   private boolean crossPartitionScanEnabled;
   private boolean crossPartitionScanFilteringEnabled;
   private boolean crossPartitionScanOrderingEnabled;
+  private String systemNamespaceName;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -53,6 +54,9 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN = SCAN_PREFIX + "enabled";
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
+  public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
+
+  public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -114,6 +118,9 @@ public class DatabaseConfig {
           CROSS_PARTITION_SCAN
               + " must be enabled to use cross-partition scan with filtering or ordering");
     }
+
+    systemNamespaceName =
+        getString(getProperties(), SYSTEM_NAMESPACE_NAME, DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   public List<String> getContactPoints() {
@@ -162,5 +169,9 @@ public class DatabaseConfig {
 
   public boolean isCrossPartitionScanOrderingEnabled() {
     return crossPartitionScanOrderingEnabled;
+  }
+
+  public String getSystemNamespaceName() {
+    return systemNamespaceName;
   }
 }

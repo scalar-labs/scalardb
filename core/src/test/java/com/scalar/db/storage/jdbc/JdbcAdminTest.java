@@ -42,11 +42,9 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,12 +63,9 @@ import org.postgresql.util.PSQLState;
 import org.sqlite.SQLiteErrorCode;
 import org.sqlite.SQLiteException;
 
-/**
- * Abstraction that defines unit tests for the {@link JdbcAdmin}. The class purpose is to be able to
- * run the {@link JdbcAdmin} unit tests with different values for the {@link JdbcConfig}, notably
- * {@link JdbcConfig#METADATA_SCHEMA}.
- */
-public abstract class JdbcAdminTestBase {
+public class JdbcAdminTest {
+
+  private static final String METADATA_SCHEMA = "scalardb";
   private static final String NAMESPACE = "namespace";
   private static final String TABLE = "table";
   private static final String COLUMN_1 = "c1";
@@ -86,16 +81,12 @@ public abstract class JdbcAdminTestBase {
   @Mock private Connection connection;
   @Mock private JdbcConfig config;
 
-  private String metadataSchemaName;
-
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    when(config.getMetadataSchema()).thenReturn(getTableMetadataSchemaConfig());
-
-    metadataSchemaName = getTableMetadataSchemaConfig().orElse("scalardb");
+    when(config.getMetadataSchema()).thenReturn(METADATA_SCHEMA);
   }
 
   private JdbcAdmin createJdbcAdminFor(RdbEngine rdbEngine) {
@@ -128,20 +119,13 @@ public abstract class JdbcAdminTestBase {
     }
   }
 
-  /**
-   * This sets the {@link JdbcConfig#METADATA_SCHEMA} value that will be used to run the tests.
-   *
-   * @return {@link JdbcConfig#METADATA_SCHEMA} value
-   */
-  abstract Optional<String> getTableMetadataSchemaConfig();
-
   @Test
   public void getTableMetadata_forMysql_ShouldReturnTableMetadata()
       throws SQLException, ExecutionException {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.MYSQL,
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC");
   }
 
@@ -151,7 +135,7 @@ public abstract class JdbcAdminTestBase {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.POSTGRESQL,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
@@ -161,7 +145,7 @@ public abstract class JdbcAdminTestBase {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.SQL_SERVER,
         "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC");
   }
 
@@ -171,7 +155,7 @@ public abstract class JdbcAdminTestBase {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.ORACLE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
@@ -181,7 +165,7 @@ public abstract class JdbcAdminTestBase {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.SQLITE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
@@ -304,14 +288,16 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA `my_ns` character set utf8 COLLATE utf8_bin",
-        "CREATE SCHEMA IF NOT EXISTS `"
-            + metadataSchemaName
-            + "` character set utf8 COLLATE utf8_bin",
+        Collections.singletonList("CREATE SCHEMA `my_ns` character set utf8 COLLATE utf8_bin"),
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
+        Collections.singletonList(
+            "CREATE SCHEMA IF NOT EXISTS `"
+                + METADATA_SCHEMA
+                + "` character set utf8 COLLATE utf8_bin"),
         "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
-        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES (?)");
+        "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
   @Test
@@ -319,12 +305,13 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA \"my_ns\"",
-        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
+        Collections.singletonList("CREATE SCHEMA \"my_ns\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -332,12 +319,13 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [my_ns]",
-        "CREATE SCHEMA [" + metadataSchemaName + "]",
+        Collections.singletonList("CREATE SCHEMA [my_ns]"),
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
         "CREATE TABLE ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
-        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES (?)");
+        "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
   @Test
@@ -345,12 +333,17 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.ORACLE,
-        "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"my_ns\" quota unlimited on USERS",
+        Arrays.asList(
+            "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
+            "ALTER USER \"my_ns\" quota unlimited on USERS"),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
+        Arrays.asList(
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -358,40 +351,80 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.SQLITE,
+        Collections.emptyList(),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
+        Collections.emptyList(),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES (?)");
+        "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
   private void createNamespace_forX_shouldExecuteCreateNamespaceStatement(
-      RdbEngine rdbEngine, String... expectedSqlStatements)
+      RdbEngine rdbEngine,
+      List<String> createSchemaSqls,
+      String namespacesTableExistsSql,
+      List<String> createMetadataSchemaSqls,
+      String createNamespacesTableSql,
+      String insertNamespaceSql)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-    List<Statement> mockedStatements = new ArrayList<>();
 
-    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
-      mockedStatements.add(mock(Statement.class));
+    List<Statement> mockedCreateSchemaStatements = new ArrayList<>();
+    for (int i = 0; i < createSchemaSqls.size(); i++) {
+      mockedCreateSchemaStatements.add(mock(Statement.class));
     }
-    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+
+    Statement mockedNamespacesTableExistsStatement = mock(Statement.class);
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(mockedNamespacesTableExistsStatement.execute(namespacesTableExistsSql))
+        .thenThrow(sqlException);
+
+    List<Statement> mockedCreateMetadataSchemaStatements = new ArrayList<>();
+    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
+      mockedCreateMetadataSchemaStatements.add(mock(Statement.class));
+    }
+
+    Statement mockedCreateNamespacesTableStatement = mock(Statement.class);
+
+    List<Statement> statementsMock =
+        ImmutableList.<Statement>builder()
+            .addAll(mockedCreateSchemaStatements)
+            .add(mockedNamespacesTableExistsStatement)
+            .addAll(mockedCreateMetadataSchemaStatements)
+            .add(mockedCreateNamespacesTableStatement)
+            .build();
     when(connection.createStatement())
         .thenReturn(
-            mockedStatements.get(0),
-            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
-    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+            statementsMock.get(0),
+            statementsMock.subList(1, statementsMock.size()).toArray(new Statement[0]));
+
+    PreparedStatement mockedInsertNamespaceStatement1 = mock(PreparedStatement.class);
+    PreparedStatement mockedInsertNamespaceStatement2 = mock(PreparedStatement.class);
+    when(connection.prepareStatement(insertNamespaceSql))
+        .thenReturn(mockedInsertNamespaceStatement1, mockedInsertNamespaceStatement2);
+
     when(dataSource.getConnection()).thenReturn(connection);
 
     // Act
     admin.createNamespace(namespace);
 
     // Assert
-    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
-      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    for (int i = 0; i < createSchemaSqls.size(); i++) {
+      verify(mockedCreateSchemaStatements.get(i)).execute(createSchemaSqls.get(i));
     }
-    verify(connection).prepareStatement(expectedSqlStatements[expectedSqlStatements.length - 1]);
-    verify(preparedStatement).execute();
+    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
+    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
+      verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
+    }
+    verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
+    verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
+    verify(mockedInsertNamespaceStatement2).setString(1, namespace);
+    verify(mockedInsertNamespaceStatement1).execute();
+    verify(mockedInsertNamespaceStatement2).execute();
   }
 
   @Test
@@ -406,7 +439,10 @@ public abstract class JdbcAdminTestBase {
 
     // Act
     // Assert
-    assertThatThrownBy(() -> admin.createTable(namespace, table, metadata, new HashMap<>()))
+    assertThatThrownBy(
+            () ->
+                admin.createTableInternal(
+                    mock(Connection.class), namespace, table, metadata, false))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -609,13 +645,13 @@ public abstract class JdbcAdminTestBase {
     addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
         "DELETE FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
@@ -625,13 +661,13 @@ public abstract class JdbcAdminTestBase {
     addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
@@ -640,13 +676,13 @@ public abstract class JdbcAdminTestBase {
     addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
         "DELETE FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
   }
 
@@ -655,13 +691,13 @@ public abstract class JdbcAdminTestBase {
     addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
   }
 
@@ -670,13 +706,13 @@ public abstract class JdbcAdminTestBase {
     addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
         RdbEngine.SQLITE,
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,2)");
   }
 
@@ -718,11 +754,9 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `"
-            + metadataSchemaName
-            + "` character set utf8 COLLATE utf8_bin",
+        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "` character set utf8 COLLATE utf8_bin",
         "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata`("
             + "`full_table_name` VARCHAR(128),"
             + "`column_name` VARCHAR(128),"
@@ -733,13 +767,13 @@ public abstract class JdbcAdminTestBase {
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
         "DELETE FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
@@ -748,9 +782,9 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
+        "CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\"",
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\"("
             + "\"full_table_name\" VARCHAR(128),"
             + "\"column_name\" VARCHAR(128),"
@@ -761,13 +795,13 @@ public abstract class JdbcAdminTestBase {
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
@@ -776,9 +810,9 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [" + metadataSchemaName + "]",
+        "CREATE SCHEMA [" + METADATA_SCHEMA + "]",
         "CREATE TABLE ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata]("
             + "[full_table_name] VARCHAR(128),"
             + "[column_name] VARCHAR(128),"
@@ -789,13 +823,13 @@ public abstract class JdbcAdminTestBase {
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
         "DELETE FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
   }
 
@@ -804,19 +838,19 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS",
+        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
         "CREATE TABLE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,2)");
   }
 
@@ -826,7 +860,7 @@ public abstract class JdbcAdminTestBase {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.SQLITE,
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\"("
             + "\"full_table_name\" TEXT,"
             + "\"column_name\" TEXT,"
@@ -837,13 +871,13 @@ public abstract class JdbcAdminTestBase {
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,2)");
   }
 
@@ -886,11 +920,9 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `"
-            + metadataSchemaName
-            + "` character set utf8 COLLATE utf8_bin",
+        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "` character set utf8 COLLATE utf8_bin",
         "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata`("
             + "`full_table_name` VARCHAR(128),"
             + "`column_name` VARCHAR(128),"
@@ -901,25 +933,25 @@ public abstract class JdbcAdminTestBase {
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
@@ -929,9 +961,9 @@ public abstract class JdbcAdminTestBase {
           throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
+        "CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\"",
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\"("
             + "\"full_table_name\" VARCHAR(128),"
             + "\"column_name\" VARCHAR(128),"
@@ -942,25 +974,25 @@ public abstract class JdbcAdminTestBase {
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
@@ -969,9 +1001,9 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [" + metadataSchemaName + "]",
+        "CREATE SCHEMA [" + METADATA_SCHEMA + "]",
         "CREATE TABLE ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata]("
             + "[full_table_name] VARCHAR(128),"
             + "[column_name] VARCHAR(128),"
@@ -982,25 +1014,25 @@ public abstract class JdbcAdminTestBase {
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
@@ -1009,31 +1041,31 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS",
+        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
         "CREATE TABLE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
@@ -1043,7 +1075,7 @@ public abstract class JdbcAdminTestBase {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.SQLITE,
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\"("
             + "\"full_table_name\" TEXT,"
             + "\"column_name\" TEXT,"
@@ -1054,25 +1086,25 @@ public abstract class JdbcAdminTestBase {
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,FALSE,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',TRUE,2)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',TRUE,3)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,4)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,FALSE,5)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,FALSE,6)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)");
   }
 
@@ -1285,10 +1317,11 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.MYSQL,
         "DROP TABLE `my_ns`.`foo_table`",
         "DELETE FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "SELECT DISTINCT `full_table_name` FROM `" + metadataSchemaName + "`.`metadata`",
-        "DROP TABLE `" + metadataSchemaName + "`.`metadata`");
+        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
+        "DROP TABLE `" + METADATA_SCHEMA + "`.`metadata`",
+        "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
   }
 
   @Test
@@ -1299,10 +1332,11 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.POSTGRESQL,
         "DROP TABLE \"my_ns\".\"foo_table\"",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"",
-        "DROP TABLE \"" + metadataSchemaName + "\".\"metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1313,10 +1347,11 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.SQL_SERVER,
         "DROP TABLE [my_ns].[foo_table]",
         "DELETE FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "SELECT DISTINCT [full_table_name] FROM [" + metadataSchemaName + "].[metadata]",
-        "DROP TABLE [" + metadataSchemaName + "].[metadata]");
+        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "DROP TABLE [" + METADATA_SCHEMA + "].[metadata]",
+        "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]");
   }
 
   @Test
@@ -1326,10 +1361,11 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.ORACLE,
         "DROP TABLE \"my_ns\".\"foo_table\"",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"",
-        "DROP TABLE \"" + metadataSchemaName + "\".\"metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1339,10 +1375,11 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.SQLITE,
         "DROP TABLE \"my_ns$foo_table\"",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "$metadata\"",
-        "DROP TABLE \"" + metadataSchemaName + "$metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
+        "DROP TABLE \"" + METADATA_SCHEMA + "$metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
   }
 
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
@@ -1369,6 +1406,13 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
+    ResultSet resultSetForSelectAllNamespacesTable =
+        mockResultSet(
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA),
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace));
+    when(mockedStatements.get(mockedStatements.size() - 1).executeQuery(anyString()))
+        .thenReturn(resultSetForSelectAllNamespacesTable);
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
@@ -1392,9 +1436,10 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.MYSQL,
         "DROP TABLE `my_ns`.`foo_table`",
         "DELETE FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "SELECT DISTINCT `full_table_name` FROM `" + metadataSchemaName + "`.`metadata`");
+        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
+        "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
   }
 
   @Test
@@ -1405,9 +1450,10 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.POSTGRESQL,
         "DROP TABLE \"my_ns\".\"foo_table\"",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1418,9 +1464,10 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.SQL_SERVER,
         "DROP TABLE [my_ns].[foo_table]",
         "DELETE FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "SELECT DISTINCT [full_table_name] FROM [" + metadataSchemaName + "].[metadata]");
+        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]");
   }
 
   @Test
@@ -1431,9 +1478,10 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.ORACLE,
         "DROP TABLE \"my_ns\".\"foo_table\"",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1444,9 +1492,10 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.SQLITE,
         "DROP TABLE \"my_ns$foo_table\"",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "$metadata\"");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
   }
 
   private void
@@ -1474,6 +1523,13 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
+    ResultSet resultSetForSelectAllNamespacesTable =
+        mockResultSet(
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA),
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace));
+    when(mockedStatements.get(mockedStatements.size() - 1).executeQuery(anyString()))
+        .thenReturn(resultSetForSelectAllNamespacesTable);
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
@@ -1490,78 +1546,96 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForMysql_shouldDropSchemaAndNamespacesTable()
+  public void dropNamespace_WithOnlyNamespaceSchemaLeftForMysql_shouldDropSchemaAndNamespacesTable()
       throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.MYSQL,
         "DROP SCHEMA `my_ns`",
-        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?",
-        "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`",
-        "DROP TABLE `" + metadataSchemaName + "`.`namespaces`",
-        "DROP SCHEMA `" + metadataSchemaName + "`");
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`namespaces` WHERE `namespace_name` = ?",
+        "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`",
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`metadata` LIMIT 1",
+        "DROP TABLE `" + METADATA_SCHEMA + "`.`namespaces`",
+        "DROP SCHEMA `" + METADATA_SCHEMA + "`");
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForPostgresql_shouldDropSchemaAndNamespacesTable()
-      throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
+  public void
+      dropNamespace_WithOnlyNamespaceSchemaLeftForPostgresql_shouldDropSchemaAndNamespacesTable()
+          throws Exception {
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.POSTGRESQL,
         "DROP SCHEMA \"my_ns\"",
-        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"",
-        "DROP TABLE \"" + metadataSchemaName + "\".\"namespaces\"",
-        "DROP SCHEMA \"" + metadataSchemaName + "\"");
+        "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "DROP SCHEMA \"" + METADATA_SCHEMA + "\"");
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForSqlServer_shouldDropSchemaAndNamespacesTable()
-      throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
+  public void
+      dropNamespace_WithOnlyNamespaceSchemaLeftForSqlServer_shouldDropSchemaAndNamespacesTable()
+          throws Exception {
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.SQL_SERVER,
         "DROP SCHEMA [my_ns]",
-        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?",
-        "SELECT * FROM [" + metadataSchemaName + "].[namespaces]",
-        "DROP TABLE [" + metadataSchemaName + "].[namespaces]",
-        "DROP SCHEMA [" + metadataSchemaName + "]");
+        "DELETE FROM [" + METADATA_SCHEMA + "].[namespaces] WHERE [namespace_name] = ?",
+        "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "DROP TABLE [" + METADATA_SCHEMA + "].[namespaces]",
+        "DROP SCHEMA [" + METADATA_SCHEMA + "]");
   }
 
   @Test
-  public void dropNamespace_WithLastExistingSchemaForOracle_shouldDropSchemaAndNamespacesTable()
-      throws Exception {
-    dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
+  public void
+      dropNamespace_WithOnlyNamespaceSchemaLeftForOracle_shouldDropSchemaAndNamespacesTable()
+          throws Exception {
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
         RdbEngine.ORACLE,
         "DROP USER \"my_ns\"",
-        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"",
-        "DROP TABLE \"" + metadataSchemaName + "\".\"namespaces\"",
-        "DROP USER \"" + metadataSchemaName + "\"");
+        "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "DROP USER \"" + METADATA_SCHEMA + "\"");
   }
 
   @Test
   public void dropNamespace_forSqlite_shouldDropNamespace() throws Exception {
     // Arrange
     String deleteFromNamespaceTableQuery =
-        "DELETE FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?";
+        "DELETE FROM \"" + METADATA_SCHEMA + "$namespaces\" WHERE \"namespace_name\" = ?";
     String selectAllFromNamespaceTableQuery =
-        "SELECT * FROM \"" + metadataSchemaName + "$namespaces\"";
-    String dropNamespaceTableQuery = "DROP TABLE \"" + metadataSchemaName + "$namespaces\"";
+        "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"";
+    String selectAllFromMetadataTableQuery =
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$metadata\" LIMIT 1";
+    String dropNamespaceTableQuery = "DROP TABLE \"" + METADATA_SCHEMA + "$namespaces\"";
 
     String namespace = "my_ns";
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
 
     Connection connection = mock(Connection.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
-    PreparedStatement selectAllFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
+    Statement selectAllFromMetadataTablePrepStmt = mock(Statement.class);
     Statement dropNamespaceTableStmt = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement()).thenReturn(dropNamespaceTableStmt);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTablePrepStmt, selectAllFromNamespaceTablePrepStmt);
+    when(connection.createStatement())
+        .thenReturn(
+            selectAllFromNamespaceTablePrepStmt,
+            selectAllFromMetadataTablePrepStmt,
+            dropNamespaceTableStmt);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
-    // Namespaces table is empty
-    ResultSet resultSet =
-        mockResultSet(new SelectFullTableNameFromMetadataTableResultSetMocker.Row[0]);
-    when(selectAllFromNamespaceTablePrepStmt.executeQuery()).thenReturn(resultSet);
+    // Only the metadata schema is left
+    ResultSet resultSet1 =
+        mockResultSet(
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA));
+    when(selectAllFromNamespaceTablePrepStmt.executeQuery(anyString())).thenReturn(resultSet1);
+
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(RdbEngine.SQLITE, sqlException);
+    when(selectAllFromMetadataTablePrepStmt.execute(anyString())).thenThrow(sqlException);
 
     // Act
     admin.dropNamespace(namespace);
@@ -1569,15 +1643,17 @@ public abstract class JdbcAdminTestBase {
     // Assert
     verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
     verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
-    verify(connection).prepareStatement(selectAllFromNamespaceTableQuery);
+    verify(selectAllFromNamespaceTablePrepStmt).executeQuery(selectAllFromNamespaceTableQuery);
+    verify(selectAllFromMetadataTablePrepStmt).execute(selectAllFromMetadataTableQuery);
     verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
   }
 
-  private void dropNamespace_WithLastExistingSchemaForX_shouldDropSchemaAndNamespacesTable(
+  private void dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
       RdbEngine rdbEngine,
       String dropNamespaceQuery,
       String deleteFromNamespaceTableQuery,
       String selectAllFromNamespaceTableQuery,
+      String selectAllFromMetadataTableQuery,
       String dropNamespaceTableQuery,
       String dropMetadataSchemaQuery)
       throws Exception {
@@ -1588,19 +1664,29 @@ public abstract class JdbcAdminTestBase {
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStmt = mock(Statement.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
-    PreparedStatement selectAllFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
+    Statement selectAllFromMetadataTablePrepStmt = mock(Statement.class);
     Statement dropNamespaceTableStmt = mock(Statement.class);
     Statement dropMetadataSchemaStmt = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement())
-        .thenReturn(dropNamespaceStmt, dropNamespaceTableStmt, dropMetadataSchemaStmt);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTablePrepStmt, selectAllFromNamespaceTablePrepStmt);
+        .thenReturn(
+            dropNamespaceStmt,
+            selectAllFromNamespaceTablePrepStmt,
+            selectAllFromMetadataTablePrepStmt,
+            dropNamespaceTableStmt,
+            dropMetadataSchemaStmt);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
-    // Namespaces table is empty
+    // Only the metadata schema is left
     ResultSet resultSet =
-        mockResultSet(new SelectFullTableNameFromMetadataTableResultSetMocker.Row[0]);
-    when(selectAllFromNamespaceTablePrepStmt.executeQuery()).thenReturn(resultSet);
+        mockResultSet(
+            new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(METADATA_SCHEMA));
+    when(selectAllFromNamespaceTablePrepStmt.executeQuery(anyString())).thenReturn(resultSet);
+
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(selectAllFromMetadataTablePrepStmt.execute(anyString())).thenThrow(sqlException);
 
     // Act
     admin.dropNamespace(namespace);
@@ -1610,8 +1696,8 @@ public abstract class JdbcAdminTestBase {
     verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
     verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
     verify(deleteFromNamespaceTablePrepStmt).execute();
-    verify(connection).prepareStatement(selectAllFromNamespaceTableQuery);
-    verify(selectAllFromNamespaceTablePrepStmt).executeQuery();
+    verify(selectAllFromNamespaceTablePrepStmt).executeQuery(selectAllFromNamespaceTableQuery);
+    verify(selectAllFromMetadataTablePrepStmt).execute(selectAllFromMetadataTableQuery);
     verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
     verify(dropMetadataSchemaStmt).execute(dropMetadataSchemaQuery);
   }
@@ -1622,8 +1708,8 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.MYSQL,
         "DROP SCHEMA `my_ns`",
-        "DELETE FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?",
-        "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`");
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`namespaces` WHERE `namespace_name` = ?",
+        "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
   }
 
   @Test
@@ -1632,8 +1718,8 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.POSTGRESQL,
         "DROP SCHEMA \"my_ns\"",
-        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
+        "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1642,8 +1728,8 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.SQL_SERVER,
         "DROP SCHEMA [my_ns]",
-        "DELETE FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?",
-        "SELECT * FROM [" + metadataSchemaName + "].[namespaces]");
+        "DELETE FROM [" + METADATA_SCHEMA + "].[namespaces] WHERE [namespace_name] = ?",
+        "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]");
   }
 
   @Test
@@ -1652,8 +1738,8 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.ORACLE,
         "DROP USER \"my_ns\"",
-        "DELETE FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
-        "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
+        "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
@@ -1662,8 +1748,8 @@ public abstract class JdbcAdminTestBase {
     dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
         RdbEngine.SQLITE,
         "unused",
-        "DELETE FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?",
-        "SELECT * FROM \"" + metadataSchemaName + "$namespaces\"");
+        "DELETE FROM \"" + METADATA_SCHEMA + "$namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
   }
 
   private void dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
@@ -1679,18 +1765,20 @@ public abstract class JdbcAdminTestBase {
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStatementMock = mock(Statement.class);
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
-    PreparedStatement selectNamespaceStatementMock = mock(PreparedStatement.class);
+    Statement selectNamespaceStatementMock = mock(Statement.class);
     if (rdbEngine != RdbEngine.SQLITE) {
-      when(connection.createStatement()).thenReturn(dropNamespaceStatementMock);
+      when(connection.createStatement())
+          .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+    } else {
+      when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
     }
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTableMock, selectNamespaceStatementMock);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
     ResultSet resultSet =
         mockResultSet(
             new SelectFullTableNameFromMetadataTableResultSetMocker.Row(namespace + ".tbl1"));
-    when(selectNamespaceStatementMock.executeQuery()).thenReturn(resultSet);
+    when(selectNamespaceStatementMock.executeQuery(anyString())).thenReturn(resultSet);
 
     // Act
     admin.dropNamespace(namespace);
@@ -1702,8 +1790,7 @@ public abstract class JdbcAdminTestBase {
     verify(connection).prepareStatement(deleteFromNamespaceTable);
     verify(deleteFromNamespaceTableMock).setString(1, namespace);
     verify(deleteFromNamespaceTableMock).execute();
-    verify(connection).prepareStatement(selectNamespaceStatement);
-    verify(selectNamespaceStatementMock).executeQuery();
+    verify(selectNamespaceStatementMock).executeQuery(selectNamespaceStatement);
   }
 
   @Test
@@ -1711,7 +1798,7 @@ public abstract class JdbcAdminTestBase {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.MYSQL,
         "SELECT DISTINCT `full_table_name` FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` LIKE ?");
   }
 
@@ -1720,7 +1807,7 @@ public abstract class JdbcAdminTestBase {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.POSTGRESQL,
         "SELECT DISTINCT \"full_table_name\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
@@ -1729,7 +1816,7 @@ public abstract class JdbcAdminTestBase {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.SQL_SERVER,
         "SELECT DISTINCT [full_table_name] FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] LIKE ?");
   }
 
@@ -1738,7 +1825,7 @@ public abstract class JdbcAdminTestBase {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.ORACLE,
         "SELECT DISTINCT \"full_table_name\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
@@ -1747,7 +1834,7 @@ public abstract class JdbcAdminTestBase {
     getNamespaceTables_forX_ShouldReturnTableNames(
         RdbEngine.SQLITE,
         "SELECT DISTINCT \"full_table_name\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
@@ -1789,7 +1876,7 @@ public abstract class JdbcAdminTestBase {
   public void namespaceExists_forMysqlWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.MYSQL,
-        "SELECT 1 FROM `" + metadataSchemaName + "`.`namespaces` WHERE `namespace_name` = ?");
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` WHERE `namespace_name` = ?");
   }
 
   @Test
@@ -1797,7 +1884,7 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   @Test
@@ -1805,21 +1892,21 @@ public abstract class JdbcAdminTestBase {
       throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.SQL_SERVER,
-        "SELECT 1 FROM [" + metadataSchemaName + "].[namespaces] WHERE [namespace_name] = ?");
+        "SELECT 1 FROM [" + METADATA_SCHEMA + "].[namespaces] WHERE [namespace_name] = ?");
   }
 
   @Test
   public void namespaceExists_forOracleWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.ORACLE,
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   @Test
   public void namespaceExists_forSqliteWithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.SQLITE,
-        "SELECT 1 FROM \"" + metadataSchemaName + "$namespaces\" WHERE \"namespace_name\" = ?");
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" WHERE \"namespace_name\" = ?");
   }
 
   private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
@@ -1852,11 +1939,11 @@ public abstract class JdbcAdminTestBase {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.MYSQL,
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
@@ -1867,11 +1954,11 @@ public abstract class JdbcAdminTestBase {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.POSTGRESQL,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -1882,11 +1969,11 @@ public abstract class JdbcAdminTestBase {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.SQL_SERVER,
         "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "CREATE INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl] ([my_column])",
         "UPDATE ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] SET [indexed]=1 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
   }
 
@@ -1897,11 +1984,11 @@ public abstract class JdbcAdminTestBase {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.ORACLE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -1912,11 +1999,11 @@ public abstract class JdbcAdminTestBase {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
         RdbEngine.SQLITE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns$my_tbl\" (\"my_column\")",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" SET \"indexed\"=TRUE WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -1967,12 +2054,12 @@ public abstract class JdbcAdminTestBase {
     createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.MYSQL,
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` VARCHAR(64)",
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` SET `indexed`=true WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
@@ -1983,12 +2070,12 @@ public abstract class JdbcAdminTestBase {
     createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.POSTGRESQL,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE VARCHAR(10485760)",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -1999,12 +2086,12 @@ public abstract class JdbcAdminTestBase {
     createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
         RdbEngine.ORACLE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(64) )",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=1 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -2064,11 +2151,11 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.MYSQL,
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
         "UPDATE `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
@@ -2079,11 +2166,11 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.POSTGRESQL,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -2093,11 +2180,11 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.SQL_SERVER,
         "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "DROP INDEX [index_my_ns_my_tbl_my_column] ON [my_ns].[my_tbl]",
         "UPDATE ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] SET [indexed]=0 WHERE [full_table_name]='my_ns.my_tbl' AND [column_name]='my_column'");
   }
 
@@ -2107,11 +2194,11 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.ORACLE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -2121,11 +2208,11 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.SQLITE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" SET \"indexed\"=FALSE WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -2175,12 +2262,12 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.MYSQL,
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
         "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` LONGTEXT",
         "UPDATE `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
   }
 
@@ -2190,12 +2277,12 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.POSTGRESQL,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
         "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE TEXT",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -2205,12 +2292,12 @@ public abstract class JdbcAdminTestBase {
     dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
         RdbEngine.ORACLE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
         "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )",
         "UPDATE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
@@ -2267,15 +2354,15 @@ public abstract class JdbcAdminTestBase {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "ALTER TABLE `ns`.`table` ADD `c2` INT",
-        "DELETE FROM `" + metadataSchemaName + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`metadata` VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
   }
 
@@ -2285,17 +2372,17 @@ public abstract class JdbcAdminTestBase {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
   }
 
@@ -2305,17 +2392,17 @@ public abstract class JdbcAdminTestBase {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
         "DELETE FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
   }
 
@@ -2325,15 +2412,15 @@ public abstract class JdbcAdminTestBase {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
         "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "ALTER TABLE [ns].[table] ADD [c2] INT",
-        "DELETE FROM [" + metadataSchemaName + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[metadata] VALUES ('ns.table','c2','INT',NULL,NULL,0,2)");
   }
 
@@ -2343,17 +2430,15 @@ public abstract class JdbcAdminTestBase {
     addNewColumnToTable_ForX_ShouldWorkProperly(
         RdbEngine.SQLITE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns$table\" ADD \"c2\" INT",
-        "DELETE FROM \""
-            + metadataSchemaName
-            + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,FALSE,1)",
         "INSERT INTO \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,FALSE,2)");
   }
 
@@ -2401,31 +2486,31 @@ public abstract class JdbcAdminTestBase {
   @Test
   public void getNamespaceNames_forMysql_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.MYSQL, "SELECT * FROM `" + metadataSchemaName + "`.`namespaces`");
+        RdbEngine.MYSQL, "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
   }
 
   @Test
   public void getNamespaceNames_forPostgresql_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.POSTGRESQL, "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
+        RdbEngine.POSTGRESQL, "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
   public void getNamespaceNames_forSqlServer_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.SQL_SERVER, "SELECT * FROM [" + metadataSchemaName + "].[namespaces]");
+        RdbEngine.SQL_SERVER, "SELECT * FROM [" + METADATA_SCHEMA + "].[namespaces]");
   }
 
   @Test
   public void getNamespaceNames_forOracle_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.ORACLE, "SELECT * FROM \"" + metadataSchemaName + "\".\"namespaces\"");
+        RdbEngine.ORACLE, "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   @Test
   public void getNamespaceNames_forSqlLite_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
-        RdbEngine.SQLITE, "SELECT * FROM \"" + metadataSchemaName + "$" + "namespaces\"");
+        RdbEngine.SQLITE, "SELECT * FROM \"" + METADATA_SCHEMA + "$" + "namespaces\"");
   }
 
   private void getNamespaceNames_forX_ShouldReturnNamespaceNames(
@@ -2798,14 +2883,17 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `my_ns` character set utf8 COLLATE utf8_bin",
-        "CREATE SCHEMA IF NOT EXISTS `"
-            + metadataSchemaName
-            + "` character set utf8 COLLATE utf8_bin",
+        Collections.singletonList(
+            "CREATE SCHEMA IF NOT EXISTS `my_ns` character set utf8 COLLATE utf8_bin"),
+        "SELECT 1 FROM `scalardb`.`namespaces` LIMIT 1",
+        Collections.singletonList(
+            "CREATE SCHEMA IF NOT EXISTS `"
+                + METADATA_SCHEMA
+                + "` character set utf8 COLLATE utf8_bin"),
         "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
-        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES (?)");
+        "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
   @Test
@@ -2813,12 +2901,13 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA IF NOT EXISTS \"my_ns\"",
-        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"my_ns\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -2826,12 +2915,13 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [my_ns]",
-        "CREATE SCHEMA [" + metadataSchemaName + "]",
+        Collections.singletonList("CREATE SCHEMA [my_ns]"),
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
         "CREATE TABLE ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
-        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES (?)");
+        "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
   @Test
@@ -2839,12 +2929,17 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"my_ns\" quota unlimited on USERS",
+        Arrays.asList(
+            "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
+            "ALTER USER \"my_ns\" quota unlimited on USERS"),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
+        Arrays.asList(
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -2852,40 +2947,81 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.SQLITE,
+        Collections.emptyList(),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
+        Collections.emptyList(),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
-        "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES (?)");
+        "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
   private void repairNamespace_forX_shouldWorkProperly(
-      RdbEngine rdbEngine, String... expectedSqlStatements)
+      RdbEngine rdbEngine,
+      List<String> createSchemaIfNotExistsSqls,
+      String namespacesTableExistsSql,
+      List<String> createMetadataSchemaSqls,
+      String createNamespacesTableSql,
+      String insertNamespaceSql)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-    List<Statement> mockedStatements = new ArrayList<>();
 
-    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
-      mockedStatements.add(mock(Statement.class));
+    List<Statement> mockedCreateSchemaIfNotExistsStatements = new ArrayList<>();
+    for (int i = 0; i < createSchemaIfNotExistsSqls.size(); i++) {
+      mockedCreateSchemaIfNotExistsStatements.add(mock(Statement.class));
     }
-    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+
+    Statement mockedNamespacesTableExistsStatement = mock(Statement.class);
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(mockedNamespacesTableExistsStatement.execute(namespacesTableExistsSql))
+        .thenThrow(sqlException);
+
+    List<Statement> mockedCreateMetadataSchemaStatements = new ArrayList<>();
+    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
+      mockedCreateMetadataSchemaStatements.add(mock(Statement.class));
+    }
+
+    Statement mockedCreateNamespacesTableStatement = mock(Statement.class);
+
+    List<Statement> statementsMock =
+        ImmutableList.<Statement>builder()
+            .addAll(mockedCreateSchemaIfNotExistsStatements)
+            .add(mockedNamespacesTableExistsStatement)
+            .addAll(mockedCreateMetadataSchemaStatements)
+            .add(mockedCreateNamespacesTableStatement)
+            .build();
+
     when(connection.createStatement())
         .thenReturn(
-            mockedStatements.get(0),
-            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
-    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+            statementsMock.get(0),
+            statementsMock.subList(1, statementsMock.size()).toArray(new Statement[0]));
+
+    PreparedStatement mockedInsertNamespaceStatement1 = mock(PreparedStatement.class);
+    PreparedStatement mockedInsertNamespaceStatement2 = mock(PreparedStatement.class);
+    when(connection.prepareStatement(insertNamespaceSql))
+        .thenReturn(mockedInsertNamespaceStatement1, mockedInsertNamespaceStatement2);
     when(dataSource.getConnection()).thenReturn(connection);
 
     // Act
     admin.repairNamespace(namespace, Collections.emptyMap());
 
     // Assert
-    for (int i = 0; i < expectedSqlStatements.length - 1; i++) {
-      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    for (int i = 0; i < createSchemaIfNotExistsSqls.size(); i++) {
+      verify(mockedCreateSchemaIfNotExistsStatements.get(i))
+          .execute(createSchemaIfNotExistsSqls.get(i));
     }
-    verify(connection).prepareStatement(expectedSqlStatements[expectedSqlStatements.length - 1]);
-    verify(preparedStatement).execute();
+    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
+    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
+      verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
+    }
+    verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
+    verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
+    verify(mockedInsertNamespaceStatement2).setString(1, namespace);
+    verify(mockedInsertNamespaceStatement1).execute();
+    verify(mockedInsertNamespaceStatement2).execute();
   }
 
   @Test
@@ -2893,16 +3029,17 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.MYSQL,
-        "SELECT 1 FROM `" + metadataSchemaName + "`.`metadata` LIMIT 1",
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`metadata` LIMIT 1",
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
         ImmutableList.of(
             "CREATE SCHEMA IF NOT EXISTS `"
-                + metadataSchemaName
+                + METADATA_SCHEMA
                 + "` character set utf8 COLLATE utf8_bin"),
         "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
-        "SELECT DISTINCT `full_table_name` FROM `" + metadataSchemaName + "`.`metadata`",
-        "INSERT INTO `" + metadataSchemaName + "`.`namespaces` VALUES (?)");
+        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
+        "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
   @Test
@@ -2910,13 +3047,14 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" LIMIT 1",
-        ImmutableList.of("CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        ImmutableList.of("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -2924,15 +3062,16 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.ORACLE,
-        "SELECT 1 FROM \"" + metadataSchemaName + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         ImmutableList.of(
-            "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
-            "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS"),
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "\".\"metadata\"",
-        "INSERT INTO \"" + metadataSchemaName + "\".\"namespaces\" VALUES (?)");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -2940,13 +3079,14 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.SQL_SERVER,
-        "SELECT TOP 1 1 FROM [" + metadataSchemaName + "].[metadata]",
-        ImmutableList.of("CREATE SCHEMA [" + metadataSchemaName + "]"),
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        ImmutableList.of("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
         "CREATE TABLE ["
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
-        "SELECT DISTINCT [full_table_name] FROM [" + metadataSchemaName + "].[metadata]",
-        "INSERT INTO [" + metadataSchemaName + "].[namespaces] VALUES (?)");
+        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
   @Test
@@ -2954,18 +3094,20 @@ public abstract class JdbcAdminTestBase {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.SQLITE,
-        "SELECT 1 FROM \"" + metadataSchemaName + "$metadata\" LIMIT 1",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$metadata\" LIMIT 1",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         Collections.emptyList(),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
+            + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + metadataSchemaName + "$metadata\"",
-        "INSERT INTO \"" + metadataSchemaName + "$namespaces\" VALUES (?)");
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
+        "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
   private void upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
       RdbEngine rdbEngine,
       String tableMetadataExistStatement,
+      String namespacesTableExistsStatement,
       List<String> createMetadataNamespaceStatements,
       String createNamespaceTableStatement,
       String getTableMetadataNamespacesStatement,
@@ -2974,18 +3116,21 @@ public abstract class JdbcAdminTestBase {
     // Arrange
     // Instantiate mocks
     Statement tableMetadataExistsStatementMock = mock(Statement.class);
+    Statement namespacesTableExistsStatementMock = mock(Statement.class);
     List<Statement> createMetadataNamespaceStatementsMock =
         prepareMockStatements(createMetadataNamespaceStatements.size());
     Statement createNamespaceTableStatementMock = mock(Statement.class);
     Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
     PreparedStatement insertNamespacePrepStmt1 = mock(PreparedStatement.class);
     PreparedStatement insertNamespacePrepStmt2 = mock(PreparedStatement.class);
+    PreparedStatement insertNamespacePrepStmt3 = mock(PreparedStatement.class);
 
     when(connection.prepareStatement(anyString()))
-        .thenReturn(insertNamespacePrepStmt1, insertNamespacePrepStmt2);
+        .thenReturn(insertNamespacePrepStmt1, insertNamespacePrepStmt2, insertNamespacePrepStmt3);
     List<Statement> statementsMock =
         ImmutableList.<Statement>builder()
             .add(tableMetadataExistsStatementMock)
+            .add(namespacesTableExistsStatementMock)
             .addAll(createMetadataNamespaceStatementsMock)
             .add(createNamespaceTableStatementMock)
             .add(getTableMetadataNamespacesStatementMock)
@@ -2998,6 +3143,12 @@ public abstract class JdbcAdminTestBase {
             statementsMock.subList(1, statementsMock.size()).toArray(new Statement[0]));
     Connection connection2 = mock(Connection.class);
     when(dataSource.getConnection()).thenReturn(connection, connection2);
+
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(namespacesTableExistsStatementMock.execute(namespacesTableExistsStatement))
+        .thenThrow(sqlException);
+
     ResultSet resultSet1 =
         mockResultSet(
             new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns1.tbl1"),
@@ -3011,6 +3162,7 @@ public abstract class JdbcAdminTestBase {
 
     // Assert
     verify(tableMetadataExistsStatementMock).execute(tableMetadataExistStatement);
+    verify(namespacesTableExistsStatementMock).execute(namespacesTableExistsStatement);
     for (int i = 0; i < createMetadataNamespaceStatementsMock.size(); i++) {
       verify(createMetadataNamespaceStatementsMock.get(i))
           .execute(createMetadataNamespaceStatements.get(i));
@@ -3018,11 +3170,13 @@ public abstract class JdbcAdminTestBase {
     verify(createNamespaceTableStatementMock).execute(createNamespaceTableStatement);
     verify(getTableMetadataNamespacesStatementMock)
         .executeQuery(getTableMetadataNamespacesStatement);
-    verify(connection, times(2)).prepareStatement(insertNamespaceStatement);
-    verify(insertNamespacePrepStmt1).setString(1, "ns2");
-    verify(insertNamespacePrepStmt2).setString(1, "ns1");
+    verify(connection, times(3)).prepareStatement(insertNamespaceStatement);
+    verify(insertNamespacePrepStmt1).setString(1, METADATA_SCHEMA);
+    verify(insertNamespacePrepStmt2).setString(1, "ns2");
+    verify(insertNamespacePrepStmt3).setString(1, "ns1");
     verify(insertNamespacePrepStmt1).execute();
     verify(insertNamespacePrepStmt2).execute();
+    verify(insertNamespacePrepStmt3).execute();
   }
 
   private List<Statement> prepareMockStatements(int count) {
@@ -3052,7 +3206,7 @@ public abstract class JdbcAdminTestBase {
         .prepareStatement(
             "INSERT INTO "
                 + rdbEngineStrategy.encloseFullTableName(
-                    metadataSchemaName, JdbcAdmin.NAMESPACES_TABLE)
+                    METADATA_SCHEMA, JdbcAdmin.NAMESPACES_TABLE)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
     verify(insertStatement).execute();
@@ -3077,7 +3231,7 @@ public abstract class JdbcAdminTestBase {
         .prepareStatement(
             "INSERT INTO "
                 + rdbEngineStrategy.encloseFullTableName(
-                    metadataSchemaName, JdbcAdmin.NAMESPACES_TABLE)
+                    METADATA_SCHEMA, JdbcAdmin.NAMESPACES_TABLE)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
     verify(insertStatement).execute();
@@ -3089,25 +3243,15 @@ public abstract class JdbcAdminTestBase {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `"
-            + metadataSchemaName
-            + "` character set utf8 COLLATE utf8_bin",
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
+        Collections.singletonList(
+            "CREATE SCHEMA IF NOT EXISTS `"
+                + METADATA_SCHEMA
+                + "` character set utf8 COLLATE utf8_bin"),
         "CREATE TABLE IF NOT EXISTS `"
-            + metadataSchemaName
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))");
-  }
-
-  @Test
-  public void
-      createNamespaceTableIfNotExists_forOracle_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists()
-          throws ExecutionException, SQLException {
-    createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
-        RdbEngine.ORACLE,
-        "CREATE USER \"" + metadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"" + metadataSchemaName + "\" quota unlimited on USERS",
-        "CREATE TABLE \""
-            + metadataSchemaName
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))");
+            + METADATA_SCHEMA
+            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+        "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
   @Test
@@ -3116,10 +3260,12 @@ public abstract class JdbcAdminTestBase {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA IF NOT EXISTS \"" + metadataSchemaName + "\"",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))");
+            + METADATA_SCHEMA
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -3128,10 +3274,28 @@ public abstract class JdbcAdminTestBase {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [" + metadataSchemaName + "]",
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
         "CREATE TABLE ["
-            + metadataSchemaName
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))");
+            + METADATA_SCHEMA
+            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+        "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
+  }
+
+  @Test
+  public void
+      createNamespaceTableIfNotExists_forOracle_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists()
+          throws ExecutionException, SQLException {
+    createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
+        RdbEngine.ORACLE,
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
+        Arrays.asList(
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
+        "CREATE TABLE \""
+            + METADATA_SCHEMA
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   @Test
@@ -3140,35 +3304,79 @@ public abstract class JdbcAdminTestBase {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.SQLITE,
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
+        Collections.emptyList(),
         "CREATE TABLE IF NOT EXISTS \""
-            + metadataSchemaName
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))");
+            + METADATA_SCHEMA
+            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
   public void
       createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
-          RdbEngine rdbEngine, String... expectedSqlStatements)
+          RdbEngine rdbEngine,
+          String namespacesTableExistsSql,
+          List<String> createMetadataSchemaSqls,
+          String createNamespacesTableSql,
+          String insertNamespaceSql)
           throws SQLException, ExecutionException {
     // Arrange
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-    List<Statement> mockedStatements = new ArrayList<>();
 
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      mockedStatements.add(mock(Statement.class));
+    Statement mockedNamespacesTableExistsStatement = mock(Statement.class);
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(mockedNamespacesTableExistsStatement.execute(namespacesTableExistsSql))
+        .thenThrow(sqlException);
+
+    List<Statement> mockedCreateMetadataSchemaStatements = new ArrayList<>();
+    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
+      mockedCreateMetadataSchemaStatements.add(mock(Statement.class));
     }
+
+    Statement mockedCreateNamespacesTableStatement = mock(Statement.class);
+
+    if (!mockedCreateMetadataSchemaStatements.isEmpty()) {
+      when(connection.createStatement())
+          .thenReturn(mockedNamespacesTableExistsStatement)
+          .thenReturn(
+              mockedCreateMetadataSchemaStatements.get(0),
+              mockedCreateMetadataSchemaStatements
+                  .subList(1, mockedCreateMetadataSchemaStatements.size())
+                  .toArray(new Statement[0]))
+          .thenReturn(mockedCreateNamespacesTableStatement);
+    } else {
+      when(connection.createStatement())
+          .thenReturn(mockedNamespacesTableExistsStatement)
+          .thenReturn(mockedCreateNamespacesTableStatement);
+    }
+
+    List<Statement> statementsMock =
+        ImmutableList.<Statement>builder()
+            .add(mockedNamespacesTableExistsStatement)
+            .addAll(mockedCreateMetadataSchemaStatements)
+            .add(mockedCreateNamespacesTableStatement)
+            .build();
     when(connection.createStatement())
         .thenReturn(
-            mockedStatements.get(0),
-            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
-    when(dataSource.getConnection()).thenReturn(connection);
+            statementsMock.get(0),
+            statementsMock.subList(1, statementsMock.size()).toArray(new Statement[0]));
+
+    PreparedStatement mockedInsertNamespaceStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(insertNamespaceSql))
+        .thenReturn(mockedInsertNamespaceStatement);
 
     // Act
     admin.createNamespacesTableIfNotExists(connection);
 
     // Assert
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
+    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
+      verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
     }
+    verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
+    verify(mockedInsertNamespaceStatement).setString(1, METADATA_SCHEMA);
+    verify(mockedInsertNamespaceStatement).execute();
   }
 
   private SQLException prepareDuplicatedKeyException(RdbEngine rdbEngine) {
@@ -3225,7 +3433,7 @@ public abstract class JdbcAdminTestBase {
         .prepareStatement(
             "INSERT INTO "
                 + rdbEngineStrategy.encloseFullTableName(
-                    metadataSchemaName, JdbcAdmin.NAMESPACES_TABLE)
+                    METADATA_SCHEMA, JdbcAdmin.NAMESPACES_TABLE)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
     verify(insertStatement).execute();

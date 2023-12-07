@@ -46,9 +46,7 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .credentialsProvider(credentialsProvider)
             .region(Region.of(config.getRegion()))
             .build();
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config.getMetadataNamespace().orElse(DynamoAdmin.METADATA_NAMESPACE);
+    metadataNamespace = config.getNamespacePrefix().orElse("") + config.getMetadataNamespace();
     namespacePrefix = config.getNamespacePrefix().orElse("");
   }
 

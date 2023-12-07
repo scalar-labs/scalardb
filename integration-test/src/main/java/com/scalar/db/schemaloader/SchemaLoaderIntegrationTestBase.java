@@ -9,6 +9,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
@@ -76,6 +77,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private DistributedTransactionAdmin transactionAdmin;
   private String namespace1;
   private String namespace2;
+  private String systemNamespaceName;
   private AdminTestUtils adminTestUtils;
 
   @BeforeAll
@@ -91,6 +93,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     storageAdmin = factory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
     transactionAdmin = transactionFactory.getTransactionAdmin();
+    systemNamespaceName = new DatabaseConfig(properties).getSystemNamespaceName();
     adminTestUtils = getAdminTestUtils(TEST_NAME);
   }
 
@@ -427,7 +430,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     // Assert
     assertThat(exitCodeUpgrade).isZero();
     waitForCreationIfNecessary();
-    assertThat(transactionAdmin.getNamespaceNames()).containsOnly(namespace1, namespace2);
+    assertThat(transactionAdmin.getNamespaceNames())
+        .containsOnly(namespace1, namespace2, systemNamespaceName);
   }
 
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
