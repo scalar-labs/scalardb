@@ -19,6 +19,6 @@ public class CassandraProvider implements DistributedStorageProvider {
 
   @Override
   public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    return new CheckedDistributedStorageAdmin(new CassandraAdmin(config));
+    return new CheckedDistributedStorageAdmin(new CassandraAdmin(config), config);
   }
 }

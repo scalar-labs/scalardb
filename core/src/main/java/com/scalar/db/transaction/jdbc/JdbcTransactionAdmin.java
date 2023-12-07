@@ -21,7 +21,7 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
 
   @Inject
   public JdbcTransactionAdmin(DatabaseConfig databaseConfig) {
-    jdbcAdmin = new CheckedDistributedStorageAdmin(new JdbcAdmin(databaseConfig));
+    jdbcAdmin = new CheckedDistributedStorageAdmin(new JdbcAdmin(databaseConfig), databaseConfig);
   }
 
   @VisibleForTesting
