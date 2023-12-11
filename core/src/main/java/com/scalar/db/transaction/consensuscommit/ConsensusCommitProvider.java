@@ -9,7 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 public class ConsensusCommitProvider implements DistributedTransactionProvider {
   @Override
   public String getName() {
-    return "consensus-commit";
+    return ConsensusCommitConfig.TRANSACTION_MANAGER_NAME;
   }
 
   @Override
