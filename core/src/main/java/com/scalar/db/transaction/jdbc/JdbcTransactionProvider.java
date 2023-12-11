@@ -5,11 +5,12 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.jdbc.JdbcConfig;
 
 public class JdbcTransactionProvider implements DistributedTransactionProvider {
   @Override
   public String getName() {
-    return "jdbc";
+    return JdbcConfig.TRANSACTION_MANAGER_NAME;
   }
 
   @Override

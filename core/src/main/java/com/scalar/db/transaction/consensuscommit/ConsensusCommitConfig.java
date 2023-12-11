@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 public class ConsensusCommitConfig {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitConfig.class);
 
+  public static final String TRANSACTION_MANAGER_NAME = "consensus-commit";
   public static final String PREFIX = DatabaseConfig.PREFIX + "consensus_commit.";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
   public static final String SERIALIZABLE_STRATEGY = PREFIX + "serializable_strategy";
@@ -58,9 +59,9 @@ public class ConsensusCommitConfig {
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
-    if (!"consensus-commit".equals(transactionManager)) {
+    if (!transactionManager.equals(TRANSACTION_MANAGER_NAME)) {
       throw new IllegalArgumentException(
-          DatabaseConfig.TRANSACTION_MANAGER + " should be 'consensus-commit'");
+          DatabaseConfig.TRANSACTION_MANAGER + " should be '" + TRANSACTION_MANAGER_NAME + "'");
     }
 
     if (databaseConfig.getProperties().containsKey("scalar.db.isolation_level")) {
