@@ -13,6 +13,7 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class JdbcConfig {
   public static final String STORAGE_NAME = "jdbc";
+  public static final String TRANSACTION_MANAGER_NAME = STORAGE_NAME;
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
   public static final String CONNECTION_POOL_MAX_IDLE = PREFIX + "connection_pool.max_idle";
@@ -77,7 +78,7 @@ public class JdbcConfig {
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
     String transactionManager = databaseConfig.getTransactionManager();
-    if (!storage.equals(STORAGE_NAME) && !transactionManager.equals(STORAGE_NAME)) {
+    if (!storage.equals(STORAGE_NAME) && !transactionManager.equals(TRANSACTION_MANAGER_NAME)) {
       throw new IllegalArgumentException(
           DatabaseConfig.STORAGE
               + " or "
