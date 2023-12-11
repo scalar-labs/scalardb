@@ -97,9 +97,9 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
+    admin1.createCoordinatorTables(true, options);
     admin1.createNamespace(namespace1, true, options);
     admin1.createTable(namespace1, TABLE_1, TABLE_1_METADATA, true, options);
-    admin1.createCoordinatorTables(true, options);
     admin2.createNamespace(namespace2, true, options);
     admin2.createTable(namespace2, TABLE_2, TABLE_2_METADATA, true, options);
   }
@@ -125,11 +125,11 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
   }
 
   private void dropTables() throws ExecutionException {
+    admin2.dropTable(namespace2, TABLE_2);
+    admin2.dropNamespace(namespace2);
     admin1.dropTable(namespace1, TABLE_1);
     admin1.dropNamespace(namespace1);
     admin1.dropCoordinatorTables();
-    admin2.dropTable(namespace2, TABLE_2);
-    admin2.dropNamespace(namespace2);
   }
 
   @Test

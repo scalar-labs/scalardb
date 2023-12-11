@@ -109,6 +109,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
+    consensusCommitAdmin.createCoordinatorTables(true, options);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -121,7 +122,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     consensusCommitAdmin.createTable(namespace1, TABLE_1, tableMetadata, true, options);
     consensusCommitAdmin.createNamespace(namespace2, true, options);
     consensusCommitAdmin.createTable(namespace2, TABLE_2, tableMetadata, true, options);
-    consensusCommitAdmin.createCoordinatorTables(true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
