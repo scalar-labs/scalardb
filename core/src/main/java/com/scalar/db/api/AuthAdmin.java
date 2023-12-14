@@ -115,7 +115,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieve a {@link User} for the given username.
+   * Retrieves a {@link User} for the given username.
    *
    * @param username the username
    * @return a {@link User} for the given username
@@ -126,7 +126,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieve a list of {@link User}s.
+   * Retrieves a list of {@link User}s.
    *
    * @return a list of {@link User}s
    * @throws ExecutionException if the operation fails
@@ -136,7 +136,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieve privileges for the given table for the given user.
+   * Retrieves privileges for the given table for the given user.
    *
    * @param username the username
    * @param namespaceName the namespace name of the table
@@ -151,7 +151,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieve privileges for all tables in the given namespace for the given user.
+   * Retrieves privileges for all tables in the given namespace for the given user.
    *
    * @param username the username
    * @param namespaceName the namespace name
