@@ -90,9 +90,9 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
 
   private void createTable() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
+    admin.createCoordinatorTables(options);
     admin.createNamespace(getNamespace(), options);
     admin.createTable(getNamespace(), getTable(), TABLE_METADATA, options);
-    admin.createCoordinatorTables(options);
   }
 
   protected Map<String, String> getCreationOptions() {
