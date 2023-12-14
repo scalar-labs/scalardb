@@ -118,6 +118,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
+    consensusCommitAdmin1.createCoordinatorTables(true, options);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -128,7 +129,6 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
             .build();
     consensusCommitAdmin1.createNamespace(namespace1, true, options);
     consensusCommitAdmin1.createTable(namespace1, TABLE_1, tableMetadata, true, options);
-    consensusCommitAdmin1.createCoordinatorTables(true, options);
     consensusCommitAdmin2.createNamespace(namespace2, true, options);
     consensusCommitAdmin2.createTable(namespace2, TABLE_2, tableMetadata, true, options);
   }
@@ -160,11 +160,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void dropTables() throws ExecutionException {
+    consensusCommitAdmin2.dropTable(namespace2, TABLE_2);
+    consensusCommitAdmin2.dropNamespace(namespace2);
     consensusCommitAdmin1.dropTable(namespace1, TABLE_1);
     consensusCommitAdmin1.dropNamespace(namespace1);
     consensusCommitAdmin1.dropCoordinatorTables();
-    consensusCommitAdmin2.dropTable(namespace2, TABLE_2);
-    consensusCommitAdmin2.dropNamespace(namespace2);
   }
 
   @Test
