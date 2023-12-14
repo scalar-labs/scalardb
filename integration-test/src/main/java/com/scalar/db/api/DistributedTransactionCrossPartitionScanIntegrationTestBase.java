@@ -88,10 +88,10 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
+    admin.createCoordinatorTables(true, options);
     admin.createNamespace(namespace, true, options);
     admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
     admin.createTable(namespace, TABLE_WITH_TEXT, TABLE_METADATA_WITH_TEXT, true, options);
-    admin.createCoordinatorTables(true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
