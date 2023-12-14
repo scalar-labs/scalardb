@@ -26,7 +26,7 @@ public class TableMetadataManagerTest {
   @Mock private DistributedStorageAdmin admin;
 
   @Mock
-  private ThrowableFunction<Optional<TableMetadata>, TableMetadataManager.TableKey, Exception>
+  private ThrowableFunction<TableMetadataManager.TableKey, Optional<TableMetadata>, Exception>
       getTableMetadataFunc;
 
   @BeforeEach
