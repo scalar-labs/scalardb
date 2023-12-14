@@ -27,7 +27,7 @@ public class TableMetadataManager {
   }
 
   public TableMetadataManager(
-      ThrowableFunction<Optional<TableMetadata>, TableKey, Exception> getTableMetadataFunc,
+      ThrowableFunction<TableKey, Optional<TableMetadata>, Exception> getTableMetadataFunc,
       long cacheExpirationTimeSecs) {
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
     if (cacheExpirationTimeSecs >= 0) {
