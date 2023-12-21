@@ -5,14 +5,14 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC proto compiler (version 1.53.0)",
+    value = "by gRPC proto compiler (version 1.60.0)",
     comments = "Source: scalardb.proto")
 @io.grpc.stub.annotations.GrpcGenerated
 public final class DistributedStorageGrpc {
 
   private DistributedStorageGrpc() {}
 
-  public static final String SERVICE_NAME = "rpc.DistributedStorage";
+  public static final java.lang.String SERVICE_NAME = "rpc.DistributedStorage";
 
   // Static method descriptors that strictly reflect the proto.
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.GetRequest,
@@ -154,59 +154,46 @@ public final class DistributedStorageGrpc {
 
   /**
    */
-  public static abstract class DistributedStorageImplBase implements io.grpc.BindableService {
+  public interface AsyncService {
 
     /**
      */
-    public void get(com.scalar.db.rpc.GetRequest request,
+    default void get(com.scalar.db.rpc.GetRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetMethod(), responseObserver);
     }
 
     /**
      */
-    public io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanRequest> scan(
+    default io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanRequest> scan(
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanResponse> responseObserver) {
       return io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall(getScanMethod(), responseObserver);
     }
 
     /**
      */
-    public void mutate(com.scalar.db.rpc.MutateRequest request,
+    default void mutate(com.scalar.db.rpc.MutateRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getMutateMethod(), responseObserver);
-    }
-
-    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
-      return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-          .addMethod(
-            getGetMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.GetRequest,
-                com.scalar.db.rpc.GetResponse>(
-                  this, METHODID_GET)))
-          .addMethod(
-            getScanMethod(),
-            io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.ScanRequest,
-                com.scalar.db.rpc.ScanResponse>(
-                  this, METHODID_SCAN)))
-          .addMethod(
-            getMutateMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.MutateRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_MUTATE)))
-          .build();
     }
   }
 
   /**
+   * Base class for the server implementation of the service DistributedStorage.
    */
-  public static final class DistributedStorageStub extends io.grpc.stub.AbstractAsyncStub<DistributedStorageStub> {
+  public static abstract class DistributedStorageImplBase
+      implements io.grpc.BindableService, AsyncService {
+
+    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
+      return DistributedStorageGrpc.bindService(this);
+    }
+  }
+
+  /**
+   * A stub to allow clients to do asynchronous rpc calls to service DistributedStorage.
+   */
+  public static final class DistributedStorageStub
+      extends io.grpc.stub.AbstractAsyncStub<DistributedStorageStub> {
     private DistributedStorageStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -244,8 +231,10 @@ public final class DistributedStorageGrpc {
   }
 
   /**
+   * A stub to allow clients to do synchronous rpc calls to service DistributedStorage.
    */
-  public static final class DistributedStorageBlockingStub extends io.grpc.stub.AbstractBlockingStub<DistributedStorageBlockingStub> {
+  public static final class DistributedStorageBlockingStub
+      extends io.grpc.stub.AbstractBlockingStub<DistributedStorageBlockingStub> {
     private DistributedStorageBlockingStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -273,8 +262,10 @@ public final class DistributedStorageGrpc {
   }
 
   /**
+   * A stub to allow clients to do ListenableFuture-style rpc calls to service DistributedStorage.
    */
-  public static final class DistributedStorageFutureStub extends io.grpc.stub.AbstractFutureStub<DistributedStorageFutureStub> {
+  public static final class DistributedStorageFutureStub
+      extends io.grpc.stub.AbstractFutureStub<DistributedStorageFutureStub> {
     private DistributedStorageFutureStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -312,10 +303,10 @@ public final class DistributedStorageGrpc {
       io.grpc.stub.ServerCalls.ServerStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.ClientStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.BidiStreamingMethod<Req, Resp> {
-    private final DistributedStorageImplBase serviceImpl;
+    private final AsyncService serviceImpl;
     private final int methodId;
 
-    MethodHandlers(DistributedStorageImplBase serviceImpl, int methodId) {
+    MethodHandlers(AsyncService serviceImpl, int methodId) {
       this.serviceImpl = serviceImpl;
       this.methodId = methodId;
     }
@@ -351,6 +342,32 @@ public final class DistributedStorageGrpc {
     }
   }
 
+  public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
+    return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
+        .addMethod(
+          getGetMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.GetRequest,
+              com.scalar.db.rpc.GetResponse>(
+                service, METHODID_GET)))
+        .addMethod(
+          getScanMethod(),
+          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.ScanRequest,
+              com.scalar.db.rpc.ScanResponse>(
+                service, METHODID_SCAN)))
+        .addMethod(
+          getMutateMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.MutateRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_MUTATE)))
+        .build();
+  }
+
   private static abstract class DistributedStorageBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoFileDescriptorSupplier, io.grpc.protobuf.ProtoServiceDescriptorSupplier {
     DistributedStorageBaseDescriptorSupplier() {}
@@ -374,9 +391,9 @@ public final class DistributedStorageGrpc {
   private static final class DistributedStorageMethodDescriptorSupplier
       extends DistributedStorageBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoMethodDescriptorSupplier {
-    private final String methodName;
+    private final java.lang.String methodName;
 
-    DistributedStorageMethodDescriptorSupplier(String methodName) {
+    DistributedStorageMethodDescriptorSupplier(java.lang.String methodName) {
       this.methodName = methodName;
     }
 
