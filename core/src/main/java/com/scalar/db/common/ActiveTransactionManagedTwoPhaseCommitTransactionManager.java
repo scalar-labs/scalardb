@@ -21,6 +21,8 @@ import com.scalar.db.util.ActiveExpiringMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +36,17 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
 
   private final ActiveExpiringMap<String, ActiveTransaction> activeTransactions;
 
+  private final AtomicReference<BiConsumer<String, TwoPhaseCommitTransaction>>
+      transactionExpirationHandler =
+          new AtomicReference<>(
+              (id, t) -> {
+                try {
+                  t.rollback();
+                } catch (Exception e) {
+                  logger.warn("Rollback failed. transaction ID: {}", id, e);
+                }
+              });
+
   public ActiveTransactionManagedTwoPhaseCommitTransactionManager(DatabaseConfig config) {
     super(config);
     activeTransactions =
@@ -42,12 +55,13 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             (id, t) -> {
               logger.warn("The transaction is expired. transaction ID: {}", id);
-              try {
-                t.rollback();
-              } catch (Exception e) {
-                logger.warn("Rollback failed. transaction ID: {}", id, e);
-              }
+              transactionExpirationHandler.get().accept(id, t);
             });
+  }
+
+  public void setTransactionExpirationHandler(
+      BiConsumer<String, TwoPhaseCommitTransaction> handler) {
+    transactionExpirationHandler.set(handler);
   }
 
   private void add(ActiveTransaction transaction) throws TransactionException {
