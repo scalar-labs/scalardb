@@ -5,14 +5,14 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC proto compiler (version 1.53.0)",
+    value = "by gRPC proto compiler (version 1.60.0)",
     comments = "Source: scalardb.proto")
 @io.grpc.stub.annotations.GrpcGenerated
 public final class TwoPhaseCommitTransactionGrpc {
 
   private TwoPhaseCommitTransactionGrpc() {}
 
-  public static final String SERVICE_NAME = "rpc.TwoPhaseCommitTransaction";
+  public static final java.lang.String SERVICE_NAME = "rpc.TwoPhaseCommitTransaction";
 
   // Static method descriptors that strictly reflect the proto.
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.TwoPhaseCommitTransactionRequest,
@@ -185,73 +185,53 @@ public final class TwoPhaseCommitTransactionGrpc {
 
   /**
    */
-  public static abstract class TwoPhaseCommitTransactionImplBase implements io.grpc.BindableService {
+  public interface AsyncService {
 
     /**
      */
-    public io.grpc.stub.StreamObserver<com.scalar.db.rpc.TwoPhaseCommitTransactionRequest> twoPhaseCommitTransaction(
+    default io.grpc.stub.StreamObserver<com.scalar.db.rpc.TwoPhaseCommitTransactionRequest> twoPhaseCommitTransaction(
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.TwoPhaseCommitTransactionResponse> responseObserver) {
       return io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall(getTwoPhaseCommitTransactionMethod(), responseObserver);
     }
 
     /**
      */
-    public void getState(com.scalar.db.rpc.GetTransactionStateRequest request,
+    default void getState(com.scalar.db.rpc.GetTransactionStateRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTransactionStateResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetStateMethod(), responseObserver);
     }
 
     /**
      */
-    public void rollback(com.scalar.db.rpc.RollbackRequest request,
+    default void rollback(com.scalar.db.rpc.RollbackRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.RollbackResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRollbackMethod(), responseObserver);
     }
 
     /**
      */
-    public void abort(com.scalar.db.rpc.AbortRequest request,
+    default void abort(com.scalar.db.rpc.AbortRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.AbortResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAbortMethod(), responseObserver);
-    }
-
-    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
-      return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-          .addMethod(
-            getTwoPhaseCommitTransactionMethod(),
-            io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.TwoPhaseCommitTransactionRequest,
-                com.scalar.db.rpc.TwoPhaseCommitTransactionResponse>(
-                  this, METHODID_TWO_PHASE_COMMIT_TRANSACTION)))
-          .addMethod(
-            getGetStateMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.GetTransactionStateRequest,
-                com.scalar.db.rpc.GetTransactionStateResponse>(
-                  this, METHODID_GET_STATE)))
-          .addMethod(
-            getRollbackMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.RollbackRequest,
-                com.scalar.db.rpc.RollbackResponse>(
-                  this, METHODID_ROLLBACK)))
-          .addMethod(
-            getAbortMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.AbortRequest,
-                com.scalar.db.rpc.AbortResponse>(
-                  this, METHODID_ABORT)))
-          .build();
     }
   }
 
   /**
+   * Base class for the server implementation of the service TwoPhaseCommitTransaction.
    */
-  public static final class TwoPhaseCommitTransactionStub extends io.grpc.stub.AbstractAsyncStub<TwoPhaseCommitTransactionStub> {
+  public static abstract class TwoPhaseCommitTransactionImplBase
+      implements io.grpc.BindableService, AsyncService {
+
+    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
+      return TwoPhaseCommitTransactionGrpc.bindService(this);
+    }
+  }
+
+  /**
+   * A stub to allow clients to do asynchronous rpc calls to service TwoPhaseCommitTransaction.
+   */
+  public static final class TwoPhaseCommitTransactionStub
+      extends io.grpc.stub.AbstractAsyncStub<TwoPhaseCommitTransactionStub> {
     private TwoPhaseCommitTransactionStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -297,8 +277,10 @@ public final class TwoPhaseCommitTransactionGrpc {
   }
 
   /**
+   * A stub to allow clients to do synchronous rpc calls to service TwoPhaseCommitTransaction.
    */
-  public static final class TwoPhaseCommitTransactionBlockingStub extends io.grpc.stub.AbstractBlockingStub<TwoPhaseCommitTransactionBlockingStub> {
+  public static final class TwoPhaseCommitTransactionBlockingStub
+      extends io.grpc.stub.AbstractBlockingStub<TwoPhaseCommitTransactionBlockingStub> {
     private TwoPhaseCommitTransactionBlockingStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -333,8 +315,10 @@ public final class TwoPhaseCommitTransactionGrpc {
   }
 
   /**
+   * A stub to allow clients to do ListenableFuture-style rpc calls to service TwoPhaseCommitTransaction.
    */
-  public static final class TwoPhaseCommitTransactionFutureStub extends io.grpc.stub.AbstractFutureStub<TwoPhaseCommitTransactionFutureStub> {
+  public static final class TwoPhaseCommitTransactionFutureStub
+      extends io.grpc.stub.AbstractFutureStub<TwoPhaseCommitTransactionFutureStub> {
     private TwoPhaseCommitTransactionFutureStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -381,10 +365,10 @@ public final class TwoPhaseCommitTransactionGrpc {
       io.grpc.stub.ServerCalls.ServerStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.ClientStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.BidiStreamingMethod<Req, Resp> {
-    private final TwoPhaseCommitTransactionImplBase serviceImpl;
+    private final AsyncService serviceImpl;
     private final int methodId;
 
-    MethodHandlers(TwoPhaseCommitTransactionImplBase serviceImpl, int methodId) {
+    MethodHandlers(AsyncService serviceImpl, int methodId) {
       this.serviceImpl = serviceImpl;
       this.methodId = methodId;
     }
@@ -424,6 +408,39 @@ public final class TwoPhaseCommitTransactionGrpc {
     }
   }
 
+  public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
+    return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
+        .addMethod(
+          getTwoPhaseCommitTransactionMethod(),
+          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.TwoPhaseCommitTransactionRequest,
+              com.scalar.db.rpc.TwoPhaseCommitTransactionResponse>(
+                service, METHODID_TWO_PHASE_COMMIT_TRANSACTION)))
+        .addMethod(
+          getGetStateMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.GetTransactionStateRequest,
+              com.scalar.db.rpc.GetTransactionStateResponse>(
+                service, METHODID_GET_STATE)))
+        .addMethod(
+          getRollbackMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.RollbackRequest,
+              com.scalar.db.rpc.RollbackResponse>(
+                service, METHODID_ROLLBACK)))
+        .addMethod(
+          getAbortMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.AbortRequest,
+              com.scalar.db.rpc.AbortResponse>(
+                service, METHODID_ABORT)))
+        .build();
+  }
+
   private static abstract class TwoPhaseCommitTransactionBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoFileDescriptorSupplier, io.grpc.protobuf.ProtoServiceDescriptorSupplier {
     TwoPhaseCommitTransactionBaseDescriptorSupplier() {}
@@ -447,9 +464,9 @@ public final class TwoPhaseCommitTransactionGrpc {
   private static final class TwoPhaseCommitTransactionMethodDescriptorSupplier
       extends TwoPhaseCommitTransactionBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoMethodDescriptorSupplier {
-    private final String methodName;
+    private final java.lang.String methodName;
 
-    TwoPhaseCommitTransactionMethodDescriptorSupplier(String methodName) {
+    TwoPhaseCommitTransactionMethodDescriptorSupplier(java.lang.String methodName) {
       this.methodName = methodName;
     }
 
