@@ -5,14 +5,14 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC proto compiler (version 1.53.0)",
+    value = "by gRPC proto compiler (version 1.60.0)",
     comments = "Source: scalardb.proto")
 @io.grpc.stub.annotations.GrpcGenerated
 public final class DistributedStorageAdminGrpc {
 
   private DistributedStorageAdminGrpc() {}
 
-  public static final String SERVICE_NAME = "rpc.DistributedStorageAdmin";
+  public static final java.lang.String SERVICE_NAME = "rpc.DistributedStorageAdmin";
 
   // Static method descriptors that strictly reflect the proto.
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateNamespaceRequest,
@@ -402,171 +402,102 @@ public final class DistributedStorageAdminGrpc {
 
   /**
    */
-  public static abstract class DistributedStorageAdminImplBase implements io.grpc.BindableService {
+  public interface AsyncService {
 
     /**
      */
-    public void createNamespace(com.scalar.db.rpc.CreateNamespaceRequest request,
+    default void createNamespace(com.scalar.db.rpc.CreateNamespaceRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateNamespaceMethod(), responseObserver);
     }
 
     /**
      */
-    public void dropNamespace(com.scalar.db.rpc.DropNamespaceRequest request,
+    default void dropNamespace(com.scalar.db.rpc.DropNamespaceRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDropNamespaceMethod(), responseObserver);
     }
 
     /**
      */
-    public void createTable(com.scalar.db.rpc.CreateTableRequest request,
+    default void createTable(com.scalar.db.rpc.CreateTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateTableMethod(), responseObserver);
     }
 
     /**
      */
-    public void dropTable(com.scalar.db.rpc.DropTableRequest request,
+    default void dropTable(com.scalar.db.rpc.DropTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDropTableMethod(), responseObserver);
     }
 
     /**
      */
-    public void truncateTable(com.scalar.db.rpc.TruncateTableRequest request,
+    default void truncateTable(com.scalar.db.rpc.TruncateTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getTruncateTableMethod(), responseObserver);
     }
 
     /**
      */
-    public void createIndex(com.scalar.db.rpc.CreateIndexRequest request,
+    default void createIndex(com.scalar.db.rpc.CreateIndexRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateIndexMethod(), responseObserver);
     }
 
     /**
      */
-    public void dropIndex(com.scalar.db.rpc.DropIndexRequest request,
+    default void dropIndex(com.scalar.db.rpc.DropIndexRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDropIndexMethod(), responseObserver);
     }
 
     /**
      */
-    public void getTableMetadata(com.scalar.db.rpc.GetTableMetadataRequest request,
+    default void getTableMetadata(com.scalar.db.rpc.GetTableMetadataRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTableMetadataResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetTableMetadataMethod(), responseObserver);
     }
 
     /**
      */
-    public void getNamespaceTableNames(com.scalar.db.rpc.GetNamespaceTableNamesRequest request,
+    default void getNamespaceTableNames(com.scalar.db.rpc.GetNamespaceTableNamesRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetNamespaceTableNamesResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetNamespaceTableNamesMethod(), responseObserver);
     }
 
     /**
      */
-    public void namespaceExists(com.scalar.db.rpc.NamespaceExistsRequest request,
+    default void namespaceExists(com.scalar.db.rpc.NamespaceExistsRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.NamespaceExistsResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getNamespaceExistsMethod(), responseObserver);
     }
 
     /**
      */
-    public void repairTable(com.scalar.db.rpc.RepairTableRequest request,
+    default void repairTable(com.scalar.db.rpc.RepairTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRepairTableMethod(), responseObserver);
-    }
-
-    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
-      return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-          .addMethod(
-            getCreateNamespaceMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.CreateNamespaceRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_CREATE_NAMESPACE)))
-          .addMethod(
-            getDropNamespaceMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.DropNamespaceRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_DROP_NAMESPACE)))
-          .addMethod(
-            getCreateTableMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.CreateTableRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_CREATE_TABLE)))
-          .addMethod(
-            getDropTableMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.DropTableRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_DROP_TABLE)))
-          .addMethod(
-            getTruncateTableMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.TruncateTableRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_TRUNCATE_TABLE)))
-          .addMethod(
-            getCreateIndexMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.CreateIndexRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_CREATE_INDEX)))
-          .addMethod(
-            getDropIndexMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.DropIndexRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_DROP_INDEX)))
-          .addMethod(
-            getGetTableMetadataMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.GetTableMetadataRequest,
-                com.scalar.db.rpc.GetTableMetadataResponse>(
-                  this, METHODID_GET_TABLE_METADATA)))
-          .addMethod(
-            getGetNamespaceTableNamesMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.GetNamespaceTableNamesRequest,
-                com.scalar.db.rpc.GetNamespaceTableNamesResponse>(
-                  this, METHODID_GET_NAMESPACE_TABLE_NAMES)))
-          .addMethod(
-            getNamespaceExistsMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.NamespaceExistsRequest,
-                com.scalar.db.rpc.NamespaceExistsResponse>(
-                  this, METHODID_NAMESPACE_EXISTS)))
-          .addMethod(
-            getRepairTableMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.RepairTableRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_REPAIR_TABLE)))
-          .build();
     }
   }
 
   /**
+   * Base class for the server implementation of the service DistributedStorageAdmin.
    */
-  public static final class DistributedStorageAdminStub extends io.grpc.stub.AbstractAsyncStub<DistributedStorageAdminStub> {
+  public static abstract class DistributedStorageAdminImplBase
+      implements io.grpc.BindableService, AsyncService {
+
+    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
+      return DistributedStorageAdminGrpc.bindService(this);
+    }
+  }
+
+  /**
+   * A stub to allow clients to do asynchronous rpc calls to service DistributedStorageAdmin.
+   */
+  public static final class DistributedStorageAdminStub
+      extends io.grpc.stub.AbstractAsyncStub<DistributedStorageAdminStub> {
     private DistributedStorageAdminStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -668,8 +599,10 @@ public final class DistributedStorageAdminGrpc {
   }
 
   /**
+   * A stub to allow clients to do synchronous rpc calls to service DistributedStorageAdmin.
    */
-  public static final class DistributedStorageAdminBlockingStub extends io.grpc.stub.AbstractBlockingStub<DistributedStorageAdminBlockingStub> {
+  public static final class DistributedStorageAdminBlockingStub
+      extends io.grpc.stub.AbstractBlockingStub<DistributedStorageAdminBlockingStub> {
     private DistributedStorageAdminBlockingStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -760,8 +693,10 @@ public final class DistributedStorageAdminGrpc {
   }
 
   /**
+   * A stub to allow clients to do ListenableFuture-style rpc calls to service DistributedStorageAdmin.
    */
-  public static final class DistributedStorageAdminFutureStub extends io.grpc.stub.AbstractFutureStub<DistributedStorageAdminFutureStub> {
+  public static final class DistributedStorageAdminFutureStub
+      extends io.grpc.stub.AbstractFutureStub<DistributedStorageAdminFutureStub> {
     private DistributedStorageAdminFutureStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -879,10 +814,10 @@ public final class DistributedStorageAdminGrpc {
       io.grpc.stub.ServerCalls.ServerStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.ClientStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.BidiStreamingMethod<Req, Resp> {
-    private final DistributedStorageAdminImplBase serviceImpl;
+    private final AsyncService serviceImpl;
     private final int methodId;
 
-    MethodHandlers(DistributedStorageAdminImplBase serviceImpl, int methodId) {
+    MethodHandlers(AsyncService serviceImpl, int methodId) {
       this.serviceImpl = serviceImpl;
       this.methodId = methodId;
     }
@@ -951,6 +886,88 @@ public final class DistributedStorageAdminGrpc {
     }
   }
 
+  public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
+    return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
+        .addMethod(
+          getCreateNamespaceMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.CreateNamespaceRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_CREATE_NAMESPACE)))
+        .addMethod(
+          getDropNamespaceMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.DropNamespaceRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_DROP_NAMESPACE)))
+        .addMethod(
+          getCreateTableMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.CreateTableRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_CREATE_TABLE)))
+        .addMethod(
+          getDropTableMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.DropTableRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_DROP_TABLE)))
+        .addMethod(
+          getTruncateTableMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.TruncateTableRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_TRUNCATE_TABLE)))
+        .addMethod(
+          getCreateIndexMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.CreateIndexRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_CREATE_INDEX)))
+        .addMethod(
+          getDropIndexMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.DropIndexRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_DROP_INDEX)))
+        .addMethod(
+          getGetTableMetadataMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.GetTableMetadataRequest,
+              com.scalar.db.rpc.GetTableMetadataResponse>(
+                service, METHODID_GET_TABLE_METADATA)))
+        .addMethod(
+          getGetNamespaceTableNamesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.GetNamespaceTableNamesRequest,
+              com.scalar.db.rpc.GetNamespaceTableNamesResponse>(
+                service, METHODID_GET_NAMESPACE_TABLE_NAMES)))
+        .addMethod(
+          getNamespaceExistsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.NamespaceExistsRequest,
+              com.scalar.db.rpc.NamespaceExistsResponse>(
+                service, METHODID_NAMESPACE_EXISTS)))
+        .addMethod(
+          getRepairTableMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.RepairTableRequest,
+              com.google.protobuf.Empty>(
+                service, METHODID_REPAIR_TABLE)))
+        .build();
+  }
+
   private static abstract class DistributedStorageAdminBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoFileDescriptorSupplier, io.grpc.protobuf.ProtoServiceDescriptorSupplier {
     DistributedStorageAdminBaseDescriptorSupplier() {}
@@ -974,9 +991,9 @@ public final class DistributedStorageAdminGrpc {
   private static final class DistributedStorageAdminMethodDescriptorSupplier
       extends DistributedStorageAdminBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoMethodDescriptorSupplier {
-    private final String methodName;
+    private final java.lang.String methodName;
 
-    DistributedStorageAdminMethodDescriptorSupplier(String methodName) {
+    DistributedStorageAdminMethodDescriptorSupplier(java.lang.String methodName) {
       this.methodName = methodName;
     }
 
