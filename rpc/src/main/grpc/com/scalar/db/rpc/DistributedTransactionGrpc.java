@@ -5,14 +5,14 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC proto compiler (version 1.53.0)",
+    value = "by gRPC proto compiler (version 1.60.0)",
     comments = "Source: scalardb.proto")
 @io.grpc.stub.annotations.GrpcGenerated
 public final class DistributedTransactionGrpc {
 
   private DistributedTransactionGrpc() {}
 
-  public static final String SERVICE_NAME = "rpc.DistributedTransaction";
+  public static final java.lang.String SERVICE_NAME = "rpc.DistributedTransaction";
 
   // Static method descriptors that strictly reflect the proto.
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.TransactionRequest,
@@ -185,73 +185,53 @@ public final class DistributedTransactionGrpc {
 
   /**
    */
-  public static abstract class DistributedTransactionImplBase implements io.grpc.BindableService {
+  public interface AsyncService {
 
     /**
      */
-    public io.grpc.stub.StreamObserver<com.scalar.db.rpc.TransactionRequest> transaction(
+    default io.grpc.stub.StreamObserver<com.scalar.db.rpc.TransactionRequest> transaction(
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.TransactionResponse> responseObserver) {
       return io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall(getTransactionMethod(), responseObserver);
     }
 
     /**
      */
-    public void getState(com.scalar.db.rpc.GetTransactionStateRequest request,
+    default void getState(com.scalar.db.rpc.GetTransactionStateRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTransactionStateResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetStateMethod(), responseObserver);
     }
 
     /**
      */
-    public void rollback(com.scalar.db.rpc.RollbackRequest request,
+    default void rollback(com.scalar.db.rpc.RollbackRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.RollbackResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRollbackMethod(), responseObserver);
     }
 
     /**
      */
-    public void abort(com.scalar.db.rpc.AbortRequest request,
+    default void abort(com.scalar.db.rpc.AbortRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.AbortResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAbortMethod(), responseObserver);
-    }
-
-    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
-      return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-          .addMethod(
-            getTransactionMethod(),
-            io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.TransactionRequest,
-                com.scalar.db.rpc.TransactionResponse>(
-                  this, METHODID_TRANSACTION)))
-          .addMethod(
-            getGetStateMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.GetTransactionStateRequest,
-                com.scalar.db.rpc.GetTransactionStateResponse>(
-                  this, METHODID_GET_STATE)))
-          .addMethod(
-            getRollbackMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.RollbackRequest,
-                com.scalar.db.rpc.RollbackResponse>(
-                  this, METHODID_ROLLBACK)))
-          .addMethod(
-            getAbortMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.AbortRequest,
-                com.scalar.db.rpc.AbortResponse>(
-                  this, METHODID_ABORT)))
-          .build();
     }
   }
 
   /**
+   * Base class for the server implementation of the service DistributedTransaction.
    */
-  public static final class DistributedTransactionStub extends io.grpc.stub.AbstractAsyncStub<DistributedTransactionStub> {
+  public static abstract class DistributedTransactionImplBase
+      implements io.grpc.BindableService, AsyncService {
+
+    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
+      return DistributedTransactionGrpc.bindService(this);
+    }
+  }
+
+  /**
+   * A stub to allow clients to do asynchronous rpc calls to service DistributedTransaction.
+   */
+  public static final class DistributedTransactionStub
+      extends io.grpc.stub.AbstractAsyncStub<DistributedTransactionStub> {
     private DistributedTransactionStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -297,8 +277,10 @@ public final class DistributedTransactionGrpc {
   }
 
   /**
+   * A stub to allow clients to do synchronous rpc calls to service DistributedTransaction.
    */
-  public static final class DistributedTransactionBlockingStub extends io.grpc.stub.AbstractBlockingStub<DistributedTransactionBlockingStub> {
+  public static final class DistributedTransactionBlockingStub
+      extends io.grpc.stub.AbstractBlockingStub<DistributedTransactionBlockingStub> {
     private DistributedTransactionBlockingStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -333,8 +315,10 @@ public final class DistributedTransactionGrpc {
   }
 
   /**
+   * A stub to allow clients to do ListenableFuture-style rpc calls to service DistributedTransaction.
    */
-  public static final class DistributedTransactionFutureStub extends io.grpc.stub.AbstractFutureStub<DistributedTransactionFutureStub> {
+  public static final class DistributedTransactionFutureStub
+      extends io.grpc.stub.AbstractFutureStub<DistributedTransactionFutureStub> {
     private DistributedTransactionFutureStub(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       super(channel, callOptions);
@@ -381,10 +365,10 @@ public final class DistributedTransactionGrpc {
       io.grpc.stub.ServerCalls.ServerStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.ClientStreamingMethod<Req, Resp>,
       io.grpc.stub.ServerCalls.BidiStreamingMethod<Req, Resp> {
-    private final DistributedTransactionImplBase serviceImpl;
+    private final AsyncService serviceImpl;
     private final int methodId;
 
-    MethodHandlers(DistributedTransactionImplBase serviceImpl, int methodId) {
+    MethodHandlers(AsyncService serviceImpl, int methodId) {
       this.serviceImpl = serviceImpl;
       this.methodId = methodId;
     }
@@ -424,6 +408,39 @@ public final class DistributedTransactionGrpc {
     }
   }
 
+  public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
+    return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
+        .addMethod(
+          getTransactionMethod(),
+          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.TransactionRequest,
+              com.scalar.db.rpc.TransactionResponse>(
+                service, METHODID_TRANSACTION)))
+        .addMethod(
+          getGetStateMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.GetTransactionStateRequest,
+              com.scalar.db.rpc.GetTransactionStateResponse>(
+                service, METHODID_GET_STATE)))
+        .addMethod(
+          getRollbackMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.RollbackRequest,
+              com.scalar.db.rpc.RollbackResponse>(
+                service, METHODID_ROLLBACK)))
+        .addMethod(
+          getAbortMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.scalar.db.rpc.AbortRequest,
+              com.scalar.db.rpc.AbortResponse>(
+                service, METHODID_ABORT)))
+        .build();
+  }
+
   private static abstract class DistributedTransactionBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoFileDescriptorSupplier, io.grpc.protobuf.ProtoServiceDescriptorSupplier {
     DistributedTransactionBaseDescriptorSupplier() {}
@@ -447,9 +464,9 @@ public final class DistributedTransactionGrpc {
   private static final class DistributedTransactionMethodDescriptorSupplier
       extends DistributedTransactionBaseDescriptorSupplier
       implements io.grpc.protobuf.ProtoMethodDescriptorSupplier {
-    private final String methodName;
+    private final java.lang.String methodName;
 
-    DistributedTransactionMethodDescriptorSupplier(String methodName) {
+    DistributedTransactionMethodDescriptorSupplier(java.lang.String methodName) {
       this.methodName = methodName;
     }
 
