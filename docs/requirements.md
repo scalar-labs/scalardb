@@ -6,7 +6,7 @@ This document explains the requirements and recommendations in the underlying da
 
 ### Privileges to access the underlying databases
 
-ScalarDB operates the underlying databases not only for CRUD operations but also for creating/altering schema, tables, indexes, and so on. Thus, ScalarDB requires a fully privileged account to access the underlying databases.
+ScalarDB operates the underlying databases not only for CRUD operations but also for performing operations like creating or altering schemas, tables, or indexes. Thus, ScalarDB requires a fully privileged account to access the underlying databases.
 
 ## Cassandra or Cassandra-compatible database requirements
 
