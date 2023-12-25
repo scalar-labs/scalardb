@@ -9,7 +9,7 @@ repositories {
 mainClassName = "sample.ElectronicMoneyMain"
 
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.8.3'
+    implementation 'com.scalar-labs:scalardb:3.8.4'
 }
 
 sourceCompatibility = 1.8 
