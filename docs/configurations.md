@@ -4,7 +4,7 @@ This page describes the available configurations for ScalarDB.
 
 ## ScalarDB client configurations
 
-ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library or through [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/), which is a component that is available only in the ScalarDB Enterprise edition.
+ScalarDB provides its own transaction protocol called Consensus Commit. You can use the Consensus Commit protocol directly through the ScalarDB client library or through [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.11/scalardb-cluster/), which is a component that is available only in the ScalarDB Enterprise edition.
 
 ### Use Consensus Commit directly
 
@@ -154,9 +154,9 @@ For details about using multiple storages, see [Multi-Storage Transactions](mult
 
 ### Use Consensus Commit through ScalarDB Cluster
 
-[ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/) is a component that provides a gRPC interface to ScalarDB.
+[ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.11/scalardb-cluster/) is a component that provides a gRPC interface to ScalarDB.
 
-For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
+For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.11/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
 
 ## Cross-partition scan configurations
 
@@ -259,4 +259,4 @@ scalar.db.transaction_manager=cluster
 scalar.db.contact_points=indirect:<SCALARDB_CLUSTER_CONTACT_POINT>
 ```
 
-For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.10/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
+For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/3.11/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
