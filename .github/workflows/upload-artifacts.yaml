@@ -27,10 +27,6 @@ on:
       OSSRH_PASSWORD:
         required: true
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   upload-artifacts:
     runs-on: ubuntu-latest
