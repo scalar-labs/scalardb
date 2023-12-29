@@ -2,6 +2,14 @@
 
 This document explains the requirements and recommendations in the underlying databases of ScalarDB to make ScalarDB applications work correctly.
 
+## Common requirements
+
+This section describes common requirements for the underlying databases when using ScalarDB.
+
+### Privileges to access the underlying databases
+
+ScalarDB operates the underlying databases not only for CRUD operations but also for performing operations like creating or altering schemas, tables, or indexes. Thus, ScalarDB basically requires a fully privileged account to access the underlying databases.
+
 ## Cassandra or Cassandra-compatible database requirements
 
 The following are requirements to make ScalarDB on Cassandra or Cassandra-compatible databases work properly and for storage operations with `LINEARIZABLE` to provide linearizability and for transaction operations with `SERIALIZABLE` to provide strict serializability.
