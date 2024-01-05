@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// TODO: K should be separate into PARENT_KEY, CHILD_KEY and FULL_KEY
+// TODO: K should be separate into PARENT_KEY, CHILD_KEY and FULL_KEY.
 public class GroupCommitter3<K, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
   // Queues
@@ -52,17 +52,35 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final BuffersManager buffersManager;
 
   // FIXME: This single instance can be a performance bottleneck. Try multi-partitions.
+  //        Probably not so straightforward. `currentBufferedValues` can't be partitioned.
+  //
   // This class is just for encapsulation of buffer accesses
   private class BuffersManager {
+    private static final int NUM_OF_PARTITIONS = 1024;
     // Buffers
     @Nullable private NormalBufferedValues<K, V> currentBufferedValues;
     // Using ConcurrentHashMap results in less performance.
     private final Map<K, NormalBufferedValues<K, V>> bufferedValuesMap = new HashMap<>();
     private final Map<K, DelayedBufferedValue<K, V>> delayedBufferedValueMap = new HashMap<>();
 
+    private final Object[] locks = new Object[NUM_OF_PARTITIONS];
+
+    public BuffersManager() {
+      for (int i = 0; i < NUM_OF_PARTITIONS; i++) {
+        locks[i] = new Object();
+      }
+    }
+
+    private Object getLock(K key) {
+      return locks[Math.abs(key.hashCode()) % NUM_OF_PARTITIONS];
+    }
+
     // Returns full key
     private synchronized K reserveNewValueSlot(K childKey)
         throws GroupCommitAlreadySizeFixedException {
+      K parentKeyCandidate = keyManipulator.createParentKey();
+      K fullKeyToReturn;
+      NormalBufferedValues<K, V> newBufVal = null;
       if (currentBufferedValues == null
           || currentBufferedValues.noMoreSlot()
           || currentBufferedValues.isDone()
@@ -70,55 +88,67 @@ public class GroupCommitter3<K, V> implements Closeable {
         ///////// FIXME: DEBUG
         logger.info("OLD BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
         ///////// FIXME: DEBUG
-        currentBufferedValues =
+        newBufVal =
             new NormalBufferedValues<>(
+                parentKeyCandidate,
                 emitExecutorService,
                 emitter,
                 keyManipulator,
                 sizeFixExpirationInMillis,
                 timeoutExpirationInMillis,
                 numberOfRetentionValues);
-        queueForSizeFix.add(currentBufferedValues);
-        bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
+        currentBufferedValues = newBufVal;
+      }
+      fullKeyToReturn = currentBufferedValues.reserveNewValueSlot(childKey);
+
+      if (newBufVal != null) {
+        // It's okay if a buffered value is duplicated in the queue.
+        queueForSizeFix.add(newBufVal);
+
+        synchronized (getLock(newBufVal.key)) {
+          bufferedValuesMap.put(newBufVal.key, newBufVal);
+        }
         ///////// FIXME: DEBUG
-        logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
+        logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", newBufVal, childKey);
         ///////// FIXME: DEBUG
       }
-      return currentBufferedValues.reserveNewValueSlot(childKey);
+      return fullKeyToReturn;
     }
 
-    private synchronized BufferedValues<K, V> getBufferedValues(Keys<K> keys)
-        throws GroupCommitException {
-      // TODO: The following logic can be simplified since it's in synchronized block
-      NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
-      DelayedBufferedValue<K, V> delayedBufferedValue =
-          delayedBufferedValueMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
-      // Avoid the following cases to find the value slot corresponding to pk1:ck11
-      // Case:1
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap.get(pk1) and check if it contains ck11, but not found
-      // - (slowBufValMap.get(pk1:ck11) should be called even if bufValMap.get(pk1) is found)
-      // - return NONE
-      // Case:2
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
-      // - slowBufValMap.get(pk1:ck11), but not found
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap.get(pk1) and check if it contains ck11, but not found
-      // - (slowBufValMap.get(pk1:ck11) should be called after bufValMap.get(pk1))
-      // - return NONE
-      if (delayedBufferedValue != null) {
-        return delayedBufferedValue;
-      }
-      if (bufferedValues != null) {
-        return bufferedValues;
-      }
+    private BufferedValues<K, V> getBufferedValues(Keys<K> keys) throws GroupCommitException {
+      synchronized (getLock(keys.parentKey)) {
+        // TODO: The following logic can be simplified since it's in synchronized block
+        NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
+        DelayedBufferedValue<K, V> delayedBufferedValue =
+            delayedBufferedValueMap.get(
+                keyManipulator.createFullKey(keys.parentKey, keys.childKey));
+        // Avoid the following cases to find the value slot corresponding to pk1:ck11
+        // Case:1
+        // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
+        // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+        // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+        // - bufValMap.get(pk1) and check if it contains ck11, but not found
+        // - (slowBufValMap.get(pk1:ck11) should be called even if bufValMap.get(pk1) is found)
+        // - return NONE
+        // Case:2
+        // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
+        // - slowBufValMap.get(pk1:ck11), but not found
+        // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+        // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
+        // - bufValMap.get(pk1) and check if it contains ck11, but not found
+        // - (slowBufValMap.get(pk1:ck11) should be called after bufValMap.get(pk1))
+        // - return NONE
+        if (delayedBufferedValue != null) {
+          return delayedBufferedValue;
+        }
+        if (bufferedValues != null) {
+          return bufferedValues;
+        }
 
-      // TODO: Revisit this exception class
-      throw new GroupCommitException(
-          "The buffer for the reserved value slot doesn't exist. keys:" + keys);
+        // TODO: Revisit this exception class
+        throw new GroupCommitException(
+            "The buffer for the reserved value slot doesn't exist. keys:" + keys);
+      }
     }
 
     // TODO: Create cleanup queue and worker to call this
@@ -149,33 +179,35 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     }
 
-    private synchronized void moveDelayedValueSlotsToDelayedBufferValues(
+    private void moveDelayedValueSlotsToDelayedBufferValues(
         NormalBufferedValues<K, V> bufferedValues) {
-      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#1 BV:{}", bufferedValues);
-      List<ValueSlot<K, V>> notReadyValueSlots = bufferedValues.removeNotReadyValueSlots();
-      for (ValueSlot<K, V> notReadyValueSlot : notReadyValueSlots) {
-        K fullKey = notReadyValueSlot.getFullKey();
-        DelayedBufferedValue<K, V> newDelayedBufferedValue =
-            new DelayedBufferedValue<>(
-                fullKey,
-                emitExecutorService,
-                emitter,
-                keyManipulator,
-                sizeFixExpirationInMillis,
-                timeoutExpirationInMillis,
-                notReadyValueSlot);
-        DelayedBufferedValue<K, V> old =
-            delayedBufferedValueMap.put(fullKey, newDelayedBufferedValue);
-        if (old != null) {
-          logger.warn("The slow buffer value map already has the same key buffer. {}", old);
+      synchronized (getLock(bufferedValues.key)) {
+        logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#1 BV:{}", bufferedValues);
+        List<ValueSlot<K, V>> notReadyValueSlots = bufferedValues.removeNotReadyValueSlots();
+        for (ValueSlot<K, V> notReadyValueSlot : notReadyValueSlots) {
+          K fullKey = notReadyValueSlot.getFullKey();
+          DelayedBufferedValue<K, V> newDelayedBufferedValue =
+              new DelayedBufferedValue<>(
+                  fullKey,
+                  emitExecutorService,
+                  emitter,
+                  keyManipulator,
+                  sizeFixExpirationInMillis,
+                  timeoutExpirationInMillis,
+                  notReadyValueSlot);
+          DelayedBufferedValue<K, V> old =
+              delayedBufferedValueMap.put(fullKey, newDelayedBufferedValue);
+          if (old != null) {
+            logger.warn("The slow buffer value map already has the same key buffer. {}", old);
+          }
         }
+        logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#2 BV:{}", bufferedValues);
+        if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
+          bufferedValuesMap.remove(bufferedValues.key);
+          logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
+        }
+        logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#3 BV:{}", bufferedValues);
       }
-      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#2 BV:{}", bufferedValues);
-      if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
-        bufferedValuesMap.remove(bufferedValues.key);
-        logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
-      }
-      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#3 BV:{}", bufferedValues);
     }
   }
 
@@ -472,6 +504,7 @@ public class GroupCommitter3<K, V> implements Closeable {
   private static class NormalBufferedValues<K, V> extends BufferedValues<K, V> {
 
     NormalBufferedValues(
+        K key,
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
@@ -479,7 +512,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         long timeoutExpirationInMillis,
         int capacity) {
       super(
-          keyManipulator.createParentKey(),
+          key,
           executorService,
           emitter,
           keyManipulator,
