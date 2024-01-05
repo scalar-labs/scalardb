@@ -34,6 +34,8 @@ public class GroupCommitter3<K, V> implements Closeable {
       new LinkedBlockingQueue<>();
   private final BlockingQueue<NormalBufferedValues<K, V>> queueForTimeout =
       new LinkedBlockingQueue<>();
+  private final BlockingQueue<DelayedBufferedValue<K, V>> queueForDelayed =
+      new LinkedBlockingQueue<>();
   // Parameters
   private final long expirationCheckIntervalInMillis;
   private final long sizeFixExpirationInMillis;
@@ -43,6 +45,7 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final ExecutorService emitExecutorService;
   private final ExecutorService sizeFixExecutorService;
   private final ExecutorService timeoutExecutorService;
+  private final ExecutorService delayedExecutorService;
   // Custom operations injected by the client
   private final KeyManipulator<K> keyManipulator;
   @LazyInit private Emittable<K, V> emitter;
@@ -168,14 +171,10 @@ public class GroupCommitter3<K, V> implements Closeable {
         }
       }
       logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#2 BV:{}", bufferedValues);
-      // TODO: Replace this with cleanup queue and worker
-      // FIXME: stream() is a bit slow
-      /*
       if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
         bufferedValuesMap.remove(bufferedValues.key);
         logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
       }
-       */
       logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#3 BV:{}", bufferedValues);
     }
   }
@@ -279,6 +278,11 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     protected K reserveNewValueSlot(ValueSlot<K, V> valueSlot)
         throws GroupCommitAlreadySizeFixedException {
+      return reserveNewValueSlot(valueSlot, true);
+    }
+
+    protected K reserveNewValueSlot(ValueSlot<K, V> valueSlot, boolean autoEmit)
+        throws GroupCommitAlreadySizeFixedException {
       synchronized (this) {
         if (isSizeFixed()) {
           throw new GroupCommitAlreadySizeFixedException(
@@ -290,7 +294,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       logger.info("RESERVE:{}, CHILDKEY:{}", this, valueSlot.key);
       ///////// FIXME: DEBUG
       if (noMoreSlot()) {
-        fixSize();
+        fixSize(autoEmit);
       }
       return valueSlot.getFullKey();
     }
@@ -336,6 +340,10 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     public void fixSize() {
+      fixSize(true);
+    }
+
+    public void fixSize(boolean autoEmit) {
       synchronized (this) {
         // Current ValueSlot that `index` is pointing is not used yet.
         size.set(valueSlots.size());
@@ -343,7 +351,9 @@ public class GroupCommitter3<K, V> implements Closeable {
         logger.info("Fixed size: buffer={}", this);
         ////// FIXME: DEBUG
         // This is in this block since it results in better performance
-        asyncEmitIfReady();
+        if (autoEmit) {
+          asyncEmitIfReady();
+        }
       }
     }
 
@@ -526,7 +536,10 @@ public class GroupCommitter3<K, V> implements Closeable {
           timeoutExpirationInMillis,
           1);
       try {
-        super.reserveNewValueSlot(valueSlot);
+        // Auto emit should be disabled since:
+        // - the queue and worker for delayed values will emit this if it's ready
+        // - to avoid taking time in synchronized blocks
+        super.reserveNewValueSlot(valueSlot, false);
       } catch (GroupCommitAlreadySizeFixedException e) {
         // FIXME Message
         throw new IllegalStateException(
@@ -579,6 +592,15 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     startTimeoutExecutorService();
 
+    this.delayedExecutorService =
+        Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat(label + "-group-commit-delayed-%d")
+                .build());
+
+    startDelayedExecutorService();
+
     this.buffersManager = new BuffersManager();
   }
 
@@ -619,13 +641,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         bufferedValues.fixSize();
       } else {
         // Not expired. Retry
-        retryWaitInMillis =
-            // FIXME
-            //            Math.max(
-            //
-            // bufferedValues.sizeFixedAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
-            //                expirationCheckIntervalInMillis);
-            expirationCheckIntervalInMillis;
+        retryWaitInMillis = expirationCheckIntervalInMillis;
       }
     }
 
@@ -647,11 +663,15 @@ public class GroupCommitter3<K, V> implements Closeable {
         queueForTimeout.add(bufferedValues);
       }
       NormalBufferedValues<K, V> removed = queueForSizeFix.poll();
+      // Check if the removed buffered value is expected just in case.
       if (removed == null || !removed.equals(bufferedValues)) {
-        logger.warn(
-            "The queue returned an inconsistent return value. expected:{}, actual:{}",
+        logger.error(
+            "The queue for size-fix returned an inconsistent return value. expected:{}, actual:{}",
             bufferedValues,
             removed);
+        if (removed != null) {
+          queueForSizeFix.add(removed);
+        }
       }
     }
     return true;
@@ -689,13 +709,7 @@ public class GroupCommitter3<K, V> implements Closeable {
             queueForTimeout.size());
       } else {
         // Not expired. Retry
-        retryWaitInMillis =
-            // FIXME
-            //            Math.max(
-            //
-            // bufferedValues.timeoutAt.minusMillis(now.toEpochMilli()).toEpochMilli(),
-            //                expirationCheckIntervalInMillis);
-            expirationCheckIntervalInMillis * 2;
+        retryWaitInMillis = expirationCheckIntervalInMillis * 2;
       }
     }
 
@@ -713,13 +727,72 @@ public class GroupCommitter3<K, V> implements Closeable {
       logger.info("[TIMEOUT] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
       ////////// FIXME: DEBUG LOG
       NormalBufferedValues<K, V> removed = queueForTimeout.poll();
+      // Check if the removed buffered value is expected just in case.
       if (removed == null || !removed.equals(bufferedValues)) {
-        logger.warn(
-            "The queue returned an inconsistent return value. expected:{}, actual:{}",
+        logger.error(
+            "The queue for timeout returned an inconsistent return value. expected:{}, actual:{}",
             bufferedValues,
             removed);
+        if (removed != null) {
+          queueForTimeout.add(removed);
+        }
       }
     }
+    return true;
+  }
+
+  private volatile long lastDebugPrintForDelayedQueue = 0;
+  ////////// FIXME: DEBUG LOG
+  private boolean handleQueueForDelayed() {
+    DelayedBufferedValue<K, V> bufferedValues = queueForDelayed.peek();
+    Long waitInMillis = expirationCheckIntervalInMillis;
+
+    ////////// FIXME: DEBUG LOG
+    if (lastDebugPrintForDelayedQueue + 1000 < System.currentTimeMillis()) {
+      logger.info("[DELAYED] QUEUE STATUS: size={}", queueForDelayed.size());
+      lastDebugPrintForDelayedQueue = System.currentTimeMillis();
+    }
+    ////////// FIXME: DEBUG LOG
+
+    ////////// FIXME: DEBUG LOG
+    logger.info("[DELAYED] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
+    ////////// FIXME: DEBUG LOG
+    if (bufferedValues == null) {
+      // The queue is empty, so wait for a longer time.
+      waitInMillis = expirationCheckIntervalInMillis * 2;
+    } else {
+      DelayedBufferedValue<K, V> removed = queueForDelayed.poll();
+      // Check if the removed buffered value is expected just in case.
+      if (removed == null || !removed.equals(bufferedValues)) {
+        logger.error(
+            "The queue for delayed values returned an inconsistent return value. expected:{}, actual:{}",
+            bufferedValues,
+            removed);
+        if (removed != null) {
+          queueForDelayed.add(removed);
+        }
+        return true;
+      } else if (bufferedValues.isReady()) {
+        // Send the ready buffer asynchronously and check the result later.
+        bufferedValues.asyncEmitIfReady();
+      } else if (bufferedValues.isDone()) {
+        // Don't need retries.
+        return true;
+      }
+      // Buffered values in the queue for delayed ones could contain very delayed ones.
+      // Those delayed ones should be handled later.
+      queueForDelayed.add(bufferedValues);
+    }
+
+    try {
+      TimeUnit.MILLISECONDS.sleep(waitInMillis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      // TODO: Unified the error message
+      logger.warn("Interrupted", e);
+      return false;
+    }
+
     return true;
   }
 
@@ -739,6 +812,17 @@ public class GroupCommitter3<K, V> implements Closeable {
         () -> {
           while (!timeoutExecutorService.isShutdown()) {
             if (!handleQueueForTimeout()) {
+              break;
+            }
+          }
+        });
+  }
+
+  private void startDelayedExecutorService() {
+    delayedExecutorService.execute(
+        () -> {
+          while (!delayedExecutorService.isShutdown()) {
+            if (!handleQueueForDelayed()) {
               break;
             }
           }
@@ -813,14 +897,17 @@ public class GroupCommitter3<K, V> implements Closeable {
   // But for testing, this should be called for resources.
   @Override
   public void close() {
-    if (emitExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(emitExecutorService, 5, TimeUnit.SECONDS);
+    if (delayedExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(delayedExecutorService, 5, TimeUnit.SECONDS);
+    }
+    if (timeoutExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(timeoutExecutorService, 5, TimeUnit.SECONDS);
     }
     if (sizeFixExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(sizeFixExecutorService, 5, TimeUnit.SECONDS);
     }
-    if (timeoutExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(timeoutExecutorService, 5, TimeUnit.SECONDS);
+    if (emitExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(emitExecutorService, 5, TimeUnit.SECONDS);
     }
   }
 }
