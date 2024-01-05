@@ -3,10 +3,14 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.group
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,6 +71,66 @@ class GroupCommitter3Test {
     public final Future<Value> future;
   }
 
+  static class Result {
+    public final int tps;
+    public final int retry;
+
+    public Result(int tps, int retry) {
+      this.tps = tps;
+      this.retry = retry;
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this).add("tps", tps).add("retry", retry).toString();
+    }
+  }
+
+  static class GroupCommitParams {
+    public final int numOfThreads;
+    public final int numOfRetentionValues;
+    public final int sizeFixExpirationInMillis;
+    public final int timeoutExpirationInMillis;
+
+    public GroupCommitParams(
+        int numOfThreads,
+        int numOfRetentionValues,
+        int sizeFixExpirationInMillis,
+        int timeoutExpirationInMillis) {
+      this.numOfThreads = numOfThreads;
+      this.numOfRetentionValues = numOfRetentionValues;
+      this.sizeFixExpirationInMillis = sizeFixExpirationInMillis;
+      this.timeoutExpirationInMillis = timeoutExpirationInMillis;
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("numOfThreads", numOfThreads)
+          .add("numOfRetentionValues", numOfRetentionValues)
+          .add("sizeFixExpirationInMillis", sizeFixExpirationInMillis)
+          .add("timeoutExpirationInMillis", timeoutExpirationInMillis)
+          .toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof GroupCommitParams)) return false;
+      GroupCommitParams that = (GroupCommitParams) o;
+      return numOfThreads == that.numOfThreads
+          && numOfRetentionValues == that.numOfRetentionValues
+          && sizeFixExpirationInMillis == that.sizeFixExpirationInMillis
+          && timeoutExpirationInMillis == that.timeoutExpirationInMillis;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          numOfThreads, numOfRetentionValues, sizeFixExpirationInMillis, timeoutExpirationInMillis);
+    }
+  }
+
   // $ ./gradlew core:cleanTest core:test --tests
   // 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3Test'
   @Test
@@ -76,17 +140,17 @@ class GroupCommitter3Test {
         // For Benchmarker:
         // NumOfThreads,NumOfRequests
         256,
-        4000,
+        40000,
         // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
         0,
         0,
         0,
         // For Group Commit
-        // NumOfRetentionValues,SizeFixExpirationInMillis,TimeoutExpirationInMillis,NumOfThreads
-        2,
-        10,
-        100,
-        64);
+        new GroupCommitParams(32, 8, 10, 100));
+
+    System.out.println("FINISHED WARMUP");
+    TimeUnit.SECONDS.sleep(10);
+    System.out.println("STARTING BENCHMARK");
 
     boolean microBenchmark = false;
     if (microBenchmark) {
@@ -99,39 +163,69 @@ class GroupCommitter3Test {
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
           // For Group Commit
-          32, // NumOfRetentionValues
-          80, // SizeFixExpirationInMillis
-          800, // TimeoutExpirationInMillis
-          64 // NumOfThreads
-          );
+          new GroupCommitParams(64, 32, 80, 800));
     } else {
-      // Benchmark for Production case
-      benchmarkInternal(
-          // For Benchmarker:
-          4096, // NumOfThreads
-          100000, // NumOfRequests
-          40, // AveragePrepareWaitInMillis
-          400, // MultiplexerInMillis
-          40, // MaxCommitWaitInMillis
-          // For Group Commit
-          32, // NumOfRetentionValues
-          50, // SizeFixExpirationInMillis
-          200, // TimeoutExpirationInMillis
-          64 // NumOfThreads
-          );
+      /*
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=40, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=4602, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=400}=Result{tps=4092, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=75, timeoutExpirationInMillis=200}=Result{tps=3474, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=25, timeoutExpirationInMillis=400}=Result{tps=4113, retry=0},
+      GroupCommitParams{numOfThreads=24, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=3701, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=75, timeoutExpirationInMillis=100}=Result{tps=2821, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=3709, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=25, timeoutExpirationInMillis=200}=Result{tps=3778, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=100}=Result{tps=2827, retry=0},
+      GroupCommitParams{numOfThreads=40, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=3703, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=25, timeoutExpirationInMillis=100}=Result{tps=3056, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=24, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=2777, retry=0},
+      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=75, timeoutExpirationInMillis=400}=Result{tps=4136, retry=0}
+       */
+      List<GroupCommitParams> params =
+          Arrays.asList(
+              new GroupCommitParams(24, 32, 50, 200),
+              new GroupCommitParams(32, 32, 50, 200),
+              new GroupCommitParams(40, 32, 50, 200),
+              new GroupCommitParams(32, 24, 50, 200),
+              // new GroupCommitParams(32, 32, 50, 200),
+              new GroupCommitParams(32, 40, 50, 200),
+              new GroupCommitParams(32, 32, 25, 100),
+              new GroupCommitParams(32, 32, 25, 200),
+              new GroupCommitParams(32, 32, 25, 400),
+              new GroupCommitParams(32, 32, 50, 100),
+              // new GroupCommitParams(32, 32, 50, 200),
+              new GroupCommitParams(32, 32, 50, 400),
+              new GroupCommitParams(32, 32, 75, 100),
+              new GroupCommitParams(32, 32, 75, 200),
+              new GroupCommitParams(32, 32, 75, 400));
+      Map<GroupCommitParams, Result> results = new HashMap<>();
+      for (GroupCommitParams param : params) {
+        // Benchmark for Production case
+        Result result =
+            benchmarkInternal(
+                // For Benchmarker:
+                2048, // NumOfThreads
+                100000, // NumOfRequests
+                40, // AveragePrepareWaitInMillis
+                400, // MultiplexerInMillis
+                40, // MaxCommitWaitInMillis
+                // For Group Commit
+                param);
+        results.put(param, result);
+        System.gc();
+        System.out.println("FINISH: " + param);
+        TimeUnit.SECONDS.sleep(10);
+      }
+      System.out.println("RESULT: " + results);
     }
   }
 
-  void benchmarkInternal(
+  Result benchmarkInternal(
       int bmNumOfThreads,
       int bmNumOfRequests,
       int bmAveragePrepareWaitInMillis,
       int bmMultiplexerInMillis,
       int bmMaxCommitWaitInMillis,
-      int gcNumOfRetentionValues,
-      int gcSizeFixExpirationInMillis,
-      int gcTimeoutExpirationInMillis,
-      int gcNumOfThreads)
+      GroupCommitParams groupCommitParams)
       throws ExecutionException, InterruptedException, TimeoutException {
     Random rand = new Random();
     AtomicInteger retry = new AtomicInteger();
@@ -140,11 +234,11 @@ class GroupCommitter3Test {
     try (GroupCommitter3<String, Value> groupCommitter =
         new GroupCommitter3<>(
             "test",
-            gcSizeFixExpirationInMillis,
-            gcTimeoutExpirationInMillis,
-            gcNumOfRetentionValues,
-            5,
-            gcNumOfThreads,
+            groupCommitParams.sizeFixExpirationInMillis,
+            groupCommitParams.timeoutExpirationInMillis,
+            groupCommitParams.numOfRetentionValues,
+            10,
+            groupCommitParams.numOfRetentionValues,
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
           ((parentKey, values) -> {
@@ -177,66 +271,72 @@ class GroupCommitter3Test {
       ExecutorService executorService =
           Executors.newFixedThreadPool(
               bmNumOfThreads, new ThreadFactoryBuilder().setDaemon(true).build());
-      long start = System.currentTimeMillis();
-      for (int i = 0; i < bmNumOfRequests; i++) {
-        String childKey = String.format("%016d", i);
-        Value value = new Value("ORIG-KEY: " + childKey);
-        futures.add(
-            new KeyAndFuture(
-                childKey,
-                executorService.submit(
-                    () -> {
-                      while (true) {
-                        try {
-                          String fullKey = groupCommitter.reserve(childKey);
-                          int waitInMillis =
-                              (int)
-                                  (bmAveragePrepareWaitInMillis
-                                      + rand.nextGaussian() * bmMultiplexerInMillis);
-                          waitInMillis = Math.max(waitInMillis, bmAveragePrepareWaitInMillis);
-                          if (waitInMillis > 0) {
-                            System.out.printf(
-                                "Waiting for prepare. FullKey=%s, Duration=%d ms \n",
-                                fullKey, waitInMillis);
-                            TimeUnit.MILLISECONDS.sleep(waitInMillis);
+      try {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < bmNumOfRequests; i++) {
+          String childKey = String.format("%016d", i);
+          Value value = new Value("ORIG-KEY: " + childKey);
+          futures.add(
+              new KeyAndFuture(
+                  childKey,
+                  executorService.submit(
+                      () -> {
+                        while (true) {
+                          try {
+                            String fullKey = groupCommitter.reserve(childKey);
+                            int waitInMillis =
+                                (int)
+                                    (bmAveragePrepareWaitInMillis
+                                        + rand.nextGaussian() * bmMultiplexerInMillis);
+                            waitInMillis = Math.max(waitInMillis, bmAveragePrepareWaitInMillis);
+                            if (waitInMillis > 0) {
+                              System.out.printf(
+                                  "Waiting for prepare. FullKey=%s, Duration=%d ms \n",
+                                  fullKey, waitInMillis);
+                              TimeUnit.MILLISECONDS.sleep(waitInMillis);
+                            }
+                            groupCommitter.ready(fullKey, value);
+                            break;
+                          } catch (GroupCommitAlreadyClosedException
+                              | GroupCommitAlreadySizeFixedException e) {
+                            retry.incrementAndGet();
                           }
-                          groupCommitter.ready(fullKey, value);
-                          break;
-                        } catch (GroupCommitAlreadyClosedException
-                            | GroupCommitAlreadySizeFixedException e) {
-                          retry.incrementAndGet();
                         }
-                      }
-                      return null;
-                    })));
-      }
-
-      for (KeyAndFuture kf : futures) {
-        try {
-          System.err.println("Getting the future of " + kf.key);
-          kf.future.get(10, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-          System.out.println("Timeout: Key=" + kf.key);
-          throw e;
+                        return null;
+                      })));
         }
-      }
-      long duration = System.currentTimeMillis() - start;
-      System.err.println("Duration(ms): " + duration);
-      System.err.println("TPS:          " + (((double) bmNumOfRequests) / (duration / 1000.0)));
-      System.err.println("Retry:        " + retry.get());
 
-      start = System.currentTimeMillis();
-      for (int i = 0; i < bmNumOfRequests; i++) {
-        String expectedKey = "ORIG-KEY: " + String.format("%016d", i);
-        if (!emittedKeys.containsKey(expectedKey)) {
-          throw new AssertionError(expectedKey + " is not found");
+        for (KeyAndFuture kf : futures) {
+          try {
+            System.err.println("Getting the future of " + kf.key);
+            kf.future.get(10, TimeUnit.SECONDS);
+          } catch (TimeoutException e) {
+            System.out.println("Timeout: Key=" + kf.key);
+            throw e;
+          }
         }
-        // System.err.println("Confirmed the key is contained: Key=" + expectedKey);
-      }
-      assertEquals(bmNumOfRequests, emittedKeys.size());
+        long duration = System.currentTimeMillis() - start;
+        int tps = (int) ((double) bmNumOfRequests / (duration / 1000.0));
+        System.err.println("Duration(ms): " + duration);
+        System.err.println("TPS:          " + tps);
+        System.err.println("Retry:        " + retry.get());
 
-      System.err.println("Checked all the keys");
-      System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
+        for (int i = 0; i < bmNumOfRequests; i++) {
+          String expectedKey = "ORIG-KEY: " + String.format("%016d", i);
+          if (!emittedKeys.containsKey(expectedKey)) {
+            throw new AssertionError(expectedKey + " is not found");
+          }
+          // System.err.println("Confirmed the key is contained: Key=" + expectedKey);
+        }
+        assertEquals(bmNumOfRequests, emittedKeys.size());
+
+        System.err.println("Checked all the keys");
+        System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
+        return new Result(tps, retry.get());
+      } finally {
+        MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);
+      }
     }
   }
 }
