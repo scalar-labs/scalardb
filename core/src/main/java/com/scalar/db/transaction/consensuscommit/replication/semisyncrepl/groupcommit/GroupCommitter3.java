@@ -69,10 +69,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       NormalBufferedValues<K, V> oldBufferedValues = null;
       NormalBufferedValues<K, V> newBufferedValues = null;
       synchronized (this) {
-        if (currentBufferedValues == null
-            || currentBufferedValues.noMoreSlot()
-            || currentBufferedValues.isDone()
-            || currentBufferedValues.isSizeFixed()) {
+        if (currentBufferedValues == null || currentBufferedValues.isClosed()) {
           isNewBufferedValuesCreated = true;
           oldBufferedValues = currentBufferedValues;
           currentBufferedValues =
@@ -244,6 +241,8 @@ public class GroupCommitter3<K, V> implements Closeable {
     public final Instant timeoutAt;
     private final AtomicBoolean done = new AtomicBoolean();
     protected final Map<K, ValueSlot<K, V>> valueSlots;
+    // Whether to reject a new value slot.
+    protected final AtomicBoolean closed = new AtomicBoolean();
 
     @Override
     public String toString() {
@@ -299,6 +298,7 @@ public class GroupCommitter3<K, V> implements Closeable {
               "The size of 'valueSlot' is already fixed. buffer:" + this);
         }
         valueSlots.put(valueSlot.key, valueSlot);
+        updateIsClosed();
       }
       ///////// FIXME: DEBUG
       logger.info("RESERVE:{}, CHILDKEY:{}", this, valueSlot.key);
@@ -357,6 +357,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       synchronized (this) {
         // Current ValueSlot that `index` is pointing is not used yet.
         size.set(valueSlots.size());
+        updateIsClosed();
         ////// FIXME: DEBUG
         logger.info("Fixed size: buffer={}", this);
         ////// FIXME: DEBUG
@@ -390,12 +391,21 @@ public class GroupCommitter3<K, V> implements Closeable {
       return done.get();
     }
 
+    public boolean isClosed() {
+      return closed.get();
+    }
+
+    public synchronized void updateIsClosed() {
+      closed.set(noMoreSlot() || isDone() || isSizeFixed());
+    }
+
     public void removeValueSlot(K childKey) {
       synchronized (this) {
         if (valueSlots.remove(childKey) != null) {
           if (size.get() != null && size.get() > 0) {
             size.set(size.get() - 1);
           }
+          updateIsClosed();
         }
         ////// FIXME: DEBUG
         logger.info(
@@ -420,6 +430,7 @@ public class GroupCommitter3<K, V> implements Closeable {
           // In this case, each transaction has aborted with the full transaction ID.
           logger.warn("'valueSlots' is empty. Nothing to do. bufferedValue:{}", this);
           done.set(true);
+          updateIsClosed();
           return;
         }
         executorService.execute(
@@ -461,6 +472,7 @@ public class GroupCommitter3<K, V> implements Closeable {
               }
             });
         done.set(true);
+        updateIsClosed();
       }
     }
 
@@ -475,6 +487,7 @@ public class GroupCommitter3<K, V> implements Closeable {
                 "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
                 cause));
         done.set(true);
+        updateIsClosed();
       }
     }
   }
