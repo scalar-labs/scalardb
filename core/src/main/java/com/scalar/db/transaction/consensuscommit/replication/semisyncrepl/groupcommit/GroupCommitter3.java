@@ -61,28 +61,29 @@ public class GroupCommitter3<K, V> implements Closeable {
     private final Map<K, DelayedBufferedValue<K, V>> delayedBufferedValueMap = new HashMap<>();
 
     // Returns full key
-    private synchronized K reserveNewValueSlot(K childKey)
-        throws GroupCommitAlreadySizeFixedException {
-      if (currentBufferedValues == null
-          || currentBufferedValues.noMoreSlot()
-          || currentBufferedValues.isDone()
-          || currentBufferedValues.isSizeFixed()) {
-        ///////// FIXME: DEBUG
-        logger.info("OLD BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
-        ///////// FIXME: DEBUG
-        currentBufferedValues =
-            new NormalBufferedValues<>(
-                emitExecutorService,
-                emitter,
-                keyManipulator,
-                sizeFixExpirationInMillis,
-                timeoutExpirationInMillis,
-                numberOfRetentionValues);
-        queueForSizeFix.add(currentBufferedValues);
-        bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
-        ///////// FIXME: DEBUG
-        logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
-        ///////// FIXME: DEBUG
+    private K reserveNewValueSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
+      synchronized (this) {
+        if (currentBufferedValues == null
+            || currentBufferedValues.noMoreSlot()
+            || currentBufferedValues.isDone()
+            || currentBufferedValues.isSizeFixed()) {
+          ///////// FIXME: DEBUG
+          logger.info("OLD BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
+          ///////// FIXME: DEBUG
+          currentBufferedValues =
+              new NormalBufferedValues<>(
+                  emitExecutorService,
+                  emitter,
+                  keyManipulator,
+                  sizeFixExpirationInMillis,
+                  timeoutExpirationInMillis,
+                  numberOfRetentionValues);
+          queueForSizeFix.add(currentBufferedValues);
+          bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
+          ///////// FIXME: DEBUG
+          logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
+          ///////// FIXME: DEBUG
+        }
       }
       return currentBufferedValues.reserveNewValueSlot(childKey);
     }
