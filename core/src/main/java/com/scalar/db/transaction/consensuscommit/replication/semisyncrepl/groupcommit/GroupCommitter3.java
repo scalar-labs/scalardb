@@ -65,14 +65,16 @@ public class GroupCommitter3<K, V> implements Closeable {
       // TODO:
       //   - add a flag to represent if a new buffer must be created
       //   - move the log out of the synchronized block
+      boolean isNewBufferedValuesCreated = false;
+      NormalBufferedValues<K, V> oldBufferedValues = null;
+      NormalBufferedValues<K, V> newBufferedValues = null;
       synchronized (this) {
         if (currentBufferedValues == null
             || currentBufferedValues.noMoreSlot()
             || currentBufferedValues.isDone()
             || currentBufferedValues.isSizeFixed()) {
-          ///////// FIXME: DEBUG
-          logger.info("OLD BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
-          ///////// FIXME: DEBUG
+          isNewBufferedValuesCreated = true;
+          oldBufferedValues = currentBufferedValues;
           currentBufferedValues =
               new NormalBufferedValues<>(
                   emitExecutorService,
@@ -81,12 +83,16 @@ public class GroupCommitter3<K, V> implements Closeable {
                   sizeFixExpirationInMillis,
                   timeoutExpirationInMillis,
                   numberOfRetentionValues);
+          newBufferedValues = currentBufferedValues;
           queueForSizeFix.add(currentBufferedValues);
           bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
-          ///////// FIXME: DEBUG
-          logger.info("NEW BUFFER VALUES:{}, CHILDKEY:{}", currentBufferedValues, childKey);
-          ///////// FIXME: DEBUG
         }
+      }
+      if (isNewBufferedValuesCreated) {
+        ///////// FIXME: DEBUG
+        logger.info(
+            "NEW BV:{}, OLD BV:{}, CHILD_KEY:{}", newBufferedValues, oldBufferedValues, childKey);
+        ///////// FIXME: DEBUG
       }
       return currentBufferedValues.reserveNewValueSlot(childKey);
     }
