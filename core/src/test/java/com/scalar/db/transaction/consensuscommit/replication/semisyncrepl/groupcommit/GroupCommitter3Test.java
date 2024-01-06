@@ -149,7 +149,7 @@ class GroupCommitter3Test {
         new GroupCommitParams(32, 8, 10, 100));
 
     System.out.println("FINISHED WARMUP");
-    TimeUnit.SECONDS.sleep(10);
+    System.gc();
     System.out.println("STARTING BENCHMARK");
 
     boolean microBenchmark = false;
