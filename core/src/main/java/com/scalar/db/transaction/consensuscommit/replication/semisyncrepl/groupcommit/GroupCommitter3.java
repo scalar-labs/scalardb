@@ -62,6 +62,9 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     // Returns full key
     private K reserveNewValueSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
+      // TODO:
+      //   - add a flag to represent if a new buffer must be created
+      //   - move the log out of the synchronized block
       synchronized (this) {
         if (currentBufferedValues == null
             || currentBufferedValues.noMoreSlot()
