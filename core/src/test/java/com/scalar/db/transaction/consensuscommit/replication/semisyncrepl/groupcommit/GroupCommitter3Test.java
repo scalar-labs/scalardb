@@ -165,38 +165,7 @@ class GroupCommitter3Test {
           // For Group Commit
           new GroupCommitParams(64, 32, 80, 800));
     } else {
-      /*
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=40, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=4602, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=400}=Result{tps=4092, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=75, timeoutExpirationInMillis=200}=Result{tps=3474, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=25, timeoutExpirationInMillis=400}=Result{tps=4113, retry=0},
-      GroupCommitParams{numOfThreads=24, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=3701, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=75, timeoutExpirationInMillis=100}=Result{tps=2821, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=3709, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=25, timeoutExpirationInMillis=200}=Result{tps=3778, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=100}=Result{tps=2827, retry=0},
-      GroupCommitParams{numOfThreads=40, numOfRetentionValues=32, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=3703, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=25, timeoutExpirationInMillis=100}=Result{tps=3056, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=24, sizeFixExpirationInMillis=50, timeoutExpirationInMillis=200}=Result{tps=2777, retry=0},
-      GroupCommitParams{numOfThreads=32, numOfRetentionValues=32, sizeFixExpirationInMillis=75, timeoutExpirationInMillis=400}=Result{tps=4136, retry=0}
-       */
-      List<GroupCommitParams> params =
-          Arrays.asList(
-              new GroupCommitParams(24, 32, 50, 200),
-              new GroupCommitParams(32, 32, 50, 200),
-              new GroupCommitParams(40, 32, 50, 200),
-              new GroupCommitParams(32, 24, 50, 200),
-              // new GroupCommitParams(32, 32, 50, 200),
-              new GroupCommitParams(32, 40, 50, 200),
-              new GroupCommitParams(32, 32, 25, 100),
-              new GroupCommitParams(32, 32, 25, 200),
-              new GroupCommitParams(32, 32, 25, 400),
-              new GroupCommitParams(32, 32, 50, 100),
-              // new GroupCommitParams(32, 32, 50, 200),
-              new GroupCommitParams(32, 32, 50, 400),
-              new GroupCommitParams(32, 32, 75, 100),
-              new GroupCommitParams(32, 32, 75, 200),
-              new GroupCommitParams(32, 32, 75, 400));
+      List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(32, 40, 40, 200));
       Map<GroupCommitParams, Result> results = new HashMap<>();
       for (GroupCommitParams param : params) {
         // Benchmark for Production case
