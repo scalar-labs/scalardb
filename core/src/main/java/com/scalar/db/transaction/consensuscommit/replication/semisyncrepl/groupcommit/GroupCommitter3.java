@@ -81,6 +81,7 @@ public class GroupCommitter3<K, V> implements Closeable {
                   timeoutExpirationInMillis,
                   numberOfRetentionValues);
           newBufferedValues = currentBufferedValues;
+          // TODO: This can be a faster queue?
           queueForSizeFix.add(currentBufferedValues);
           bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
         }
