@@ -44,7 +44,7 @@ subprojects {
         jettyVersion = '9.4.53.v20231009'
         junitVersion = '5.10.1'
         commonsLangVersion = '3.14.0'
-        assertjVersion = '3.25.0'
+        assertjVersion = '3.25.1'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.3'
         errorproneVersion = '2.10.0'
