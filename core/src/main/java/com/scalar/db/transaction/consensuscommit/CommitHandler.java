@@ -20,12 +20,14 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitAlreadyClosedException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitTargetNotFoundException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -328,6 +330,7 @@ public class CommitHandler {
           snapshot.getId(),
           System.currentTimeMillis() - start);
     } catch (PreparationException e) {
+      // TODO: This can be removed since it's called in `abortState()` as well.
       cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -349,6 +352,7 @@ public class CommitHandler {
           snapshot.getId(),
           System.currentTimeMillis() - start);
     } catch (ValidationException e) {
+      // TODO: This can be removed since it's called in `abortState()` as well.
       cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -382,16 +386,43 @@ public class CommitHandler {
       commitState(snapshot);
       commitRecords(snapshot);
     } else {
+      commitViaGroupCommit(snapshot);
+    }
+  }
+
+  // This is used by TwoPhaseConsensusCommit.
+  public void commitViaGroupCommit(Snapshot snapshot)
+      throws CommitException, UnknownTransactionStatusException {
+    String id = snapshot.getId();
+    try {
+      groupCommitter.ready(id, snapshot);
+    } catch (GroupCommitAlreadyClosedException e) {
+      cancelGroupCommitIfNeeded(id);
+      throw new CommitConflictException("Group commit failed due to a conflict", e, id);
+    } catch (GroupCommitTargetNotFoundException e) {
+      // This would happen with 2PC interface.
       try {
-        groupCommitter.ready(snapshot.getId(), snapshot);
-      } catch (GroupCommitAlreadyClosedException e) {
-        cancelGroupCommitIfNeeded(snapshot.getId());
-        throw new CommitConflictException(
-            "Group commit failed due to a conflict", e, snapshot.getId());
-      } catch (GroupCommitException e) {
-        cancelGroupCommitIfNeeded(snapshot.getId());
-        throw new CommitException("Group commit failed", e, snapshot.getId());
+        Optional<State> s = coordinator.getState(id);
+        if (s.isPresent()) {
+          TransactionState state = s.get().getState();
+          if (state.equals(TransactionState.ABORTED)) {
+            rollbackRecords(snapshot);
+            throw new CommitException(
+                "Committing state in coordinator failed. the transaction is aborted", e, id);
+          }
+        } else {
+          throw new UnknownTransactionStatusException(
+              "Committing state failed with NoMutationException but the coordinator status doesn't exist",
+              e,
+              id);
+        }
+        commitRecords(snapshot);
+      } catch (CoordinatorException ex) {
+        throw new UnknownTransactionStatusException("Can't get the state", ex, id);
       }
+    } catch (GroupCommitException e) {
+      cancelGroupCommitIfNeeded(id);
+      throw new CommitException("Group commit failed", e, id);
     }
   }
 

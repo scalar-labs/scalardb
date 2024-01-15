@@ -124,8 +124,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         return bufferedValues;
       }
 
-      // TODO: Revisit this exception class
-      throw new GroupCommitException(
+      throw new GroupCommitTargetNotFoundException(
           "The buffer for the reserved value slot doesn't exist. keys:" + keys);
     }
 

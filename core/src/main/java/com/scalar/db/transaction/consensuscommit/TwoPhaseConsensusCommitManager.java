@@ -14,6 +14,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,6 +36,14 @@ public class TwoPhaseConsensusCommitManager
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
 
+  ////////////// For group commit >>>>>>>>>>>>>>>>>
+  private final GroupCommitter3<String, Snapshot> groupCommitter;
+
+  public boolean isGroupCommitEnabled() {
+    return groupCommitter != null;
+  }
+  ////////////// For group commit <<<<<<<<<<<<<<<<<
+
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public TwoPhaseConsensusCommitManager(
@@ -49,7 +58,10 @@ public class TwoPhaseConsensusCommitManager
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
+    commit =
+        new CommitHandler(
+            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -67,7 +79,10 @@ public class TwoPhaseConsensusCommitManager
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
+    commit =
+        new CommitHandler(
+            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -82,7 +97,8 @@ public class TwoPhaseConsensusCommitManager
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
-      CommitHandler commit) {
+      CommitHandler commit,
+      GroupCommitter3<String, Snapshot> groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
@@ -94,6 +110,7 @@ public class TwoPhaseConsensusCommitManager
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
+    this.groupCommitter = groupCommitter;
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -120,6 +137,11 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
+    // For Group Commit PoC >>>>
+    if (groupCommitter != null) {
+      txId = groupCommitter.reserve(txId);
+    }
+    // <<<< For Group Commit PoC
     return createNewTransaction(txId, isolation, strategy);
   }
 
@@ -149,7 +171,8 @@ public class TwoPhaseConsensusCommitManager
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
 
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
+        new TwoPhaseConsensusCommit(
+            crud, commit, recovery, mutationOperationChecker, groupCommitter);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return decorate(transaction);
@@ -185,5 +208,10 @@ public class TwoPhaseConsensusCommitManager
     storage.close();
     admin.close();
     parallelExecutor.close();
+    // For Group Commit PoC >>>>
+    if (groupCommitter != null) {
+      groupCommitter.close();
+    }
+    // <<<< For Group Commit PoC
   }
 }
