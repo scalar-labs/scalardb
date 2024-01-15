@@ -134,6 +134,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
     // Error number: 1022; Symbol: ER_DUP_KEY; SQLSTATE: 23000
     // Message: Can't write; duplicate key in table '%s'
     // etc... See: <https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html>
