@@ -120,6 +120,9 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
     // 23000: Integrity constraint violation
     return e.getSQLState().equals("23000");
   }
