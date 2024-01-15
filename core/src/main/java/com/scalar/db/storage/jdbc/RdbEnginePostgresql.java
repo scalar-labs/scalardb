@@ -125,24 +125,36 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
     // 42P07: duplicate_table
     return e.getSQLState().equals("42P07");
   }
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
     // 23505: unique_violation
     return e.getSQLState().equals("23505");
   }
 
   @Override
   public boolean isUndefinedTableError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
     // 42P01: undefined_table
     return e.getSQLState().equals("42P01");
   }
 
   @Override
   public boolean isConflictError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
     // 40001: serialization_failure
     // 40P01: deadlock_detected
     return e.getSQLState().equals("40001") || e.getSQLState().equals("40P01");
