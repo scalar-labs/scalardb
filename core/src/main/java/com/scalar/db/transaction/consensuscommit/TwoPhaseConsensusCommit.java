@@ -21,9 +21,11 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  @Nullable private final GroupCommitter3<String, Snapshot> groupCommitter;
   private boolean validated;
   private boolean needRollback;
 
@@ -47,11 +50,13 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       CrudHandler crud,
       CommitHandler commit,
       RecoveryHandler recovery,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
+      ConsensusCommitMutationOperationChecker mutationOperationChecker,
+      @Nullable GroupCommitter3 groupCommitter) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
     this.mutationOperationChecker = mutationOperationChecker;
+    this.groupCommitter = groupCommitter;
   }
 
   @Override
@@ -167,6 +172,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
           CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_EXTRA_READ.buildMessage());
+    }
+
+    if (groupCommitter != null) {
+      // TODO: Revisit here to consider `needRollback` and so on
+      commit.commitViaGroupCommit(crud.getSnapshot());
+      return;
     }
 
     try {
