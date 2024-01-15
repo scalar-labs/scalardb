@@ -151,6 +151,9 @@ class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
     // Integrity constraint violation
     return e.getSQLState().equals("23000");
   }
