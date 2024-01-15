@@ -3,6 +3,11 @@ package com.scalar.db.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Properties;
 import javax.annotation.Nullable;
 import org.apache.commons.text.StringSubstitutor;
@@ -34,7 +39,9 @@ public final class ConfigUtils {
 
   private ConfigUtils() {}
 
-  public static String getString(Properties properties, String name, String defaultValue) {
+  @Nullable
+  public static String getString(
+      Properties properties, String name, @Nullable String defaultValue) {
     String value = trimAndReplace(properties.getProperty(name));
     if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
@@ -126,12 +133,28 @@ public final class ConfigUtils {
     }
   }
 
-  public static String[] getStringArray(Properties properties, String name, String[] defaultValue) {
+  @Nullable
+  public static String[] getStringArray(
+      Properties properties, String name, @Nullable String[] defaultValue) {
     String value = trimAndReplace(properties.getProperty(name));
     if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
     }
     return value.split("\\s*,\\s*");
+  }
+
+  @Nullable
+  public static String getStringFromFilePath(
+      Properties properties, String pathName, @Nullable String defaultValue) {
+    String path = trimAndReplace(properties.getProperty(pathName));
+    if (Strings.isNullOrEmpty(path)) {
+      return defaultValue;
+    }
+    try {
+      return new String(Files.readAllBytes(new File(path).toPath()), StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   @VisibleForTesting
