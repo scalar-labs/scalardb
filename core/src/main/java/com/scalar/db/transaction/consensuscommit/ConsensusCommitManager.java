@@ -17,7 +17,6 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,88 +39,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
 
   ////////////// For group commit >>>>>>>>>>>>>>>>>
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS";
-
   private final GroupCommitter3<String, Snapshot> groupCommitter;
-
-  // FIXME: GroupCommitter3 should be abstract
-  @VisibleForTesting
-  public static Optional<GroupCommitter3<String, Snapshot>> prepareGroupCommitter() {
-    // TODO: Make this configurable
-    // TODO: Take care of lazy recovery
-    if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
-      return Optional.empty();
-    }
-
-    int groupCommitNumOfRetentionValues = 32;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
-      groupCommitNumOfRetentionValues =
-          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
-    }
-
-    int groupCommitNumOfThreads = 32;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
-      groupCommitNumOfThreads =
-          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS));
-    }
-
-    int groupCommitSizeFixExpirationInMillis = 200;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS) != null) {
-      groupCommitSizeFixExpirationInMillis =
-          Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS));
-    }
-
-    int groupCommitTimeoutExpirationInMillis = 2000;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS) != null) {
-      groupCommitTimeoutExpirationInMillis =
-          Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS));
-    }
-    return Optional.of(
-        new GroupCommitter3<>(
-            "coordinator-writer",
-            groupCommitSizeFixExpirationInMillis,
-            groupCommitTimeoutExpirationInMillis,
-            groupCommitNumOfRetentionValues,
-            10,
-            groupCommitNumOfThreads,
-            new KeyManipulator<String>() {
-              @Override
-              public String createParentKey() {
-                return UUID.randomUUID().toString();
-              }
-
-              @Override
-              public String createFullKey(String parentKey, String childKey) {
-                return parentKey + ":" + childKey;
-              }
-
-              @Override
-              public boolean isFullKey(String fullKey) {
-                String[] parts = fullKey.split(":");
-                return parts.length == 2;
-              }
-
-              @Override
-              public Keys<String> fromFullKey(String fullKey) {
-                String[] parts = fullKey.split(":");
-                if (parts.length != 2) {
-                  throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
-                }
-                return new Keys<>(parts[0], parts[1]);
-              }
-            }));
-  }
 
   public boolean isGroupCommitEnabled() {
     return groupCommitter != null;
@@ -142,7 +60,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = prepareGroupCommitter().orElse(null);
+    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -163,7 +81,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = prepareGroupCommitter().orElse(null);
+    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -194,7 +112,6 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
-    // For PoC
     this.groupCommitter = groupCommitter;
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
@@ -266,12 +183,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   @VisibleForTesting
   DistributedTransaction begin(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    String txId;
-    if (groupCommitter != null) {
-      txId = groupCommitter.reserve(UUID.randomUUID().toString());
-    } else {
-      txId = UUID.randomUUID().toString();
-    }
+    String txId = UUID.randomUUID().toString();
     return begin(txId, isolation, strategy);
   }
 
@@ -280,6 +192,11 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
       throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
+    // For Group Commit PoC >>>>
+    if (groupCommitter != null) {
+      txId = groupCommitter.reserve(txId);
+    }
+    // <<<< For Group Commit PoC
     if (!config.getIsolation().equals(isolation)
         || !config.getSerializableStrategy().equals(strategy)) {
       logger.warn(
@@ -328,9 +245,10 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     storage.close();
     admin.close();
     parallelExecutor.close();
-    // For PoC
+    // For Group Commit PoC >>>>
     if (groupCommitter != null) {
       groupCommitter.close();
     }
+    // <<<< For Group Commit PoC
   }
 }

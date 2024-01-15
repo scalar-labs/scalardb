@@ -155,7 +155,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     // For PoC
-    groupCommitter = ConsensusCommitManager.prepareGroupCommitter().orElse(null);
+    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
     commit =
         spy(
             new CommitHandler(
