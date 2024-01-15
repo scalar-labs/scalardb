@@ -4,10 +4,25 @@ import static com.github.stefanbirkner.systemlambda.SystemLambda.withEnvironment
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class ConfigUtilsTest {
+
+  @TempDir private Path folder;
+
+  private void writeToFile(File file, String content) throws IOException {
+    BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8);
+    writer.write(content);
+    writer.close();
+  }
 
   @Test
   public void getString_ShouldBehaveCorrectly() {
@@ -102,6 +117,18 @@ public class ConfigUtilsTest {
     assertThat(ConfigUtils.getStringArray(properties, "name4", new String[] {"xxx", "yyy", "zzz"}))
         .isEqualTo(new String[] {"xxx", "yyy", "zzz"});
     assertThat(ConfigUtils.getBoolean(properties, "name5", null)).isNull();
+  }
+
+  @Test
+  public void getStringFromFilePath_ShouldBehaveCorrectly() throws IOException {
+    // Arrange
+    File filePath = folder.resolve("some_file").toFile();
+    writeToFile(filePath.getCanonicalFile(), "value");
+    Properties properties = new Properties();
+    properties.setProperty("name1", filePath.getCanonicalPath());
+
+    // Act Assert
+    assertThat(ConfigUtils.getStringFromFilePath(properties, "name1", null)).isEqualTo("value");
   }
 
   @Test
