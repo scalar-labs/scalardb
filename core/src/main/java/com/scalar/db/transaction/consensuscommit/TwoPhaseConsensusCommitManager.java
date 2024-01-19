@@ -132,6 +132,11 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction join(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
+    // If the transaction associated with the specified transaction ID is active, resume it
+    if (isTransactionActive(txId)) {
+      return resume(txId);
+    }
+
     return createNewTransaction(txId, isolation, strategy);
   }
 
