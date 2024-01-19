@@ -64,7 +64,12 @@ releases.each do |release|
     cur = candidate_releases
     rest_versions.split('.').each do |part_of_version_str|
       next if part_of_version_str.empty?
-      part_of_version = Integer(part_of_version_str)
+      begin
+        part_of_version = Integer(part_of_version_str)
+      rescue ArgumentError
+        STDERR.puts "Failed to convert string(#{part_of_version_str}) to integer. Skipping it."
+        next
+      end
       # Just an idiom for map initialization
       cur[part_of_version] ||= {}
       cur = cur[part_of_version]
