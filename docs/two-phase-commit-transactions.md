@@ -288,7 +288,7 @@ TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>");
 // Resume the transaction by using the transaction ID.
 TwoPhaseCommitTransaction tx1 = transactionManager.resume("<TRANSACTION_ID>");
 
-// Or you can also re-join the transaction by using the transaction ID.
+// Or you can re-join the transaction by using the transaction ID.
 TwoPhaseCommitTransaction tx2 = transactionManager.join("<TRANSACTION_ID>");
 ```
 
@@ -304,14 +304,7 @@ tx.getId();
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
-In case of using `join()` to re-join a transaction, if you have not joined the transaction before, it returns a new transaction object. On the other hand, in case of using `resume()` to resume a transaction, if you have not joined the transaction before, it throws `TransactionNotFoundException`.
-
-{% capture notice--info %}
-**Note**
-
-{% endcapture %}
-
-<div class="notice--info">{{ notice--info | markdownify }}</div>
+When using `join()` to re-join a transaction, if you have not joined the transaction before, a new transaction object will be returned. On the other hand, when using `resume()` to resume a transaction, if you have not joined the transaction before, `TransactionNotFoundException` will be thrown.
 
 The following is an example of two services that have multiple endpoints:
 
@@ -450,7 +443,7 @@ public class ServiceBImpl implements ServiceB {
 }
 ```
 
-As shown above, by resuming (or re-joining) the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
+As shown above, by resuming or re-joining the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
 
 ## How to handle exceptions
 
