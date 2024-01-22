@@ -304,7 +304,14 @@ tx.getId();
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
+{% capture notice--info %}
+**Note**
+
 When using `join()` to re-join a transaction, if you have not joined the transaction before, a new transaction object will be returned. On the other hand, when using `resume()` to resume a transaction, if you have not joined the transaction before, `TransactionNotFoundException` will be thrown.
+
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 
 The following is an example of two services that have multiple endpoints:
 
