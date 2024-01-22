@@ -13,11 +13,6 @@ public class TransactionException extends Exception {
   private final boolean superuserRequired;
   @Nullable private final AuthAdmin.Privilege requiredPrivilege;
 
-  public TransactionException(String message) {
-    super(message);
-    this.transactionId = null;
-  }
-
   public TransactionException(String message, @Nullable String transactionId) {
     this(message, transactionId, false, false, false, null);
   }
