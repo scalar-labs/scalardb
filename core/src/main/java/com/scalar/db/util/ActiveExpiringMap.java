@@ -102,7 +102,7 @@ public class ActiveExpiringMap<K, V> {
     return prev == null ? Optional.empty() : Optional.of(prev.get());
   }
 
-  public boolean contains(K key) {
+  public boolean containsKey(K key) {
     return map.containsKey(key);
   }
 

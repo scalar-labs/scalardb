@@ -64,7 +64,7 @@ TwoPhaseCommitTransaction tx = transactionManager.start("<TRANSACTION_ID>");
 For participants, you can join a transaction by specifying the transaction ID associated with the transaction that Coordinator has started or begun as follows:
 
 ```java
-TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>")
+TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>");
 ```
 
 {% capture notice--info %}
@@ -273,11 +273,11 @@ For simplicity, the above example code doesn't handle the exceptions that the AP
 
 As previously mentioned, for `commit()`, if any of the Coordinator or participant processes succeed in committing the transaction, you can consider the transaction as committed. Also, for better performance, you can execute `prepare()`, `validate()`, and `commit()` in parallel, respectively.
 
-### Resume a transaction
+### Resume or re-join a transaction
 
-Given that processes or applications that use transactions with a two-phase commit interface usually involve multiple request and response exchanges, you might need to execute a transaction across various endpoints or APIs. For such scenarios, you can use `resume()` to resume a transaction object (an instance of `TwoPhaseCommitTransaction`) that you previously began or joined.
+Given that processes or applications that use transactions with a two-phase commit interface usually involve multiple request and response exchanges, you might need to execute a transaction across various endpoints or APIs. For such scenarios, you can use `resume()` or `join()` to get a transaction object (an instance of `TwoPhaseCommitTransaction`) for the transaction that you previously joined.
 
-The following shows how `resume()` works:
+The following shows how `resume()` and `join()` work:
 
 ```java
 // Join (or begin) the transaction.
@@ -286,7 +286,10 @@ TwoPhaseCommitTransaction tx = transactionManager.join("<TRANSACTION_ID>");
 ...
 
 // Resume the transaction by using the transaction ID.
-TwoPhaseCommitTransaction tx1 = transactionManager.resume("<TRANSACTION_ID>")
+TwoPhaseCommitTransaction tx1 = transactionManager.resume("<TRANSACTION_ID>");
+
+// Or you can re-join the transaction by using the transaction ID.
+TwoPhaseCommitTransaction tx2 = transactionManager.join("<TRANSACTION_ID>");
 ```
 
 {% capture notice--info %}
@@ -297,6 +300,9 @@ To get the transaction ID with `getId()`, you can specify the following:
 ```java
 tx.getId();
 ```
+
+In addition, when using `join()` to re-join a transaction, if you have not joined the transaction before, a new transaction object will be returned. On the other hand, when using `resume()` to resume a transaction, if you have not joined the transaction before, `TransactionNotFoundException` will be thrown.
+
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
@@ -379,18 +385,28 @@ public class ServiceBImpl implements ServiceB {
   public void endpoint1(String txId) throws Exception {
     // Join the transaction.
     TwoPhaseCommitTransaction tx = transactionManager.join(txId);
+
+    ...
   }
 
   @Override
   public void endpoint2(String txId) throws Exception {
     // Resume the transaction that you joined in `endpoint1()`.
     TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
+
+    // Or re-join the transaction that you joined in `endpoint1()`.
+    // TwoPhaseCommitTransaction tx = transactionManager.join(txId);
+
+    ...
   }
 
   @Override
   public void prepare(String txId) throws Exception {
     // Resume the transaction.
     TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
+
+    // Or re-join the transaction.
+    // TwoPhaseCommitTransaction tx = transactionManager.join(txId);
 
     ...
 
@@ -403,6 +419,9 @@ public class ServiceBImpl implements ServiceB {
     // Resume the transaction.
     TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
+    // Or re-join the transaction.
+    // TwoPhaseCommitTransaction tx = transactionManager.join(txId);
+
     ...
 
     // Commit.
@@ -414,6 +433,9 @@ public class ServiceBImpl implements ServiceB {
     // Resume the transaction.
     TwoPhaseCommitTransaction tx = transactionManager.resume(txId);
 
+    // Or re-join the transaction.
+    // TwoPhaseCommitTransaction tx = transactionManager.join(txId);
+
     ...
 
     // Roll back.
@@ -422,7 +444,7 @@ public class ServiceBImpl implements ServiceB {
 }
 ```
 
-As shown above, by resuming the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
+As shown above, by resuming or re-joining the transaction, you can share the same transaction object across multiple endpoints in `ServiceB`.
 
 ## How to handle exceptions
 
