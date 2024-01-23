@@ -75,6 +75,10 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     activeTransactions.remove(transactionId);
   }
 
+  protected boolean isTransactionActive(String transactionId) {
+    return activeTransactions.containsKey(transactionId);
+  }
+
   @Override
   public TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException {
     return activeTransactions
