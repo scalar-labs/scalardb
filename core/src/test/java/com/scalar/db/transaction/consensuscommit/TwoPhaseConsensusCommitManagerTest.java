@@ -212,13 +212,16 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void join_CalledAfterBeginWithSameTxId_ThrowTransactionException()
+  public void join_CalledAfterJoinWithSameTxId_ReturnSameTransactionObject()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransaction transaction1 = manager.join(ANY_TX_ID);
 
-    // Act Assert
-    manager.begin(ANY_TX_ID);
-    assertThatThrownBy(() -> manager.join(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+    // Act
+    TwoPhaseCommitTransaction transaction2 = manager.join(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction1).isEqualTo(transaction2);
   }
 
   @Test

@@ -50,7 +50,7 @@ public class ActiveExpiringMapTest {
   }
 
   @Test
-  public void contains_ShouldBehaveCorrectly() {
+  public void containsKey_ShouldBehaveCorrectly() {
     // Arrange
     ActiveExpiringMap<String, String> activeExpiringMap =
         new ActiveExpiringMap<>(0, 0, (k, v) -> {});
@@ -60,10 +60,10 @@ public class ActiveExpiringMapTest {
     activeExpiringMap.put("k3", "v3");
 
     // Act Assert
-    assertThat(activeExpiringMap.contains("k1")).isTrue();
-    assertThat(activeExpiringMap.contains("k2")).isTrue();
-    assertThat(activeExpiringMap.contains("k3")).isTrue();
-    assertThat(activeExpiringMap.contains("k4")).isFalse();
+    assertThat(activeExpiringMap.containsKey("k1")).isTrue();
+    assertThat(activeExpiringMap.containsKey("k2")).isTrue();
+    assertThat(activeExpiringMap.containsKey("k3")).isTrue();
+    assertThat(activeExpiringMap.containsKey("k4")).isFalse();
   }
 
   @Test
