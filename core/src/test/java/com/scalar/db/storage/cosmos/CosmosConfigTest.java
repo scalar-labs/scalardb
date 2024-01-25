@@ -13,6 +13,7 @@ public class CosmosConfigTest {
   private static final String ANY_KEY = "any_key";
   private static final String COSMOS_STORAGE = "cosmos";
   private static final String ANY_TABLE_METADATA_DATABASE = "any_database";
+  private static final String ANY_CONSISTENCY_LEVEL = "any_consistency_level";
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -22,6 +23,7 @@ public class CosmosConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
     props.setProperty(DatabaseConfig.STORAGE, COSMOS_STORAGE);
     props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_DATABASE);
+    props.setProperty(CosmosConfig.CONSISTENCY_LEVEL, ANY_CONSISTENCY_LEVEL);
 
     // Act
     CosmosConfig config = new CosmosConfig(new DatabaseConfig(props));
@@ -30,6 +32,7 @@ public class CosmosConfigTest {
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
     assertThat(config.getKey()).isEqualTo(ANY_KEY);
     assertThat(config.getMetadataDatabase()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
+    assertThat(config.getConsistencyLevel()).hasValue(ANY_CONSISTENCY_LEVEL);
   }
 
   @Test
@@ -45,7 +48,7 @@ public class CosmosConfigTest {
   }
 
   @Test
-  public void constructor_WithoutTableMetadataDatabase_ShouldLoadProperly() {
+  public void constructor_WithoutSystemNamespaceNameAndConsistencyLevel_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_ENDPOINT);
@@ -60,6 +63,7 @@ public class CosmosConfigTest {
     assertThat(config.getKey()).isEqualTo(ANY_KEY);
     assertThat(config.getMetadataDatabase())
         .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    assertThat(config.getConsistencyLevel()).isEmpty();
   }
 
   @Test
@@ -78,6 +82,7 @@ public class CosmosConfigTest {
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
     assertThat(config.getKey()).isEqualTo(ANY_KEY);
     assertThat(config.getMetadataDatabase()).isEqualTo(ANY_TABLE_METADATA_DATABASE);
+    assertThat(config.getConsistencyLevel()).isEmpty();
   }
 
   @Test

@@ -3,6 +3,8 @@ package com.scalar.db.storage.cosmos;
 import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +20,12 @@ public class CosmosConfig {
   @Deprecated
   public static final String TABLE_METADATA_DATABASE = PREFIX + "table_metadata.database";
 
+  public static final String CONSISTENCY_LEVEL = PREFIX + "consistency_level";
+
   private final String endpoint;
   private final String key;
   private final String metadataDatabase;
+  @Nullable private final String consistencyLevel;
 
   public CosmosConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -48,6 +53,8 @@ public class CosmosConfig {
     } else {
       metadataDatabase = databaseConfig.getSystemNamespaceName();
     }
+
+    consistencyLevel = getString(databaseConfig.getProperties(), CONSISTENCY_LEVEL, null);
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
@@ -64,5 +71,9 @@ public class CosmosConfig {
 
   public String getMetadataDatabase() {
     return metadataDatabase;
+  }
+
+  public Optional<String> getConsistencyLevel() {
+    return Optional.ofNullable(consistencyLevel);
   }
 }

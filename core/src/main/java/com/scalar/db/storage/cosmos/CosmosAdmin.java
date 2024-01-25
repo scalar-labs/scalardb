@@ -2,9 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
-import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
@@ -72,13 +70,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Inject
   public CosmosAdmin(DatabaseConfig databaseConfig) {
     CosmosConfig config = new CosmosConfig(databaseConfig);
-    client =
-        new CosmosClientBuilder()
-            .endpoint(config.getEndpoint())
-            .key(config.getKey())
-            .directMode()
-            .consistencyLevel(ConsistencyLevel.STRONG)
-            .buildClient();
+    client = CosmosUtils.buildCosmosClient(config);
     metadataDatabase = config.getMetadataDatabase();
   }
 

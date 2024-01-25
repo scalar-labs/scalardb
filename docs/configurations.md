@@ -80,11 +80,12 @@ The following configurations are available for Cassandra:
 
 The following configurations are available for CosmosDB for NoSQL:
 
-| Name                                 | Description                                                                                              | Default    |
-|--------------------------------------|----------------------------------------------------------------------------------------------------------|------------|
-| `scalar.db.storage`                  | `cosmos` must be specified.                                                                              | -          |
-| `scalar.db.contact_points`           | Azure Cosmos DB for NoSQL endpoint with which ScalarDB should communicate.                               |            |
-| `scalar.db.password`                 | Either a master or read-only key used to perform authentication for accessing Azure Cosmos DB for NoSQL. |            |
+| Name                                 | Description                                                                                              | Default  |
+|--------------------------------------|----------------------------------------------------------------------------------------------------------|----------|
+| `scalar.db.storage`                  | `cosmos` must be specified.                                                                              | -        |
+| `scalar.db.contact_points`           | Azure Cosmos DB for NoSQL endpoint with which ScalarDB should communicate.                               |          |
+| `scalar.db.password`                 | Either a master or read-only key used to perform authentication for accessing Azure Cosmos DB for NoSQL. |          |
+| `scalar.db.cosmos.consistency_level` | Consistency level used for Cosmos DB operations. `STRONG` or `BOUNDED_STALENESS` can be specified.       | `STRONG` |
 
 </div>
 <div id="DynamoDB" class="tabcontent" markdown="1">
