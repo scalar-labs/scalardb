@@ -521,8 +521,8 @@ Scan scan =
         .namespace("ns")
         .table("tbl")
         .partitionKey(partitionKey)
-        .start(startClusteringKey)
-        .end(endClusteringKey)
+        .start(startClusteringKey, true)    // Include startClusteringKey
+        .end(endClusteringKey, false)       // Exclude endClusteringKey
         .projections("c1", "c2", "c3", "c4")
         .orderings(Scan.Ordering.desc("c2"), Scan.Ordering.asc("c3"))
         .limit(10)
