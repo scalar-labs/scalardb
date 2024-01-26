@@ -332,7 +332,7 @@ public class CommitHandler {
     }
   }
 
-  private void commitStateForGroupCommit(String parentId, List<Snapshot> snapshots)
+  private void commitStateForGroupCommit(String id, List<Snapshot> snapshots)
       throws CommitException, UnknownTransactionStatusException {
     if (snapshots.isEmpty()) {
       // This means all buffered transactions failed in the prepare phase.
@@ -345,7 +345,7 @@ public class CommitHandler {
     try {
       long start = System.currentTimeMillis();
       coordinator.putStateForGroupCommit(
-          parentId,
+          id,
           snapshots.stream().map(Snapshot::getId).collect(Collectors.toList()),
           TransactionState.COMMITTED,
           System.currentTimeMillis());
@@ -358,27 +358,27 @@ public class CommitHandler {
           System.currentTimeMillis() - start);
 
       logger.debug(
-          "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
+          "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
       try {
-        Optional<Coordinator.State> s = coordinator.getState(parentId);
+        Optional<Coordinator.State> s = coordinator.getState(id);
         if (s.isPresent()) {
           TransactionState state = s.get().getState();
           if (state.equals(TransactionState.ABORTED)) {
             throw new CommitException(
-                "Committing state in coordinator failed. the transaction is aborted", e, parentId);
+                "Committing state in coordinator failed. the transaction is aborted", e, id);
           }
         } else {
           throw new UnknownTransactionStatusException(
               "Committing state failed with NoMutationException but the coordinator status doesn't exist",
               e,
-              parentId);
+              id);
         }
       } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException("Can't get the state", e1, parentId);
+        throw new UnknownTransactionStatusException("Can't get the state", e1, id);
       }
     } catch (CoordinatorException e) {
-      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, parentId);
+      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, id);
     }
   }
 
