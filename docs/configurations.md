@@ -81,27 +81,28 @@ The following configurations are available for Cassandra:
 
 The following configurations are available for CosmosDB for NoSQL:
 
-| Name                                 | Description                                                                                              | Default    |
-|--------------------------------------|----------------------------------------------------------------------------------------------------------|------------|
-| `scalar.db.storage`                  | `cosmos` must be specified.                                                                              | -          |
-| `scalar.db.contact_points`           | Azure Cosmos DB for NoSQL endpoint with which ScalarDB should communicate.                               |            |
-| `scalar.db.password`                 | Either a master or read-only key used to perform authentication for accessing Azure Cosmos DB for NoSQL. |            |
-| `scalar.db.cosmos.table_metadata.database` | Database name for the table metadata used for ScalarDB.                                    | `scalardb` |
+| Name                                       | Description                                                                                              | Default    |
+|--------------------------------------------|----------------------------------------------------------------------------------------------------------|------------|
+| `scalar.db.storage`                        | `cosmos` must be specified.                                                                              | -          |
+| `scalar.db.contact_points`                 | Azure Cosmos DB for NoSQL endpoint with which ScalarDB should communicate.                               |            |
+| `scalar.db.password`                       | Either a master or read-only key used to perform authentication for accessing Azure Cosmos DB for NoSQL. |            |
+| `scalar.db.cosmos.table_metadata.database` | Database name for the table metadata used for ScalarDB.                                                  | `scalardb` |
+| `scalar.db.cosmos.consistency_level`       | Consistency level used for Cosmos DB operations. `STRONG` or `BOUNDED_STALENESS` can be specified.       | `STRONG`   |
 
 </div>
 <div id="DynamoDB" class="tabcontent" markdown="1">
 
 The following configurations are available for DynamoDB:
 
-| Name                                  | Description                                                                                                                                                                                                                                                 | Default    |
-|---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
-| `scalar.db.storage`                   | `dynamo` must be specified.                                                                                                                                                                                                                                 | -          |
-| `scalar.db.contact_points`            | AWS region with which ScalarDB should communicate (e.g., `us-east-1`).                                                                                                                                                                                      |            |
-| `scalar.db.username`                  | AWS access key used to identify the user interacting with AWS.                                                                                                                                                                                              |            |
-| `scalar.db.password`                  | AWS secret access key used to authenticate the user interacting with AWS.                                                                                                                                                                                   |            |
-| `scalar.db.dynamo.endpoint_override`  | Amazon DynamoDB endpoint with which ScalarDB should communicate. This is primarily used for testing with a local instance instead of an AWS service.                                                                                                        |            |
-| `scalar.db.dynamo.table_metadata.namespace` | Namespace name for the table metadata used for ScalarDB.                                                                                                                                                                                      | `scalardb` |
-| `scalar.db.dynamo.namespace.prefix`   | Prefix for the user namespaces and metadata namespace names. Since AWS requires having unique tables names in a single AWS region, this is useful if you want to use multiple ScalarDB environments (development, production, etc.) in a single AWS region. |            |
+| Name                                        | Description                                                                                                                                                                                                                                                 | Default    |
+|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `scalar.db.storage`                         | `dynamo` must be specified.                                                                                                                                                                                                                                 | -          |
+| `scalar.db.contact_points`                  | AWS region with which ScalarDB should communicate (e.g., `us-east-1`).                                                                                                                                                                                      |            |
+| `scalar.db.username`                        | AWS access key used to identify the user interacting with AWS.                                                                                                                                                                                              |            |
+| `scalar.db.password`                        | AWS secret access key used to authenticate the user interacting with AWS.                                                                                                                                                                                   |            |
+| `scalar.db.dynamo.endpoint_override`        | Amazon DynamoDB endpoint with which ScalarDB should communicate. This is primarily used for testing with a local instance instead of an AWS service.                                                                                                        |            |
+| `scalar.db.dynamo.table_metadata.namespace` | Namespace name for the table metadata used for ScalarDB.                                                                                                                                                                                                    | `scalardb` |
+| `scalar.db.dynamo.namespace.prefix`         | Prefix for the user namespaces and metadata namespace names. Since AWS requires having unique tables names in a single AWS region, this is useful if you want to use multiple ScalarDB environments (development, production, etc.) in a single AWS region. |            |
 
 </div>
 <div id="JDBC_databases" class="tabcontent" markdown="1">
@@ -120,7 +121,7 @@ The following configurations are available for JDBC databases:
 | `scalar.db.jdbc.prepared_statements_pool.enabled`         | Setting this property to `true` enables prepared-statement pooling.                                                                                                          | `false`                      |
 | `scalar.db.jdbc.prepared_statements_pool.max_open`        | Maximum number of open statements that can be allocated from the statement pool at the same time. Use a negative value for no limit.                                         | `-1`                         |
 | `scalar.db.jdbc.isolation_level`                          | Isolation level for JDBC. `READ_UNCOMMITTED`, `READ_COMMITTED`, `REPEATABLE_READ`, or `SERIALIZABLE` can be specified.                                                       | Underlying-database specific |
-| `scalar.db.jdbc.table_metadata.schema`                          | Schema name for the table metadata used for ScalarDB.                                                                                                          | `scalardb`                   |
+| `scalar.db.jdbc.table_metadata.schema`                    | Schema name for the table metadata used for ScalarDB.                                                                                                                        | `scalardb`                   |
 | `scalar.db.jdbc.table_metadata.connection_pool.min_idle`  | Minimum number of idle connections in the connection pool for the table metadata.                                                                                            | `5`                          |
 | `scalar.db.jdbc.table_metadata.connection_pool.max_idle`  | Maximum number of connections that can remain idle in the connection pool for the table metadata.                                                                            | `10`                         |
 | `scalar.db.jdbc.table_metadata.connection_pool.max_total` | Maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. | `25`                         |
