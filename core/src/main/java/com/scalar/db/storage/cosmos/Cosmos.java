@@ -2,9 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
@@ -55,13 +53,7 @@ public class Cosmos extends AbstractDistributedStorage {
 
     CosmosConfig config = new CosmosConfig(databaseConfig);
 
-    client =
-        new CosmosClientBuilder()
-            .endpoint(config.getEndpoint())
-            .key(config.getKey())
-            .directMode()
-            .consistencyLevel(ConsistencyLevel.STRONG)
-            .buildClient();
+    client = CosmosUtils.buildCosmosClient(config);
 
     TableMetadataManager metadataManager =
         new TableMetadataManager(
