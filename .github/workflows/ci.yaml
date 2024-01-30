@@ -25,7 +25,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'check' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: check
 
@@ -79,13 +79,13 @@ jobs:
           distribution: 'temurin'
 
       - name: Dockerfile Lint for ScalarDB Server
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: ':server:dockerfileLint'
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
         if: always()
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: ':schema-loader:dockerfileLint'
 
@@ -112,7 +112,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestCassandra' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestCassandra
 
@@ -146,7 +146,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestCassandra' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestCassandra
 
@@ -175,7 +175,7 @@ jobs:
           echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
 
       - name: Setup and execute Gradle 'integrationTestCosmos' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
 
@@ -212,7 +212,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestDynamo' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestDynamo
 
@@ -245,7 +245,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc
 
@@ -278,7 +278,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc
 
@@ -311,7 +311,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc
 
@@ -345,7 +345,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
@@ -379,7 +379,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
@@ -413,7 +413,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
@@ -447,7 +447,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
@@ -487,7 +487,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
@@ -527,7 +527,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
@@ -581,7 +581,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
@@ -620,7 +620,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer17
 
@@ -655,7 +655,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
 
@@ -690,7 +690,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22
 
@@ -718,7 +718,7 @@ jobs:
         run: sudo apt-get install -y sqlite3
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
 
@@ -751,7 +751,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestJdbc
 
@@ -791,7 +791,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestMultiStorage' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestMultiStorage
 
@@ -824,7 +824,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: integrationTestScalarDbServer
 
