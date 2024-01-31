@@ -548,8 +548,9 @@ public class CommitHandler {
           System.currentTimeMillis());
 
       logger.info(
-          "CommitState-ed(thread_id:{}, num_of_values:{}): {} ms",
+          "CommitState-ed(thread_id:{}, txid:{}, num_of_values:{}): {} ms",
           Thread.currentThread().getId(),
+          snapshots.get(0).getId(),
           snapshots.size(),
           System.currentTimeMillis() - start);
 
