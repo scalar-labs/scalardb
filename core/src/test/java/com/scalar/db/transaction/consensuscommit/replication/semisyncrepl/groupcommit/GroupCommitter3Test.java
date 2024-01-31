@@ -174,9 +174,9 @@ class GroupCommitter3Test {
                 // For Benchmarker:
                 2048, // NumOfThreads
                 100000, // NumOfRequests
-                200, // AveragePrepareWaitInMillis
+                100, // AveragePrepareWaitInMillis
                 400, // MultiplexerInMillis
-                200, // MaxCommitWaitInMillis
+                100, // MaxCommitWaitInMillis
                 // For Group Commit
                 param);
         results.put(param, result);
