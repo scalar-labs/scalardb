@@ -19,14 +19,6 @@ public class UncommittedRecordException extends CrudConflictException {
     results = ImmutableList.of(result);
   }
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public UncommittedRecordException(
-      Selection selection, List<TransactionResult> results, String message, String transactionId) {
-    super(message, transactionId);
-    this.selection = selection;
-    this.results = ImmutableList.copyOf(results);
-  }
-
   @SuppressFBWarnings("EI_EXPOSE_REP")
   public Selection getSelection() {
     return selection;
