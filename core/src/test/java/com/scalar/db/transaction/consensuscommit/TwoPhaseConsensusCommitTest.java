@@ -114,6 +114,7 @@ public class TwoPhaseConsensusCommitTest {
     UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
     when(crud.get(get)).thenThrow(toThrow);
     when(crud.getSnapshot()).thenReturn(snapshot);
+    when(toThrow.getSelection()).thenReturn(get);
     when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
 
     // Act
@@ -138,6 +139,22 @@ public class TwoPhaseConsensusCommitTest {
     // Assert
     assertThat(actual.size()).isEqualTo(1);
     verify(crud).scan(scan);
+  }
+
+  @Test
+  public void scan_ScanForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    TransactionResult result = mock(TransactionResult.class);
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    when(crud.scan(scan)).thenThrow(toThrow);
+    when(toThrow.getSelection()).thenReturn(scan);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(scan, result);
   }
 
   @Test
@@ -241,6 +258,28 @@ public class TwoPhaseConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
+  }
+
+  @Test
+  public void
+      prepare_ProcessedCrudGiven_UncommittedRecordExceptionThrownWhileImplicitPreRead_ShouldPerformLazyRecoveryAndThrowPreparationConflictException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+
+    Get get = mock(Get.class);
+    TransactionResult result = mock(TransactionResult.class);
+
+    UncommittedRecordException uncommittedRecordException = mock(UncommittedRecordException.class);
+    when(uncommittedRecordException.getSelection()).thenReturn(get);
+    when(uncommittedRecordException.getResults()).thenReturn(Collections.singletonList(result));
+
+    doThrow(uncommittedRecordException).when(crud).readIfImplicitPreReadEnabled();
+
+    // Act Assert
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
+
+    verify(recovery).recover(get, result);
   }
 
   @Test
