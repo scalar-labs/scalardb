@@ -46,6 +46,7 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final ExecutorService normalGroupCloseExecutorService;
   private final ExecutorService delayedSlotMoveExecutorService;
   private final ExecutorService delayedGroupEmitExecutorService;
+  private final ExecutorService monitorExecutorService;
   // Custom operations injected by the client
   private final KeyManipulator<K> keyManipulator;
   @LazyInit private Emittable<K, V> emitter;
@@ -564,6 +565,15 @@ public class GroupCommitter3<K, V> implements Closeable {
     this.numberOfRetentionValues = numberOfRetentionValues;
     this.expirationCheckIntervalInMillis = expirationCheckIntervalInMillis;
     this.keyManipulator = keyManipulator;
+    this.groupManager = new GroupManager();
+
+    this.monitorExecutorService =
+        Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat(label + "-group-commit-monitor-%d")
+                .build());
+    startMonitorExecutorService();
 
     this.emitExecutorService =
         Executors.newFixedThreadPool(
@@ -579,7 +589,6 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .setDaemon(true)
                 .setNameFormat(label + "-group-commit-normal-group-close-%d")
                 .build());
-
     startNormalGroupCloseExecutorService();
 
     this.delayedSlotMoveExecutorService =
@@ -588,7 +597,6 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .setDaemon(true)
                 .setNameFormat(label + "-group-commit-delayed-slot-move-%d")
                 .build());
-
     startDelayedSlotMoveExecutorService();
 
     this.delayedGroupEmitExecutorService =
@@ -597,29 +605,16 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .setDaemon(true)
                 .setNameFormat(label + "-group-commit-delayed-group-emit-%d")
                 .build());
-
     startDelayedGroupEmitExecutorService();
-
-    this.groupManager = new GroupManager();
   }
 
   public void setEmitter(Emittable<K, V> emitter) {
     this.emitter = emitter;
   }
 
-  ////////// FIXME: DEBUG LOG
-  private volatile long lastDebugPrintForNormalGroupCloseQueue = 0;
-  ////////// FIXME: DEBUG LOG
   private boolean handleQueueForNormalGroupClose() {
     NormalGroup<K, V> normalGroup = queueForNormalGroupClose.peek();
     Long retryWaitInMillis = null;
-
-    ////////// FIXME: DEBUG LOG
-    if (lastDebugPrintForNormalGroupCloseQueue + 1000 < System.currentTimeMillis()) {
-      logger.info("[NORMAL-GROUP-CLOSE] QUEUE STATUS: size={}", queueForNormalGroupClose.size());
-      lastDebugPrintForNormalGroupCloseQueue = System.currentTimeMillis();
-    }
-    ////////// FIXME: DEBUG LOG
 
     if (normalGroup == null) {
       retryWaitInMillis = expirationCheckIntervalInMillis;
@@ -676,9 +671,6 @@ public class GroupCommitter3<K, V> implements Closeable {
     return true;
   }
 
-  ////////// FIXME: DEBUG LOG
-  private volatile long lastDebugPrintForDelayedSlotMoveQueue = 0;
-  ////////// FIXME: DEBUG LOG
   private boolean handleQueueForDelayedSlotMove() {
     NormalGroup<K, V> normalGroup = queueForDelayedSlotMove.peek();
     Long retryWaitInMillis = null;
@@ -686,11 +678,6 @@ public class GroupCommitter3<K, V> implements Closeable {
     ////////// FIXME: DEBUG LOG
     logger.info(
         "[DELAYED-SLOT-MOVE] New group:{}, size:{}", normalGroup, queueForDelayedSlotMove.size());
-    if (lastDebugPrintForDelayedSlotMoveQueue + 1000 < System.currentTimeMillis()) {
-      logger.info("[DELAYED-SLOT-MOVE] Queue status: size={}", queueForDelayedSlotMove.size());
-      lastDebugPrintForDelayedSlotMoveQueue = System.currentTimeMillis();
-    }
-    ////////// FIXME: DEBUG LOG
 
     if (normalGroup == null) {
       retryWaitInMillis = expirationCheckIntervalInMillis * 2;
@@ -741,18 +728,9 @@ public class GroupCommitter3<K, V> implements Closeable {
     return true;
   }
 
-  private volatile long lastDebugPrintForDelayedGroupEmitQueue = 0;
-  ////////// FIXME: DEBUG LOG
   private boolean handleQueueForDelayedGroupEmit() {
     DelayedGroup<K, V> delayedGroup = queueForDelayedGroupEmit.peek();
     Long waitInMillis = expirationCheckIntervalInMillis;
-
-    ////////// FIXME: DEBUG LOG
-    if (lastDebugPrintForDelayedGroupEmitQueue + 1000 < System.currentTimeMillis()) {
-      logger.info("[DELAYED-GROUP-EMIT] QUEUE STATUS: size={}", queueForDelayedGroupEmit.size());
-      lastDebugPrintForDelayedGroupEmitQueue = System.currentTimeMillis();
-    }
-    ////////// FIXME: DEBUG LOG
 
     ////////// FIXME: DEBUG LOG
     logger.info("[DELAYED-GROUP-EMIT] Fetched group={}", delayedGroup);
@@ -823,6 +801,29 @@ public class GroupCommitter3<K, V> implements Closeable {
         () -> {
           while (!delayedGroupEmitExecutorService.isShutdown()) {
             if (!handleQueueForDelayedGroupEmit()) {
+              break;
+            }
+          }
+        });
+  }
+
+  private void startMonitorExecutorService() {
+    monitorExecutorService.execute(
+        () -> {
+          while (!monitorExecutorService.isShutdown()) {
+            logger.info(
+                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
+                Instant.now(),
+                queueForNormalGroupClose.size(),
+                queueForDelayedSlotMove.size(),
+                queueForDelayedGroupEmit.size(),
+                groupManager.normalGroupMap.size(),
+                groupManager.delayedGroupMap.size());
+            try {
+              TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              logger.warn("Interrupted", e);
               break;
             }
           }
@@ -911,6 +912,9 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
     if (emitExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(emitExecutorService, 5, TimeUnit.SECONDS);
+    }
+    if (monitorExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(monitorExecutorService, 5, TimeUnit.SECONDS);
     }
   }
 }
