@@ -85,7 +85,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
       if (isNewGroupCreated) {
         ///////// FIXME: DEBUG
-        logger.info("NEW BV:{}, OLD BV:{}, CHILD_KEY:{}", newGroup, oldGroup, childKey);
+        logger.info("New group:{}, old group:{}, child key:{}", newGroup, oldGroup, childKey);
         ///////// FIXME: DEBUG
       }
       return currentGroup.reserveNewValueSlot(childKey);
@@ -643,7 +643,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       ////////// FIXME: DEBUG LOG
       if (normalGroup.sizeFixedAt.isBefore(Instant.now().minusMillis(5000))) {
         logger.info(
-            "[NORMAL-GROUP-CLOSE] TOO OLD BUFFER: group.key={}, group.values={}",
+            "[NORMAL-GROUP-CLOSE] Too old group: group.key={}, group.values={}",
             normalGroup.key,
             normalGroup.valueSlots);
       }
@@ -670,7 +670,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     } else {
       ////////// FIXME: DEBUG LOG
-      logger.info("[NORMAL-GROUP-CLOSE] FETCHED BUFFER(REMOVE): group={}", normalGroup);
+      logger.info("[NORMAL-GROUP-CLOSE] Fetched group={}", normalGroup);
       ////////// FIXME: DEBUG LOG
       // Move the size-fixed group but not ready to the timeout queue
       if (!normalGroup.isReady()) {
@@ -700,9 +700,9 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     ////////// FIXME: DEBUG LOG
     logger.info(
-        "[DELAYED-SLOT-MOVE] NEW BV:{}, SIZE:{}", normalGroup, queueForDelayedSlotMove.size());
+        "[DELAYED-SLOT-MOVE] New group:{}, size:{}", normalGroup, queueForDelayedSlotMove.size());
     if (lastDebugPrintForDelayedSlotMoveQueue + 1000 < System.currentTimeMillis()) {
-      logger.info("[DELAYED-SLOT-MOVE] QUEUE STATUS: size={}", queueForDelayedSlotMove.size());
+      logger.info("[DELAYED-SLOT-MOVE] Queue status: size={}", queueForDelayedSlotMove.size());
       lastDebugPrintForDelayedSlotMoveQueue = System.currentTimeMillis();
     }
     ////////// FIXME: DEBUG LOG
@@ -718,7 +718,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         long start = System.currentTimeMillis();
         groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
         logger.info(
-            "[DELAYED-SLOT-MOVE] MOVED BV:{} TO DELAYED BUFFERS, DURATION:{}ms, SIZE:{}",
+            "[DELAYED-SLOT-MOVE] Moved group:{} to delayed group, duration:{}ms, size:{}",
             normalGroup,
             (System.currentTimeMillis() - start),
             queueForDelayedSlotMove.size());
@@ -739,7 +739,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     } else {
       ////////// FIXME: DEBUG LOG
-      logger.info("[DELAYED-SLOT-MOVE] FETCHED BUFFER(REMOVE): group={}", normalGroup);
+      logger.info("[DELAYED-SLOT-MOVE] Removing fetched group: group={}", normalGroup);
       ////////// FIXME: DEBUG LOG
       NormalGroup<K, V> removed = queueForDelayedSlotMove.poll();
       // Check if the removed slot is expected just in case.
@@ -770,7 +770,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     ////////// FIXME: DEBUG LOG
 
     ////////// FIXME: DEBUG LOG
-    logger.info("[DELAYED-GROUP-EMIT] FETCHED BUFFER(REMOVE): group={}", delayedGroup);
+    logger.info("[DELAYED-GROUP-EMIT] Fetched group={}", delayedGroup);
     ////////// FIXME: DEBUG LOG
     if (delayedGroup == null) {
       // The queue is empty, so wait for a longer time.
@@ -860,7 +860,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         ///////// FIXME: DEBUG
       } catch (Throwable e) {
         ///////// FIXME: DEBUG
-        logger.error("FAILED TO RESERVE SLOT #2: UNEXPECTED key={}", childKey);
+        logger.error("Failed to reserve slot #2: Unexpected key={}", childKey);
         ///////// FIXME: DEBUG
         throw e;
       }
