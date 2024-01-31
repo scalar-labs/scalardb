@@ -10,7 +10,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Selection;
 import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -71,7 +70,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     try {
       return crud.get(get);
     } catch (UncommittedRecordException e) {
-      lazyRecovery(get, e.getResults());
+      lazyRecovery(e);
       throw e;
     }
   }
@@ -82,7 +81,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     try {
       return crud.scan(scan);
     } catch (UncommittedRecordException e) {
-      lazyRecovery(scan, e.getResults());
+      lazyRecovery(e);
       throw e;
     }
   }
@@ -135,6 +134,9 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     try {
       crud.readIfImplicitPreReadEnabled();
     } catch (CrudConflictException e) {
+      if (e instanceof UncommittedRecordException) {
+        lazyRecovery((UncommittedRecordException) e);
+      }
       throw new CommitConflictException("Conflict occurred while implicit pre-read", e, getId());
     } catch (CrudException e) {
       throw new CommitException("Failed to execute implicit pre-read", e, getId());
@@ -168,10 +170,10 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     this.beforeRecoveryHook = beforeRecoveryHook;
   }
 
-  private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    logger.debug("Recover uncommitted records: {}", results);
+  private void lazyRecovery(UncommittedRecordException e) {
+    logger.debug("Recover uncommitted records: {}", e.getResults());
     beforeRecoveryHook.run();
-    results.forEach(r -> recovery.recover(selection, r));
+    e.getResults().forEach(r -> recovery.recover(e.getSelection(), r));
   }
 
   private void checkMutation(Mutation mutation) throws CrudException {
