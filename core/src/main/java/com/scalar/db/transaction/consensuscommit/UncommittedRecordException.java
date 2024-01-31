@@ -1,38 +1,30 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.collect.ImmutableList;
+import com.scalar.db.api.Selection;
 import com.scalar.db.exception.transaction.CrudConflictException;
-import java.util.ArrayList;
-import java.util.Collections;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 
 public class UncommittedRecordException extends CrudConflictException {
+
+  private final Selection selection;
   private final List<TransactionResult> results;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public UncommittedRecordException(
-      TransactionResult result, String message, String transactionId) {
-    this(result, message, null, transactionId);
+      Selection selection, TransactionResult result, String message, String transactionId) {
+    super(message, transactionId);
+    this.selection = selection;
+    results = ImmutableList.of(result);
   }
 
-  public UncommittedRecordException(
-      TransactionResult result, String message, Throwable cause, String transactionId) {
-    super(message, cause, transactionId);
-    results = Collections.singletonList(result);
-  }
-
-  public UncommittedRecordException(
-      List<TransactionResult> results, String message, String transactionId) {
-    this(results, message, null, transactionId);
-  }
-
-  public UncommittedRecordException(
-      List<TransactionResult> results, String message, Throwable cause, String transactionId) {
-    super(message, cause, transactionId);
-    this.results = new ArrayList<>();
-    this.results.addAll(results);
+  @SuppressFBWarnings("EI_EXPOSE_REP")
+  public Selection getSelection() {
+    return selection;
   }
 
   public List<TransactionResult> getResults() {
-    return ImmutableList.copyOf(results);
+    return results;
   }
 }

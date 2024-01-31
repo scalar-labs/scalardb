@@ -89,7 +89,7 @@ public class CrudHandler {
       return;
     }
     throw new UncommittedRecordException(
-        result.get(), "This record needs recovery", snapshot.getId());
+        get, result.get(), "This record needs recovery", snapshot.getId());
   }
 
   private Optional<Result> createGetResult(Snapshot.Key key, List<String> projections)
@@ -136,7 +136,7 @@ public class CrudHandler {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
           throw new UncommittedRecordException(
-              result, "The record needs recovery", snapshot.getId());
+              scan, result, "The record needs recovery", snapshot.getId());
         }
 
         Snapshot.Key key = new Snapshot.Key(scan, r);

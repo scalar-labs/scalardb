@@ -188,12 +188,24 @@ public class CrudHandlerTest {
           throws CrudException, ExecutionException {
     // Arrange
     Get get = prepareGet();
-    Optional<Result> expected = Optional.of(prepareResult(TransactionState.PREPARED));
+    result = prepareResult(TransactionState.PREPARED);
+    Optional<Result> expected = Optional.of(result);
     when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
     when(storage.get(get)).thenReturn(expected);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.get(get)).isInstanceOf(UncommittedRecordException.class);
+    assertThatThrownBy(() -> handler.get(get))
+        .isInstanceOf(UncommittedRecordException.class)
+        .satisfies(
+            e -> {
+              UncommittedRecordException exception = (UncommittedRecordException) e;
+              assertThat(exception.getSelection()).isEqualTo(get);
+              assertThat(exception.getResults().size()).isEqualTo(1);
+              assertThat(exception.getResults().get(0)).isEqualTo(result);
+            });
+
+    verify(snapshot, never())
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
   }
 
   @Test
@@ -260,10 +272,17 @@ public class CrudHandlerTest {
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
-    // Act
-    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scan))
+        .isInstanceOf(UncommittedRecordException.class)
+        .satisfies(
+            e -> {
+              UncommittedRecordException exception = (UncommittedRecordException) e;
+              assertThat(exception.getSelection()).isEqualTo(scan);
+              assertThat(exception.getResults().size()).isEqualTo(1);
+              assertThat(exception.getResults().get(0)).isEqualTo(result);
+            });
 
-    // Assert
     verify(snapshot, never())
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
   }
@@ -475,10 +494,17 @@ public class CrudHandlerTest {
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
 
-    // Act
-    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scan))
+        .isInstanceOf(UncommittedRecordException.class)
+        .satisfies(
+            e -> {
+              UncommittedRecordException exception = (UncommittedRecordException) e;
+              assertThat(exception.getSelection()).isEqualTo(scan);
+              assertThat(exception.getResults().size()).isEqualTo(1);
+              assertThat(exception.getResults().get(0)).isEqualTo(result);
+            });
 
-    // Assert
     verify(snapshot, never())
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     verify(snapshot, never()).verify(any());
@@ -839,7 +865,14 @@ public class CrudHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> handler.readUnread(key, getForKey))
-        .isInstanceOf(UncommittedRecordException.class);
+        .isInstanceOf(UncommittedRecordException.class)
+        .satisfies(
+            e -> {
+              UncommittedRecordException exception = (UncommittedRecordException) e;
+              assertThat(exception.getSelection()).isEqualTo(getForKey);
+              assertThat(exception.getResults().size()).isEqualTo(1);
+              assertThat(exception.getResults().get(0)).isEqualTo(result);
+            });
   }
 
   @Test
