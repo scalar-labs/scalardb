@@ -437,7 +437,7 @@ public class GroupCommitter3<K, V> implements Closeable {
             () -> {
               try {
                 ////// FIXME: DEBUG
-                logger.info("EMIT: buffer={}", this);
+                logger.info("Emitting: buffer={}", this);
                 ////// FIXME: DEBUG
                 long startEmit = System.currentTimeMillis();
                 List<V> values = new ArrayList<>(valueSlots.size());
@@ -447,8 +447,9 @@ public class GroupCommitter3<K, V> implements Closeable {
                 }
                 emitter.execute(key, values);
                 logger.info(
-                    "Emitted (thread_id:{}, num_of_values:{}): {} ms",
+                    "Emitted (thread_id:{}, key:{}, num_of_values:{}): {} ms",
                     Thread.currentThread().getId(),
+                    key,
                     size.get(),
                     System.currentTimeMillis() - startEmit);
 
