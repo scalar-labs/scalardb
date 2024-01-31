@@ -51,6 +51,11 @@ public class GroupCommitter3<K, V> implements Closeable {
   @LazyInit private Emittable<K, V> emitter;
   private final GroupManager groupManager;
 
+  @FunctionalInterface
+  private interface GarbageGroupCollector<K, V> {
+    void collect(Group<K, V> group);
+  }
+
   // FIXME: This single instance can be a performance bottleneck. Try multi-partitions.
   // This class is just for encapsulation of accesses to Groups
   private class GroupManager {
@@ -76,7 +81,8 @@ public class GroupCommitter3<K, V> implements Closeable {
                   keyManipulator,
                   sizeFixExpirationInMillis,
                   timeoutExpirationInMillis,
-                  numberOfRetentionValues);
+                  numberOfRetentionValues,
+                  this::unregisterNormalGroup);
           newGroup = currentGroup;
           // TODO: This can be a faster queue?
           queueForNormalGroupClose.add(currentGroup);
@@ -123,32 +129,12 @@ public class GroupCommitter3<K, V> implements Closeable {
           "The group for the reserved value slot doesn't exist. keys:" + keys);
     }
 
-    // TODO: Create cleanup queue and worker to call this
-    private synchronized void unregisterGroup(Keys<K> keys) throws GroupCommitException {
-      K fullKey = keyManipulator.createFullKey(keys.parentKey, keys.childKey);
-      NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
-      if (normalGroup != null) {
-        synchronized (normalGroup) {
-          if (normalGroup.isDone()) {
-            normalGroupMap.remove(fullKey);
-          }
-        }
-      }
+    private synchronized void unregisterNormalGroup(Group<K, V> group) {
+      normalGroupMap.remove(group.key);
+    }
 
-      DelayedGroup<K, V> delayedGroup = delayedGroupMap.get(fullKey);
-      if (delayedGroup != null) {
-        synchronized (delayedGroup) {
-          if (delayedGroup.isDone()) {
-            delayedGroupMap.remove(fullKey);
-          }
-        }
-      }
-
-      if (normalGroup == null && delayedGroup == null) {
-        // TODO: Revisit this exception class
-        throw new GroupCommitException(
-            "The group for the reserved value slot doesn't exist. keys:" + keys);
-      }
+    private synchronized void unregisterDelayedGroup(Group<K, V> group) {
+      delayedGroupMap.remove(group.key);
     }
 
     private synchronized void moveDelayedSlotToDelayedGroup(NormalGroup<K, V> normalGroup) {
@@ -164,7 +150,8 @@ public class GroupCommitter3<K, V> implements Closeable {
                 keyManipulator,
                 sizeFixExpirationInMillis,
                 timeoutExpirationInMillis,
-                notReadyValueSlot);
+                notReadyValueSlot,
+                this::unregisterDelayedGroup);
         DelayedGroup<K, V> old = delayedGroupMap.put(fullKey, delayedGroup);
         if (old != null) {
           logger.warn("The slow group value map already has the same key group. {}", old);
@@ -236,6 +223,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     protected final Map<K, Slot<K, V>> valueSlots;
     // Whether to reject a new value slot.
     protected final AtomicBoolean closed = new AtomicBoolean();
+    protected final GarbageGroupCollector<K, V> garbageGroupCollector;
 
     @Override
     public String toString() {
@@ -261,7 +249,8 @@ public class GroupCommitter3<K, V> implements Closeable {
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
         long timeoutExpirationInMillis,
-        int capacity) {
+        int capacity,
+        GarbageGroupCollector<K, V> garbageGroupCollector) {
       this.executorService = executorService;
       this.emitter = emitter;
       this.keyManipulator = keyManipulator;
@@ -270,6 +259,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       this.timeoutAt = Instant.now().plusMillis(timeoutExpirationInMillis);
       this.key = key;
       this.valueSlots = new HashMap<>(capacity);
+      this.garbageGroupCollector = garbageGroupCollector;
     }
 
     public abstract K getFullKey(K childKey);
@@ -422,6 +412,7 @@ public class GroupCommitter3<K, V> implements Closeable {
           logger.warn("slots are empty. Nothing to do. group:{}", this);
           done.set(true);
           updateIsClosed();
+          dismiss();
           return;
         }
         executorService.execute(
@@ -461,6 +452,8 @@ public class GroupCommitter3<K, V> implements Closeable {
                             vf.completableFuture.completeExceptionally(
                                 new GroupCommitException(
                                     "Group commit failed. Aborting all the values", e)));
+              } finally {
+                dismiss();
               }
             });
         done.set(true);
@@ -468,31 +461,20 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     }
 
-    public synchronized void notifyOfReadyValue() {
-      asyncEmitIfReady();
-    }
-
-    public synchronized void abortAll(Throwable cause) {
-      for (Slot<K, V> kv : valueSlots.values()) {
-        kv.completableFuture.completeExceptionally(
-            new GroupCommitCascadeException(
-                "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
-                cause));
-        done.set(true);
-        updateIsClosed();
-      }
+    private void dismiss() {
+      garbageGroupCollector.collect(this);
     }
   }
 
   private static class NormalGroup<K, V> extends Group<K, V> {
-
     NormalGroup(
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
         long timeoutExpirationInMillis,
-        int capacity) {
+        int capacity,
+        GarbageGroupCollector<K, V> garbageGroupCollector) {
       super(
           keyManipulator.createParentKey(),
           executorService,
@@ -500,7 +482,8 @@ public class GroupCommitter3<K, V> implements Closeable {
           keyManipulator,
           sizeFixExpirationInMillis,
           timeoutExpirationInMillis,
-          capacity);
+          capacity,
+          garbageGroupCollector);
     }
 
     public K getFullKey(K childKey) {
@@ -540,7 +523,8 @@ public class GroupCommitter3<K, V> implements Closeable {
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
         long timeoutExpirationInMillis,
-        Slot<K, V> valueSlot) {
+        Slot<K, V> valueSlot,
+        GarbageGroupCollector<K, V> garbageGroupCollector) {
       super(
           fullKey,
           executorService,
@@ -548,7 +532,8 @@ public class GroupCommitter3<K, V> implements Closeable {
           keyManipulator,
           sizeFixExpirationInMillis,
           timeoutExpirationInMillis,
-          1);
+          1,
+          garbageGroupCollector);
       try {
         // Auto emit should be disabled since:
         // - the queue and worker for delayed values will emit this if it's ready
