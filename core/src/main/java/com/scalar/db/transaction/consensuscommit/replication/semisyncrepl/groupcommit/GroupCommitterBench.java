@@ -201,7 +201,7 @@ class GroupCommitterBench {
             groupCommitParams.sizeFixExpirationInMillis,
             groupCommitParams.timeoutExpirationInMillis,
             groupCommitParams.numOfRetentionValues,
-            10,
+            20,
             groupCommitParams.numOfRetentionValues,
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(

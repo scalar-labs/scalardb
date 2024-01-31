@@ -287,7 +287,7 @@ public final class ConsensusCommitUtils {
               System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS));
     }
 
-    int groupCommitExpirationCheckIntervalInMillis = 10;
+    int groupCommitExpirationCheckIntervalInMillis = 20;
     if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS)
         != null) {
       groupCommitExpirationCheckIntervalInMillis =
