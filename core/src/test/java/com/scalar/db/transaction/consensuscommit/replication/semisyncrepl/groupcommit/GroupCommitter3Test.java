@@ -174,9 +174,9 @@ class GroupCommitter3Test {
                 // For Benchmarker:
                 2048, // NumOfThreads
                 100000, // NumOfRequests
-                40, // AveragePrepareWaitInMillis
+                200, // AveragePrepareWaitInMillis
                 400, // MultiplexerInMillis
-                40, // MaxCommitWaitInMillis
+                200, // MaxCommitWaitInMillis
                 // For Group Commit
                 param);
         results.put(param, result);
@@ -206,7 +206,7 @@ class GroupCommitter3Test {
             groupCommitParams.sizeFixExpirationInMillis,
             groupCommitParams.timeoutExpirationInMillis,
             groupCommitParams.numOfRetentionValues,
-            10,
+            20,
             groupCommitParams.numOfRetentionValues,
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
