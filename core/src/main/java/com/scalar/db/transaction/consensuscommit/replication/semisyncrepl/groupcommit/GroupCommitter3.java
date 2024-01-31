@@ -30,11 +30,11 @@ import org.slf4j.LoggerFactory;
 public class GroupCommitter3<K, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
   // Queues
-  private final BlockingQueue<NormalBufferedValues<K, V>> queueForSizeFix =
+  private final BlockingQueue<NormalGroup<K, V>> queueForNormalGroupClose =
       new LinkedBlockingQueue<>();
-  private final BlockingQueue<NormalBufferedValues<K, V>> queueForTimeout =
+  private final BlockingQueue<NormalGroup<K, V>> queueForDelayedSlotMove =
       new LinkedBlockingQueue<>();
-  private final BlockingQueue<DelayedBufferedValue<K, V>> queueForDelayed =
+  private final BlockingQueue<DelayedGroup<K, V>> queueForDelayedGroupEmit =
       new LinkedBlockingQueue<>();
   // Parameters
   private final long expirationCheckIntervalInMillis;
@@ -43,22 +43,22 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final int numberOfRetentionValues;
   // Executors
   private final ExecutorService emitExecutorService;
-  private final ExecutorService sizeFixExecutorService;
-  private final ExecutorService timeoutExecutorService;
-  private final ExecutorService delayedExecutorService;
+  private final ExecutorService normalGroupCloseExecutorService;
+  private final ExecutorService delayedSlotMoveExecutorService;
+  private final ExecutorService delayedGroupEmitExecutorService;
   // Custom operations injected by the client
   private final KeyManipulator<K> keyManipulator;
   @LazyInit private Emittable<K, V> emitter;
-  private final BuffersManager buffersManager;
+  private final GroupManager groupManager;
 
   // FIXME: This single instance can be a performance bottleneck. Try multi-partitions.
   // This class is just for encapsulation of buffer accesses
-  private class BuffersManager {
+  private class GroupManager {
     // Buffers
-    @Nullable private NormalBufferedValues<K, V> currentBufferedValues;
+    @Nullable private NormalGroup<K, V> currentGroup;
     // Using ConcurrentHashMap results in less performance.
-    private final Map<K, NormalBufferedValues<K, V>> bufferedValuesMap = new HashMap<>();
-    private final Map<K, DelayedBufferedValue<K, V>> delayedBufferedValueMap = new HashMap<>();
+    private final Map<K, NormalGroup<K, V>> bufferedValuesMap = new HashMap<>();
+    private final Map<K, DelayedGroup<K, V>> delayedBufferedValueMap = new HashMap<>();
 
     // Returns full key
     private K reserveNewValueSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
@@ -66,24 +66,24 @@ public class GroupCommitter3<K, V> implements Closeable {
       //   - add a flag to represent if a new buffer must be created
       //   - move the log out of the synchronized block
       boolean isNewBufferedValuesCreated = false;
-      NormalBufferedValues<K, V> oldBufferedValues = null;
-      NormalBufferedValues<K, V> newBufferedValues = null;
+      NormalGroup<K, V> oldBufferedValues = null;
+      NormalGroup<K, V> newBufferedValues = null;
       synchronized (this) {
-        if (currentBufferedValues == null || currentBufferedValues.isClosed()) {
+        if (currentGroup == null || currentGroup.isClosed()) {
           isNewBufferedValuesCreated = true;
-          oldBufferedValues = currentBufferedValues;
-          currentBufferedValues =
-              new NormalBufferedValues<>(
+          oldBufferedValues = currentGroup;
+          currentGroup =
+              new NormalGroup<>(
                   emitExecutorService,
                   emitter,
                   keyManipulator,
                   sizeFixExpirationInMillis,
                   timeoutExpirationInMillis,
                   numberOfRetentionValues);
-          newBufferedValues = currentBufferedValues;
+          newBufferedValues = currentGroup;
           // TODO: This can be a faster queue?
-          queueForSizeFix.add(currentBufferedValues);
-          bufferedValuesMap.put(currentBufferedValues.key, currentBufferedValues);
+          queueForNormalGroupClose.add(currentGroup);
+          bufferedValuesMap.put(currentGroup.key, currentGroup);
         }
       }
       if (isNewBufferedValuesCreated) {
@@ -92,14 +92,13 @@ public class GroupCommitter3<K, V> implements Closeable {
             "NEW BV:{}, OLD BV:{}, CHILD_KEY:{}", newBufferedValues, oldBufferedValues, childKey);
         ///////// FIXME: DEBUG
       }
-      return currentBufferedValues.reserveNewValueSlot(childKey);
+      return currentGroup.reserveNewValueSlot(childKey);
     }
 
-    private synchronized BufferedValues<K, V> getBufferedValues(Keys<K> keys)
-        throws GroupCommitException {
+    private synchronized Group<K, V> getBufferedValues(Keys<K> keys) throws GroupCommitException {
       // TODO: The following logic can be simplified since it's in synchronized block
-      NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
-      DelayedBufferedValue<K, V> delayedBufferedValue =
+      NormalGroup<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
+      DelayedGroup<K, V> delayedBufferedValue =
           delayedBufferedValueMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
       // Avoid the following cases to find the value slot corresponding to pk1:ck11
       // Case:1
@@ -131,7 +130,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     // TODO: Create cleanup queue and worker to call this
     private synchronized void unregisterBufferedValues(Keys<K> keys) throws GroupCommitException {
       K fullKey = keyManipulator.createFullKey(keys.parentKey, keys.childKey);
-      NormalBufferedValues<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
+      NormalGroup<K, V> bufferedValues = bufferedValuesMap.get(keys.parentKey);
       if (bufferedValues != null) {
         synchronized (bufferedValues) {
           if (bufferedValues.isDone()) {
@@ -140,7 +139,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         }
       }
 
-      DelayedBufferedValue<K, V> delayedBufferedValue = delayedBufferedValueMap.get(fullKey);
+      DelayedGroup<K, V> delayedBufferedValue = delayedBufferedValueMap.get(fullKey);
       if (delayedBufferedValue != null) {
         synchronized (delayedBufferedValue) {
           if (delayedBufferedValue.isDone()) {
@@ -157,13 +156,14 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     private synchronized void moveDelayedValueSlotsToDelayedBufferValues(
-        NormalBufferedValues<K, V> bufferedValues) {
-      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#1 BV:{}", bufferedValues);
-      List<ValueSlot<K, V>> notReadyValueSlots = bufferedValues.removeNotReadyValueSlots();
-      for (ValueSlot<K, V> notReadyValueSlot : notReadyValueSlots) {
+        NormalGroup<K, V> bufferedValues) {
+      logger.info(
+          "[DELAYED-SLOT-MOVE] moveDelayedValueSlotsToDelayedBufferValues#1 BV:{}", bufferedValues);
+      List<Slot<K, V>> notReadyValueSlots = bufferedValues.removeNotReadyValueSlots();
+      for (Slot<K, V> notReadyValueSlot : notReadyValueSlots) {
         K fullKey = notReadyValueSlot.getFullKey();
-        DelayedBufferedValue<K, V> newDelayedBufferedValue =
-            new DelayedBufferedValue<>(
+        DelayedGroup<K, V> newDelayedBufferedValue =
+            new DelayedGroup<>(
                 fullKey,
                 emitExecutorService,
                 emitter,
@@ -171,28 +171,29 @@ public class GroupCommitter3<K, V> implements Closeable {
                 sizeFixExpirationInMillis,
                 timeoutExpirationInMillis,
                 notReadyValueSlot);
-        DelayedBufferedValue<K, V> old =
-            delayedBufferedValueMap.put(fullKey, newDelayedBufferedValue);
+        DelayedGroup<K, V> old = delayedBufferedValueMap.put(fullKey, newDelayedBufferedValue);
         if (old != null) {
           logger.warn("The slow buffer value map already has the same key buffer. {}", old);
         }
       }
-      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#2 BV:{}", bufferedValues);
+      logger.info(
+          "[DELAYED-SLOT-MOVE] moveDelayedValueSlotsToDelayedBufferValues#2 BV:{}", bufferedValues);
       if (bufferedValues.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
         bufferedValuesMap.remove(bufferedValues.key);
         logger.info("Removed a bufferedValues as it's empty. bufferedValues:{}", bufferedValues);
       }
-      logger.info("[TIMEOUT] moveDelayedValueSlotsToDelayedBufferValues#3 BV:{}", bufferedValues);
+      logger.info(
+          "[DELAYED-SLOT-MOVE] moveDelayedValueSlotsToDelayedBufferValues#3 BV:{}", bufferedValues);
     }
   }
 
-  private static class ValueSlot<K, V> {
-    private final NormalBufferedValues<K, V> parentBuffer;
+  private static class Slot<K, V> {
+    private final NormalGroup<K, V> parentBuffer;
     private final K key;
     private final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     @Nullable private volatile V value;
 
-    public ValueSlot(K key, NormalBufferedValues<K, V> parentBuffer) {
+    public Slot(K key, NormalGroup<K, V> parentBuffer) {
       this.key = key;
       this.parentBuffer = parentBuffer;
     }
@@ -230,7 +231,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
   }
 
-  protected abstract static class BufferedValues<K, V> {
+  protected abstract static class Group<K, V> {
     private final ExecutorService executorService;
     private final Emittable<K, V> emitter;
     protected final KeyManipulator<K> keyManipulator;
@@ -240,7 +241,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     public final Instant sizeFixedAt;
     public final Instant timeoutAt;
     private final AtomicBoolean done = new AtomicBoolean();
-    protected final Map<K, ValueSlot<K, V>> valueSlots;
+    protected final Map<K, Slot<K, V>> valueSlots;
     // Whether to reject a new value slot.
     protected final AtomicBoolean closed = new AtomicBoolean();
 
@@ -261,7 +262,7 @@ public class GroupCommitter3<K, V> implements Closeable {
           .toString();
     }
 
-    BufferedValues(
+    Group(
         K key,
         ExecutorService executorService,
         Emittable<K, V> emitter,
@@ -285,12 +286,12 @@ public class GroupCommitter3<K, V> implements Closeable {
       return valueSlots.size() >= capacity;
     }
 
-    protected K reserveNewValueSlot(ValueSlot<K, V> valueSlot)
+    protected K reserveNewValueSlot(Slot<K, V> valueSlot)
         throws GroupCommitAlreadySizeFixedException {
       return reserveNewValueSlot(valueSlot, true);
     }
 
-    protected K reserveNewValueSlot(ValueSlot<K, V> valueSlot, boolean autoEmit)
+    protected K reserveNewValueSlot(Slot<K, V> valueSlot, boolean autoEmit)
         throws GroupCommitAlreadySizeFixedException {
       synchronized (this) {
         if (isSizeFixed()) {
@@ -310,14 +311,14 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
-    private synchronized ValueSlot<K, V> putValueToSlot(K childKey, V value)
+    private synchronized Slot<K, V> putValueToSlot(K childKey, V value)
         throws GroupCommitAlreadyClosedException, GroupCommitTargetNotFoundException {
       if (isDone()) {
         throw new GroupCommitAlreadyClosedException(
             "This value slot buffer is already closed. buffer:" + this);
       }
 
-      ValueSlot<K, V> valueSlot = valueSlots.get(childKey);
+      Slot<K, V> valueSlot = valueSlots.get(childKey);
       if (valueSlot == null) {
         throw new GroupCommitTargetNotFoundException(
             "The value slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
@@ -327,7 +328,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
-      ValueSlot<K, V> valueSlot;
+      Slot<K, V> valueSlot;
       synchronized (this) {
         valueSlot = putValueToSlot(childKey, value);
 
@@ -375,7 +376,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     public synchronized boolean isReady() {
       if (isSizeFixed()) {
         int readySlotCount = 0;
-        for (ValueSlot<K, V> valueSlot : valueSlots.values()) {
+        for (Slot<K, V> valueSlot : valueSlots.values()) {
           if (valueSlot.value != null) {
             readySlotCount++;
             if (readySlotCount >= size.get()) {
@@ -442,7 +443,7 @@ public class GroupCommitter3<K, V> implements Closeable {
                 long startEmit = System.currentTimeMillis();
                 List<V> values = new ArrayList<>(valueSlots.size());
                 // Avoid using java.util.Collection.stream since it's a bit slow
-                for (ValueSlot<K, V> valueSlot : valueSlots.values()) {
+                for (Slot<K, V> valueSlot : valueSlots.values()) {
                   values.add(valueSlot.value);
                 }
                 emitter.execute(key, values);
@@ -482,7 +483,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     public synchronized void abortAll(Throwable cause) {
-      for (ValueSlot<K, V> kv : valueSlots.values()) {
+      for (Slot<K, V> kv : valueSlots.values()) {
         kv.completableFuture.completeExceptionally(
             new GroupCommitCascadeException(
                 "One of the fetched items failed in group commit. The other items have the same key associated with the failure. All the items will fail",
@@ -493,9 +494,9 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
   }
 
-  private static class NormalBufferedValues<K, V> extends BufferedValues<K, V> {
+  private static class NormalGroup<K, V> extends Group<K, V> {
 
-    NormalBufferedValues(
+    NormalGroup(
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
@@ -517,22 +518,22 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     public K reserveNewValueSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
-      return reserveNewValueSlot(new ValueSlot<>(childKey, this));
+      return reserveNewValueSlot(new Slot<>(childKey, this));
     }
 
-    public synchronized List<ValueSlot<K, V>> removeNotReadyValueSlots() {
+    public synchronized List<Slot<K, V>> removeNotReadyValueSlots() {
       // Lazy instantiation might be better, but it's likely there is a not-ready value slot since
       // it's already timed-out.
-      List<ValueSlot<K, V>> removed = new ArrayList<>();
-      for (Entry<K, ValueSlot<K, V>> entry : valueSlots.entrySet()) {
-        ValueSlot<K, V> valueSlot = entry.getValue();
+      List<Slot<K, V>> removed = new ArrayList<>();
+      for (Entry<K, Slot<K, V>> entry : valueSlots.entrySet()) {
+        Slot<K, V> valueSlot = entry.getValue();
         K childKey = valueSlot.key;
         if (valueSlot.value == null) {
           removed.add(valueSlot);
         }
       }
 
-      for (ValueSlot<K, V> valueSlot : removed) {
+      for (Slot<K, V> valueSlot : removed) {
         removeValueSlot(valueSlot.key);
         logger.info(
             "Removed a value slot from bufferedValues to move it to slow buffered values. valueSlot:{}",
@@ -542,15 +543,15 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
   }
 
-  private static class DelayedBufferedValue<K, V> extends BufferedValues<K, V> {
-    DelayedBufferedValue(
+  private static class DelayedGroup<K, V> extends Group<K, V> {
+    DelayedGroup(
         K fullKey,
         ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
         long timeoutExpirationInMillis,
-        ValueSlot<K, V> valueSlot) {
+        Slot<K, V> valueSlot) {
       super(
           fullKey,
           executorService,
@@ -598,34 +599,34 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .setNameFormat(label + "-group-commit-emit-%d")
                 .build());
 
-    this.sizeFixExecutorService =
+    this.normalGroupCloseExecutorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
                 .setDaemon(true)
-                .setNameFormat(label + "-group-commit-sizefix-%d")
+                .setNameFormat(label + "-group-commit-normal-group-close-%d")
                 .build());
 
-    startSizeFixExecutorService();
+    startNormalGroupCloseExecutorService();
 
-    this.timeoutExecutorService =
+    this.delayedSlotMoveExecutorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
                 .setDaemon(true)
-                .setNameFormat(label + "-group-commit-timeout-%d")
+                .setNameFormat(label + "-group-commit-delayed-slot-move-%d")
                 .build());
 
-    startTimeoutExecutorService();
+    startDelayedSlotMoveExecutorService();
 
-    this.delayedExecutorService =
+    this.delayedGroupEmitExecutorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
                 .setDaemon(true)
-                .setNameFormat(label + "-group-commit-delayed-%d")
+                .setNameFormat(label + "-group-commit-delayed-group-emit-%d")
                 .build());
 
-    startDelayedExecutorService();
+    startDelayedGroupEmitExecutorService();
 
-    this.buffersManager = new BuffersManager();
+    this.groupManager = new GroupManager();
   }
 
   public void setEmitter(Emittable<K, V> emitter) {
@@ -633,16 +634,16 @@ public class GroupCommitter3<K, V> implements Closeable {
   }
 
   ////////// FIXME: DEBUG LOG
-  private volatile long lastDebugPrintForSizeFixQueue = 0;
+  private volatile long lastDebugPrintForNormalGroupCloseQueue = 0;
   ////////// FIXME: DEBUG LOG
-  private boolean handleQueueForSizeFix() {
-    NormalBufferedValues<K, V> bufferedValues = queueForSizeFix.peek();
+  private boolean handleQueueForNormalGroupClose() {
+    NormalGroup<K, V> bufferedValues = queueForNormalGroupClose.peek();
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
-    if (lastDebugPrintForSizeFixQueue + 1000 < System.currentTimeMillis()) {
-      logger.info("[SIZE-FIX] QUEUE STATUS: size={}", queueForSizeFix.size());
-      lastDebugPrintForSizeFixQueue = System.currentTimeMillis();
+    if (lastDebugPrintForNormalGroupCloseQueue + 1000 < System.currentTimeMillis()) {
+      logger.info("[NORMAL-GROUP-CLOSE] QUEUE STATUS: size={}", queueForNormalGroupClose.size());
+      lastDebugPrintForNormalGroupCloseQueue = System.currentTimeMillis();
     }
     ////////// FIXME: DEBUG LOG
 
@@ -653,7 +654,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       ////////// FIXME: DEBUG LOG
       if (bufferedValues.sizeFixedAt.isBefore(Instant.now().minusMillis(5000))) {
         logger.info(
-            "[SIZE-FIX] TOO OLD BUFFER: buffer.key={}, buffer.values={}",
+            "[NORMAL-GROUP-CLOSE] TOO OLD BUFFER: buffer.key={}, buffer.values={}",
             bufferedValues.key,
             bufferedValues.valueSlots);
       }
@@ -680,13 +681,13 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     } else {
       ////////// FIXME: DEBUG LOG
-      logger.info("[SIZE-FIX] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
+      logger.info("[NORMAL-GROUP-CLOSE] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
       ////////// FIXME: DEBUG LOG
       // Move the size-fixed buffer but not ready to the timeout queue
       if (!bufferedValues.isReady()) {
-        queueForTimeout.add(bufferedValues);
+        queueForDelayedSlotMove.add(bufferedValues);
       }
-      NormalBufferedValues<K, V> removed = queueForSizeFix.poll();
+      NormalGroup<K, V> removed = queueForNormalGroupClose.poll();
       // Check if the removed buffered value is expected just in case.
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.error(
@@ -694,7 +695,7 @@ public class GroupCommitter3<K, V> implements Closeable {
             bufferedValues,
             removed);
         if (removed != null) {
-          queueForSizeFix.add(removed);
+          queueForNormalGroupClose.add(removed);
         }
       }
     }
@@ -702,17 +703,18 @@ public class GroupCommitter3<K, V> implements Closeable {
   }
 
   ////////// FIXME: DEBUG LOG
-  private volatile long lastDebugPrintForTimeoutQueue = 0;
+  private volatile long lastDebugPrintForDelayedSlotMoveQueue = 0;
   ////////// FIXME: DEBUG LOG
-  private boolean handleQueueForTimeout() {
-    NormalBufferedValues<K, V> bufferedValues = queueForTimeout.peek();
+  private boolean handleQueueForDelayedSlotMove() {
+    NormalGroup<K, V> bufferedValues = queueForDelayedSlotMove.peek();
     Long retryWaitInMillis = null;
 
     ////////// FIXME: DEBUG LOG
-    logger.info("[TIMEOUT] NEW BV:{}, SIZE:{}", bufferedValues, queueForTimeout.size());
-    if (lastDebugPrintForTimeoutQueue + 1000 < System.currentTimeMillis()) {
-      logger.info("[TIMEOUT] QUEUE STATUS: size={}", queueForTimeout.size());
-      lastDebugPrintForTimeoutQueue = System.currentTimeMillis();
+    logger.info(
+        "[DELAYED-SLOT-MOVE] NEW BV:{}, SIZE:{}", bufferedValues, queueForDelayedSlotMove.size());
+    if (lastDebugPrintForDelayedSlotMoveQueue + 1000 < System.currentTimeMillis()) {
+      logger.info("[DELAYED-SLOT-MOVE] QUEUE STATUS: size={}", queueForDelayedSlotMove.size());
+      lastDebugPrintForDelayedSlotMoveQueue = System.currentTimeMillis();
     }
     ////////// FIXME: DEBUG LOG
 
@@ -725,12 +727,12 @@ public class GroupCommitter3<K, V> implements Closeable {
       if (now.isAfter(bufferedValues.timeoutAt)) {
         ////////// FIXME: DEBUG LOG
         long start = System.currentTimeMillis();
-        buffersManager.moveDelayedValueSlotsToDelayedBufferValues(bufferedValues);
+        groupManager.moveDelayedValueSlotsToDelayedBufferValues(bufferedValues);
         logger.info(
-            "[TIMEOUT] MOVED BV:{} TO DELAYED BUFFERS, DURATION:{}ms, SIZE:{}",
+            "[DELAYED-SLOT-MOVE] MOVED BV:{} TO DELAYED BUFFERS, DURATION:{}ms, SIZE:{}",
             bufferedValues,
             (System.currentTimeMillis() - start),
-            queueForTimeout.size());
+            queueForDelayedSlotMove.size());
       } else {
         // Not expired. Retry
         retryWaitInMillis = expirationCheckIntervalInMillis * 2;
@@ -748,9 +750,9 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     } else {
       ////////// FIXME: DEBUG LOG
-      logger.info("[TIMEOUT] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
+      logger.info("[DELAYED-SLOT-MOVE] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
       ////////// FIXME: DEBUG LOG
-      NormalBufferedValues<K, V> removed = queueForTimeout.poll();
+      NormalGroup<K, V> removed = queueForDelayedSlotMove.poll();
       // Check if the removed buffered value is expected just in case.
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.error(
@@ -758,34 +760,34 @@ public class GroupCommitter3<K, V> implements Closeable {
             bufferedValues,
             removed);
         if (removed != null) {
-          queueForTimeout.add(removed);
+          queueForDelayedSlotMove.add(removed);
         }
       }
     }
     return true;
   }
 
-  private volatile long lastDebugPrintForDelayedQueue = 0;
+  private volatile long lastDebugPrintForDelayedGroupEmitQueue = 0;
   ////////// FIXME: DEBUG LOG
-  private boolean handleQueueForDelayed() {
-    DelayedBufferedValue<K, V> bufferedValues = queueForDelayed.peek();
+  private boolean handleQueueForDelayedGroupEmit() {
+    DelayedGroup<K, V> bufferedValues = queueForDelayedGroupEmit.peek();
     Long waitInMillis = expirationCheckIntervalInMillis;
 
     ////////// FIXME: DEBUG LOG
-    if (lastDebugPrintForDelayedQueue + 1000 < System.currentTimeMillis()) {
-      logger.info("[DELAYED] QUEUE STATUS: size={}", queueForDelayed.size());
-      lastDebugPrintForDelayedQueue = System.currentTimeMillis();
+    if (lastDebugPrintForDelayedGroupEmitQueue + 1000 < System.currentTimeMillis()) {
+      logger.info("[DELAYED-GROUP-EMIT] QUEUE STATUS: size={}", queueForDelayedGroupEmit.size());
+      lastDebugPrintForDelayedGroupEmitQueue = System.currentTimeMillis();
     }
     ////////// FIXME: DEBUG LOG
 
     ////////// FIXME: DEBUG LOG
-    logger.info("[DELAYED] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
+    logger.info("[DELAYED-GROUP-EMIT] FETCHED BUFFER(REMOVE): buffer={}", bufferedValues);
     ////////// FIXME: DEBUG LOG
     if (bufferedValues == null) {
       // The queue is empty, so wait for a longer time.
       waitInMillis = expirationCheckIntervalInMillis * 2;
     } else {
-      DelayedBufferedValue<K, V> removed = queueForDelayed.poll();
+      DelayedGroup<K, V> removed = queueForDelayedGroupEmit.poll();
       // Check if the removed buffered value is expected just in case.
       if (removed == null || !removed.equals(bufferedValues)) {
         logger.error(
@@ -793,7 +795,7 @@ public class GroupCommitter3<K, V> implements Closeable {
             bufferedValues,
             removed);
         if (removed != null) {
-          queueForDelayed.add(removed);
+          queueForDelayedGroupEmit.add(removed);
         }
         return true;
       } else if (bufferedValues.isReady()) {
@@ -805,7 +807,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
       // Buffered values in the queue for delayed ones could contain very delayed ones.
       // Those delayed ones should be handled later.
-      queueForDelayed.add(bufferedValues);
+      queueForDelayedGroupEmit.add(bufferedValues);
     }
 
     try {
@@ -820,33 +822,33 @@ public class GroupCommitter3<K, V> implements Closeable {
     return true;
   }
 
-  private void startSizeFixExecutorService() {
-    sizeFixExecutorService.execute(
+  private void startNormalGroupCloseExecutorService() {
+    normalGroupCloseExecutorService.execute(
         () -> {
-          while (!sizeFixExecutorService.isShutdown()) {
-            if (!handleQueueForSizeFix()) {
+          while (!normalGroupCloseExecutorService.isShutdown()) {
+            if (!handleQueueForNormalGroupClose()) {
               break;
             }
           }
         });
   }
 
-  private void startTimeoutExecutorService() {
-    timeoutExecutorService.execute(
+  private void startDelayedSlotMoveExecutorService() {
+    delayedSlotMoveExecutorService.execute(
         () -> {
-          while (!timeoutExecutorService.isShutdown()) {
-            if (!handleQueueForTimeout()) {
+          while (!delayedSlotMoveExecutorService.isShutdown()) {
+            if (!handleQueueForDelayedSlotMove()) {
               break;
             }
           }
         });
   }
 
-  private void startDelayedExecutorService() {
-    delayedExecutorService.execute(
+  private void startDelayedGroupEmitExecutorService() {
+    delayedGroupEmitExecutorService.execute(
         () -> {
-          while (!delayedExecutorService.isShutdown()) {
-            if (!handleQueueForDelayed()) {
+          while (!delayedGroupEmitExecutorService.isShutdown()) {
+            if (!handleQueueForDelayedGroupEmit()) {
               break;
             }
           }
@@ -858,7 +860,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     int counterForDebug = 0;
     while (true) {
       try {
-        return buffersManager.reserveNewValueSlot(childKey);
+        return groupManager.reserveNewValueSlot(childKey);
       } catch (GroupCommitAlreadySizeFixedException e) {
         logger.info("Failed to reserve a new value slot. Retrying. key:{}", childKey);
         ///////// FIXME: DEBUG
@@ -884,14 +886,14 @@ public class GroupCommitter3<K, V> implements Closeable {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
     int retry = 0;
     while (true) {
-      BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
+      Group<K, V> bufferedValues = groupManager.getBufferedValues(keys);
       try {
         bufferedValues.putValueToSlotAndWait(keys.childKey, value);
         return;
       } catch (GroupCommitAlreadyClosedException | GroupCommitTargetNotFoundException e) {
         // This can throw an exception in a race condition when the value slot is moved to
         // delayed buffer values. So, retry should be needed.
-        if (bufferedValues instanceof NormalBufferedValues) {
+        if (bufferedValues instanceof GroupCommitter3.NormalGroup) {
           if (++retry >= 4) {
             throw new GroupCommitException(
                 String.format("Retry over for putting a value to the slot. fullKey=%s", fullKey),
@@ -913,7 +915,7 @@ public class GroupCommitter3<K, V> implements Closeable {
 
   public void remove(K fullKey) throws GroupCommitException {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
-    BufferedValues<K, V> bufferedValues = buffersManager.getBufferedValues(keys);
+    Group<K, V> bufferedValues = groupManager.getBufferedValues(keys);
     bufferedValues.removeValueSlot(keys.childKey);
   }
 
@@ -921,14 +923,17 @@ public class GroupCommitter3<K, V> implements Closeable {
   // But for testing, this should be called for resources.
   @Override
   public void close() {
-    if (delayedExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(delayedExecutorService, 5, TimeUnit.SECONDS);
+    if (delayedGroupEmitExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(
+          delayedGroupEmitExecutorService, 5, TimeUnit.SECONDS);
     }
-    if (timeoutExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(timeoutExecutorService, 5, TimeUnit.SECONDS);
+    if (delayedSlotMoveExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(
+          delayedSlotMoveExecutorService, 5, TimeUnit.SECONDS);
     }
-    if (sizeFixExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(sizeFixExecutorService, 5, TimeUnit.SECONDS);
+    if (normalGroupCloseExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(
+          normalGroupCloseExecutorService, 5, TimeUnit.SECONDS);
     }
     if (emitExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(emitExecutorService, 5, TimeUnit.SECONDS);
