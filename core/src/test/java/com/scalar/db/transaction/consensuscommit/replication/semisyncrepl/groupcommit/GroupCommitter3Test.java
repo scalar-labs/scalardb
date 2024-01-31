@@ -163,9 +163,13 @@ class GroupCommitter3Test {
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
           // For Group Commit
-          new GroupCommitParams(64, 32, 80, 800));
+          new GroupCommitParams(128, 32, 80, 800));
     } else {
-      List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(32, 40, 40, 200));
+      List<GroupCommitParams> params =
+          Arrays.asList(
+              // The number of threads should be large enough when many operations tend to be
+              // delayed
+              new GroupCommitParams(128, 40, 40, 200));
       Map<GroupCommitParams, Result> results = new HashMap<>();
       for (GroupCommitParams param : params) {
         // Benchmark for Production case
@@ -207,7 +211,7 @@ class GroupCommitter3Test {
             groupCommitParams.timeoutExpirationInMillis,
             groupCommitParams.numOfRetentionValues,
             20,
-            groupCommitParams.numOfRetentionValues,
+            groupCommitParams.numOfThreads,
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
           ((parentKey, values) -> {
