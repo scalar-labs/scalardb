@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,7 +43,7 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final long timeoutExpirationInMillis;
   private final int numberOfRetentionValues;
   // Executors
-  private final ExecutorService emitExecutorService;
+  private final ThreadPoolExecutor emitExecutorService;
   private final ExecutorService normalGroupCloseExecutorService;
   private final ExecutorService delayedSlotMoveExecutorService;
   private final ExecutorService delayedGroupEmitExecutorService;
@@ -576,8 +577,12 @@ public class GroupCommitter3<K, V> implements Closeable {
     startMonitorExecutorService();
 
     this.emitExecutorService =
-        Executors.newFixedThreadPool(
+        new ThreadPoolExecutor(
             numberOfThreads,
+            numberOfThreads,
+            0,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder()
                 .setDaemon(true)
                 .setNameFormat(label + "-group-commit-emit-%d")
@@ -812,8 +817,10 @@ public class GroupCommitter3<K, V> implements Closeable {
         () -> {
           while (!monitorExecutorService.isShutdown()) {
             logger.info(
-                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
+                "[MONITOR] Timestamp={}, EmitExecutorService=[active={}, queue.size={}], NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
+                emitExecutorService.getActiveCount(),
+                emitExecutorService.getQueue().size(),
                 queueForNormalGroupClose.size(),
                 queueForDelayedSlotMove.size(),
                 queueForDelayedGroupEmit.size(),
