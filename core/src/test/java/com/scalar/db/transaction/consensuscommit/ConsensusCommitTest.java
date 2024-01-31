@@ -114,6 +114,7 @@ public class ConsensusCommitTest {
     TransactionResult result = mock(TransactionResult.class);
     UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
     when(crud.get(get)).thenThrow(toThrow);
+    when(toThrow.getSelection()).thenReturn(get);
     when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
 
     // Act Assert
@@ -137,6 +138,22 @@ public class ConsensusCommitTest {
     // Assert
     assertThat(actual.size()).isEqualTo(1);
     verify(crud).scan(scan);
+  }
+
+  @Test
+  public void scan_ScanForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    TransactionResult result = mock(TransactionResult.class);
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    when(crud.scan(scan)).thenThrow(toThrow);
+    when(toThrow.getSelection()).thenReturn(scan);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(scan, result);
   }
 
   @Test
@@ -242,6 +259,28 @@ public class ConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_ProcessedCrudGiven_UncommittedRecordExceptionThrownWhileImplicitPreRead_ShouldPerformLazyRecoveryAndThrowCommitConflictException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+
+    Get get = mock(Get.class);
+    TransactionResult result = mock(TransactionResult.class);
+
+    UncommittedRecordException uncommittedRecordException = mock(UncommittedRecordException.class);
+    when(uncommittedRecordException.getSelection()).thenReturn(get);
+    when(uncommittedRecordException.getResults()).thenReturn(Collections.singletonList(result));
+
+    doThrow(uncommittedRecordException).when(crud).readIfImplicitPreReadEnabled();
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
+
+    verify(recovery).recover(get, result);
   }
 
   @Test
