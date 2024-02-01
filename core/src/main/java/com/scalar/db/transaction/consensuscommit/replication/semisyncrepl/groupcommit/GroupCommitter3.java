@@ -8,6 +8,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupc
 import java.io.Closeable;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,7 +161,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         }
       }
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#2 BV:{}", normalGroup);
-      if (normalGroup.valueSlots.values().stream().noneMatch(v -> v.value != null)) {
+      if (normalGroup.slots.values().stream().noneMatch(v -> v.value != null)) {
         normalGroupMap.remove(normalGroup.key);
         logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
       }
@@ -171,7 +172,9 @@ public class GroupCommitter3<K, V> implements Closeable {
   private static class Slot<K, V> {
     private final NormalGroup<K, V> parentGroup;
     private final K key;
-    private final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+    // If a result value is null, the value is already emitted.
+    // Otherwise, the result lambda must be emitted by the receiver's thread.
+    private final CompletableFuture<Runnable> completableFuture = new CompletableFuture<>();
     @Nullable private volatile V value;
 
     public Slot(K key, NormalGroup<K, V> parentGroup) {
@@ -189,7 +192,13 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     public void waitUntilEmit() throws GroupCommitException {
       try {
-        completableFuture.get();
+        // If a result value is null, the value is already emitted.
+        // Otherwise, the result lambda must be emitted by the receiver's thread.
+        Runnable emittable = completableFuture.get();
+        if (emittable != null) {
+          // TODO: Enhance the error handling?
+          emittable.run();
+        }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         // TODO: Unified the error message
@@ -213,8 +222,8 @@ public class GroupCommitter3<K, V> implements Closeable {
   }
 
   protected abstract static class Group<K, V> {
-    private final ExecutorService executorService;
-    private final Emittable<K, V> emitter;
+    protected final ExecutorService executorService;
+    protected final Emittable<K, V> emitter;
     protected final KeyManipulator<K> keyManipulator;
     private final int capacity;
     private final AtomicReference<Integer> size = new AtomicReference<>();
@@ -222,7 +231,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     public final Instant sizeFixedAt;
     public final Instant timeoutAt;
     private final AtomicBoolean done = new AtomicBoolean();
-    protected final Map<K, Slot<K, V>> valueSlots;
+    protected final Map<K, Slot<K, V>> slots;
     // Whether to reject a new value slot.
     protected final AtomicBoolean closed = new AtomicBoolean();
     protected final GarbageGroupCollector<K, V> garbageGroupCollector;
@@ -237,7 +246,7 @@ public class GroupCommitter3<K, V> implements Closeable {
           .add("done", isDone())
           .add("ready", isReady())
           .add("sizeFixed", isSizeFixed())
-          .add("valueSlots.size", valueSlots.size())
+          .add("valueSlots.size", slots.size())
           //          .add(
           //              "valueSlots.size(ready)",
           //              valueSlots.values().stream().filter(v -> v.value != null).count())
@@ -260,37 +269,40 @@ public class GroupCommitter3<K, V> implements Closeable {
       this.sizeFixedAt = Instant.now().plusMillis(sizeFixExpirationInMillis);
       this.timeoutAt = Instant.now().plusMillis(timeoutExpirationInMillis);
       this.key = key;
-      this.valueSlots = new HashMap<>(capacity);
+      this.slots = new HashMap<>(capacity);
       this.garbageGroupCollector = garbageGroupCollector;
     }
 
-    public abstract K getFullKey(K childKey);
-
     public boolean noMoreSlot() {
-      return valueSlots.size() >= capacity;
+      return slots.size() >= capacity;
     }
 
-    protected K reserveNewSlot(Slot<K, V> valueSlot) throws GroupCommitAlreadySizeFixedException {
-      return reserveNewSlot(valueSlot, true);
+    protected K reserveNewSlot(Slot<K, V> slot) throws GroupCommitAlreadySizeFixedException {
+      return reserveNewSlot(slot, true);
     }
 
-    protected K reserveNewSlot(Slot<K, V> valueSlot, boolean autoEmit)
+    protected K reserveNewSlot(Slot<K, V> slot, boolean autoEmit)
         throws GroupCommitAlreadySizeFixedException {
       synchronized (this) {
         if (isSizeFixed()) {
           throw new GroupCommitAlreadySizeFixedException(
               "The size of 'valueSlot' is already fixed. Group:" + this);
         }
-        valueSlots.put(valueSlot.key, valueSlot);
-        updateIsClosed();
+        reserveSlot(slot.key, slot);
       }
       ///////// FIXME: DEBUG
-      logger.info("RESERVE:{}, CHILDKEY:{}", this, valueSlot.key);
+      logger.info("RESERVE:{}, CHILDKEY:{}", this, slot.key);
       ///////// FIXME: DEBUG
       if (noMoreSlot()) {
         fixSize(autoEmit);
       }
-      return valueSlot.getFullKey();
+      return slot.getFullKey();
+    }
+
+    private synchronized void reserveSlot(K key, Slot<K, V> slot) {
+      // TODO: Check if no existing slot?
+      slots.put(slot.key, slot);
+      updateIsClosed();
     }
 
     // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
@@ -300,13 +312,13 @@ public class GroupCommitter3<K, V> implements Closeable {
         throw new GroupCommitAlreadyClosedException("This group is already closed. group:" + this);
       }
 
-      Slot<K, V> valueSlot = valueSlots.get(childKey);
-      if (valueSlot == null) {
+      Slot<K, V> slot = slots.get(childKey);
+      if (slot == null) {
         throw new GroupCommitTargetNotFoundException(
             "The slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
       }
-      valueSlot.putValue(value);
-      return valueSlot;
+      slot.putValue(value);
+      return slot;
     }
 
     public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
@@ -318,7 +330,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         asyncEmitIfReady();
       }
       ///////// FIXME: DEBUG
-      logger.info("PUT VALUE:{}, CHILDKEY:{}", this, childKey);
+      logger.info("Put value:{}, childKey:{}", this, childKey);
       ///////// FIXME: DEBUG
 
       long start = System.currentTimeMillis();
@@ -339,7 +351,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     public void fixSize(boolean autoEmit) {
       synchronized (this) {
         // Current ValueSlot that `index` is pointing is not used yet.
-        size.set(valueSlots.size());
+        size.set(slots.size());
         updateIsClosed();
         ////// FIXME: DEBUG
         logger.info("Fixed size: group={}", this);
@@ -355,10 +367,14 @@ public class GroupCommitter3<K, V> implements Closeable {
       return size.get() != null;
     }
 
+    protected int getSize() {
+      return size.get();
+    }
+
     public synchronized boolean isReady() {
       if (isSizeFixed()) {
         int readySlotCount = 0;
-        for (Slot<K, V> valueSlot : valueSlots.values()) {
+        for (Slot<K, V> valueSlot : slots.values()) {
           if (valueSlot.value != null) {
             readySlotCount++;
             if (readySlotCount >= size.get()) {
@@ -382,9 +398,14 @@ public class GroupCommitter3<K, V> implements Closeable {
       closed.set(noMoreSlot() || isDone() || isSizeFixed());
     }
 
+    protected synchronized void setDone() {
+      done.set(true);
+      updateIsClosed();
+    }
+
     public void removeValueSlot(K childKey) {
       synchronized (this) {
-        if (valueSlots.remove(childKey) != null) {
+        if (slots.remove(childKey) != null) {
           if (size.get() != null && size.get() > 0) {
             size.set(size.get() - 1);
           }
@@ -395,7 +416,7 @@ public class GroupCommitter3<K, V> implements Closeable {
             "REMOVE VS: key={}, childKey={}, valueSlotsSize={}, size={}",
             this.key,
             childKey,
-            valueSlots.size(),
+            slots.size(),
             size.get());
         ////// FIXME: DEBUG
         // This is in this block since it results in better performance
@@ -403,67 +424,27 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     }
 
+    protected abstract void asyncEmit();
+
     public synchronized void asyncEmitIfReady() {
       if (isDone()) {
         return;
       }
 
       if (isReady()) {
-        if (valueSlots.isEmpty()) {
+        if (slots.isEmpty()) {
           // In this case, each transaction has aborted with the full transaction ID.
           logger.warn("slots are empty. Nothing to do. group:{}", this);
-          done.set(true);
-          updateIsClosed();
+          setDone();
           dismiss();
           return;
         }
-        executorService.execute(
-            () -> {
-              try {
-                ////// FIXME: DEBUG
-                logger.info("Emitting: group={}", this);
-                ////// FIXME: DEBUG
-                long startEmit = System.currentTimeMillis();
-                List<V> values = new ArrayList<>(valueSlots.size());
-                // Avoid using java.util.Collection.stream since it's a bit slow
-                for (Slot<K, V> valueSlot : valueSlots.values()) {
-                  values.add(valueSlot.value);
-                }
-                emitter.execute(key, values);
-                logger.info(
-                    "Emitted (thread_id:{}, key:{}, num_of_values:{}): {} ms",
-                    Thread.currentThread().getId(),
-                    key,
-                    size.get(),
-                    System.currentTimeMillis() - startEmit);
-
-                long startNotify = System.currentTimeMillis();
-                // Wake up the waiting threads
-                valueSlots.values().forEach(vf -> vf.completableFuture.complete(null));
-                logger.info(
-                    "Notified (thread_id:{}, num_of_values:{}): {} ms",
-                    Thread.currentThread().getId(),
-                    size.get(),
-                    System.currentTimeMillis() - startNotify);
-              } catch (Throwable e) {
-                logger.error("Group commit failed", e);
-                valueSlots
-                    .values()
-                    .forEach(
-                        vf ->
-                            vf.completableFuture.completeExceptionally(
-                                new GroupCommitException(
-                                    "Group commit failed. Aborting all the values", e)));
-              } finally {
-                dismiss();
-              }
-            });
-        done.set(true);
-        updateIsClosed();
+        asyncEmit();
+        setDone();
       }
     }
 
-    private void dismiss() {
+    protected void dismiss() {
       garbageGroupCollector.collect(this);
     }
   }
@@ -500,7 +481,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       // Lazy instantiation might be better, but it's likely there is a not-ready value slot since
       // it's already timed-out.
       List<Slot<K, V>> removed = new ArrayList<>();
-      for (Entry<K, Slot<K, V>> entry : valueSlots.entrySet()) {
+      for (Entry<K, Slot<K, V>> entry : slots.entrySet()) {
         Slot<K, V> valueSlot = entry.getValue();
         K childKey = valueSlot.key;
         if (valueSlot.value == null) {
@@ -514,6 +495,51 @@ public class GroupCommitter3<K, V> implements Closeable {
             "Removed a value slot from group to move it to delayed group. valueSlot:{}", valueSlot);
       }
       return removed;
+    }
+
+    @Override
+    public synchronized void asyncEmit() {
+      executorService.execute(
+          () -> {
+            try {
+              ////// FIXME: DEBUG
+              logger.info("Emitting: group={}", this);
+              ////// FIXME: DEBUG
+              long startEmit = System.currentTimeMillis();
+              List<V> values = new ArrayList<>(slots.size());
+              // Avoid using java.util.Collection.stream since it's a bit slow
+              for (Slot<K, V> valueSlot : slots.values()) {
+                values.add(valueSlot.value);
+              }
+              emitter.execute(key, values);
+              logger.info(
+                  "Emitted (thread_id:{}, key:{}, num_of_values:{}): {} ms",
+                  Thread.currentThread().getId(),
+                  key,
+                  getSize(),
+                  System.currentTimeMillis() - startEmit);
+
+              long startNotify = System.currentTimeMillis();
+              // Wake up the waiting threads. Pass null since the value is already emitted.
+              slots.values().forEach(vf -> vf.completableFuture.complete(null));
+              logger.info(
+                  "Notified (thread_id:{}, num_of_values:{}): {} ms",
+                  Thread.currentThread().getId(),
+                  getSize(),
+                  System.currentTimeMillis() - startNotify);
+            } catch (Throwable e) {
+              logger.error("Group commit failed", e);
+              slots
+                  .values()
+                  .forEach(
+                      vf ->
+                          vf.completableFuture.completeExceptionally(
+                              new GroupCommitException(
+                                  "Group commit failed. Aborting all the values", e)));
+            } finally {
+              dismiss();
+            }
+          });
     }
   }
 
@@ -548,8 +574,17 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     }
 
-    public K getFullKey(K childKey) {
-      throw new AssertionError("This method must not be called in this class");
+    @Override
+    protected void asyncEmit() {
+      for (Entry<K, Slot<K, V>> entry : slots.entrySet()) {
+        Slot<K, V> slot = entry.getValue();
+        // Pass `emitter` to ask the receiver's thread to emit the value
+        slot.completableFuture.complete(
+            () -> emitter.execute(key, Collections.singletonList(slot.value)));
+        // The number of the slots is only 1.
+        dismiss();
+        return;
+      }
     }
   }
 
@@ -630,7 +665,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         logger.info(
             "[NORMAL-GROUP-CLOSE] Too old group: group.key={}, group.values={}",
             normalGroup.key,
-            normalGroup.valueSlots);
+            normalGroup.slots);
       }
       ////////// FIXME: DEBUG LOG
     } else {
