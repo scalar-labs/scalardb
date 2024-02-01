@@ -241,8 +241,6 @@ public final class ConsensusCommitUtils {
   ////////////// For group commit >>>>>>>>>>>>>>>>>
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS";
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS =
@@ -265,12 +263,6 @@ public final class ConsensusCommitUtils {
     if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
       groupCommitNumOfRetentionValues =
           Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
-    }
-
-    int groupCommitNumOfThreads = 32;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS) != null) {
-      groupCommitNumOfThreads =
-          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_THREADS));
     }
 
     int groupCommitSizeFixExpirationInMillis = 200;
@@ -302,7 +294,6 @@ public final class ConsensusCommitUtils {
             groupCommitTimeoutExpirationInMillis,
             groupCommitNumOfRetentionValues,
             groupCommitExpirationCheckIntervalInMillis,
-            groupCommitNumOfThreads,
             new KeyManipulator<String>() {
               @Override
               public String createParentKey() {

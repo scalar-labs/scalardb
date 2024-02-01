@@ -87,17 +87,12 @@ class GroupCommitter3Test {
   }
 
   static class GroupCommitParams {
-    public final int numOfThreads;
     public final int numOfRetentionValues;
     public final int sizeFixExpirationInMillis;
     public final int timeoutExpirationInMillis;
 
     public GroupCommitParams(
-        int numOfThreads,
-        int numOfRetentionValues,
-        int sizeFixExpirationInMillis,
-        int timeoutExpirationInMillis) {
-      this.numOfThreads = numOfThreads;
+        int numOfRetentionValues, int sizeFixExpirationInMillis, int timeoutExpirationInMillis) {
       this.numOfRetentionValues = numOfRetentionValues;
       this.sizeFixExpirationInMillis = sizeFixExpirationInMillis;
       this.timeoutExpirationInMillis = timeoutExpirationInMillis;
@@ -106,7 +101,6 @@ class GroupCommitter3Test {
     @Override
     public String toString() {
       return MoreObjects.toStringHelper(this)
-          .add("numOfThreads", numOfThreads)
           .add("numOfRetentionValues", numOfRetentionValues)
           .add("sizeFixExpirationInMillis", sizeFixExpirationInMillis)
           .add("timeoutExpirationInMillis", timeoutExpirationInMillis)
@@ -118,8 +112,7 @@ class GroupCommitter3Test {
       if (this == o) return true;
       if (!(o instanceof GroupCommitParams)) return false;
       GroupCommitParams that = (GroupCommitParams) o;
-      return numOfThreads == that.numOfThreads
-          && numOfRetentionValues == that.numOfRetentionValues
+      return numOfRetentionValues == that.numOfRetentionValues
           && sizeFixExpirationInMillis == that.sizeFixExpirationInMillis
           && timeoutExpirationInMillis == that.timeoutExpirationInMillis;
     }
@@ -127,7 +120,7 @@ class GroupCommitter3Test {
     @Override
     public int hashCode() {
       return Objects.hash(
-          numOfThreads, numOfRetentionValues, sizeFixExpirationInMillis, timeoutExpirationInMillis);
+          numOfRetentionValues, sizeFixExpirationInMillis, timeoutExpirationInMillis);
     }
   }
 
@@ -146,7 +139,7 @@ class GroupCommitter3Test {
         0,
         0,
         // For Group Commit
-        new GroupCommitParams(32, 8, 10, 100));
+        new GroupCommitParams(8, 10, 100));
 
     System.out.println("FINISHED WARMUP");
     System.gc();
@@ -163,13 +156,13 @@ class GroupCommitter3Test {
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
           // For Group Commit
-          new GroupCommitParams(32, 32, 80, 800));
+          new GroupCommitParams(32, 80, 800));
     } else {
       List<GroupCommitParams> params =
           Arrays.asList(
               // The number of threads should be large enough when many operations tend to be
               // delayed
-              new GroupCommitParams(32, 40, 40, 200));
+              new GroupCommitParams(40, 40, 200));
       Map<GroupCommitParams, Result> results = new HashMap<>();
       for (GroupCommitParams param : params) {
         // Benchmark for Production case
@@ -211,7 +204,6 @@ class GroupCommitter3Test {
             groupCommitParams.timeoutExpirationInMillis,
             groupCommitParams.numOfRetentionValues,
             20,
-            groupCommitParams.numOfThreads,
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
           ((parentKey, values) -> {
