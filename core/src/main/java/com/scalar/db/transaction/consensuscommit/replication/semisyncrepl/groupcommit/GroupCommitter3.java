@@ -35,8 +35,8 @@ public class GroupCommitter3<K, V> implements Closeable {
       new LinkedBlockingQueue<>();
   private final BlockingQueue<NormalGroup<K, V>> queueForDelayedSlotMove =
       new LinkedBlockingQueue<>();
-  private final BlockingQueue<DelayedGroup<K, V>> queueForDelayedGroupEmit =
-      new LinkedBlockingQueue<>();
+  //  private final BlockingQueue<DelayedGroup<K, V>> queueForDelayedGroupEmit =
+  //      new LinkedBlockingQueue<>();
   // Parameters
   private final long queueCheckIntervalInMillis;
   private final long normalGroupCloseExpirationInMillis;
@@ -45,7 +45,7 @@ public class GroupCommitter3<K, V> implements Closeable {
   // Executors
   private final ExecutorService normalGroupCloseExecutorService;
   private final ExecutorService delayedSlotMoveExecutorService;
-  private final ExecutorService delayedGroupEmitExecutorService;
+  //  private final ExecutorService delayedGroupEmitExecutorService;
   private final ExecutorService monitorExecutorService;
   // Custom operations injected by the client
   private final KeyManipulator<K> keyManipulator;
@@ -151,6 +151,17 @@ public class GroupCommitter3<K, V> implements Closeable {
                 delayedSlotMoveExpirationInMillis,
                 notReadyValueSlot,
                 this::unregisterDelayedGroup);
+
+        // Delegate the value to the client thread
+        notReadyValueSlot.completableFuture.complete(
+            () -> {
+              try {
+                emitter.execute(fullKey, Collections.singletonList(notReadyValueSlot.value));
+              } finally {
+                unregisterDelayedGroup(delayedGroup);
+              }
+            });
+
         DelayedGroup<K, V> old = delayedGroupMap.put(fullKey, delayedGroup);
         if (old != null) {
           logger.warn("The slow group value map already has the same key group. {}", old);
@@ -649,6 +660,7 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .build());
     startDelayedSlotMoveExecutorService();
 
+    /*
     this.delayedGroupEmitExecutorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
@@ -656,6 +668,7 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .setNameFormat(label + "-group-commit-delayed-group-emit-%d")
                 .build());
     startDelayedGroupEmitExecutorService();
+     */
   }
 
   public void setEmitter(Emittable<K, V> emitter) {
@@ -782,6 +795,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     return true;
   }
 
+  /*
   private boolean handleQueueForDelayedGroupEmit() {
     DelayedGroup<K, V> delayedGroup = queueForDelayedGroupEmit.peek();
     Long waitInMillis = queueCheckIntervalInMillis;
@@ -827,6 +841,7 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     return true;
   }
+   */
 
   private void startNormalGroupCloseExecutorService() {
     normalGroupCloseExecutorService.execute(
@@ -850,6 +865,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         });
   }
 
+  /*
   private void startDelayedGroupEmitExecutorService() {
     delayedGroupEmitExecutorService.execute(
         () -> {
@@ -860,17 +876,21 @@ public class GroupCommitter3<K, V> implements Closeable {
           }
         });
   }
+   */
 
   private void startMonitorExecutorService() {
     monitorExecutorService.execute(
         () -> {
           while (!monitorExecutorService.isShutdown()) {
             logger.info(
-                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
+                // "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={},
+                // DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={},
+                // NormalGroupMap.size={}, DelayedGroupMap.size={}",
+                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
                 queueForNormalGroupClose.size(),
                 queueForDelayedSlotMove.size(),
-                queueForDelayedGroupEmit.size(),
+                // queueForDelayedGroupEmit.size(),
                 groupManager.normalGroupMap.size(),
                 groupManager.delayedGroupMap.size());
             try {
@@ -952,10 +972,12 @@ public class GroupCommitter3<K, V> implements Closeable {
   // But for testing, this should be called for resources.
   @Override
   public void close() {
+    /*
     if (delayedGroupEmitExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(
           delayedGroupEmitExecutorService, 5, TimeUnit.SECONDS);
     }
+     */
     if (delayedSlotMoveExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(
           delayedSlotMoveExecutorService, 5, TimeUnit.SECONDS);

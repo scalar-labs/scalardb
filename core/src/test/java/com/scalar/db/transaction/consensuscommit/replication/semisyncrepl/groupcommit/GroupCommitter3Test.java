@@ -145,7 +145,7 @@ class GroupCommitter3Test {
     System.gc();
     System.out.println("STARTING BENCHMARK");
 
-    boolean microBenchmark = true;
+    boolean microBenchmark = false;
     if (microBenchmark) {
       // Benchmark for Micro-benchmark
       benchmarkInternal(
