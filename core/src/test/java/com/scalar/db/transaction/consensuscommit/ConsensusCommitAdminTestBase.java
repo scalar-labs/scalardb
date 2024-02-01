@@ -723,4 +723,61 @@ public abstract class ConsensusCommitAdminTestBase {
     // Arrange
     verify(distributedStorageAdmin).upgrade(options);
   }
+
+  @Test
+  public void coordinatorNamespaceShouldHandleCorrectly() throws ExecutionException {
+    // Arrange
+    when(admin.getNamespaceNames())
+        .thenReturn(ImmutableSet.of(coordinatorNamespaceName, "ns1", "ns2"));
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createNamespace(coordinatorNamespaceName))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.dropNamespace(coordinatorNamespaceName))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                admin.createTable(
+                    coordinatorNamespaceName,
+                    "tbl",
+                    TableMetadata.newBuilder()
+                        .addColumn("id", DataType.INT)
+                        .addColumn("col", DataType.INT)
+                        .addPartitionKey("id")
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.truncateTable(coordinatorNamespaceName, "tbl"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.dropTable(coordinatorNamespaceName, "tbl"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.createIndex(coordinatorNamespaceName, "tbl", "col"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.dropIndex(coordinatorNamespaceName, "tbl", "col"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(admin.getTableMetadata(coordinatorNamespaceName, "tbl")).isNull();
+    assertThat(admin.getNamespaceTableNames(coordinatorNamespaceName)).isEmpty();
+    assertThat(admin.namespaceExists(coordinatorNamespaceName)).isFalse();
+    assertThatThrownBy(
+            () -> admin.repairNamespace(coordinatorNamespaceName, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                admin.repairTable(
+                    coordinatorNamespaceName,
+                    "tbl",
+                    TableMetadata.newBuilder()
+                        .addColumn("id", DataType.INT)
+                        .addColumn("col", DataType.INT)
+                        .addPartitionKey("id")
+                        .build(),
+                    Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> admin.addNewColumnToTable(coordinatorNamespaceName, "tbl", "col", DataType.INT))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(admin.getNamespaceNames()).containsOnly("ns1", "ns2");
+    assertThatThrownBy(
+            () -> admin.importTable(coordinatorNamespaceName, "tbl", Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }
