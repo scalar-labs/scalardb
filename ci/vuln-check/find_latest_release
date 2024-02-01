@@ -62,14 +62,22 @@ releases.each do |release|
     # Get the rest of string after `release_pattern` (e.g., "9.1")
     rest_versions = release[release_pattern.size..]
     cur = candidate_releases
+
+    # Validate `rest_versions`
+    begin
+      rest_versions.split('.').each do |x|
+        # Empty string is expected
+        Integer(x) unless x.empty?
+      end
+    rescue ArgumentError
+      STDERR.puts "Found invalid version unit '#{rest_versions}'. Skipping it."
+      next
+    end
+
+    # Update `candidate_releases`
     rest_versions.split('.').each do |part_of_version_str|
       next if part_of_version_str.empty?
-      begin
-        part_of_version = Integer(part_of_version_str)
-      rescue ArgumentError
-        STDERR.puts "Failed to convert string(#{part_of_version_str}) to integer. Skipping it."
-        next
-      end
+      part_of_version = Integer(part_of_version_str)
       # Just an idiom for map initialization
       cur[part_of_version] ||= {}
       cur = cur[part_of_version]
