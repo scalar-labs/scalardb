@@ -145,24 +145,24 @@ class GroupCommitter3Test {
     System.gc();
     System.out.println("STARTING BENCHMARK");
 
-    boolean microBenchmark = false;
+    boolean microBenchmark = true;
     if (microBenchmark) {
       // Benchmark for Micro-benchmark
       benchmarkInternal(
           // For Benchmarker:
-          32, // NumOfThreads
+          2048, // NumOfThreads
           100000, // NumOfRequests
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
           // For Group Commit
-          new GroupCommitParams(32, 80, 800));
+          new GroupCommitParams(40, 20, 200));
     } else {
       List<GroupCommitParams> params =
           Arrays.asList(
               // The number of threads should be large enough when many operations tend to be
               // delayed
-              new GroupCommitParams(40, 40, 200));
+              new GroupCommitParams(40, 40, 400));
       Map<GroupCommitParams, Result> results = new HashMap<>();
       for (GroupCommitParams param : params) {
         // Benchmark for Production case

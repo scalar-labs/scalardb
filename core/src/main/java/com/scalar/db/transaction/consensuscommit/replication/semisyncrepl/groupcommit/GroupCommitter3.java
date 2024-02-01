@@ -281,18 +281,18 @@ public class GroupCommitter3<K, V> implements Closeable {
           throw new GroupCommitAlreadySizeFixedException(
               "The size of 'valueSlot' is already fixed. Group:" + this);
         }
-        reserveSlot(slot.key, slot);
+        reserveSlot(slot);
+        ///////// FIXME: DEBUG
+        if (noMoreSlot()) {
+          fixSize(autoEmit);
+        }
       }
       ///////// FIXME: DEBUG
       logger.info("RESERVE:{}, CHILDKEY:{}", this, slot.key);
-      ///////// FIXME: DEBUG
-      if (noMoreSlot()) {
-        fixSize(autoEmit);
-      }
       return slot.getFullKey();
     }
 
-    private synchronized void reserveSlot(K key, Slot<K, V> slot) {
+    private synchronized void reserveSlot(Slot<K, V> slot) {
       // TODO: Check if no existing slot?
       slots.put(slot.key, slot);
       updateIsClosed();
