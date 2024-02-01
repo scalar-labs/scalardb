@@ -20,7 +20,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,7 +43,6 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final long timeoutExpirationInMillis;
   private final int numberOfRetentionValues;
   // Executors
-  private final ThreadPoolExecutor emitExecutorService;
   private final ExecutorService normalGroupCloseExecutorService;
   private final ExecutorService delayedSlotMoveExecutorService;
   private final ExecutorService delayedGroupEmitExecutorService;
@@ -79,7 +77,6 @@ public class GroupCommitter3<K, V> implements Closeable {
           oldGroup = currentGroup;
           currentGroup =
               new NormalGroup<>(
-                  emitExecutorService,
                   emitter,
                   keyManipulator,
                   sizeFixExpirationInMillis,
@@ -148,7 +145,6 @@ public class GroupCommitter3<K, V> implements Closeable {
         DelayedGroup<K, V> delayedGroup =
             new DelayedGroup<>(
                 fullKey,
-                emitExecutorService,
                 emitter,
                 keyManipulator,
                 sizeFixExpirationInMillis,
@@ -222,7 +218,6 @@ public class GroupCommitter3<K, V> implements Closeable {
   }
 
   protected abstract static class Group<K, V> {
-    protected final ExecutorService executorService;
     protected final Emittable<K, V> emitter;
     protected final KeyManipulator<K> keyManipulator;
     private final int capacity;
@@ -255,14 +250,12 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     Group(
         K key,
-        ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
         long timeoutExpirationInMillis,
         int capacity,
         GarbageGroupCollector<K, V> garbageGroupCollector) {
-      this.executorService = executorService;
       this.emitter = emitter;
       this.keyManipulator = keyManipulator;
       this.capacity = capacity;
@@ -451,7 +444,6 @@ public class GroupCommitter3<K, V> implements Closeable {
 
   private static class NormalGroup<K, V> extends Group<K, V> {
     NormalGroup(
-        ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
@@ -460,7 +452,6 @@ public class GroupCommitter3<K, V> implements Closeable {
         GarbageGroupCollector<K, V> garbageGroupCollector) {
       super(
           keyManipulator.createParentKey(),
-          executorService,
           emitter,
           keyManipulator,
           sizeFixExpirationInMillis,
@@ -499,18 +490,40 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     @Override
     public synchronized void asyncEmit() {
-      executorService.execute(
+      ////// FIXME: DEBUG
+      logger.info("Delegating emits: group={}", this);
+      ////// FIXME: DEBUG
+
+      if (slots.isEmpty()) {
+        return;
+      }
+
+      final AtomicReference<Slot<K, V>> emitterSlot = new AtomicReference<>();
+
+      boolean isFirst = true;
+      List<V> values = new ArrayList<>(slots.size());
+      // Avoid using java.util.Collection.stream since it's a bit slow.
+      for (Slot<K, V> slot : slots.values()) {
+        // Use the first slot as an emitter.
+        if (isFirst) {
+          isFirst = false;
+          emitterSlot.set(slot);
+        }
+        values.add(slot.value);
+      }
+
+      long startDelegate = System.currentTimeMillis();
+      Runnable taskForEmitterSlot =
           () -> {
             try {
-              ////// FIXME: DEBUG
-              logger.info("Emitting: group={}", this);
-              ////// FIXME: DEBUG
+              logger.info(
+                  "Delegated (thread_id:{}, key:{}, num_of_values:{}): {} ms",
+                  Thread.currentThread().getId(),
+                  key,
+                  getSize(),
+                  System.currentTimeMillis() - startDelegate);
+
               long startEmit = System.currentTimeMillis();
-              List<V> values = new ArrayList<>(slots.size());
-              // Avoid using java.util.Collection.stream since it's a bit slow
-              for (Slot<K, V> valueSlot : slots.values()) {
-                values.add(valueSlot.value);
-              }
               emitter.execute(key, values);
               logger.info(
                   "Emitted (thread_id:{}, key:{}, num_of_values:{}): {} ms",
@@ -520,8 +533,13 @@ public class GroupCommitter3<K, V> implements Closeable {
                   System.currentTimeMillis() - startEmit);
 
               long startNotify = System.currentTimeMillis();
-              // Wake up the waiting threads. Pass null since the value is already emitted.
-              slots.values().forEach(vf -> vf.completableFuture.complete(null));
+              // Wake up the other waiting threads.
+              // Pass null since the value is already emitted by the thread of `firstSlot`.
+              for (Slot<K, V> slot : slots.values()) {
+                if (slot != emitterSlot.get()) {
+                  slot.completableFuture.complete(null);
+                }
+              }
               logger.info(
                   "Notified (thread_id:{}, num_of_values:{}): {} ms",
                   Thread.currentThread().getId(),
@@ -529,24 +547,30 @@ public class GroupCommitter3<K, V> implements Closeable {
                   System.currentTimeMillis() - startNotify);
             } catch (Throwable e) {
               logger.error("Group commit failed", e);
-              slots
-                  .values()
-                  .forEach(
-                      vf ->
-                          vf.completableFuture.completeExceptionally(
-                              new GroupCommitException(
-                                  "Group commit failed. Aborting all the values", e)));
+              GroupCommitException exception =
+                  new GroupCommitException("Group commit failed. Aborting all the values", e);
+
+              // Let other threads know the exception.
+              for (Slot<K, V> slot : slots.values()) {
+                if (slot != emitterSlot.get()) {
+                  slot.completableFuture.completeExceptionally(exception);
+                }
+              }
+
+              // Throw the exception for the thread of `firstSlot`.
+              throw e;
             } finally {
               dismiss();
             }
-          });
+          };
+
+      emitterSlot.get().completableFuture.complete(taskForEmitterSlot);
     }
   }
 
   private static class DelayedGroup<K, V> extends Group<K, V> {
     DelayedGroup(
         K fullKey,
-        ExecutorService executorService,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
@@ -555,7 +579,6 @@ public class GroupCommitter3<K, V> implements Closeable {
         GarbageGroupCollector<K, V> garbageGroupCollector) {
       super(
           fullKey,
-          executorService,
           emitter,
           keyManipulator,
           sizeFixExpirationInMillis,
@@ -594,7 +617,6 @@ public class GroupCommitter3<K, V> implements Closeable {
       long timeoutExpirationInMillis,
       int numberOfRetentionValues,
       long expirationCheckIntervalInMillis,
-      int numberOfThreads,
       KeyManipulator<K> keyManipulator) {
     this.sizeFixExpirationInMillis = sizeFixExpirationInMillis;
     this.timeoutExpirationInMillis = timeoutExpirationInMillis;
@@ -610,18 +632,6 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .setNameFormat(label + "-group-commit-monitor-%d")
                 .build());
     startMonitorExecutorService();
-
-    this.emitExecutorService =
-        new ThreadPoolExecutor(
-            numberOfThreads,
-            numberOfThreads,
-            0,
-            TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(label + "-group-commit-emit-%d")
-                .build());
 
     this.normalGroupCloseExecutorService =
         Executors.newSingleThreadExecutor(
@@ -852,10 +862,8 @@ public class GroupCommitter3<K, V> implements Closeable {
         () -> {
           while (!monitorExecutorService.isShutdown()) {
             logger.info(
-                "[MONITOR] Timestamp={}, EmitExecutorService=[active={}, queue.size={}], NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
+                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
-                emitExecutorService.getActiveCount(),
-                emitExecutorService.getQueue().size(),
                 queueForNormalGroupClose.size(),
                 queueForDelayedSlotMove.size(),
                 queueForDelayedGroupEmit.size(),
@@ -951,9 +959,6 @@ public class GroupCommitter3<K, V> implements Closeable {
     if (normalGroupCloseExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(
           normalGroupCloseExecutorService, 5, TimeUnit.SECONDS);
-    }
-    if (emitExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(emitExecutorService, 5, TimeUnit.SECONDS);
     }
     if (monitorExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(monitorExecutorService, 5, TimeUnit.SECONDS);
