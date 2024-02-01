@@ -38,9 +38,9 @@ public class GroupCommitter3<K, V> implements Closeable {
   private final BlockingQueue<DelayedGroup<K, V>> queueForDelayedGroupEmit =
       new LinkedBlockingQueue<>();
   // Parameters
-  private final long expirationCheckIntervalInMillis;
-  private final long sizeFixExpirationInMillis;
-  private final long timeoutExpirationInMillis;
+  private final long queueCheckIntervalInMillis;
+  private final long normalGroupCloseExpirationInMillis;
+  private final long delayedSlotMoveExpirationInMillis;
   private final int numberOfRetentionValues;
   // Executors
   private final ExecutorService normalGroupCloseExecutorService;
@@ -79,8 +79,8 @@ public class GroupCommitter3<K, V> implements Closeable {
               new NormalGroup<>(
                   emitter,
                   keyManipulator,
-                  sizeFixExpirationInMillis,
-                  timeoutExpirationInMillis,
+                  normalGroupCloseExpirationInMillis,
+                  delayedSlotMoveExpirationInMillis,
                   numberOfRetentionValues,
                   this::unregisterNormalGroup);
           newGroup = currentGroup;
@@ -147,8 +147,8 @@ public class GroupCommitter3<K, V> implements Closeable {
                 fullKey,
                 emitter,
                 keyManipulator,
-                sizeFixExpirationInMillis,
-                timeoutExpirationInMillis,
+                normalGroupCloseExpirationInMillis,
+                delayedSlotMoveExpirationInMillis,
                 notReadyValueSlot,
                 this::unregisterDelayedGroup);
         DelayedGroup<K, V> old = delayedGroupMap.put(fullKey, delayedGroup);
@@ -618,10 +618,10 @@ public class GroupCommitter3<K, V> implements Closeable {
       int numberOfRetentionValues,
       long expirationCheckIntervalInMillis,
       KeyManipulator<K> keyManipulator) {
-    this.sizeFixExpirationInMillis = sizeFixExpirationInMillis;
-    this.timeoutExpirationInMillis = timeoutExpirationInMillis;
+    this.normalGroupCloseExpirationInMillis = sizeFixExpirationInMillis;
+    this.delayedSlotMoveExpirationInMillis = timeoutExpirationInMillis;
     this.numberOfRetentionValues = numberOfRetentionValues;
-    this.expirationCheckIntervalInMillis = expirationCheckIntervalInMillis;
+    this.queueCheckIntervalInMillis = expirationCheckIntervalInMillis;
     this.keyManipulator = keyManipulator;
     this.groupManager = new GroupManager();
 
@@ -664,10 +664,14 @@ public class GroupCommitter3<K, V> implements Closeable {
 
   private boolean handleQueueForNormalGroupClose() {
     NormalGroup<K, V> normalGroup = queueForNormalGroupClose.peek();
+    ////////// FIXME: DEBUG LOG
+    logger.info("[NORMAL-GROUP-CLOSE] Fetched group={}", normalGroup);
+    ////////// FIXME: DEBUG LOG
+
     Long retryWaitInMillis = null;
 
     if (normalGroup == null) {
-      retryWaitInMillis = expirationCheckIntervalInMillis;
+      retryWaitInMillis = queueCheckIntervalInMillis;
     } else if (normalGroup.isSizeFixed()) {
       // Already the size is fixed. Nothing to do. Handle a next element immediately
       ////////// FIXME: DEBUG LOG
@@ -685,7 +689,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         normalGroup.fixSize();
       } else {
         // Not expired. Retry
-        retryWaitInMillis = expirationCheckIntervalInMillis;
+        retryWaitInMillis = queueCheckIntervalInMillis;
       }
     }
 
@@ -730,7 +734,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         "[DELAYED-SLOT-MOVE] New group:{}, size:{}", normalGroup, queueForDelayedSlotMove.size());
 
     if (normalGroup == null) {
-      retryWaitInMillis = expirationCheckIntervalInMillis * 2;
+      retryWaitInMillis = queueCheckIntervalInMillis * 2;
     } else if (normalGroup.isReady()) {
       // Already ready. Nothing to do. Handle a next element immediately
     } else {
@@ -746,7 +750,7 @@ public class GroupCommitter3<K, V> implements Closeable {
             queueForDelayedSlotMove.size());
       } else {
         // Not expired. Retry
-        retryWaitInMillis = expirationCheckIntervalInMillis * 2;
+        retryWaitInMillis = queueCheckIntervalInMillis * 2;
       }
     }
 
@@ -780,14 +784,14 @@ public class GroupCommitter3<K, V> implements Closeable {
 
   private boolean handleQueueForDelayedGroupEmit() {
     DelayedGroup<K, V> delayedGroup = queueForDelayedGroupEmit.peek();
-    Long waitInMillis = expirationCheckIntervalInMillis;
+    Long waitInMillis = queueCheckIntervalInMillis;
 
     ////////// FIXME: DEBUG LOG
     logger.info("[DELAYED-GROUP-EMIT] Fetched group={}", delayedGroup);
     ////////// FIXME: DEBUG LOG
     if (delayedGroup == null) {
       // The queue is empty, so wait for a longer time.
-      waitInMillis = expirationCheckIntervalInMillis * 2;
+      waitInMillis = queueCheckIntervalInMillis * 2;
     } else {
       DelayedGroup<K, V> removed = queueForDelayedGroupEmit.poll();
       // Check if the removed group is expected just in case.
