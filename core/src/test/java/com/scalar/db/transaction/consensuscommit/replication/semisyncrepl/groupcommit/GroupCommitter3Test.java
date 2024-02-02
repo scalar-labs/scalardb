@@ -169,7 +169,7 @@ class GroupCommitter3Test {
           Arrays.asList(
               // The number of threads should be large enough when many operations tend to be
               // delayed
-              new GroupCommitParams(128, 40, 40, 200));
+              new GroupCommitParams(64, 40, 40, 200));
       Map<GroupCommitParams, Result> results = new HashMap<>();
       for (GroupCommitParams param : params) {
         // Benchmark for Production case
