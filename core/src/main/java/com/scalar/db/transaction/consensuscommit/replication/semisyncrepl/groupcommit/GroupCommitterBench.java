@@ -154,7 +154,7 @@ class GroupCommitterBench {
       benchmarkInternal(
           // For Benchmarker:
           2048, // NumOfThreads
-          100000, // NumOfRequests
+          400000, // NumOfRequests
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
@@ -171,7 +171,7 @@ class GroupCommitterBench {
             benchmarkInternal(
                 // For Benchmarker:
                 2048, // NumOfThreads
-                100000, // NumOfRequests
+                200000, // NumOfRequests
                 100, // AveragePrepareWaitInMillis
                 400, // MultiplexerInMillis
                 100, // MaxCommitWaitInMillis
