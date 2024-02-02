@@ -168,9 +168,9 @@ class GroupCommitterBench {
           1, // ErrorBeforeReadyPercentage
           1, // ErrorAfterReadyPercentage
           // For Group Commit
-          new GroupCommitParams(64, 40, 20, 200));
+          new GroupCommitParams(512, 40, 20, 200));
     } else {
-      List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(32, 40, 40, 200));
+      List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(512, 40, 40, 200));
       Map<GroupCommitParams, Result> results = new HashMap<>();
       for (GroupCommitParams param : params) {
         // Benchmark for Production case
@@ -217,7 +217,7 @@ class GroupCommitterBench {
             groupCommitParams.timeoutExpirationInMillis,
             groupCommitParams.numOfRetentionValues,
             20,
-            groupCommitParams.numOfRetentionValues,
+            groupCommitParams.numOfThreads,
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
           (parentKey, values) -> {
