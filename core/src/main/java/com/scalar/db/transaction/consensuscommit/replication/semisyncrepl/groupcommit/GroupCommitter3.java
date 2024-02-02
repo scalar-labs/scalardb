@@ -138,6 +138,8 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     private synchronized void moveDelayedSlotToDelayedGroup(NormalGroup<K, V> normalGroup) {
+      // Already tried to move this code inside NormalGroup.removeNotReadyValueSlots() to remove
+      // the `synchronized` keyword on this method. But the performance was degraded.
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#1 BV:{}", normalGroup);
       List<Slot<K, V>> notReadyValueSlots = normalGroup.removeNotReadyValueSlots();
       for (Slot<K, V> notReadyValueSlot : notReadyValueSlots) {
