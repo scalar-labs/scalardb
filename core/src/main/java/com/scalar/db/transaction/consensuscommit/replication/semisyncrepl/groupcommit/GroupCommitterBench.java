@@ -145,13 +145,13 @@ class GroupCommitterBench {
       // Benchmark for Micro-benchmark
       benchmarkInternal(
           // For Benchmarker:
-          32, // NumOfThreads
+          2048, // NumOfThreads
           100000, // NumOfRequests
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
           // For Group Commit
-          new GroupCommitParams(32, 80, 800));
+          new GroupCommitParams(40, 20, 200));
     } else {
       List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(40, 40, 200));
       Map<GroupCommitParams, Result> results = new HashMap<>();
@@ -162,9 +162,9 @@ class GroupCommitterBench {
                 // For Benchmarker:
                 2048, // NumOfThreads
                 100000, // NumOfRequests
-                40, // AveragePrepareWaitInMillis
+                100, // AveragePrepareWaitInMillis
                 400, // MultiplexerInMillis
-                40, // MaxCommitWaitInMillis
+                100, // MaxCommitWaitInMillis
                 // For Group Commit
                 param);
         results.put(param, result);
