@@ -727,7 +727,7 @@ public abstract class ConsensusCommitAdminTestBase {
   @Test
   public void coordinatorNamespaceShouldHandleCorrectly() throws ExecutionException {
     // Arrange
-    when(admin.getNamespaceNames())
+    when(distributedStorageAdmin.getNamespaceNames())
         .thenReturn(ImmutableSet.of(coordinatorNamespaceName, "ns1", "ns2"));
 
     // Act Assert
