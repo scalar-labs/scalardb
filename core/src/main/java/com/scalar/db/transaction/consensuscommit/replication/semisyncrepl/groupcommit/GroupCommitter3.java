@@ -98,31 +98,15 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     private synchronized Group<K, V> getGroup(Keys<K> keys) throws GroupCommitException {
-      // TODO: The following logic can be simplified since it's in synchronized block
       NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
-      DelayedGroup<K, V> delayedGroup =
-          delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
-      // Avoid the following cases to find the value slot corresponding to pk1:ck11
-      // Case:1
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap.get(pk1) and check if it contains ck11, but not found
-      // - (slowBufValMap.get(pk1:ck11) should be called even if bufValMap.get(pk1) is found)
-      // - return NONE
-      // Case:2
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{}
-      // - slowBufValMap.get(pk1:ck11), but not found
-      // - bufValMap:{pk1 => buf1:{ck11 => vs11}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap:{pk1 => buf1:{}}, slowBufValMap:{pk1:ck11 => buf1:{ck11 => vs11}}
-      // - bufValMap.get(pk1) and check if it contains ck11, but not found
-      // - (slowBufValMap.get(pk1:ck11) should be called after bufValMap.get(pk1))
-      // - return NONE
-      if (delayedGroup != null) {
-        return delayedGroup;
-      }
       if (normalGroup != null) {
         return normalGroup;
+      }
+
+      DelayedGroup<K, V> delayedGroup =
+          delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
+      if (delayedGroup != null) {
+        return delayedGroup;
       }
 
       throw new GroupCommitTargetNotFoundException(
