@@ -84,34 +84,7 @@ public class CommitHandler {
         new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository));
   }
 
-  private void commitSnapshotsRecordsInParallel(List<Snapshot> snapshots) {
-    long start = System.currentTimeMillis();
-    List<Future<Void>> futures = new ArrayList<>(snapshots.size());
-    for (Snapshot snapshot : snapshots) {
-      Future<Void> f =
-          executorService.submit(
-              () -> {
-                commitRecords(snapshot);
-                return null;
-              });
-      futures.add(f);
-    }
-    for (Future<Void> f : futures) {
-      try {
-        f.get();
-      } catch (Throwable e) {
-        logger.warn(
-            "Committing the records failed. But the state is already committed. So the record state will be recovered later",
-            e);
-      }
-    }
-    logger.info(
-        "CommitRecords-ed(thread_id:{}, num_of_values:{}): {} ms",
-        Thread.currentThread().getId(),
-        snapshots.size(),
-        System.currentTimeMillis() - start);
-  }
-
+  // TODO: This can be removed...?
   private void rollbackSnapshotsRecordsInParallel(List<Snapshot> snapshots) {
     long start = System.currentTimeMillis();
     List<Future<Void>> futures = new ArrayList<>(snapshots.size());
@@ -142,7 +115,6 @@ public class CommitHandler {
   private void handleSnapshotsInGroupCommit(String parentId, List<Snapshot> snapshots) {
     try {
       commitStateForGroupCommit(parentId, snapshots);
-      commitSnapshotsRecordsInParallel(snapshots);
     } catch (TransactionException e) {
       throw new TransactionGroupCommitException(e);
     } catch (Throwable e) {
@@ -188,134 +160,6 @@ public class CommitHandler {
       return (TransactionException) getCause();
     }
   }
-
-  /*
-  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    if (groupCommitter == null) {
-      normalCommit(snapshot);
-    } else {
-      groupCommit(snapshot);
-    }
-  }
-
-  private void groupCommit(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
-    String transactionId = snapshot.getId();
-    try {
-      groupCommitter.addValue(
-          UUID.randomUUID().toString(),
-          parentId -> {
-            // TODO?: Immutable
-            snapshot.setParentId(parentId);
-            try {
-              prepareAndValidate(snapshot);
-            } catch (TransactionException e) {
-              throw new TransactionGroupCommitException(e);
-            }
-            return snapshot;
-          });
-    } catch (GroupCommitCascadeException | GroupCommitAlreadyClosedException e) {
-      ///////// FIXME: DEBUG
-      logger.info("FAILED TO ADD VALUE #1: id={}, e={}", snapshot.getId(), e);
-      ///////// FIXME: DEBUG
-      // TODO: Revisit here
-      rollbackRecords(snapshot);
-      throw new CommitConflictException(e.getMessage(), e, transactionId);
-    } catch (GroupCommitException e) {
-      ///////// FIXME: DEBUG
-      logger.info("FAILED TO ADD VALUE #2: id={}, e={}", snapshot.getId(), e);
-      ///////// FIXME: DEBUG
-      Throwable cause = e.getCause();
-      TransactionException transactionEx;
-      if (cause instanceof TransactionGroupCommitException) {
-        TransactionGroupCommitException gce = (TransactionGroupCommitException) cause;
-        transactionEx = gce.getTransactionException();
-      } else if (cause instanceof TransactionException) {
-        transactionEx = (TransactionException) cause;
-      } else {
-        // TODO: Revisit here
-        rollbackRecords(snapshot);
-        throw new CommitException("Group-commit failed", cause, transactionId);
-      }
-      if (transactionEx instanceof PreparationConflictException) {
-        // TODO: Revisit here
-        rollbackRecords(snapshot);
-        PreparationConflictException ce = (PreparationConflictException) transactionEx;
-        throw new CommitConflictException(
-            "A conflict happened in the group-commit", ce, transactionId);
-      }
-      if (transactionEx instanceof ValidationConflictException) {
-        // TODO: Revisit here
-        rollbackRecords(snapshot);
-        ValidationConflictException ce = (ValidationConflictException) transactionEx;
-        throw new CommitConflictException(
-            "A conflict happened in the group-commit", ce, transactionId);
-      }
-      if (transactionEx instanceof CommitConflictException) {
-        // TODO: Revisit here
-        rollbackRecords(snapshot);
-        CommitConflictException ce = (CommitConflictException) transactionEx;
-        throw new CommitConflictException(
-            "A conflict happened in the group-commit", ce, transactionId);
-      }
-      if (transactionEx instanceof UnknownTransactionStatusException) {
-        // Shouldn't roll back the records
-        throw (UnknownTransactionStatusException) transactionEx;
-      }
-      throw new CommitException("Group-commit failed", transactionEx, transactionId);
-    } catch (Throwable e) {
-      ///////// FIXME: DEBUG
-      logger.info("FAILED TO ADD VALUE #3: id={}, e={}", snapshot.getId(), e);
-      ///////// FIXME: DEBUG
-      // TODO: Revisit here
-      rollbackRecords(snapshot);
-      throw new CommitException("Group-commit failed", e, transactionId);
-    }
-  }
-
-  public void prepareAndValidate(Snapshot snapshot) throws TransactionException {
-    Optional<Future<Void>> optLogRecordFuture;
-    try {
-      optLogRecordFuture = prepare(snapshot);
-    } catch (PreparationException e) {
-      // abortState(snapshot.getParentId());
-      rollbackRecords(snapshot);
-      throw e;
-    } catch (Throwable e) {
-      logger.error("Failed to prepare", e);
-      throw e;
-    }
-
-    try {
-      validate(snapshot);
-    } catch (ValidationException e) {
-      // abortState(snapshot.getParentId());
-      rollbackRecords(snapshot);
-      throw e;
-    } catch (Throwable e) {
-      logger.error("Failed to validate", e);
-      throw e;
-    }
-
-    // FIXME: Move this before validate
-    if (optLogRecordFuture.isPresent()) {
-      Future<Void> logRecordFuture = optLogRecordFuture.get();
-      try {
-        logRecordFuture.get();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(
-            String.format(
-                "Log recording failed due to an interruption. transactionId:%s", snapshot.getId()),
-            e);
-      } catch (java.util.concurrent.ExecutionException e) {
-        throw new TransactionException("Log recording failed", e, snapshot.getId());
-      } catch (Throwable e) {
-        logger.error("Failed to replicate data", e);
-        throw e;
-      }
-    }
-  }
-   */
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
     Optional<Future<Void>> logRecordFuture;
@@ -396,6 +240,7 @@ public class CommitHandler {
     String id = snapshot.getId();
     try {
       groupCommitter.ready(id, snapshot);
+      commitRecords(snapshot);
     } catch (GroupCommitAlreadyClosedException e) {
       cancelGroupCommitIfNeeded(id);
       throw new CommitConflictException("Group commit failed due to a conflict", e, id);
