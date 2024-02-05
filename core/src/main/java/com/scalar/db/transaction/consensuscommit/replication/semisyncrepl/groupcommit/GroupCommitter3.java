@@ -98,15 +98,15 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     private synchronized Group<K, V> getGroup(Keys<K> keys) throws GroupCommitException {
-      NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
-      if (normalGroup != null) {
-        return normalGroup;
-      }
-
       DelayedGroup<K, V> delayedGroup =
           delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
       if (delayedGroup != null) {
         return delayedGroup;
+      }
+
+      NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
+      if (normalGroup != null) {
+        return normalGroup;
       }
 
       throw new GroupCommitTargetNotFoundException(

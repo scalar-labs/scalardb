@@ -109,15 +109,16 @@ public class GroupCommitter3WithReentrantLock<K, V> implements Closeable {
       try {
         lockOnNormalGroupMap.readLock().lock();
         lockOnDelayedGroupMap.readLock().lock();
-        NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
-        if (normalGroup != null) {
-          return normalGroup;
-        }
 
         DelayedGroup<K, V> delayedGroup =
             delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
         if (delayedGroup != null) {
           return delayedGroup;
+        }
+
+        NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
+        if (normalGroup != null) {
+          return normalGroup;
         }
       } finally {
         lockOnDelayedGroupMap.readLock().unlock();
