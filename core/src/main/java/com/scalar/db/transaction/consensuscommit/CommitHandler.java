@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.error.CoreError;
@@ -37,8 +36,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -58,12 +55,6 @@ public class CommitHandler {
   private final LogRecorder logRecorder;
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
   private final GroupCommitter3<String, Snapshot> groupCommitter;
-  private final ExecutorService executorService =
-      Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("commit-handler-commit-records-%d")
-              .build());
 
   private Optional<LogRecorder> prepareLogRecorder() {
     String replicationDbConfigPath = System.getenv("LOG_RECORDER_REPLICATION_CONFIG");
@@ -84,34 +75,6 @@ public class CommitHandler {
 
     return Optional.of(
         new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository));
-  }
-
-  // TODO: This can be removed...?
-  private void rollbackSnapshotsRecordsInParallel(List<Snapshot> snapshots) {
-    long start = System.currentTimeMillis();
-    List<Future<Void>> futures = new ArrayList<>(snapshots.size());
-    for (Snapshot snapshot : snapshots) {
-      Future<Void> f =
-          executorService.submit(
-              () -> {
-                rollbackRecords(snapshot);
-                return null;
-              });
-      futures.add(f);
-    }
-    for (Future<Void> f : futures) {
-      try {
-        f.get();
-      } catch (Throwable e) {
-        logger.warn("Rolling back the records failed.", e);
-        // ignore since records are recovered lazily
-      }
-    }
-    logger.info(
-        "RollbackRecords-ed(thread_id:{}, num_of_values:{}): {} ms",
-        Thread.currentThread().getId(),
-        snapshots.size(),
-        System.currentTimeMillis() - start);
   }
 
   private void handleSnapshotsInGroupCommit(String parentId, List<Snapshot> snapshots) {
@@ -147,6 +110,7 @@ public class CommitHandler {
 
     // FIXME: These are only for PoC.
     if (groupCommitter != null) {
+      // This method reference will be called via GroupCommitter3.ready().
       groupCommitter.setEmitter(this::handleSnapshotsInGroupCommit);
     }
     this.groupCommitter = groupCommitter;
@@ -236,6 +200,28 @@ public class CommitHandler {
     }
   }
 
+  private void commitOrRollbackRecordsAccordingToState(Snapshot snapshot, Exception cause)
+      throws CommitException, UnknownTransactionStatusException {
+    try {
+      Optional<State> s = coordinator.getState(snapshot.getId());
+      if (s.isPresent()) {
+        TransactionState state = s.get().getState();
+        if (state.equals(TransactionState.ABORTED)) {
+          rollbackRecords(snapshot);
+          throw new CommitException("The transaction is already aborted", cause, snapshot.getId());
+        }
+      } else {
+        throw new UnknownTransactionStatusException(
+            "Committing state failed with NoMutationException but the coordinator status doesn't exist",
+            cause,
+            snapshot.getId());
+      }
+      commitRecords(snapshot);
+    } catch (CoordinatorException ex) {
+      throw new UnknownTransactionStatusException("Can't get the state", ex, snapshot.getId());
+    }
+  }
+
   // This is used by TwoPhaseConsensusCommit.
   public void commitViaGroupCommit(Snapshot snapshot)
       throws CommitException, UnknownTransactionStatusException {
@@ -245,30 +231,15 @@ public class CommitHandler {
       commitRecords(snapshot);
     } catch (GroupCommitAlreadyClosedException e) {
       cancelGroupCommitIfNeeded(id);
+      commitOrRollbackRecordsAccordingToState(snapshot, e);
       throw new CommitConflictException("Group commit failed due to a conflict", e, id);
     } catch (GroupCommitTargetNotFoundException e) {
       // This would happen with 2PC interface.
-      try {
-        Optional<State> s = coordinator.getState(id);
-        if (s.isPresent()) {
-          TransactionState state = s.get().getState();
-          if (state.equals(TransactionState.ABORTED)) {
-            rollbackRecords(snapshot);
-            throw new CommitException(
-                "Committing state in coordinator failed. the transaction is aborted", e, id);
-          }
-        } else {
-          throw new UnknownTransactionStatusException(
-              "Committing state failed with NoMutationException but the coordinator status doesn't exist",
-              e,
-              id);
-        }
-        commitRecords(snapshot);
-      } catch (CoordinatorException ex) {
-        throw new UnknownTransactionStatusException("Can't get the state", ex, id);
-      }
+      cancelGroupCommitIfNeeded(id);
+      commitOrRollbackRecordsAccordingToState(snapshot, e);
     } catch (GroupCommitException e) {
       cancelGroupCommitIfNeeded(id);
+      commitOrRollbackRecordsAccordingToState(snapshot, e);
       throw new CommitException("Group commit failed", e, id);
     }
   }
@@ -407,7 +378,6 @@ public class CommitHandler {
         if (s.isPresent()) {
           TransactionState state = s.get().getState();
           if (state.equals(TransactionState.ABORTED)) {
-            rollbackSnapshotsRecordsInParallel(snapshots);
             throw new CommitException(
                 "Committing state in coordinator failed. the transaction is aborted", e, parentId);
           }
