@@ -23,16 +23,12 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String[] createSchemaSqls(String fullSchema) {
-    return new String[] {
-      "CREATE SCHEMA " + enclose(fullSchema) + " character set utf8 COLLATE utf8_bin"
-    };
+    return new String[] {"CREATE SCHEMA " + enclose(fullSchema)};
   }
 
   @Override
   public String[] createSchemaIfNotExistsSqls(String schema) {
-    return new String[] {
-      "CREATE SCHEMA IF NOT EXISTS " + enclose(schema) + " character set utf8 COLLATE utf8_bin"
-    };
+    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(schema)};
   }
 
   @Override
