@@ -23,6 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,13 +66,16 @@ public class GroupCommitter3<K, V> implements Closeable {
     // Using ConcurrentHashMap results in less performance.
     private final Map<K, NormalGroup<K, V>> normalGroupMap = new HashMap<>();
     private final Map<K, DelayedGroup<K, V>> delayedGroupMap = new HashMap<>();
+    private final ReentrantReadWriteLock lockOnNormalGroupMap = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock lockOnDelayedGroupMap = new ReentrantReadWriteLock();
 
     // Returns full key
     private K reserveNewSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
       boolean isNewGroupCreated = false;
       NormalGroup<K, V> oldGroup = null;
       NormalGroup<K, V> newGroup = null;
-      synchronized (this) {
+      try {
+        lockOnNormalGroupMap.writeLock().lock();
         if (currentGroup == null || currentGroup.isClosed()) {
           isNewGroupCreated = true;
           oldGroup = currentGroup;
@@ -88,7 +92,10 @@ public class GroupCommitter3<K, V> implements Closeable {
           queueForNormalGroupClose.add(currentGroup);
           normalGroupMap.put(currentGroup.key, currentGroup);
         }
+      } finally {
+        lockOnNormalGroupMap.writeLock().unlock();
       }
+
       if (isNewGroupCreated) {
         ///////// FIXME: DEBUG
         logger.info("New group:{}, old group:{}, child key:{}", newGroup, oldGroup, childKey);
@@ -97,16 +104,24 @@ public class GroupCommitter3<K, V> implements Closeable {
       return currentGroup.reserveNewValueSlot(childKey);
     }
 
-    private synchronized Group<K, V> getGroup(Keys<K> keys) throws GroupCommitException {
-      DelayedGroup<K, V> delayedGroup =
-          delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
-      if (delayedGroup != null) {
-        return delayedGroup;
-      }
+    private Group<K, V> getGroup(Keys<K> keys) throws GroupCommitException {
+      try {
+        lockOnNormalGroupMap.readLock().lock();
+        lockOnDelayedGroupMap.readLock().lock();
 
-      NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
-      if (normalGroup != null) {
-        return normalGroup;
+        DelayedGroup<K, V> delayedGroup =
+            delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
+        if (delayedGroup != null) {
+          return delayedGroup;
+        }
+
+        NormalGroup<K, V> normalGroup = normalGroupMap.get(keys.parentKey);
+        if (normalGroup != null) {
+          return normalGroup;
+        }
+      } finally {
+        lockOnDelayedGroupMap.readLock().unlock();
+        lockOnNormalGroupMap.readLock().unlock();
       }
 
       throw new GroupCommitTargetNotFoundException(
@@ -114,49 +129,66 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     private synchronized void unregisterNormalGroup(Group<K, V> group) {
-      normalGroupMap.remove(group.key);
+      try {
+        lockOnNormalGroupMap.writeLock().lock();
+        normalGroupMap.remove(group.key);
+      } finally {
+        lockOnNormalGroupMap.writeLock().unlock();
+      }
     }
 
     private synchronized void unregisterDelayedGroup(Group<K, V> group) {
-      delayedGroupMap.remove(group.key);
+      try {
+        lockOnDelayedGroupMap.writeLock().lock();
+        delayedGroupMap.remove(group.key);
+      } finally {
+        lockOnDelayedGroupMap.writeLock().unlock();
+      }
     }
 
-    private synchronized void moveDelayedSlotToDelayedGroup(NormalGroup<K, V> normalGroup) {
+    private void moveDelayedSlotToDelayedGroup(NormalGroup<K, V> normalGroup) {
       // Already tried to move this code inside NormalGroup.removeNotReadyValueSlots() to remove
       // the `synchronized` keyword on this method. But the performance was degraded.
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#1 BV:{}", normalGroup);
-      List<Slot<K, V>> notReadyValueSlots = normalGroup.removeNotReadyValueSlots();
-      for (Slot<K, V> notReadyValueSlot : notReadyValueSlots) {
-        K fullKey = notReadyValueSlot.getFullKey();
-        DelayedGroup<K, V> delayedGroup =
-            new DelayedGroup<>(
-                fullKey,
-                emitter,
-                keyManipulator,
-                normalGroupCloseExpirationInMillis,
-                delayedSlotMoveExpirationInMillis,
-                notReadyValueSlot,
-                this::unregisterDelayedGroup);
+      try {
+        lockOnNormalGroupMap.writeLock().lock();
+        lockOnDelayedGroupMap.writeLock().lock();
+        List<Slot<K, V>> notReadyValueSlots = normalGroup.removeNotReadyValueSlots();
+        for (Slot<K, V> notReadyValueSlot : notReadyValueSlots) {
+          K fullKey = notReadyValueSlot.getFullKey();
+          DelayedGroup<K, V> delayedGroup =
+              new DelayedGroup<>(
+                  fullKey,
+                  emitter,
+                  keyManipulator,
+                  normalGroupCloseExpirationInMillis,
+                  delayedSlotMoveExpirationInMillis,
+                  notReadyValueSlot,
+                  this::unregisterDelayedGroup);
 
-        // Delegate the value to the client thread
-        notReadyValueSlot.completableFuture.complete(
-            () -> {
-              try {
-                emitter.execute(fullKey, Collections.singletonList(notReadyValueSlot.value));
-              } finally {
-                unregisterDelayedGroup(delayedGroup);
-              }
-            });
+          // Delegate the value to the client thread
+          notReadyValueSlot.completableFuture.complete(
+              () -> {
+                try {
+                  emitter.execute(fullKey, Collections.singletonList(notReadyValueSlot.value));
+                } finally {
+                  unregisterDelayedGroup(delayedGroup);
+                }
+              });
 
-        DelayedGroup<K, V> old = delayedGroupMap.put(fullKey, delayedGroup);
-        if (old != null) {
-          logger.warn("The slow group value map already has the same key group. {}", old);
+          DelayedGroup<K, V> old = delayedGroupMap.put(fullKey, delayedGroup);
+          if (old != null) {
+            logger.warn("The slow group value map already has the same key group. {}", old);
+          }
         }
-      }
-      logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#2 BV:{}", normalGroup);
-      if (normalGroup.slots.values().stream().noneMatch(v -> v.value != null)) {
-        normalGroupMap.remove(normalGroup.key);
-        logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
+        logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#2 BV:{}", normalGroup);
+        if (normalGroup.slots.values().stream().noneMatch(v -> v.value != null)) {
+          normalGroupMap.remove(normalGroup.key);
+          logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
+        }
+      } finally {
+        lockOnDelayedGroupMap.writeLock().unlock();
+        lockOnNormalGroupMap.writeLock().unlock();
       }
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#3 BV:{}", normalGroup);
     }
