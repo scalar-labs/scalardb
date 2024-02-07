@@ -144,7 +144,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       }
     }
 
-    private void moveDelayedSlotToDelayedGroup(NormalGroup<K, V> normalGroup) {
+    private boolean moveDelayedSlotToDelayedGroup(NormalGroup<K, V> normalGroup) {
       // Already tried to move this code inside NormalGroup.removeNotReadySlots() to remove
       // the `synchronized` keyword on this method. But the performance was degraded.
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#1 BV:{}", normalGroup);
@@ -152,6 +152,14 @@ public class GroupCommitter3<K, V> implements Closeable {
         lockOnNormalGroupMap.writeLock().lock();
         lockOnDelayedGroupMap.writeLock().lock();
         List<Slot<K, V>> notReadySlots = normalGroup.removeNotReadySlots();
+        if (notReadySlots == null) {
+          normalGroup.updateDelayedSlotMovedAt();
+          ;
+          logger.info(
+              "This group isn't needed to remove slots. Updated the expiration timing. group:{}",
+              normalGroup);
+          return false;
+        }
         for (Slot<K, V> notReadySlot : notReadySlots) {
           K fullKey = notReadySlot.getFullKey();
           DelayedGroup<K, V> delayedGroup =
@@ -189,6 +197,8 @@ public class GroupCommitter3<K, V> implements Closeable {
         lockOnNormalGroupMap.writeLock().unlock();
       }
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#3 BV:{}", normalGroup);
+
+      return true;
     }
   }
 
@@ -250,8 +260,9 @@ public class GroupCommitter3<K, V> implements Closeable {
     private final int capacity;
     private final AtomicReference<Integer> size = new AtomicReference<>();
     protected final K key;
-    public final Instant sizeFixedAt;
-    public final Instant timeoutAt;
+    private final long moveDelayedSlotExpirationInMillis;
+    private final Instant groupClosedAt;
+    private final AtomicReference<Instant> delayedSlotMovedAt;
     private final AtomicBoolean done = new AtomicBoolean();
     protected final Map<K, Slot<K, V>> slots;
     // Whether to reject a new value slot.
@@ -263,15 +274,12 @@ public class GroupCommitter3<K, V> implements Closeable {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
           .add("hashCode", hashCode())
-          .add("expiredAt", sizeFixedAt)
-          .add("timeoutAt", timeoutAt)
+          .add("groupClosedAt", groupClosedAt)
+          .add("delayedSlotMovedAt", delayedSlotMovedAt)
           .add("done", isDone())
           .add("ready", isReady())
           .add("sizeFixed", isSizeFixed())
           .add("valueSlots.size", slots.size())
-          //          .add(
-          //              "valueSlots.size(ready)",
-          //              valueSlots.values().stream().filter(v -> v.value != null).count())
           .toString();
     }
 
@@ -279,18 +287,24 @@ public class GroupCommitter3<K, V> implements Closeable {
         K key,
         Emittable<K, V> emitter,
         KeyManipulator<K> keyManipulator,
-        long sizeFixExpirationInMillis,
-        long timeoutExpirationInMillis,
+        long groupCloseExpirationInMillis,
+        long moveDelayedSlotExpirationInMillis,
         int capacity,
         GarbageGroupCollector<K, V> garbageGroupCollector) {
       this.emitter = emitter;
       this.keyManipulator = keyManipulator;
       this.capacity = capacity;
-      this.sizeFixedAt = Instant.now().plusMillis(sizeFixExpirationInMillis);
-      this.timeoutAt = Instant.now().plusMillis(timeoutExpirationInMillis);
+      this.moveDelayedSlotExpirationInMillis = moveDelayedSlotExpirationInMillis;
+      this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
+      this.delayedSlotMovedAt = new AtomicReference<>();
+      updateDelayedSlotMovedAt();
       this.key = key;
       this.slots = new HashMap<>(capacity);
       this.garbageGroupCollector = garbageGroupCollector;
+    }
+
+    public void updateDelayedSlotMovedAt() {
+      delayedSlotMovedAt.set(Instant.now().plusMillis(moveDelayedSlotExpirationInMillis));
     }
 
     public boolean noMoreSlot() {
@@ -362,6 +376,14 @@ public class GroupCommitter3<K, V> implements Closeable {
           key,
           childKey,
           System.currentTimeMillis() - start);
+    }
+
+    public Instant groupClosedAt() {
+      return groupClosedAt;
+    }
+
+    public Instant delayedSlotMovedAt() {
+      return delayedSlotMovedAt.get();
     }
 
     public void fixSize() {
@@ -495,7 +517,14 @@ public class GroupCommitter3<K, V> implements Closeable {
       return reserveNewSlot(new Slot<>(childKey, this));
     }
 
+    @Nullable
     public synchronized List<Slot<K, V>> removeNotReadySlots() {
+      if (!isSizeFixed()) {
+        logger.info(
+            "No need to remove any slot since the size isn't fixed yet. Too early. group:{}", this);
+        return null;
+      }
+
       // Lazy instantiation might be better, but it's likely there is a not-ready value slot since
       // it's already timed-out.
       List<Slot<K, V>> removed = new ArrayList<>();
@@ -506,9 +535,17 @@ public class GroupCommitter3<K, V> implements Closeable {
         }
       }
 
+      if (removed.size() >= getSize()) {
+        logger.info("No need to remove any slot since all the slots are not ready. group:{}", this);
+        return null;
+      }
+
       for (Slot<K, V> slot : removed) {
         removeSlot(slot.key);
-        logger.info("Removed a value slot from group to move it to delayed group. slot:{}", slot);
+        logger.info(
+            "Removed a value slot from group to move it to delayed group. group:{}, slot:{}",
+            this,
+            slot);
       }
       return removed;
     }
@@ -692,7 +729,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     } else if (normalGroup.isSizeFixed()) {
       // Already the size is fixed. Nothing to do. Handle a next element immediately
       ////////// FIXME: DEBUG LOG
-      if (normalGroup.sizeFixedAt.isBefore(Instant.now().minusMillis(5000))) {
+      if (normalGroup.groupClosedAt().isBefore(Instant.now().minusMillis(5000))) {
         logger.info(
             "[NORMAL-GROUP-CLOSE] Too old group: group.key={}, group.values={}",
             normalGroup.key,
@@ -701,7 +738,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       ////////// FIXME: DEBUG LOG
     } else {
       Instant now = Instant.now();
-      if (now.isAfter(normalGroup.sizeFixedAt)) {
+      if (now.isAfter(normalGroup.groupClosedAt())) {
         // Expired. Fix the size
         normalGroup.fixSize();
       } else {
@@ -756,10 +793,26 @@ public class GroupCommitter3<K, V> implements Closeable {
       // Already ready. Nothing to do. Handle a next element immediately
     } else {
       Instant now = Instant.now();
-      if (now.isAfter(normalGroup.timeoutAt)) {
+      if (now.isAfter(normalGroup.delayedSlotMovedAt())) {
         ////////// FIXME: DEBUG LOG
         long start = System.currentTimeMillis();
-        groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
+        if (!groupManager.moveDelayedSlotToDelayedGroup(normalGroup)) {
+          logger.info(
+              "[DELAYED-SLOT-MOVE] Re-enqueue a group since no need to remove any slots. group:{}",
+              normalGroup);
+          NormalGroup<K, V> removed = queueForDelayedSlotMove.poll();
+          // Check if the removed slot is expected just in case.
+          if (removed == null || !removed.equals(normalGroup)) {
+            logger.error(
+                "The queue for move-delayed-slot returned an inconsistent return value. expected:{}, actual:{}",
+                normalGroup,
+                removed);
+            if (removed != null) {
+              queueForDelayedSlotMove.add(removed);
+            }
+          }
+          return true;
+        }
         logger.info(
             "[DELAYED-SLOT-MOVE] Moved group:{} to delayed group, duration:{}ms, size:{}",
             normalGroup,
@@ -788,7 +841,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       // Check if the removed slot is expected just in case.
       if (removed == null || !removed.equals(normalGroup)) {
         logger.error(
-            "The queue for timeout returned an inconsistent return value. expected:{}, actual:{}",
+            "The queue for move-delayed-slot returned an inconsistent return value. expected:{}, actual:{}",
             normalGroup,
             removed);
         if (removed != null) {
