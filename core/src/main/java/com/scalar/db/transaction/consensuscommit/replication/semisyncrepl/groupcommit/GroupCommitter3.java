@@ -768,7 +768,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       // Check if the removed group is expected just in case.
       if (removed == null || !removed.equals(normalGroup)) {
         logger.error(
-            "The queue for size-fix returned an inconsistent return value. expected:{}, actual:{}",
+            "The queue for normal-group-close returned an inconsistent value. Re-enqueuing it. expected:{}, actual:{}",
             normalGroup,
             removed);
         if (removed != null) {
@@ -804,12 +804,12 @@ public class GroupCommitter3<K, V> implements Closeable {
           // Check if the removed slot is expected just in case.
           if (removed == null || !removed.equals(normalGroup)) {
             logger.error(
-                "The queue for move-delayed-slot returned an inconsistent return value. expected:{}, actual:{}",
+                "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
                 normalGroup,
                 removed);
-            if (removed != null) {
-              queueForDelayedSlotMove.add(removed);
-            }
+          }
+          if (removed != null) {
+            queueForDelayedSlotMove.add(removed);
           }
           return true;
         }
@@ -841,7 +841,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       // Check if the removed slot is expected just in case.
       if (removed == null || !removed.equals(normalGroup)) {
         logger.error(
-            "The queue for move-delayed-slot returned an inconsistent return value. expected:{}, actual:{}",
+            "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
             normalGroup,
             removed);
         if (removed != null) {
