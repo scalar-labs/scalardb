@@ -172,7 +172,7 @@ class GroupCommitterBench {
                 // For Benchmarker:
                 2048, // NumOfThreads
                 200000, // NumOfRequests
-                100, // AveragePrepareWaitInMillis
+                200, // AveragePrepareWaitInMillis
                 400, // MultiplexerInMillis
                 100, // MaxCommitWaitInMillis
                 1, // ErrorBeforeReadyPercentage
@@ -239,13 +239,6 @@ class GroupCommitterBench {
           });
 
       List<KeyAndFuture> futures = new ArrayList<>();
-      /*
-      ScheduledExecutorService monitor =
-          Executors.newSingleThreadScheduledExecutor(
-              new ThreadFactoryBuilder().setDaemon(true).build());
-      monitor.scheduleAtFixedRate(
-          () -> System.err.println("future.size:" + futures.size()), 1, 1, TimeUnit.SECONDS);
-       */
 
       ExecutorService executorService =
           Executors.newFixedThreadPool(
