@@ -17,23 +17,23 @@ public class CoreErrorTest {
   @Test
   public void buildCode_ShouldBuildCorrectCode() {
     // Arrange
-    CoreError error = CoreError.OPERATION_CHECK_ERROR_INDEX1;
+    CoreError error = CoreError.OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED;
 
     // Act
     String code = error.buildCode();
 
     // Assert
-    Assertions.assertThat(code).isEqualTo("CORE-40001");
+    Assertions.assertThat(code).isEqualTo("CORE-10000");
   }
 
   @Test
   public void buildMessage_ShouldBuildCorrectMessage() {
     // Arrange
-    CoreError error = CoreError.OPERATION_CHECK_ERROR_INDEX1;
+    CoreError error = CoreError.OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED;
     Put put =
         Put.newBuilder()
-            .namespace("namespace")
-            .table("table")
+            .namespace("ns")
+            .table("tbl")
             .partitionKey(Key.ofInt("id", 0))
             .intValue("col", 0)
             .build();
@@ -43,6 +43,6 @@ public class CoreErrorTest {
 
     // Assert
     Assertions.assertThat(message)
-        .isEqualTo("CORE-40001: Only a single column index is supported. Operation: " + put);
+        .isEqualTo("CORE-10000: Only a single column index is supported. Operation: " + put);
   }
 }

@@ -10,7 +10,7 @@ public interface ScalarDbError {
 
   SubCategory getSubCategory();
 
-  String getCode();
+  String getId();
 
   String getMessage();
 
@@ -18,11 +18,13 @@ public interface ScalarDbError {
 
   String getSolution();
 
+  // This method validates the error. It is called in the constructor of the enum to ensure that the
+  // error is valid.
   default void validate(
       String componentName,
       Category category,
       SubCategory subCategory,
-      String code,
+      String id,
       String message,
       String cause,
       String solution) {
@@ -35,9 +37,9 @@ public interface ScalarDbError {
           "The parent category of the sub-category must be the same as the category.");
     }
 
-    Objects.requireNonNull(code, "The code must not be null.");
-    if (code.length() != 3) {
-      throw new IllegalArgumentException("The length of the code must be 3");
+    Objects.requireNonNull(id, "The id must not be null.");
+    if (id.length() != 3) {
+      throw new IllegalArgumentException("The length of the id must be 3");
     }
 
     Objects.requireNonNull(message, "The message must not be null.");
@@ -48,22 +50,18 @@ public interface ScalarDbError {
   /**
    * Builds the error code. The code is built as follows:
    *
-   * <p>{@code <componentName>-<categoryCode><subCategoryCode><code>}
+   * <p>{@code <componentName>-<categoryId><subCategoryId><id>}
    *
    * @return the built code
    */
   default String buildCode() {
-    return getComponentName()
-        + "-"
-        + getCategory().getCode()
-        + getSubCategory().getCode()
-        + getCode();
+    return getComponentName() + "-" + getCategory().getId() + getSubCategory().getId() + getId();
   }
 
   /**
    * Builds the error message with the given arguments. The message is built as follows:
    *
-   * <p>{@code <componentName>-<categoryCode><subCategoryCode><code>: <message>}
+   * <p>{@code <componentName>-<categoryId><subCategoryId><id>: <message>}
    *
    * @param args the arguments to be formatted into the message
    * @return the formatted message

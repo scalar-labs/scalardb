@@ -45,26 +45,28 @@ public class OperationChecker {
     if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
       if (get.getPartitionKey().size() != 1) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX1.buildMessage(get));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED.buildMessage(
+                get));
       }
 
       String name = get.getPartitionKey().getColumns().get(0).getName();
       if (!metadata.getSecondaryIndexNames().contains(name)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX2.buildMessage(get));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(get));
       }
 
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(get.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX3.buildMessage(get));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_INDEX_KEY_NOT_PROPERLY_SPECIFIED.buildMessage(
+                get));
       }
 
       // The following check is not needed when we use GetWithIndex. But we need to keep it for
       // backward compatibility. We will remove it in release 5.0.0.
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX4.buildMessage(get));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(get));
       }
       return;
     }
@@ -85,31 +87,33 @@ public class OperationChecker {
     if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
       if (scan.getPartitionKey().size() != 1) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX1.buildMessage(scan));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED.buildMessage(
+                scan));
       }
 
       String name = scan.getPartitionKey().getColumns().get(0).getName();
       if (!metadata.getSecondaryIndexNames().contains(name)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX2.buildMessage(scan));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(scan));
       }
 
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(scan.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX3.buildMessage(scan));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_INDEX_KEY_NOT_PROPERLY_SPECIFIED.buildMessage(
+                scan));
       }
 
       // The following checks are not needed when we use ScanWithIndex. But we need to keep them for
       // backward compatibility. We will remove them in release 5.0.0.
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX4.buildMessage(scan));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(scan));
       }
 
       if (!scan.getOrderings().isEmpty()) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX5.buildMessage(scan));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_ORDERING_SPECIFIED.buildMessage(scan));
       }
       return;
     }
@@ -216,7 +220,8 @@ public class OperationChecker {
       return;
     }
 
-    Supplier<String> message = () -> CoreError.OPERATION_CHECK_ERROR_ORDERING1.buildMessage(scan);
+    Supplier<String> message =
+        () -> CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan);
 
     if (orderings.size() > metadata.getClusteringKeyNames().size()) {
       throw new IllegalArgumentException(message.get());
@@ -246,7 +251,8 @@ public class OperationChecker {
     for (Scan.Ordering ordering : scanAll.getOrderings()) {
       if (!metadata.getColumnNames().contains(ordering.getColumnName())) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_ORDERING2.buildMessage(ordering, scanAll));
+            CoreError.OPERATION_CHECK_ERROR_ORDERING_COLUMN_NOT_FOUND.buildMessage(
+                ordering, scanAll));
       }
     }
   }

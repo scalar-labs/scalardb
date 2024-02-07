@@ -5,10 +5,10 @@ import java.util.Objects;
 public enum SubCategory {
 
   //
-  // Sub-categories for retryable errors
+  // Sub-categories for transaction retryable errors
   //
-  TRANSACTION_CONFLICT(Category.RETRYABLE_ERROR, "0"),
-  TRANSACTION_NOT_FOUND(Category.RETRYABLE_ERROR, "1"),
+  TRANSACTION_CONFLICT(Category.TRANSACTION_RETRYABLE_ERROR, "0"),
+  TRANSACTION_NOT_FOUND(Category.TRANSACTION_RETRYABLE_ERROR, "1"),
 
   //
   // Sub-categories for user errors
@@ -24,22 +24,22 @@ public enum SubCategory {
   UNKNOWN(Category.INTERNAL_ERROR, "9");
 
   private final Category parent;
-  private final String code;
+  private final String id;
 
-  SubCategory(Category parent, String code) {
+  SubCategory(Category parent, String id) {
     this.parent = Objects.requireNonNull(parent);
 
-    if (Objects.requireNonNull(code).length() != 1) {
-      throw new IllegalArgumentException("The length of the code must be 1");
+    if (Objects.requireNonNull(id).length() != 1) {
+      throw new IllegalArgumentException("The length of the id must be 1");
     }
-    this.code = code;
+    this.id = id;
   }
 
   Category getParent() {
     return parent;
   }
 
-  String getCode() {
-    return code;
+  String getId() {
+    return id;
   }
 }
