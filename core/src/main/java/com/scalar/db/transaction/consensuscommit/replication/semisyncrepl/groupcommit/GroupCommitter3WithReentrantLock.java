@@ -983,8 +983,12 @@ public class GroupCommitter3WithReentrantLock<K, V> implements Closeable {
 
   public void remove(K fullKey) throws GroupCommitException {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
-    Group<K, V> group = groupManager.getGroup(keys);
-    group.removeValueSlot(keys.childKey);
+    try {
+      Group<K, V> group = groupManager.getGroup(keys);
+      group.removeValueSlot(keys.childKey);
+    } catch (GroupCommitTargetNotFoundException e) {
+      logger.warn("Failed to remove the slot. fullKey:{}", fullKey, e);
+    }
   }
 
   // The ExecutorServices are created as daemon, so calling this method isn't needed.
