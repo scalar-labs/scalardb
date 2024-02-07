@@ -36,8 +36,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       new LinkedBlockingQueue<>();
   private final BlockingQueue<NormalGroup<K, V>> queueForDelayedSlotMove =
       new LinkedBlockingQueue<>();
-  //  private final BlockingQueue<DelayedGroup<K, V>> queueForDelayedGroupEmit =
-  //      new LinkedBlockingQueue<>();
+
   // Parameters
   private final long queueCheckIntervalInMillis;
   private final long normalGroupCloseExpirationInMillis;
@@ -46,7 +45,6 @@ public class GroupCommitter3<K, V> implements Closeable {
   // Executors
   private final ExecutorService normalGroupCloseExecutorService;
   private final ExecutorService delayedSlotMoveExecutorService;
-  //  private final ExecutorService delayedGroupEmitExecutorService;
   private final ExecutorService monitorExecutorService;
   // Custom operations injected by the client
   private final KeyManipulator<K> keyManipulator;
@@ -101,7 +99,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         logger.info("New group:{}, old group:{}, child key:{}", newGroup, oldGroup, childKey);
         ///////// FIXME: DEBUG
       }
-      return currentGroup.reserveNewValueSlot(childKey);
+      return currentGroup.reserveNewSlot(childKey);
     }
 
     private Group<K, V> getGroup(Keys<K> keys) throws GroupCommitException {
@@ -147,15 +145,15 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     private void moveDelayedSlotToDelayedGroup(NormalGroup<K, V> normalGroup) {
-      // Already tried to move this code inside NormalGroup.removeNotReadyValueSlots() to remove
+      // Already tried to move this code inside NormalGroup.removeNotReadySlots() to remove
       // the `synchronized` keyword on this method. But the performance was degraded.
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#1 BV:{}", normalGroup);
       try {
         lockOnNormalGroupMap.writeLock().lock();
         lockOnDelayedGroupMap.writeLock().lock();
-        List<Slot<K, V>> notReadyValueSlots = normalGroup.removeNotReadyValueSlots();
-        for (Slot<K, V> notReadyValueSlot : notReadyValueSlots) {
-          K fullKey = notReadyValueSlot.getFullKey();
+        List<Slot<K, V>> notReadySlots = normalGroup.removeNotReadySlots();
+        for (Slot<K, V> notReadySlot : notReadySlots) {
+          K fullKey = notReadySlot.getFullKey();
           DelayedGroup<K, V> delayedGroup =
               new DelayedGroup<>(
                   fullKey,
@@ -163,14 +161,14 @@ public class GroupCommitter3<K, V> implements Closeable {
                   keyManipulator,
                   normalGroupCloseExpirationInMillis,
                   delayedSlotMoveExpirationInMillis,
-                  notReadyValueSlot,
+                  notReadySlot,
                   this::unregisterDelayedGroup);
 
           // Delegate the value to the client thread
-          notReadyValueSlot.completableFuture.complete(
+          notReadySlot.completableFuture.complete(
               () -> {
                 try {
-                  emitter.execute(fullKey, Collections.singletonList(notReadyValueSlot.value));
+                  emitter.execute(fullKey, Collections.singletonList(notReadySlot.value));
                 } finally {
                   unregisterDelayedGroup(delayedGroup);
                 }
@@ -308,7 +306,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       synchronized (this) {
         if (isSizeFixed()) {
           throw new GroupCommitAlreadySizeFixedException(
-              "The size of 'valueSlot' is already fixed. Group:" + this);
+              "The size of 'slot' is already fixed. Group:" + this);
         }
         reserveSlot(slot);
         ///////// FIXME: DEBUG
@@ -344,9 +342,9 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
 
     public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
-      Slot<K, V> valueSlot;
+      Slot<K, V> slot;
       synchronized (this) {
-        valueSlot = putValueToSlot(childKey, value);
+        slot = putValueToSlot(childKey, value);
 
         // This is in this block since it results in better performance
         asyncEmitIfReady();
@@ -356,7 +354,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       ///////// FIXME: DEBUG
 
       long start = System.currentTimeMillis();
-      valueSlot.waitUntilEmit();
+      slot.waitUntilEmit();
 
       logger.info(
           "Waited(thread_id:{}, parentKey:{}, childKey:{}): {} ms",
@@ -372,7 +370,7 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     public void fixSize(boolean autoEmit) {
       synchronized (this) {
-        // Current ValueSlot that `index` is pointing is not used yet.
+        // Current Slot that `index` is pointing is not used yet.
         size.set(slots.size());
         updateIsClosed();
         ////// FIXME: DEBUG
@@ -396,8 +394,8 @@ public class GroupCommitter3<K, V> implements Closeable {
     public synchronized boolean isReady() {
       if (isSizeFixed()) {
         int readySlotCount = 0;
-        for (Slot<K, V> valueSlot : slots.values()) {
-          if (valueSlot.value != null) {
+        for (Slot<K, V> slot : slots.values()) {
+          if (slot.value != null) {
             readySlotCount++;
             if (readySlotCount >= size.get()) {
               return true;
@@ -425,7 +423,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       updateIsClosed();
     }
 
-    public void removeValueSlot(K childKey) {
+    public void removeSlot(K childKey) {
       synchronized (this) {
         if (slots.remove(childKey) != null) {
           if (size.get() != null && size.get() > 0) {
@@ -493,26 +491,24 @@ public class GroupCommitter3<K, V> implements Closeable {
       return keyManipulator.createFullKey(key, childKey);
     }
 
-    public K reserveNewValueSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
+    public K reserveNewSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
       return reserveNewSlot(new Slot<>(childKey, this));
     }
 
-    public synchronized List<Slot<K, V>> removeNotReadyValueSlots() {
+    public synchronized List<Slot<K, V>> removeNotReadySlots() {
       // Lazy instantiation might be better, but it's likely there is a not-ready value slot since
       // it's already timed-out.
       List<Slot<K, V>> removed = new ArrayList<>();
       for (Entry<K, Slot<K, V>> entry : slots.entrySet()) {
-        Slot<K, V> valueSlot = entry.getValue();
-        K childKey = valueSlot.key;
-        if (valueSlot.value == null) {
-          removed.add(valueSlot);
+        Slot<K, V> slot = entry.getValue();
+        if (slot.value == null) {
+          removed.add(slot);
         }
       }
 
-      for (Slot<K, V> valueSlot : removed) {
-        removeValueSlot(valueSlot.key);
-        logger.info(
-            "Removed a value slot from group to move it to delayed group. valueSlot:{}", valueSlot);
+      for (Slot<K, V> slot : removed) {
+        removeSlot(slot.key);
+        logger.info("Removed a value slot from group to move it to delayed group. slot:{}", slot);
       }
       return removed;
     }
@@ -604,7 +600,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         KeyManipulator<K> keyManipulator,
         long sizeFixExpirationInMillis,
         long timeoutExpirationInMillis,
-        Slot<K, V> valueSlot,
+        Slot<K, V> slot,
         GarbageGroupCollector<K, V> garbageGroupCollector) {
       super(
           fullKey,
@@ -618,11 +614,11 @@ public class GroupCommitter3<K, V> implements Closeable {
         // Auto emit should be disabled since:
         // - the queue and worker for delayed values will emit this if it's ready
         // - to avoid taking time in synchronized blocks
-        super.reserveNewSlot(valueSlot, false);
+        super.reserveNewSlot(slot, false);
       } catch (GroupCommitAlreadySizeFixedException e) {
         // FIXME Message
         throw new IllegalStateException(
-            "Failed to reserve a value slot. This shouldn't happen. valueSlot:" + valueSlot, e);
+            "Failed to reserve a value slot. This shouldn't happen. slot:" + slot, e);
       }
     }
 
@@ -677,16 +673,6 @@ public class GroupCommitter3<K, V> implements Closeable {
                 .setNameFormat(label + "-group-commit-delayed-slot-move-%d")
                 .build());
     startDelayedSlotMoveExecutorService();
-
-    /*
-    this.delayedGroupEmitExecutorService =
-        Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(label + "-group-commit-delayed-group-emit-%d")
-                .build());
-    startDelayedGroupEmitExecutorService();
-     */
   }
 
   public void setEmitter(Emittable<K, V> emitter) {
@@ -813,54 +799,6 @@ public class GroupCommitter3<K, V> implements Closeable {
     return true;
   }
 
-  /*
-  private boolean handleQueueForDelayedGroupEmit() {
-    DelayedGroup<K, V> delayedGroup = queueForDelayedGroupEmit.peek();
-    Long waitInMillis = queueCheckIntervalInMillis;
-
-    ////////// FIXME: DEBUG LOG
-    logger.info("[DELAYED-GROUP-EMIT] Fetched group={}", delayedGroup);
-    ////////// FIXME: DEBUG LOG
-    if (delayedGroup == null) {
-      // The queue is empty, so wait for a longer time.
-      waitInMillis = queueCheckIntervalInMillis * 2;
-    } else {
-      DelayedGroup<K, V> removed = queueForDelayedGroupEmit.poll();
-      // Check if the removed group is expected just in case.
-      if (removed == null || !removed.equals(delayedGroup)) {
-        logger.error(
-            "The queue for delayed values returned an inconsistent return value. expected:{}, actual:{}",
-            delayedGroup,
-            removed);
-        if (removed != null) {
-          queueForDelayedGroupEmit.add(removed);
-        }
-        return true;
-      } else if (delayedGroup.isReady()) {
-        // Send the ready group asynchronously and check the result later.
-        delayedGroup.asyncEmitIfReady();
-      } else if (delayedGroup.isDone()) {
-        // Don't need retries.
-        return true;
-      }
-      // Group in the queue for delayed ones could contain very delayed ones.
-      // Those delayed ones should be handled later.
-      queueForDelayedGroupEmit.add(delayedGroup);
-    }
-
-    try {
-      TimeUnit.MILLISECONDS.sleep(waitInMillis);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      // TODO: Unified the error message
-      logger.warn("Interrupted", e);
-      return false;
-    }
-
-    return true;
-  }
-   */
-
   private void startNormalGroupCloseExecutorService() {
     normalGroupCloseExecutorService.execute(
         () -> {
@@ -883,32 +821,15 @@ public class GroupCommitter3<K, V> implements Closeable {
         });
   }
 
-  /*
-  private void startDelayedGroupEmitExecutorService() {
-    delayedGroupEmitExecutorService.execute(
-        () -> {
-          while (!delayedGroupEmitExecutorService.isShutdown()) {
-            if (!handleQueueForDelayedGroupEmit()) {
-              break;
-            }
-          }
-        });
-  }
-   */
-
   private void startMonitorExecutorService() {
     monitorExecutorService.execute(
         () -> {
           while (!monitorExecutorService.isShutdown()) {
             logger.info(
-                // "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={},
-                // DelayedSlotMove.queue.size={}, DelayedGroupEmit.queue.size={},
-                // NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
                 queueForNormalGroupClose.size(),
                 queueForDelayedSlotMove.size(),
-                // queueForDelayedGroupEmit.size(),
                 groupManager.normalGroupMap.size(),
                 groupManager.delayedGroupMap.size());
             try {
@@ -984,7 +905,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
     try {
       Group<K, V> group = groupManager.getGroup(keys);
-      group.removeValueSlot(keys.childKey);
+      group.removeSlot(keys.childKey);
     } catch (GroupCommitTargetNotFoundException e) {
       logger.warn("Failed to remove the slot. fullKey:{}", fullKey, e);
     }
@@ -994,12 +915,6 @@ public class GroupCommitter3<K, V> implements Closeable {
   // But for testing, this should be called for resources.
   @Override
   public void close() {
-    /*
-    if (delayedGroupEmitExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(
-          delayedGroupEmitExecutorService, 5, TimeUnit.SECONDS);
-    }
-     */
     if (delayedSlotMoveExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(
           delayedSlotMoveExecutorService, 5, TimeUnit.SECONDS);
