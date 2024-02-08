@@ -8,8 +8,6 @@ public interface ScalarDbError {
 
   Category getCategory();
 
-  SubCategory getSubCategory();
-
   String getId();
 
   String getMessage();
@@ -23,7 +21,6 @@ public interface ScalarDbError {
   default void validate(
       String componentName,
       Category category,
-      SubCategory subCategory,
       String id,
       String message,
       String cause,
@@ -31,15 +28,9 @@ public interface ScalarDbError {
     Objects.requireNonNull(componentName, "The component name must not be null.");
     Objects.requireNonNull(category, "The category must not be null.");
 
-    Objects.requireNonNull(subCategory, "The sub-category must not be null.");
-    if (subCategory.getParent() != category) {
-      throw new IllegalArgumentException(
-          "The parent category of the sub-category must be the same as the category.");
-    }
-
     Objects.requireNonNull(id, "The id must not be null.");
-    if (id.length() != 3) {
-      throw new IllegalArgumentException("The length of the id must be 3");
+    if (id.length() != 4) {
+      throw new IllegalArgumentException("The length of the id must be 4");
     }
 
     Objects.requireNonNull(message, "The message must not be null.");
@@ -50,18 +41,18 @@ public interface ScalarDbError {
   /**
    * Builds the error code. The code is built as follows:
    *
-   * <p>{@code <componentName>-<categoryId><subCategoryId><id>}
+   * <p>{@code <componentName>-<categoryId><id>}
    *
    * @return the built code
    */
   default String buildCode() {
-    return getComponentName() + "-" + getCategory().getId() + getSubCategory().getId() + getId();
+    return getComponentName() + "-" + getCategory().getId() + getId();
   }
 
   /**
    * Builds the error message with the given arguments. The message is built as follows:
    *
-   * <p>{@code <componentName>-<categoryId><subCategoryId><id>: <message>}
+   * <p>{@code <componentName>-<categoryId><id>: <message>}
    *
    * @param args the arguments to be formatted into the message
    * @return the formatted message
