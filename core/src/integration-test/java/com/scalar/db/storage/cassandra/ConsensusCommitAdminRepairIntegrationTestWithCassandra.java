@@ -24,11 +24,10 @@ public class ConsensusCommitAdminRepairIntegrationTestWithCassandra
   protected void initialize(String testName) {
     Properties properties = getProperties(testName);
     ClusterManager clusterManager = new ClusterManager(new DatabaseConfig(properties));
-    CassandraAdmin cassandraAdmin =
-        new CassandraAdmin(clusterManager, new DatabaseConfig(properties));
     // Share the ClusterManager so that the keyspace metadata stay consistent between the Admin and
     // AdminTestUtils
-    admin = new ConsensusCommitAdmin(cassandraAdmin, new DatabaseConfig(properties));
+    storageAdmin = new CassandraAdmin(clusterManager, new DatabaseConfig(properties));
+    admin = new ConsensusCommitAdmin(storageAdmin, new DatabaseConfig(properties));
     adminTestUtils = new CassandraAdminTestUtils(getProperties(testName), clusterManager);
   }
 }

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
@@ -60,6 +61,7 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
           .build();
 
   protected DistributedTransactionAdmin admin;
+  protected DistributedStorageAdmin storageAdmin;
   protected AdminTestUtils adminTestUtils = null;
 
   @BeforeAll
@@ -70,11 +72,15 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
   protected void initialize(String testName) throws Exception {
     TransactionFactory factory = TransactionFactory.create(getProperties(TEST_NAME));
     admin = factory.getTransactionAdmin();
+
+    StorageFactory storageFactory = StorageFactory.create(getProperties(TEST_NAME));
+    storageAdmin = storageFactory.getStorageAdmin();
   }
 
   @AfterAll
   public void afterAll() throws Exception {
     admin.close();
+    storageAdmin.close();
     adminTestUtils.close();
   }
 
@@ -271,6 +277,6 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
         new ConsensusCommitConfig(new DatabaseConfig(getProperties(TEST_NAME)))
             .getCoordinatorNamespace()
             .orElse(Coordinator.NAMESPACE);
-    return admin.namespaceExists(coordinatorNamespace);
+    return storageAdmin.namespaceExists(coordinatorNamespace);
   }
 }
