@@ -54,9 +54,23 @@ public class MultiStorageConfig {
       return ImmutableMap.of();
     }
 
+    // Create a new Properties object for each storage
     ImmutableMap.Builder<String, Properties> builder = ImmutableMap.builder();
     for (String storage : storages) {
       Properties dbProps = new Properties();
+
+      // Put all properties unrelated to multi-storage first for global properties for all storages
+      for (String propertyName : properties.stringPropertyNames()) {
+        if (!propertyName.startsWith(PREFIX)) {
+          dbProps.put(propertyName, properties.getProperty(propertyName));
+        }
+      }
+
+      // Put all properties related to the current storage while removing
+      // `multi_storage.storages.<storage name>.` from the property name. For example, if the
+      // storage name is `cassandra`, and if the property name is
+      // `scalar.db.multi_storage.storages.cassandra.storage`, then we put the property with the key
+      // `scalar.db.storage`.
       for (String propertyName : properties.stringPropertyNames()) {
         if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
           dbProps.put(
@@ -70,8 +84,10 @@ public class MultiStorageConfig {
             CoreError.MULTI_STORAGE_NESTED_MULTI_STORAGE_DEFINITION_NOT_SUPPORTED.buildMessage(
                 storage));
       }
+
       builder.put(storage, dbProps);
     }
+
     return builder.build();
   }
 
