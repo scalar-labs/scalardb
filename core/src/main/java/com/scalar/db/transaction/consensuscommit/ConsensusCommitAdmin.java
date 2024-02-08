@@ -16,6 +16,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -93,6 +94,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.createNamespace(namespace, options);
   }
 
@@ -100,21 +103,29 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.createTable(namespace, table, buildTransactionTableMetadata(metadata), options);
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.dropTable(namespace, table);
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.dropNamespace(namespace);
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.truncateTable(namespace, table);
   }
 
@@ -122,17 +133,25 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.createIndex(namespace, table, columnName, options);
   }
 
   @Override
   public void dropIndex(String namespace, String table, String columnName)
       throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.dropIndex(namespace, table, columnName);
   }
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+    if (namespace.equals(coordinatorNamespace)) {
+      return null;
+    }
+
     TableMetadata metadata = admin.getTableMetadata(namespace, table);
     if (metadata == null) {
       return null;
@@ -148,6 +167,10 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    if (namespace.equals(coordinatorNamespace)) {
+      return Collections.emptySet();
+    }
+
     Set<String> tables = new HashSet<>();
     for (String table : admin.getNamespaceTableNames(namespace)) {
       // Remove non transaction table
@@ -161,6 +184,10 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
+    if (namespace.equals(coordinatorNamespace)) {
+      return false;
+    }
+
     return admin.namespaceExists(namespace);
   }
 
@@ -168,6 +195,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    checkNamespace(namespace);
+
     admin.repairTable(namespace, table, buildTransactionTableMetadata(metadata), options);
   }
 
@@ -180,6 +209,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
+    checkNamespace(namespace);
+
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       throw new IllegalArgumentException(
@@ -194,6 +225,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException {
+    checkNamespace(namespace);
+
     TableMetadata tableMetadata = admin.getTableMetadata(namespace, table);
     if (tableMetadata != null) {
       throw new IllegalArgumentException(
@@ -222,5 +255,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void close() {
     admin.close();
+  }
+
+  private void checkNamespace(String namespace) {
+    if (namespace.equals(coordinatorNamespace)) {
+      throw new IllegalArgumentException(
+          "Namespace "
+              + namespace
+              + " is reserved. Any operations on this namespace are not allowed.");
+    }
   }
 }
