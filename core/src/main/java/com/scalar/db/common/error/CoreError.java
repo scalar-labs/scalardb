@@ -86,7 +86,7 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   OPERATION_CHECK_ERROR_TABLE_NOT_FOUND(
-      Category.USER_ERROR, "0016", "The specified table is not found: %s", "", ""),
+      Category.USER_ERROR, "0016", "The specified table is not found. Table: %s", "", ""),
   OPERATION_CHECK_ERROR_INVALID_COLUMN(
       Category.USER_ERROR,
       "0017",
