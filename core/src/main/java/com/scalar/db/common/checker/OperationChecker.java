@@ -307,7 +307,7 @@ public class OperationChecker {
     for (Column<?> column : put.getColumns().values()) {
       if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_TABLE_NOT_FOUND.buildMessage(column, put));
+            CoreError.OPERATION_CHECK_ERROR_INVALID_COLUMN.buildMessage(column, put));
       }
     }
   }
