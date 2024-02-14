@@ -56,6 +56,7 @@ public class ConsensusCommitTestWithGroupCommit implements AutoCloseable {
   private <T> Future<T> wrapTransaction(ExecutorService executorService, TransactionTask<T> task) {
     return executorService.submit(
         () -> {
+          int counter = 0;
           while (true) {
             DistributedTransaction tx = transactionManager.begin();
             try {
@@ -72,11 +73,13 @@ public class ConsensusCommitTestWithGroupCommit implements AutoCloseable {
               tx.abort();
               System.out.println(e.getMessage());
               // Retry
-              continue;
             } catch (Exception e) {
               tx.abort();
               System.out.println(e.getMessage());
-              throw e;
+              if (++counter >= 20) {
+                throw e;
+              }
+              TimeUnit.SECONDS.sleep(2);
             }
           }
         });
