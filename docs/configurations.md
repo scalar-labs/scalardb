@@ -272,4 +272,4 @@ scalar.db.username=${env:<SCALAR_DB_USERNAME>:-admin}
 scalar.db.password=${env:<SCALAR_DB_PASSWORD>}
 ```
 
-In this example configuration, ScalarDB reads username and password from environment variables. If the environment variable `SCALAR_DB_USERNAME` does not exist, ScalarDB users the default value `admin`.
+In this example configuration, ScalarDB reads username and password from environment variables. If the environment variable `SCALAR_DB_USERNAME` does not exist, ScalarDB uses the default value `admin`.
