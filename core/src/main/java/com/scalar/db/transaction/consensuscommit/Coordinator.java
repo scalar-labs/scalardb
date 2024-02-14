@@ -122,17 +122,18 @@ public class Coordinator {
             .consistency(Consistency.LINEARIZABLE)
             .build();
 
-    State groupCommitState = null;
+    State defaultGroupCommitState = null;
     for (State s : scan(scan)) {
       if (childId.equals(s.getSubId())) {
         return Optional.of(s);
       } else if (DEFAULT_SUB_ID_VALUE.equals(s.getSubId())) {
-        groupCommitState = s;
+        defaultGroupCommitState = s;
       }
     }
 
-    if (groupCommitState != null && Arrays.asList(groupCommitState.childIds()).contains(childId)) {
-      return Optional.of(groupCommitState);
+    if (defaultGroupCommitState != null
+        && Arrays.asList(defaultGroupCommitState.childIds()).contains(childId)) {
+      return Optional.of(defaultGroupCommitState);
     }
 
     return Optional.empty();
@@ -363,12 +364,14 @@ public class Coordinator {
     public String toString() {
       return MoreObjects.toStringHelper(this)
           .add("id", id)
+          .add("subId", subId)
           .add("state", state)
           .add("createdAt", createdAt)
           .add("childIds", childIds)
           .toString();
     }
 
+    /*
     @Override
     public boolean equals(Object o) {
       if (o == this) {
@@ -385,6 +388,26 @@ public class Coordinator {
     @Override
     public int hashCode() {
       return Objects.hash(id, state);
+    }
+     */
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof State)) return false;
+      State other = (State) o;
+      // NOTICE: createdAt is not taken into account
+      return Objects.equals(id, other.id)
+          && Objects.equals(subId, other.subId)
+          && state == other.state
+          && Arrays.equals(childIds, other.childIds);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = Objects.hash(id, subId, state);
+      result = 31 * result + Arrays.hashCode(childIds);
+      return result;
     }
 
     private void checkNotMissingRequired(Result result) throws CoordinatorException {
