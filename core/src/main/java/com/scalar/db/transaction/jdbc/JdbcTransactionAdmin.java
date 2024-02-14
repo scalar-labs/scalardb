@@ -139,12 +139,14 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   @Override
   public void repairNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
+    // TODO: implement later
     throw new UnsupportedOperationException(
         "Repairing a namespace is not supported with the JDBC transaction admin");
   }
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
+    // TODO: implement later
     throw new UnsupportedOperationException(
         "Upgrading the ScalarDB environment is not supported with the JDBC transaction admin");
   }

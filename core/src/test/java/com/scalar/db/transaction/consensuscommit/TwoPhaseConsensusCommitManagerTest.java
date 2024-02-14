@@ -13,6 +13,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -274,7 +275,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
       throws TransactionException {
     // Arrange
-    doThrow(CommitException.class).when(commit).commitState(any());
+    doThrow(CommitConflictException.class).when(commit).commitState(any());
 
     TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
     transaction1.prepare();

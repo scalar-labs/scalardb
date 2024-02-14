@@ -9,6 +9,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
@@ -82,7 +83,8 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       getTable().ifPresent(transaction::withTable);
       return decorate(transaction);
     } catch (SQLException e) {
-      throw new TransactionException("Failed to start the transaction", e, null);
+      throw new TransactionException(
+          CoreError.JDBC_TRANSACTION_FAILED_TO_BEGIN.buildMessage(), e, null);
     }
   }
 
@@ -140,12 +142,14 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
 
   @Override
   public TransactionState getState(String txId) {
-    throw new UnsupportedOperationException("This method is not supported in JDBC transaction");
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_TRANSACTION_GETTING_TRANSACTION_STATE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public TransactionState rollback(String txId) {
-    throw new UnsupportedOperationException("This method is not supported in JDBC transaction");
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

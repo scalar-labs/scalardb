@@ -9,6 +9,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -16,11 +17,9 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.annotation.Nullable;
 
 public abstract class AbstractDistributedTransactionManager
     implements DistributedTransactionManager, DistributedTransactionDecoratorAddable {
@@ -113,49 +112,49 @@ public abstract class AbstractDistributedTransactionManager
 
     @Override
     public Optional<Result> get(Get get) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       return super.get(get);
     }
 
     @Override
     public List<Result> scan(Scan scan) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       return super.scan(scan);
     }
 
     @Override
     public void put(Put put) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.put(put);
     }
 
     @Override
     public void put(List<Put> puts) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.put(puts);
     }
 
     @Override
     public void delete(Delete delete) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.delete(delete);
     }
 
     @Override
     public void delete(List<Delete> deletes) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.delete(deletes);
     }
 
     @Override
     public void mutate(List<? extends Mutation> mutations) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.mutate(mutations);
     }
 
     @Override
     public void commit() throws CommitException, UnknownTransactionStatusException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       try {
         super.commit();
         status = Status.COMMITTED;
@@ -169,7 +168,7 @@ public abstract class AbstractDistributedTransactionManager
     public void rollback() throws RollbackException {
       if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
         throw new IllegalStateException(
-            "The transaction has already been committed or rolled back");
+            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
       }
       try {
         super.rollback();
@@ -181,7 +180,8 @@ public abstract class AbstractDistributedTransactionManager
     @Override
     public void abort() throws AbortException {
       if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
-        throw new IllegalStateException("The transaction has already been committed or aborted");
+        throw new IllegalStateException(
+            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ABORTED.buildMessage(status));
       }
       try {
         super.abort();
@@ -190,10 +190,9 @@ public abstract class AbstractDistributedTransactionManager
       }
     }
 
-    private void checkStatus(@Nullable String message, Status... expectedStatus) {
-      boolean expected = Arrays.stream(expectedStatus).anyMatch(s -> status == s);
-      if (!expected) {
-        throw new IllegalStateException(message);
+    private void checkIfActive() {
+      if (status != Status.ACTIVE) {
+        throw new IllegalStateException(CoreError.TRANSACTION_NOT_ACTIVE.buildMessage(status));
       }
     }
   }

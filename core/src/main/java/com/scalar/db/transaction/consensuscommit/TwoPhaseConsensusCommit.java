@@ -11,8 +11,9 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -140,9 +141,14 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
         lazyRecovery((UncommittedRecordException) e);
       }
       throw new PreparationConflictException(
-          "Conflict occurred while implicit pre-read", e, getId());
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(),
+          e,
+          getId());
     } catch (CrudException e) {
-      throw new PreparationException("Failed to execute implicit pre-read", e, getId());
+      throw new PreparationException(
+          CoreError.CONSENSUS_COMMIT_FAILED_TO_EXECUTE_IMPLICIT_PRE_READ.buildMessage(),
+          e,
+          getId());
     }
 
     try {
@@ -159,17 +165,15 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   @Override
-  public void commit() throws CommitException, UnknownTransactionStatusException {
+  public void commit() throws CommitConflictException, UnknownTransactionStatusException {
     if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
-          "The transaction is not validated."
-              + " When using the EXTRA_READ serializable strategy, you need to call validate()"
-              + " before calling commit()");
+          CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_EXTRA_READ.buildMessage());
     }
 
     try {
       commit.commitState(crud.getSnapshot());
-    } catch (CommitException | UnknownTransactionStatusException e) {
+    } catch (CommitConflictException | UnknownTransactionStatusException e) {
       // no need to rollback because the transaction has already been rolled back
       needRollback = false;
 
@@ -189,10 +193,13 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       TransactionState state = commit.abortState(crud.getSnapshot().getId());
       if (state == TransactionState.COMMITTED) {
         throw new RollbackException(
-            "Rollback failed because the transaction has already been committed", getId());
+            CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED
+                .buildMessage(),
+            getId());
       }
     } catch (UnknownTransactionStatusException e) {
-      throw new RollbackException("Rollback failed", e, getId());
+      throw new RollbackException(
+          CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED.buildMessage(), e, getId());
     }
 
     commit.rollbackRecords(crud.getSnapshot());
@@ -228,7 +235,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     try {
       mutationOperationChecker.check(mutation);
     } catch (ExecutionException e) {
-      throw new CrudException("Checking the operation failed", e, getId());
+      throw new CrudException(e.getMessage(), e, getId());
     }
   }
 }

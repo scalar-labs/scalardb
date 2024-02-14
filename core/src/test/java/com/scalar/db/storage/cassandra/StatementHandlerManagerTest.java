@@ -72,7 +72,7 @@ public class StatementHandlerManagerTest {
                     .insert(insert)
                     .update(update)
                     .build())
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test

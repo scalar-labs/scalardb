@@ -4,7 +4,7 @@ import java.util.Objects;
 
 public enum Category {
   USER_ERROR("1"),
-  SERIALIZATION_ERROR("2"),
+  CONCURRENCY_ERROR("2"),
   INTERNAL_ERROR("3"),
   UNKNOWN_TRANSACTION_STATUS_ERROR("4");
 

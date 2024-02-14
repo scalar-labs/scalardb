@@ -443,7 +443,7 @@ public class JdbcAdminTest {
             () ->
                 admin.createTableInternal(
                     mock(Connection.class), namespace, table, metadata, false))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

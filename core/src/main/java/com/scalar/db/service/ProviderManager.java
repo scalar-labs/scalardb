@@ -8,6 +8,7 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Locale;
 import java.util.Map;
@@ -79,7 +80,7 @@ final class ProviderManager {
   private static DistributedStorageProvider getDistributedStorageProvider(String name) {
     String lowerCaseName = name.toLowerCase(Locale.ROOT);
     if (!DISTRIBUTED_STORAGE_PROVIDERS.containsKey(lowerCaseName)) {
-      throw new IllegalArgumentException("Storage '" + name + "' is not found");
+      throw new IllegalArgumentException(CoreError.STORAGE_NOT_FOUND.buildMessage(name));
     }
     return DISTRIBUTED_STORAGE_PROVIDERS.get(lowerCaseName);
   }
@@ -123,7 +124,8 @@ final class ProviderManager {
   private static DistributedTransactionProvider getDistributedTransactionProvider(String name) {
     String lowerCaseName = name.toLowerCase(Locale.ROOT);
     if (!DISTRIBUTED_TRANSACTION_PROVIDERS.containsKey(lowerCaseName)) {
-      throw new IllegalArgumentException("Transaction manager '" + name + "' is not found");
+      throw new IllegalArgumentException(
+          CoreError.TRANSACTION_MANAGER_NOT_FOUND.buildMessage(name));
     }
     return DISTRIBUTED_TRANSACTION_PROVIDERS.get(lowerCaseName);
   }

@@ -1,6 +1,10 @@
 package com.scalar.db.common.error;
 
 public enum CoreError implements ScalarDbError {
+
+  //
+  // Errors for the user error category
+  //
   OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED(
       Category.USER_ERROR,
       "0000",
@@ -50,7 +54,7 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_PROJECTION(
       Category.USER_ERROR,
       "0009",
-      "The specified projection is not found. Invalid projection: %s, Operation: %s",
+      "The specified projection is not found. Projection: %s, Operation: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_CLUSTERING_KEY_BOUNDARY(
@@ -76,7 +80,7 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_ORDERING_COLUMN_NOT_FOUND(
       Category.USER_ERROR,
       "0014",
-      "The specified ordering column is not found. Invalid ordering: %s, Operation: %s",
+      "The specified ordering column is not found. Ordering: %s, Operation: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_CONDITION(
@@ -85,16 +89,14 @@ public enum CoreError implements ScalarDbError {
       "The condition is not properly specified. Operation: %s",
       "",
       ""),
-  OPERATION_CHECK_ERROR_TABLE_NOT_FOUND(
-      Category.USER_ERROR, "0016", "The specified table is not found. Table: %s", "", ""),
+  TABLE_NOT_FOUND(Category.USER_ERROR, "0016", "Table does not exist. Table: %s", "", ""),
   OPERATION_CHECK_ERROR_INVALID_COLUMN(
       Category.USER_ERROR,
       "0017",
-      "The column value is not properly specified. Invalid column: %s, Operation: %s",
+      "The column value is not properly specified. Column: %s, Operation: %s",
       "",
       ""),
-  OPERATION_CHECK_ERROR_MUTATIONS_EMPTY(
-      Category.USER_ERROR, "0018", "The mutations are empty", "", ""),
+  EMPTY_MUTATIONS_SPECIFIED(Category.USER_ERROR, "0018", "The mutations are empty", "", ""),
   OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION(
       Category.USER_ERROR,
       "0019",
@@ -111,6 +113,606 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0021",
       "The clustering key is not properly specified. Operation: %s",
+      "",
+      ""),
+  NOT_SUPPORTED_IN_COMMUNITY_EDITION(
+      Category.USER_ERROR, "0022", "Not supported in the community edition", "", ""),
+  CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF(
+      Category.USER_ERROR,
+      "0023",
+      "This condition is not allowed for the PutIf operation. Condition: %s",
+      "",
+      ""),
+  CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_DELETE_IF(
+      Category.USER_ERROR,
+      "0024",
+      "This condition is not allowed for the DeleteIf operation. Condition: %s",
+      "",
+      ""),
+  LIKE_CHECK_ERROR_OPERATOR_MUST_BE_LIKE_OR_NOT_LIKE(
+      Category.USER_ERROR, "0025", "Operator must be like or not-like. Operator: %s", "", ""),
+  LIKE_CHECK_ERROR_ESCAPE_CHARACTER_MUST_BE_STRING_OF_SINGLE_CHARACTER_OR_EMPTY_STRING(
+      Category.USER_ERROR,
+      "0026",
+      "Escape character must be a string of a single character or an empty string",
+      "",
+      ""),
+  LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_BE_NULL(
+      Category.USER_ERROR, "0027", "LIKE pattern must not be null", "", ""),
+  LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_INCLUDE_ONLY_ESCAPE_CHARACTER(
+      Category.USER_ERROR, "0028", "LIKE pattern must not include only escape character", "", ""),
+  LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_END_WITH_ESCAPE_CHARACTER(
+      Category.USER_ERROR, "0029", "LIKE pattern must not end with escape character", "", ""),
+  COLUMN_NOT_FOUND(Category.USER_ERROR, "0030", "Column %s does not exist", "", ""),
+  GET_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_GETTING_RECORDS_OF_DATABASE_WITHOUT_USING_INDEX(
+      Category.USER_ERROR,
+      "0031",
+      "This operation is not supported when getting records of a database without using an index",
+      "",
+      ""),
+  GET_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_GETTING_RECORDS_OF_DATABASE_USING_INDEX(
+      Category.USER_ERROR,
+      "0032",
+      "This operation is not supported when getting records of a database using an index",
+      "",
+      ""),
+  SCAN_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_SCANNING_ALL_RECORDS_OF_DATABASE_OR_SCANNING_RECORDS_OF_DATABASE_USING_INDEX(
+      Category.USER_ERROR,
+      "0033",
+      "This operation is not supported when scanning all the records of a database "
+          + "or scanning records of a database using an index",
+      "",
+      ""),
+  SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_SCANNING_RECORDS_OF_DATABASE_USING_INDEX(
+      Category.USER_ERROR,
+      "0034",
+      "This operation is supported only when scanning records of a database using an index",
+      "",
+      ""),
+  SCAN_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_SCANNING_RECORDS_OF_DATABASE_USING_INDEX(
+      Category.USER_ERROR,
+      "0035",
+      "This operation is not supported when scanning records of a database using an index",
+      "",
+      ""),
+  SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_SCANNING_ALL_RECORDS_OF_DATABASE(
+      Category.USER_ERROR,
+      "0036",
+      "This operation is supported only when scanning all the records of a database",
+      "",
+      ""),
+  SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
+      Category.USER_ERROR,
+      "0037",
+      "This operation is supported only when no conditions are specified at all. "
+          + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first",
+      "",
+      ""),
+  TABLE_METADATA_BUILD_ERROR_NO_COLUMNS_SPECIFIED(
+      Category.USER_ERROR, "0038", "Need to specify one or more columns", "", ""),
+  TABLE_METADATA_BUILD_ERROR_NO_PARTITION_KEYS_SPECIFIED(
+      Category.USER_ERROR, "0039", "Need to specify one or more partition keys", "", ""),
+  TABLE_METADATA_BUILD_ERROR_PARTITION_KEY_COLUMN_DEFINITION_NOT_SPECIFIED(
+      Category.USER_ERROR,
+      "0040",
+      "Need to specify the column definition of %s specified as a partition key",
+      "",
+      ""),
+  TABLE_METADATA_BUILD_ERROR_CLUSTERING_KEY_COLUMN_DEFINITION_NOT_SPECIFIED(
+      Category.USER_ERROR,
+      "0041",
+      "Need to specify the column definition of %s specified as a clustering key",
+      "",
+      ""),
+  TRANSACTION_STATE_INSTANTIATION_ERROR_INVALID_ID(
+      Category.USER_ERROR, "0042", "Invalid id specified. Id: %d", "", ""),
+  TRANSACTION_NOT_ACTIVE(
+      Category.USER_ERROR, "0043", "The transaction is not active. Status: %s", "", ""),
+  TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK(
+      Category.USER_ERROR,
+      "0044",
+      "The transaction has already been committed or rolled back. Status: %s",
+      "",
+      ""),
+  TRANSACTION_ALREADY_COMMITTED_OR_ABORTED(
+      Category.USER_ERROR,
+      "0045",
+      "The transaction has already been committed or aborted. Status: %s",
+      "",
+      ""),
+  TRANSACTION_NOT_PREPARED(
+      Category.USER_ERROR, "0046", "The transaction is not prepared. Status: %s", "", ""),
+  TRANSACTION_NOT_PREPARED_OR_VALIDATED(
+      Category.USER_ERROR,
+      "0047",
+      "The transaction is not prepared or validated. Status: %s",
+      "",
+      ""),
+  TRANSACTION_ALREADY_EXISTS(Category.USER_ERROR, "0048", "The transaction already exists", "", ""),
+  TRANSACTION_NOT_FOUND(
+      Category.USER_ERROR,
+      "0049",
+      "A transaction associated with the specified transaction ID is not found. "
+          + "It might have been expired",
+      "",
+      ""),
+  SYSTEM_NAMESPACE_SPECIFIED(
+      Category.USER_ERROR, "0050", "%s is the system namespace name", "", ""),
+  NAMESPACE_ALREADY_EXISTS(
+      Category.USER_ERROR, "0051", "Namespace already exists. Namespace: %s", "", ""),
+  NAMESPACE_NOT_FOUND(
+      Category.USER_ERROR, "0052", "Namespace does not exist. Namespace: %s", "", ""),
+  TABLE_ALREADY_EXISTS(Category.USER_ERROR, "0053", "Table already exists. Table: %s", "", ""),
+  NAMESPACE_NOT_EMPTY(
+      Category.USER_ERROR,
+      "0055",
+      "Namespace is not empty. Namespace: %s, Tables in the namespace: %s",
+      "",
+      ""),
+  COLUMN_NOT_FOUND2(
+      Category.USER_ERROR, "0056", "Column does not exist. Table: %s, Column: %s", "", ""),
+  INDEX_ALREADY_EXISTS(
+      Category.USER_ERROR, "0057", "Index already exists. Table: %s, Column: %s", "", ""),
+  INDEX_NOT_FOUND(
+      Category.USER_ERROR, "0058", "Index does not exist. Table: %s, Column: %s", "", ""),
+  COLUMN_ALREADY_EXISTS(
+      Category.USER_ERROR, "0059", "Column already exists. Table: %s, Column: %s", "", ""),
+  OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME(
+      Category.USER_ERROR,
+      "0060",
+      "Operation does not have the target namespace or table name. Operation: %s",
+      "",
+      ""),
+  CONFIG_UTILS_INVALID_NUMBER_FORMAT(
+      Category.USER_ERROR,
+      "0061",
+      "The specified value of the property '%s' is not a number. Value: %s",
+      "",
+      ""),
+  CONFIG_UTILS_INVALID_BOOLEAN_FORMAT(
+      Category.USER_ERROR,
+      "0062",
+      "The specified value of the property '%s' is not a boolean. Value: %s",
+      "",
+      ""),
+  CONFIG_UTILS_FAILED_TO_READ_FILE(
+      Category.USER_ERROR, "0063", "Failed to read the file. File: %s", "", ""),
+  CROSS_PARTITION_SCAN_MUST_BE_ENABLED_TO_USE_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING(
+      Category.USER_ERROR,
+      "0064",
+      "The property 'scalar.db.cross_partition_scan.enabled' must be set to true "
+          + "to use cross-partition scan with filtering or ordering",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
+      Category.USER_ERROR, "0065", "Out of range column value for BigInt. Value: %s", "", ""),
+  KEY_BUILD_ERROR_UNSUPPORTED_TYPE(
+      Category.USER_ERROR, "0066", "Unsupported type. Name: %s, Type: %s", "", ""),
+  STORAGE_NOT_FOUND(Category.USER_ERROR, "0067", "Storage '%s' is not found", "", ""),
+  TRANSACTION_MANAGER_NOT_FOUND(
+      Category.USER_ERROR, "0068", "Transaction manager '%s' is not found", "", ""),
+  CASSANDRA_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0069",
+      "Cross-partition scan with filtering or ordering is not supported in Cassandra",
+      "",
+      ""),
+  GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION(
+      Category.USER_ERROR,
+      "0070",
+      "Please use scan() for non-exact match selection. Operation: %s",
+      "",
+      ""),
+  CASSANDRA_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0071",
+      "Import-related functionality is not supported in Cassandra",
+      "",
+      ""),
+  CASSANDRA_NETWORK_STRATEGY_NOT_FOUND(
+      Category.USER_ERROR, "0072", "The %s network strategy does not exist", "", ""),
+  INVALID_CONTACT_PORT(
+      Category.USER_ERROR,
+      "0073",
+      "the property 'scalar.db.contact_port' must be greater than or equal to zero",
+      "",
+      ""),
+  COSMOS_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0074",
+      "Cross-partition scan with filtering or ordering is not supported in Cosmos DB",
+      "",
+      ""),
+  COSMOS_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0075",
+      "BLOB type is not supported for clustering keys in Cosmos DB. Column: %s",
+      "",
+      ""),
+  COSMOS_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0076",
+      "Import-related functionality is not supported in Cosmos DB",
+      "",
+      ""),
+  INVALID_CONTACT_POINTS(
+      Category.USER_ERROR,
+      "0077",
+      "the property 'scalar.db.contact_points' must not be empty",
+      "",
+      ""),
+  COSMOS_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BLOB_TYPE(
+      Category.USER_ERROR,
+      "0078",
+      "Cosmos DB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BLOB type in conditions. Mutation: %s",
+      "",
+      ""),
+  INVALID_CONSISTENCY_LEVEL(
+      Category.USER_ERROR,
+      "0079",
+      "The specified consistency level is not supported. Consistency level: %s",
+      "",
+      ""),
+  DYNAMO_ENCODER_0X00_BYTES_NOT_ACCEPTED_IN_BLOB_VALUES_IN_DESC_ORDER(
+      Category.USER_ERROR, "0080", "0x00 bytes not accepted in blob values in DESC order", "", ""),
+  DYNAMO_ENCODER_CANNOT_ENCODE_TEXT_VALUE_CONTAINING_0X0000(
+      Category.USER_ERROR, "0081", "Cannot encode a Text value containing '\\u0000'", "", ""),
+  DYNAMO_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0082",
+      "Cross-partition scan with filtering or ordering is not supported in DynamoDB",
+      "",
+      ""),
+  DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_NULL_OR_EMPTY(
+      Category.USER_ERROR,
+      "0083",
+      "An index column cannot be set to null or an empty value (for Text and Blob) in DynamoDB. Operation: %s",
+      "",
+      ""),
+  DYNAMO_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BOOLEAN_TYPE(
+      Category.USER_ERROR,
+      "0084",
+      "DynamoDB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BOOLEAN type in conditions. Mutation: %s",
+      "",
+      ""),
+  MULTI_STORAGE_NESTED_MULTI_STORAGE_DEFINITION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0085",
+      "Nested multi-storage definition is not supported. Storage: %s",
+      "",
+      ""),
+  MULTI_STORAGE_STORAGE_NOT_FOUND(
+      Category.USER_ERROR, "0086", "Storage not found. Storage: %s", "", ""),
+  JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE(
+      Category.USER_ERROR, "0087", "The namespace name is not acceptable. Namespace: %s", "", ""),
+  JDBC_TABLE_NAME_NOT_ACCEPTABLE(
+      Category.USER_ERROR, "0088", "The table name is not acceptable. Table: %s", "", ""),
+  JDBC_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0089",
+      "Importing table is not allowed in the RDB engine. RDB engine: %s",
+      "",
+      ""),
+  JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY(
+      Category.USER_ERROR, "0090", "The %s table must have a primary key", "", ""),
+  JDBC_RDB_ENGINE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0091",
+      "The RDB engine is not supported. JDBC connection URL: %s",
+      "",
+      ""),
+  JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0092", "Data type %s(%d) is not supported: %s", "", ""),
+  JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0093", "Data type %s is not supported: %s", "", ""),
+  JDBC_TRANSACTION_GETTING_TRANSACTION_STATE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0094",
+      "Getting a transaction state is not supported in JDBC transaction",
+      "",
+      ""),
+  JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0095",
+      "Rolling back a transaction is not supported in JDBC transaction",
+      "",
+      ""),
+  CONSENSUS_COMMIT_COORDINATOR_TABLES_ALREADY_EXIST(
+      Category.USER_ERROR, "0096", "Coordinator tables already exist", "", ""),
+  CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND(
+      Category.USER_ERROR, "0097", "Coordinator tables do not exist", "", ""),
+  CONSENSUS_COMMIT_COORDINATOR_NAMESPACE_SPECIFIED(
+      Category.USER_ERROR,
+      "0098",
+      "Namespace %s is reserved. Any operations on this namespace are not allowed",
+      "",
+      ""),
+  CONSENSUS_COMMIT_MUTATING_TRANSACTION_METADATA_COLUMNS_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0099",
+      "Mutating transaction metadata columns is not allowed. Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_PUT(
+      Category.USER_ERROR, "0100", "A %s condition is not allowed on Put operation", "", ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_DELETE(
+      Category.USER_ERROR, "0101", "A %s condition is not allowed on Delete operation", "", ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_TO_TARGET_TRANSACTION_METADATA_COLUMNS(
+      Category.USER_ERROR,
+      "0102",
+      "The condition is not allowed to target transaction metadata columns. Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_COLUMN_RESERVED_AS_TRANSACTION_METADATA(
+      Category.USER_ERROR, "0103", "Column '%s' is reserved as transaction metadata", "", ""),
+  CONSENSUS_COMMIT_BEFORE_PREFIXED_COLUMN_FOR_NON_PRIMARY_KEY_RESERVED_AS_TRANSACTION_METADATA(
+      Category.USER_ERROR,
+      "0104",
+      "Non-primary key column with the 'before_' prefix, '%s', is reserved as transaction metadata",
+      "",
+      ""),
+  CONSENSUS_COMMIT_PUT_CANNOT_HAVE_CONDITION_WHEN_TARGET_RECORD_UNREAD_AND_IMPLICIT_PRE_READ_DISABLED(
+      Category.USER_ERROR,
+      "0105",
+      "Put cannot have a condition when the target record is unread and implicit pre-read is disabled."
+          + " Please read the target record beforehand or enable implicit pre-read: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED(
+      Category.USER_ERROR, "0106", "Writing already deleted data is not allowed", "", ""),
+  CONSENSUS_COMMIT_GETTING_DATA_NEITHER_IN_READ_SET_NOR_DELETE_SET_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0107",
+      "Getting data neither in the read set nor the delete set is not allowed",
+      "",
+      ""),
+  CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
+      Category.USER_ERROR, "0108", "Reading already written data is not allowed", "", ""),
+  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_EXTRA_READ(
+      Category.USER_ERROR,
+      "0109",
+      "The transaction is not validated."
+          + " When using the EXTRA_READ serializable strategy, you need to call validate()"
+          + " before calling commit()",
+      "",
+      ""),
+
+  //
+  // Errors for the concurrency error category
+  //
+  NO_MUTATION_APPLIED(Category.CONCURRENCY_ERROR, "0000", "No mutation was applied", "", ""),
+  CASSANDRA_LOGGING_FAILED_IN_BATCH(
+      Category.CONCURRENCY_ERROR, "0001", "Logging failed in the batch", "", ""),
+  CASSANDRA_OPERATION_FAILED_IN_BATCH(
+      Category.CONCURRENCY_ERROR, "0002", "Operation failed in the batch with type %s", "", ""),
+  CASSANDRA_ERROR_OCCURRED_IN_BATCH(
+      Category.CONCURRENCY_ERROR, "0003", "An error occurred in the batch. Detailed: %s", "", ""),
+  CASSANDRA_WRITE_TIMEOUT_IN_PAXOS_PHASE_IN_MUTATION(
+      Category.CONCURRENCY_ERROR, "0004", "Paxos phase in CAS operation failed", "", ""),
+  CASSANDRA_WRITE_TIMEOUT_IN_LEARN_PHASE_IN_MUTATION(
+      Category.CONCURRENCY_ERROR, "0005", "Learn phase in CAS operation failed", "", ""),
+  CASSANDRA_WRITE_TIMEOUT_SIMPLE_WRITE_OPERATION_FAILED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR, "0006", "Simple write operation failed", "", ""),
+  CASSANDRA_ERROR_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0007",
+      "An error occurred in the mutation. Detailed: %s",
+      "",
+      ""),
+  COSMOS_RETRY_WITH_ERROR_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0008",
+      "A RetryWith error occurred in the mutation. Detailed: %s",
+      "",
+      ""),
+  DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0009",
+      "Transaction conflict occurred in the mutation. Detailed: %s",
+      "",
+      ""),
+  JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0010",
+      "Transaction conflict occurred in the mutation. Detailed: %s",
+      "",
+      ""),
+  JDBC_TRANSACTION_CONFLICT_OCCURRED(
+      Category.CONCURRENCY_ERROR, "0011", "Conflict occurred; try restarting transaction", "", ""),
+  JDBC_TRANSACTION_CONDITION_NOT_SATISFIED(
+      Category.CONCURRENCY_ERROR,
+      "0012",
+      "The %s condition of the %s operation is not satisfied. Targeting column(s): %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
+      Category.CONCURRENCY_ERROR, "0013", "Preparing record exists", "", ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS(
+      Category.CONCURRENCY_ERROR, "0014", "Conflict occurred when preparing records", "", ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE(
+      Category.CONCURRENCY_ERROR,
+      "0015",
+      "Committing state in coordinator failed. the transaction is aborted",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ(
+      Category.CONCURRENCY_ERROR, "0016", "Conflict occurred while implicit pre-read", "", ""),
+  CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD(
+      Category.CONCURRENCY_ERROR, "0017", "This record needs recovery", "", ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_NOT_EXISTS(
+      Category.CONCURRENCY_ERROR,
+      "0018",
+      "The record does not exist so the %s condition is not satisfied",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_EXISTS(
+      Category.CONCURRENCY_ERROR,
+      "0019",
+      "The record exists so the %s condition is not satisfied",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED(
+      Category.CONCURRENCY_ERROR,
+      "0020",
+      "The condition on the column '%s' is not satisfied",
+      "",
+      ""),
+  CONSENSUS_COMMIT_READING_EMPTY_RECORDS_IN_EXTRA_WRITE(
+      Category.CONCURRENCY_ERROR,
+      "0021",
+      "Reading empty records might cause write skew anomaly so aborting the transaction for safety",
+      "",
+      ""),
+  CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND_IN_EXTRA_READ(
+      Category.CONCURRENCY_ERROR,
+      "0022",
+      "Anti-dependency found. Aborting the transaction",
+      "",
+      ""),
+
+  //
+  // Errors for the internal error category
+  //
+  CREATING_NAMESPACE_FAILED(
+      Category.INTERNAL_ERROR, "0000", "Creating the namespace failed. Namespace: %s", "", ""),
+  DROPPING_NAMESPACE_FAILED(
+      Category.INTERNAL_ERROR, "0001", "Dropping the namespace failed. Namespace: %s", "", ""),
+  CREATING_TABLE_FAILED(
+      Category.INTERNAL_ERROR, "0002", "Creating the table failed. Table: %s", "", ""),
+  DROPPING_TABLE_FAILED(
+      Category.INTERNAL_ERROR, "0003", "Dropping the table failed. Table: %s", "", ""),
+  TRUNCATING_TABLE_FAILED(
+      Category.INTERNAL_ERROR, "0004", "Truncating the table failed. Table: %s", "", ""),
+  CREATING_INDEX_FAILED(
+      Category.INTERNAL_ERROR, "0005", "Creating the index failed. Table: %s, Column: %s", "", ""),
+  DROPPING_INDEX_FAILED(
+      Category.INTERNAL_ERROR, "0006", "Dropping the index failed. Table: %s, Column: %s", "", ""),
+  GETTING_TABLE_METADATA_FAILED(
+      Category.INTERNAL_ERROR, "0007", "Getting the table metadata failed. Table: %s", "", ""),
+  GETTING_TABLE_NAMES_IN_NAMESPACE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0008",
+      "Getting the table names in the namespace failed. Namespace: %s",
+      "",
+      ""),
+  CHECKING_NAMESPACE_EXISTENCE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0009",
+      "Checking the namespace existence failed. Namespace: %s",
+      "",
+      ""),
+  CHECKING_TABLE_EXISTENCE_FAILED(
+      Category.INTERNAL_ERROR, "0010", "Checking the table existence failed. Table: %s", "", ""),
+  CHECKING_INDEX_EXISTENCE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0011",
+      "Checking the index existence failed. Table: %s, Column: %s",
+      "",
+      ""),
+  REPAIRING_NAMESPACE_FAILED(
+      Category.INTERNAL_ERROR, "0012", "Repairing the namespace failed. Namespace: %s", "", ""),
+  REPAIRING_TABLE_FAILED(
+      Category.INTERNAL_ERROR, "0013", "Repairing the table failed. Table: %s", "", ""),
+  ADDING_NEW_COLUMN_TO_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0014",
+      "Adding a new column to the table failed. Table: %s, Column: %s, ColumnType: %s",
+      "",
+      ""),
+  GETTING_NAMESPACE_NAMES_FAILED(
+      Category.INTERNAL_ERROR, "0015", "Getting the namespace names failed", "", ""),
+  GETTING_IMPORT_TABLE_METADATA_FAILED(
+      Category.INTERNAL_ERROR,
+      "0016",
+      "Getting the table metadata of the importing table failed. Table: %s",
+      "",
+      ""),
+  IMPORTING_TABLE_FAILED(
+      Category.INTERNAL_ERROR, "0017", "Importing the table failed. Table: %s", "", ""),
+  ADDING_RAW_COLUMN_TO_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0018",
+      "Adding the raw column to the table failed. Table: %s, Column: %s, ColumnType: %s",
+      "",
+      ""),
+  UPGRADING_SCALAR_DB_ENV_FAILED(
+      Category.INTERNAL_ERROR, "0019", "Upgrading the ScalarDB environment failed", "", ""),
+  CASSANDRA_WRITE_TIMEOUT_WITH_OTHER_WRITE_TYPE_IN_MUTATION(
+      Category.INTERNAL_ERROR,
+      "0020",
+      "Something wrong because it is neither CAS nor SIMPLE",
+      "",
+      ""),
+  CASSANDRA_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0021", "An error occurred in the selection. Detailed: %s", "", ""),
+  COSMOS_ERROR_OCCURRED_IN_MUTATION(
+      Category.INTERNAL_ERROR, "0022", "An error occurred in the mutation. Detailed: %s", "", ""),
+  COSMOS_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0023", "An error occurred in the selection. Detailed: %s", "", ""),
+  DYNAMO_ERROR_OCCURRED_IN_MUTATION(
+      Category.INTERNAL_ERROR, "0024", "An error occurred in the mutation. Detailed: %s", "", ""),
+  DYNAMO_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0025", "An error occurred in the selection. Detailed: %s", "", ""),
+  JDBC_ERROR_OCCURRED_IN_MUTATION(
+      Category.INTERNAL_ERROR, "0026", "An error occurred in the mutation. Detailed: %s", "", ""),
+  JDBC_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0027", "An error occurred in the selection. Detailed: %s", "", ""),
+  JDBC_FAILED_TO_FETCH_NEXT_RESULT(
+      Category.INTERNAL_ERROR, "0028", "Failed to fetch the next result", "", ""),
+  JDBC_TRANSACTION_FAILED_TO_ROLLBACK(
+      Category.INTERNAL_ERROR, "0029", "Failed to rollback the transaction", "", ""),
+  JDBC_TRANSACTION_FAILED_TO_COMMIT(
+      Category.INTERNAL_ERROR, "0030", "Failed to commit the transaction", "", ""),
+  JDBC_TRANSACTION_GET_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0031", "Get operation failed", "", ""),
+  JDBC_TRANSACTION_SCAN_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0032", "Scan operation failed", "", ""),
+  JDBC_TRANSACTION_PUT_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0033", "Put operation failed", "", ""),
+  JDBC_TRANSACTION_DELETE_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0034", "Delete operation failed", "", ""),
+  JDBC_TRANSACTION_FAILED_TO_BEGIN(
+      Category.INTERNAL_ERROR, "0035", "Failed to begin a transaction", "", ""),
+  CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED(
+      Category.INTERNAL_ERROR, "0036", "Preparing records failed", "", ""),
+  CONSENSUS_COMMIT_VALIDATION_FAILED(Category.INTERNAL_ERROR, "0037", "Validation failed", "", ""),
+  CONSENSUS_COMMIT_FAILED_TO_EXECUTE_IMPLICIT_PRE_READ(
+      Category.INTERNAL_ERROR, "0038", "Failed to execute implicit pre-read", "", ""),
+  CONSENSUS_COMMIT_GET_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0039", "Get operation failed", "", ""),
+  CONSENSUS_COMMIT_SCAN_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0040", "Scan operation failed", "", ""),
+  CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
+      Category.INTERNAL_ERROR,
+      "0041",
+      "Rollback failed because the transaction has already been committed",
+      "",
+      ""),
+  CONSENSUS_COMMIT_ROLLBACK_FAILED(Category.INTERNAL_ERROR, "0042", "Rollback failed", "", ""),
+
+  //
+  // Errors for the unknown transaction status error category
+  //
+  JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0000",
+      "Failed to rollback the transaction",
+      "",
+      ""),
+  CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0001",
+      "Committing state failed with NoMutationException but the coordinator status does not exist",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CANNOT_GET_STATE(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR, "0002", "Cannot get the state", "", ""),
+  CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR, "0003", "Coordinator status is unknown", "", ""),
+  CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0004",
+      "Aborting state failed with NoMutationException but the coordinator status does not exist",
       "",
       ""),
   ;

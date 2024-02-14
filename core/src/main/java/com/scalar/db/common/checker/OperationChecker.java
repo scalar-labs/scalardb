@@ -297,8 +297,7 @@ public class OperationChecker {
     if (metadata == null) {
       assert operation.forFullTableName().isPresent();
       throw new IllegalArgumentException(
-          CoreError.OPERATION_CHECK_ERROR_TABLE_NOT_FOUND.buildMessage(
-              operation.forFullTableName().get()));
+          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
     }
     return metadata;
   }
@@ -327,8 +326,7 @@ public class OperationChecker {
 
   public void check(List<? extends Mutation> mutations) throws ExecutionException {
     if (mutations.isEmpty()) {
-      throw new IllegalArgumentException(
-          CoreError.OPERATION_CHECK_ERROR_MUTATIONS_EMPTY.buildMessage());
+      throw new IllegalArgumentException(CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
     }
 
     Mutation first = mutations.get(0);

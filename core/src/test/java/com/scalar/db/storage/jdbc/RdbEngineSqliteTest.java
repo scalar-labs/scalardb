@@ -96,7 +96,7 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isConflictError_True_SQLITE_BUSY_WhenUpdatingBeingDeletedTableInSeparateConnection()
+  void isConflict_True_SQLITE_BUSY_WhenUpdatingBeingDeletedTableInSeparateConnection()
       throws SQLException {
     statement.executeUpdate("create table t (c integer)");
     statement.executeUpdate("insert into t values (1)");
@@ -112,12 +112,12 @@ class RdbEngineSqliteTest {
     SQLException e =
         (SQLException)
             catchThrowable(() -> statement2.executeUpdate("update t set c = c + 1 where c = 1"));
-    assertTrue(rdbEngine.isConflictError(e));
+    assertTrue(rdbEngine.isConflict(e));
   }
 
   @Test
-  void isConflictError_False() {
-    assertFalse(rdbEngine.isConflictError(causeSyntaxError()));
+  void isConflict_False() {
+    assertFalse(rdbEngine.isConflict(causeSyntaxError()));
   }
 
   @Test

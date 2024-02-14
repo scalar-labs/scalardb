@@ -4,6 +4,7 @@ import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.common.error.CoreError;
 import java.util.Locale;
 
 public final class CosmosUtils {
@@ -35,7 +36,7 @@ public final class CosmosUtils {
     if (consistencyLevel != ConsistencyLevel.STRONG
         && consistencyLevel != ConsistencyLevel.BOUNDED_STALENESS) {
       throw new IllegalArgumentException(
-          "The specified consistency level is not supported:" + consistencyLevel);
+          CoreError.INVALID_CONSISTENCY_LEVEL.buildMessage(consistencyLevel));
     }
 
     return consistencyLevel;

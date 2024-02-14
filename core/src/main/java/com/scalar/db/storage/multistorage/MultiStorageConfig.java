@@ -4,6 +4,7 @@ import static com.scalar.db.config.ConfigUtils.getString;
 import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
 import java.util.Properties;
@@ -80,7 +81,8 @@ public class MultiStorageConfig {
 
       if (dbProps.getProperty(DatabaseConfig.STORAGE).equals(STORAGE_NAME)) {
         throw new IllegalArgumentException(
-            "Does not support nested " + STORAGE_NAME + ": " + storage);
+            CoreError.MULTI_STORAGE_NESTED_MULTI_STORAGE_DEFINITION_NOT_SUPPORTED.buildMessage(
+                storage));
       }
 
       builder.put(storage, dbProps);
@@ -133,7 +135,8 @@ public class MultiStorageConfig {
 
   private void checkIfStorageExists(String storage) {
     if (storage == null || !databasePropertiesMap.containsKey(storage)) {
-      throw new IllegalArgumentException("Storage not found: " + storage);
+      throw new IllegalArgumentException(
+          CoreError.MULTI_STORAGE_STORAGE_NOT_FOUND.buildMessage(storage));
     }
   }
 
