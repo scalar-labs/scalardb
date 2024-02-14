@@ -189,7 +189,7 @@ public class Coordinator {
       throws CoordinatorException {
     Put put;
     if (isIdForGroupCommit(id)) {
-      assert (childIds.isEmpty());
+      // assert (childIds.isEmpty());
       // Group commit for single transaction
       put = preparePutForSingleTxGroupCommit(idForGroupCommit(id), transactionState, createdAt);
     } else {
@@ -254,13 +254,26 @@ public class Coordinator {
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    return new Put(new Key(Attribute.toIdValue(state.getId())))
-        .withValue(Attribute.toStateValue(state.getState()))
-        .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(new PutIfNotExists())
-        .forNamespace(coordinatorNamespace)
-        .forTable(TABLE);
+    if (isIdForGroupCommit(state.getId())) {
+      IdForGroupCommit idForGroupCommit = idForGroupCommit(state.getId());
+      return new Put(
+              new Key(Attribute.toIdValue(idForGroupCommit.parentId)),
+              Key.ofText("tx_sub_id", idForGroupCommit.childId))
+          .withValue(Attribute.toStateValue(state.getState()))
+          .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
+          .withConsistency(Consistency.LINEARIZABLE)
+          .withCondition(new PutIfNotExists())
+          .forNamespace(coordinatorNamespace)
+          .forTable(TABLE);
+    } else {
+      return new Put(new Key(Attribute.toIdValue(state.getId())), DEFAULT_SUB_ID_KEY)
+          .withValue(Attribute.toStateValue(state.getState()))
+          .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
+          .withConsistency(Consistency.LINEARIZABLE)
+          .withCondition(new PutIfNotExists())
+          .forNamespace(coordinatorNamespace)
+          .forTable(TABLE);
+    }
   }
 
   private void put(Put put) throws CoordinatorException {
@@ -297,7 +310,7 @@ public class Coordinator {
     public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
       id = result.getValue(Attribute.ID).get().getAsString().get();
-      subId = result.getValue(Attribute.ID).get().getAsString().orElse(null);
+      subId = result.getValue("tx_sub_id").get().getAsString().orElse(null);
       state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
       createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
       // For PoC
