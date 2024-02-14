@@ -15,6 +15,8 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -61,19 +63,19 @@ public class ConsensusCommitTestWithGroupCommit implements AutoCloseable {
               tx.commit();
               return result;
             } catch (UnknownTransactionStatusException e) {
-              e.printStackTrace();
+              System.out.println(e.getMessage());
               throw e;
             } catch (CrudConflictException
                 | CommitConflictException
                 | PreparationConflictException
                 | ValidationConflictException e) {
               tx.abort();
-              e.printStackTrace();
+              System.out.println(e.getMessage());
               // Retry
               continue;
             } catch (Exception e) {
               tx.abort();
-              e.printStackTrace();
+              System.out.println(e.getMessage());
               throw e;
             }
           }
@@ -244,13 +246,16 @@ public class ConsensusCommitTestWithGroupCommit implements AutoCloseable {
     try (ConsensusCommitTestWithGroupCommit main =
         new ConsensusCommitTestWithGroupCommit(
             transactionFactory, numOfThreads, numOfCustomers, numOfRequests, numOfOpsPerTx)) {
+      Instant start = Instant.now();
       System.out.printf("Inserting %d customer records\n", numOfCustomers);
       main.loadRecords();
       System.out.printf("Updating %d customer records\n", numOfCustomers);
       main.updateRecords();
       System.out.printf("Verifying %d customer records\n", numOfCustomers);
       long sum = main.verifyRecords();
-      System.out.printf("The sum of `credit_total`:%d\n", sum);
+      System.out.printf(
+          "The sum of `credit_total`:%d. Expected:%d\n", sum, numOfRequests * numOfOpsPerTx);
+      System.out.printf("Duration: %s\n", Duration.between(start, Instant.now()));
     }
   }
 }
