@@ -263,13 +263,13 @@ scalar.db.contact_points=indirect:<SCALARDB_CLUSTER_CONTACT_POINT>
 
 For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
 
-### Configuration example #3 - Use placeholders
+### Configuration example #3 - Placeholders usage
 
-The following is an example of the configuration using placeholders:
+The following is an example of a configuration that uses placeholders:
 
 ```properties
 scalar.db.username=${env:<SCALAR_DB_USERNAME>:-admin}
 scalar.db.password=${env:<SCALAR_DB_PASSWORD>}
 ```
 
-In this example configuration, ScalarDB reads username and password from environment variables. If the environment variable `SCALAR_DB_USERNAME` does not exist, ScalarDB uses the default value `admin`.
+In this example configuration, ScalarDB reads the username and password from environment variables. If the environment variable `SCALAR_DB_USERNAME` does not exist, ScalarDB uses the default value `admin`.
