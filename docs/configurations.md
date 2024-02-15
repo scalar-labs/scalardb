@@ -188,7 +188,7 @@ The following are additional configurations available for ScalarDB:
 
 ## Use placeholders
 
-You can use placeholders in the values, and they are replaced with environment variables (${env:<ENVIRONMENT_VARIABLE_NAME>}) or system properties (${sys:<SYSTEM_PROPERTY_NAME>}). You can also specify default values in placeholders like ${sys:<SYSTEM_PROPERTY_NAME>:-<DEFAULT_VALUE>}.
+You can use placeholders in the values, and they are replaced with environment variables (`${env:<ENVIRONMENT_VARIABLE_NAME>}`) or system properties (`${sys:<SYSTEM_PROPERTY_NAME>}`). You can also specify default values in placeholders like `${sys:<SYSTEM_PROPERTY_NAME>:-<DEFAULT_VALUE>}`.
 
 ## Configuration examples
 
