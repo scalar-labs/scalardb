@@ -186,7 +186,7 @@ The following are additional configurations available for ScalarDB:
 | `scalar.db.default_namespace_name`                               | The given namespace name will be used by operations that do not already specify a namespace.                                                                                                |                      |
 | `scalar.db.system_namespace_name`                                | The given namespace name will be used by ScalarDB internally.                                                                                                                               | `scalardb`           |
 
-## Use placeholders
+## Placeholder usage
 
 You can use placeholders in the values, and they are replaced with environment variables (`${env:<ENVIRONMENT_VARIABLE_NAME>}`) or system properties (`${sys:<SYSTEM_PROPERTY_NAME>}`). You can also specify default values in placeholders like `${sys:<SYSTEM_PROPERTY_NAME>:-<DEFAULT_VALUE>}`.
 
@@ -263,7 +263,7 @@ scalar.db.contact_points=indirect:<SCALARDB_CLUSTER_CONTACT_POINT>
 
 For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
 
-### Configuration example #3 - Placeholders usage
+### Configuration example #3 - Placeholder usage
 
 The following is an example of a configuration that uses placeholders:
 
