@@ -716,7 +716,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0001",
-      "The committing state failed with NoMutationException, but the coordinator status does not exist",
+      "Committing state failed with NoMutationException, but the coordinator status does not exist",
       "",
       ""),
   CONSENSUS_COMMIT_CANNOT_GET_STATE(
@@ -730,7 +730,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0004",
-      "The aborting state failed with NoMutationException, but the coordinator status does not exist",
+      "Aborting state failed with NoMutationException, but the coordinator status does not exist",
       "",
       ""),
   ;
