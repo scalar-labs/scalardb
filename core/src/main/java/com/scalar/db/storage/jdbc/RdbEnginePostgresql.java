@@ -222,8 +222,8 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case SMALLINT:
         if (typeName.equalsIgnoreCase("smallserial")) {
           throw new IllegalArgumentException(
-              CoreError.JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED.buildMessage(
-                  typeName, columnSize, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         logger.info(
             "Data type larger than that of underlying database is assigned: {} ({} to INT)",
@@ -233,8 +233,8 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case INTEGER:
         if (typeName.equalsIgnoreCase("serial")) {
           throw new IllegalArgumentException(
-              CoreError.JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED.buildMessage(
-                  typeName, columnSize, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         return DataType.INT;
       case BIGINT:
