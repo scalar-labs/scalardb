@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.TextColumn;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -40,29 +41,36 @@ public class LikeExpression extends ConditionalExpression {
   private void check(String pattern, Operator operator, String escape) {
     if (operator != Operator.LIKE && operator != Operator.NOT_LIKE) {
       throw new IllegalArgumentException(
-          "Operator must be like or not-like. Operator: " + operator);
+          CoreError.LIKE_CHECK_ERROR_OPERATOR_MUST_BE_LIKE_OR_NOT_LIKE.buildMessage(operator));
     }
 
     if (escape == null || escape.length() > 1) {
       throw new IllegalArgumentException(
-          "Escape character must be a string of a single character or an empty string");
+          CoreError
+              .LIKE_CHECK_ERROR_ESCAPE_CHARACTER_MUST_BE_STRING_OF_SINGLE_CHARACTER_OR_EMPTY_STRING
+              .buildMessage());
     }
 
     if (pattern == null) {
-      throw new IllegalArgumentException("LIKE pattern must not be null");
+      throw new IllegalArgumentException(
+          CoreError.LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_BE_NULL.buildMessage());
     }
 
-    Character escapeChar = escape.length() == 0 ? null : escape.charAt(0);
+    Character escapeChar = escape.isEmpty() ? null : escape.charAt(0);
     char[] chars = pattern.toCharArray();
     for (int i = 0; i < chars.length; i++) {
       char c = chars[i];
       if (escapeChar != null && c == escapeChar && i + 1 < chars.length) {
         char nextChar = chars[++i];
         if (nextChar != '_' && nextChar != '%' && nextChar != escapeChar) {
-          throw new IllegalArgumentException("LIKE pattern must not include only escape character");
+          throw new IllegalArgumentException(
+              CoreError.LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_INCLUDE_ONLY_ESCAPE_CHARACTER
+                  .buildMessage());
         }
       } else if (escapeChar != null && c == escapeChar) {
-        throw new IllegalArgumentException("LIKE pattern must not end with escape character");
+        throw new IllegalArgumentException(
+            CoreError.LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_END_WITH_ESCAPE_CHARACTER
+                .buildMessage());
       }
     }
   }

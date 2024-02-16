@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.common.error.CoreError;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -30,7 +31,8 @@ public final class RdbEngineFactory {
     } else if (jdbcUrl.startsWith("jdbc:sqlite:")) {
       return new RdbEngineSqlite();
     } else {
-      throw new IllegalArgumentException("The rdb engine is not supported: " + jdbcUrl);
+      throw new IllegalArgumentException(
+          CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(jdbcUrl));
     }
   }
 }

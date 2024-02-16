@@ -13,6 +13,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -72,7 +73,8 @@ public class JdbcService {
               Optional.of(
                   new ResultInterpreter(get.getProjections(), tableMetadata).interpret(resultSet));
           if (resultSet.next()) {
-            throw new IllegalArgumentException("Please use scan() for non-exact match selection");
+            throw new IllegalArgumentException(
+                CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
           }
           return ret;
         }
@@ -202,7 +204,7 @@ public class JdbcService {
 
   public boolean mutate(List<? extends Mutation> mutations, Connection connection)
       throws SQLException, ExecutionException {
-    checkArgument(mutations.size() != 0);
+    checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
     operationChecker.check(mutations);
 
     for (Mutation mutation : mutations) {

@@ -13,6 +13,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -44,26 +45,28 @@ public class OperationChecker {
     if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
       if (get.getPartitionKey().size() != 1) {
         throw new IllegalArgumentException(
-            "Only a single column index is supported. Operation: " + get);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED.buildMessage(
+                get));
       }
 
       String name = get.getPartitionKey().getColumns().get(0).getName();
       if (!metadata.getSecondaryIndexNames().contains(name)) {
         throw new IllegalArgumentException(
-            "The column of the specified index key is not indexed. Operation: " + get);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(get));
       }
 
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(get.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
-            "The index key is not properly specified. Operation: " + get);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_INDEX_KEY_NOT_PROPERLY_SPECIFIED.buildMessage(
+                get));
       }
 
       // The following check is not needed when we use GetWithIndex. But we need to keep it for
       // backward compatibility. We will remove it in release 5.0.0.
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
-            "Clustering keys cannot be specified when using an index. Operation: " + get);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(get));
       }
       return;
     }
@@ -84,31 +87,33 @@ public class OperationChecker {
     if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
       if (scan.getPartitionKey().size() != 1) {
         throw new IllegalArgumentException(
-            "Only a single column index is supported. Operation: " + scan);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED.buildMessage(
+                scan));
       }
 
       String name = scan.getPartitionKey().getColumns().get(0).getName();
       if (!metadata.getSecondaryIndexNames().contains(name)) {
         throw new IllegalArgumentException(
-            "The column of the specified index key is not indexed. Operation: " + scan);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(scan));
       }
 
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(scan.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
-            "The index key is not properly specified. Operation: " + scan);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_INDEX_KEY_NOT_PROPERLY_SPECIFIED.buildMessage(
+                scan));
       }
 
       // The following checks are not needed when we use ScanWithIndex. But we need to keep them for
       // backward compatibility. We will remove them in release 5.0.0.
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
-            "Clustering keys cannot be specified when using an index. Operation: " + scan);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(scan));
       }
 
       if (!scan.getOrderings().isEmpty()) {
         throw new IllegalArgumentException(
-            "Orderings cannot be specified when using an index. Operation: " + scan);
+            CoreError.OPERATION_CHECK_ERROR_INDEX_ORDERING_SPECIFIED.buildMessage(scan));
       }
       return;
     }
@@ -118,7 +123,7 @@ public class OperationChecker {
     checkClusteringKeys(scan, metadata);
 
     if (scan.getLimit() < 0) {
-      throw new IllegalArgumentException("The limit cannot be negative. Operation: " + scan);
+      throw new IllegalArgumentException(CoreError.OPERATION_CHECK_ERROR_LIMIT.buildMessage(scan));
     }
 
     checkOrderings(scan, metadata);
@@ -127,7 +132,7 @@ public class OperationChecker {
   private void check(ScanAll scanAll) throws ExecutionException {
     if (!config.isCrossPartitionScanEnabled()) {
       throw new IllegalArgumentException(
-          "Cross-partition scan is not enabled. Operation: " + scanAll);
+          CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN.buildMessage(scanAll));
     }
 
     TableMetadata metadata = getTableMetadata(scanAll);
@@ -135,18 +140,19 @@ public class OperationChecker {
     checkProjections(scanAll, metadata);
 
     if (scanAll.getLimit() < 0) {
-      throw new IllegalArgumentException("The limit cannot be negative. Operation: " + scanAll);
+      throw new IllegalArgumentException(
+          CoreError.OPERATION_CHECK_ERROR_LIMIT.buildMessage(scanAll));
     }
 
     if (!config.isCrossPartitionScanOrderingEnabled() && !scanAll.getOrderings().isEmpty()) {
       throw new IllegalArgumentException(
-          "Cross-partition scan ordering is not enabled. Operation: " + scanAll);
+          CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
     checkOrderings(scanAll, metadata);
 
     if (!config.isCrossPartitionScanFilteringEnabled() && !scanAll.getConjunctions().isEmpty()) {
       throw new IllegalArgumentException(
-          "Cross-partition scan filtering is not enabled. Operation: " + scanAll);
+          CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_FILTERING.buildMessage(scanAll));
     }
     checkConjunctions(scanAll, metadata);
   }
@@ -155,10 +161,7 @@ public class OperationChecker {
     for (String projection : selection.getProjections()) {
       if (!metadata.getColumnNames().contains(projection)) {
         throw new IllegalArgumentException(
-            "The specified projection is not found. Invalid projection: "
-                + projection
-                + ", Operation: "
-                + selection);
+            CoreError.OPERATION_CHECK_ERROR_PROJECTION.buildMessage(projection, selection));
       }
     }
   }
@@ -173,7 +176,7 @@ public class OperationChecker {
       Key startClusteringKey = scan.getStartClusteringKey().get();
       Key endClusteringKey = scan.getEndClusteringKey().get();
       Supplier<String> message =
-          () -> "The clustering key boundary is not properly specified. Operation: " + scan;
+          () -> CoreError.OPERATION_CHECK_ERROR_CLUSTERING_KEY_BOUNDARY.buildMessage(scan);
 
       if (startClusteringKey.size() != endClusteringKey.size()) {
         throw new IllegalArgumentException(message.get());
@@ -195,7 +198,7 @@ public class OperationChecker {
             ckey -> {
               if (!checkKey(ckey, metadata.getClusteringKeyNames(), true, metadata)) {
                 throw new IllegalArgumentException(
-                    "The start clustering key is not properly specified. Operation: " + scan);
+                    CoreError.OPERATION_CHECK_ERROR_START_CLUSTERING_KEY.buildMessage(scan));
               }
             });
   }
@@ -206,7 +209,7 @@ public class OperationChecker {
             ckey -> {
               if (!checkKey(ckey, metadata.getClusteringKeyNames(), true, metadata)) {
                 throw new IllegalArgumentException(
-                    "The end clustering key is not properly specified. Operation: " + scan);
+                    CoreError.OPERATION_CHECK_ERROR_END_CLUSTERING_KEY.buildMessage(scan));
               }
             });
   }
@@ -217,7 +220,8 @@ public class OperationChecker {
       return;
     }
 
-    Supplier<String> message = () -> "Orderings are not properly specified. Operation: " + scan;
+    Supplier<String> message =
+        () -> CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan);
 
     if (orderings.size() > metadata.getClusteringKeyNames().size()) {
       throw new IllegalArgumentException(message.get());
@@ -243,14 +247,12 @@ public class OperationChecker {
     }
   }
 
-  private void checkOrderings(ScanAll scan, TableMetadata metadata) {
-    for (Scan.Ordering ordering : scan.getOrderings()) {
+  private void checkOrderings(ScanAll scanAll, TableMetadata metadata) {
+    for (Scan.Ordering ordering : scanAll.getOrderings()) {
       if (!metadata.getColumnNames().contains(ordering.getColumnName())) {
         throw new IllegalArgumentException(
-            "The specified ordering column is not found. Invalid ordering: "
-                + ordering
-                + ", Operation: "
-                + scan);
+            CoreError.OPERATION_CHECK_ERROR_ORDERING_COLUMN_NOT_FOUND.buildMessage(
+                ordering, scanAll));
       }
     }
   }
@@ -271,7 +273,7 @@ public class OperationChecker {
         }
         if (!isValid) {
           throw new IllegalArgumentException(
-              "The condition is not properly specified. Operation: " + scan);
+              CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(scan));
         }
       }
     }
@@ -293,8 +295,9 @@ public class OperationChecker {
   protected TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
     TableMetadata metadata = tableMetadataManager.getTableMetadata(operation);
     if (metadata == null) {
+      assert operation.forFullTableName().isPresent();
       throw new IllegalArgumentException(
-          "The specified table is not found: " + operation.forFullTableName().get());
+          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
     }
     return metadata;
   }
@@ -303,10 +306,7 @@ public class OperationChecker {
     for (Column<?> column : put.getColumns().values()) {
       if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
-            "The column value is not properly specified. Invalid column: "
-                + column
-                + ", Operation: "
-                + put);
+            CoreError.OPERATION_CHECK_ERROR_INVALID_COLUMN.buildMessage(column, put));
       }
     }
   }
@@ -319,14 +319,14 @@ public class OperationChecker {
             c -> {
               if (!new ConditionChecker(metadata).check(mutation.getCondition().get(), isPut)) {
                 throw new IllegalArgumentException(
-                    "The condition is not properly specified. Operation: " + mutation);
+                    CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(mutation));
               }
             });
   }
 
   public void check(List<? extends Mutation> mutations) throws ExecutionException {
     if (mutations.isEmpty()) {
-      throw new IllegalArgumentException("The mutations are empty");
+      throw new IllegalArgumentException(CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
     }
 
     Mutation first = mutations.get(0);
@@ -335,7 +335,7 @@ public class OperationChecker {
           || !mutation.forTable().equals(first.forTable())
           || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
         throw new IllegalArgumentException(
-            "Mutations that span multi-partition are not supported. Mutations: " + mutations);
+            CoreError.OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION.buildMessage(mutations));
       }
     }
 
@@ -357,13 +357,13 @@ public class OperationChecker {
   private void checkPartitionKey(Operation operation, TableMetadata metadata) {
     if (!checkKey(operation.getPartitionKey(), metadata.getPartitionKeyNames(), false, metadata)) {
       throw new IllegalArgumentException(
-          "The partition key is not properly specified. Operation: " + operation);
+          CoreError.OPERATION_CHECK_ERROR_PARTITION_KEY.buildMessage(operation));
     }
   }
 
   private void checkClusteringKey(Operation operation, TableMetadata metadata) {
     Supplier<String> message =
-        () -> "The clustering key is not properly specified. Operation: " + operation;
+        () -> CoreError.OPERATION_CHECK_ERROR_CLUSTERING_KEY.buildMessage(operation);
 
     if (!metadata.getClusteringKeyNames().isEmpty() && !operation.getClusteringKey().isPresent()) {
       throw new IllegalArgumentException(message.get());

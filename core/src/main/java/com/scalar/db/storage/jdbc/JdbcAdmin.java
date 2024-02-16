@@ -13,6 +13,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -81,7 +82,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
-      throw new ExecutionException("The schema name is not acceptable: " + namespace);
+      throw new IllegalArgumentException(
+          CoreError.JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE.buildMessage(namespace));
     }
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.createSchemaSqls(namespace));
@@ -113,9 +115,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String table,
       TableMetadata metadata,
       boolean ifNotExists)
-      throws ExecutionException, SQLException {
+      throws SQLException {
     if (!rdbEngine.isValidNamespaceOrTableName(table)) {
-      throw new ExecutionException("The table name is not acceptable: " + table);
+      throw new IllegalArgumentException(
+          CoreError.JDBC_TABLE_NAME_NOT_ACCEPTABLE.buildMessage(table));
     }
     String createTableStatement = "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
     // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
@@ -498,13 +501,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     if (!rdbEngine.isImportable()) {
       throw new UnsupportedOperationException(
-          "Importing table is not allowed in this storage: " + rdbEngine.getClass().getName());
+          CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
     }
 
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
-            "The " + getFullTableName(namespace, table) + " table does not exist");
+            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
@@ -517,7 +520,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       if (!primaryKeyExists) {
         throw new IllegalStateException(
-            "The " + getFullTableName(namespace, table) + " table must have a primary key");
+            CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
+                getFullTableName(namespace, table)));
       }
 
       resultSet = metadata.getColumns(null, namespace, table, "%");
@@ -762,7 +766,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void repairNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
-      throw new ExecutionException("The schema name is not acceptable: " + namespace);
+      throw new IllegalArgumentException(
+          CoreError.JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE.buildMessage(namespace));
     }
     try (Connection connection = dataSource.getConnection()) {
       createSchemaIfNotExists(connection, namespace);
@@ -821,7 +826,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
-            "The " + getFullTableName(namespace, table) + " table does not exist");
+            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
 
       String addNewColumnStatement =

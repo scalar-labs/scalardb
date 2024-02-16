@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.PutBuilder.BuildableFromExisting;
 import com.scalar.db.api.PutBuilder.Namespace;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -705,7 +706,7 @@ public class Put extends Mutation {
 
   private void checkIfExists(String name) {
     if (!containsColumn(name)) {
-      throw new IllegalArgumentException(name + " doesn't exist");
+      throw new IllegalArgumentException(CoreError.COLUMN_NOT_FOUND.buildMessage(name));
     }
   }
 

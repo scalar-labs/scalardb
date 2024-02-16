@@ -10,6 +10,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -61,7 +62,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void createCoordinatorTables(Map<String, String> options) throws ExecutionException {
     if (coordinatorTablesExist()) {
-      throw new IllegalArgumentException("Coordinator tables already exist");
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_ALREADY_EXIST.buildMessage());
     }
 
     admin.createNamespace(coordinatorNamespace, options);
@@ -71,7 +73,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void dropCoordinatorTables() throws ExecutionException {
     if (!coordinatorTablesExist()) {
-      throw new IllegalArgumentException("Coordinator tables do not exist");
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND.buildMessage());
     }
 
     admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
@@ -81,7 +84,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void truncateCoordinatorTables() throws ExecutionException {
     if (!coordinatorTablesExist()) {
-      throw new IllegalArgumentException("Coordinator tables do not exist");
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND.buildMessage());
     }
 
     admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
@@ -224,7 +228,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       throw new IllegalArgumentException(
-          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
     }
     String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
 
@@ -247,7 +251,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     TableMetadata tableMetadata = admin.getTableMetadata(namespace, table);
     if (tableMetadata != null) {
       throw new IllegalArgumentException(
-          "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)));
     }
     tableMetadata = admin.getImportTableMetadata(namespace, table);
 
@@ -283,9 +288,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   private void checkNamespace(String namespace) {
     if (namespace.equals(coordinatorNamespace)) {
       throw new IllegalArgumentException(
-          "Namespace "
-              + namespace
-              + " is reserved. Any operations on this namespace are not allowed.");
+          CoreError.CONSENSUS_COMMIT_COORDINATOR_NAMESPACE_SPECIFIED.buildMessage(namespace));
     }
   }
 }

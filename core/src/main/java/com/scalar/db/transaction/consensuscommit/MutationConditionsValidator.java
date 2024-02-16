@@ -11,6 +11,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Column;
 import java.util.List;
@@ -92,18 +93,16 @@ public class MutationConditionsValidator {
   private void throwWhenRecordDoesNotExist(MutationCondition condition)
       throws UnsatisfiedConditionException {
     throw new UnsatisfiedConditionException(
-        "The record does not exist so the "
-            + condition.getClass().getSimpleName()
-            + " condition is not satisfied",
+        CoreError.CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_NOT_EXISTS.buildMessage(
+            condition.getClass().getSimpleName()),
         transactionId);
   }
 
   private void throwWhenRecordExists(MutationCondition condition)
       throws UnsatisfiedConditionException {
     throw new UnsatisfiedConditionException(
-        "The record exists so the "
-            + condition.getClass().getSimpleName()
-            + " condition is not satisfied",
+        CoreError.CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_EXISTS.buildMessage(
+            condition.getClass().getSimpleName()),
         transactionId);
   }
 
@@ -116,9 +115,8 @@ public class MutationConditionsValidator {
           conditionalExpression.getColumn(),
           conditionalExpression.getOperator())) {
         throw new UnsatisfiedConditionException(
-            "The condition on the column '"
-                + conditionalExpression.getColumn().getName()
-                + "' is not satisfied",
+            CoreError.CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED.buildMessage(
+                conditionalExpression.getColumn().getName()),
             transactionId);
       }
     }

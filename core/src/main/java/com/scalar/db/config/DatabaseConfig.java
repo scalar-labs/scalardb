@@ -8,6 +8,7 @@ import static com.scalar.db.config.ConfigUtils.getString;
 import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableList;
+import com.scalar.db.common.error.CoreError;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
@@ -97,7 +98,7 @@ public class DatabaseConfig {
     contactPoints =
         ImmutableList.copyOf(getStringArray(getProperties(), CONTACT_POINTS, new String[0]));
     contactPort = getInt(getProperties(), CONTACT_PORT, 0);
-    checkArgument(contactPort >= 0);
+    checkArgument(contactPort >= 0, CoreError.INVALID_CONTACT_PORT.buildMessage());
     username = getString(getProperties(), USERNAME, null);
     password = getString(getProperties(), PASSWORD, null);
     transactionManager = getString(getProperties(), TRANSACTION_MANAGER, "consensus-commit");
@@ -115,8 +116,9 @@ public class DatabaseConfig {
     if (!crossPartitionScanEnabled
         && (crossPartitionScanFilteringEnabled || crossPartitionScanOrderingEnabled)) {
       throw new IllegalArgumentException(
-          CROSS_PARTITION_SCAN
-              + " must be enabled to use cross-partition scan with filtering or ordering");
+          CoreError
+              .CROSS_PARTITION_SCAN_MUST_BE_ENABLED_TO_USE_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING
+              .buildMessage());
     }
 
     systemNamespaceName =

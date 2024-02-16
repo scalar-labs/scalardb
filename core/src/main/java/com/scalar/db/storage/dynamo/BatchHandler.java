@@ -7,6 +7,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -66,7 +67,7 @@ public class BatchHandler {
    */
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
     if (mutations.size() > 100) {
-      throw new IllegalArgumentException("DynamoDB cannot batch more than 100 mutations at once");
+      throw new IllegalArgumentException(CoreError.DYNAMO_BATCH_SIZE_EXCEEDED.buildMessage());
     }
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(mutations.get(0));
@@ -83,7 +84,7 @@ public class BatchHandler {
       boolean allReasonsAreTransactionConflicts = true;
       for (CancellationReason reason : e.cancellationReasons()) {
         if (reason.code().equals("ConditionalCheckFailed")) {
-          throw new NoMutationException("No mutation was applied", e);
+          throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
         }
         if (!reason.code().equals("TransactionConflict") && !reason.code().equals("None")) {
           allReasonsAreTransactionConflicts = false;
@@ -92,11 +93,17 @@ public class BatchHandler {
       if (allReasonsAreTransactionConflicts) {
         // If all the reasons of the cancellation are "TransactionConflict", throw
         // RetriableExecutionException
-        throw new RetriableExecutionException(e.getMessage(), e);
+        throw new RetriableExecutionException(
+            CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
+                e.getMessage(), e),
+            e);
       }
-      throw new ExecutionException(e.getMessage(), e);
+
+      throw new ExecutionException(
+          CoreError.DYNAMO_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } catch (DynamoDbException e) {
-      throw new ExecutionException(e.getMessage(), e);
+      throw new ExecutionException(
+          CoreError.DYNAMO_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -186,8 +193,7 @@ public class BatchHandler {
               } else if (m instanceof com.scalar.db.api.Delete) {
                 return copyAndAppendNamespacePrefix((com.scalar.db.api.Delete) m);
               } else {
-                throw new IllegalArgumentException(
-                    "Unexpected mutation type: " + m.getClass().getName());
+                throw new AssertionError("Unexpected mutation type: " + m.getClass().getName());
               }
             })
         .collect(Collectors.toList());

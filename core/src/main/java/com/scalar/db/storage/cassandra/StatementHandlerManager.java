@@ -70,7 +70,7 @@ public class StatementHandlerManager {
       return delete();
     }
     // never comes here usually
-    throw new IllegalArgumentException("Unexpected operation was given");
+    throw new AssertionError("Unexpected operation was given");
   }
 
   @Nonnull
@@ -110,7 +110,7 @@ public class StatementHandlerManager {
 
     public StatementHandlerManager build() {
       if (select == null || insert == null || update == null || delete == null) {
-        throw new IllegalArgumentException("Please set all the statement handlers");
+        throw new IllegalStateException("Please set all the statement handlers");
       }
       return new StatementHandlerManager(this);
     }

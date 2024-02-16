@@ -66,7 +66,7 @@ public class TransactionException extends Exception {
       return message;
     }
 
-    String suffix = ". transaction ID: " + transactionId;
+    String suffix = ". Transaction ID: " + transactionId;
 
     // To avoid a duplicated transaction ID, check if the message already has a transaction ID
     if (!message.endsWith(suffix)) {

@@ -14,6 +14,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.EmptyScanner;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -89,9 +90,9 @@ public class SelectStatementHandler {
       } else {
         return executeScan((Scan) selection, tableMetadata);
       }
-
     } catch (DynamoDbException e) {
-      throw new ExecutionException(e.getMessage(), e);
+      throw new ExecutionException(
+          CoreError.DYNAMO_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
   }
 

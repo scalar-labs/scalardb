@@ -21,6 +21,8 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
+import com.scalar.db.common.error.CoreError;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
@@ -51,6 +53,18 @@ public class SelectStatementHandler extends StatementHandler {
    */
   public SelectStatementHandler(Session session) {
     super(session);
+  }
+
+  @Override
+  @Nonnull
+  public ResultSet handle(Operation operation) throws ExecutionException {
+    try {
+      return handleInternal(operation);
+    } catch (RuntimeException e) {
+      logger.error(e.getMessage(), e);
+      throw new ExecutionException(
+          CoreError.CASSANDRA_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
+    }
   }
 
   @Override

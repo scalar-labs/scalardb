@@ -1,5 +1,7 @@
 package com.scalar.db.api;
 
+import com.scalar.db.common.error.CoreError;
+
 public enum TransactionState {
   PREPARED(1),
   DELETED(2),
@@ -23,6 +25,7 @@ public enum TransactionState {
         return state;
       }
     }
-    throw new IllegalArgumentException("Invalid id specified");
+    throw new IllegalArgumentException(
+        CoreError.TRANSACTION_STATE_INSTANTIATION_ERROR_INVALID_ID.buildMessage(id));
   }
 }

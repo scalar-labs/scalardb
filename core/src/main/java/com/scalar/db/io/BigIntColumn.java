@@ -2,6 +2,7 @@ package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import com.scalar.db.common.error.CoreError;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -32,7 +33,8 @@ public class BigIntColumn implements Column<Long> {
   private BigIntColumn(String name, long value, boolean hasNullValue) {
     this.name = Objects.requireNonNull(name);
     if (value < MIN_VALUE || value > MAX_VALUE) {
-      throw new IllegalArgumentException("Out of range column value for BigInt. value: " + value);
+      throw new IllegalArgumentException(
+          CoreError.OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT.buildMessage(value));
     }
     this.value = value;
     this.hasNullValue = hasNullValue;

@@ -5,6 +5,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ public abstract class AbstractResult implements Result {
 
   protected void checkIfExists(String name) {
     if (!contains(name)) {
-      throw new IllegalArgumentException(name + " doesn't exist");
+      throw new IllegalArgumentException(CoreError.COLUMN_NOT_FOUND.buildMessage(name));
     }
   }
 

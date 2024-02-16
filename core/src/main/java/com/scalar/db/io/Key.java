@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -275,7 +276,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return BlobColumn.of(name, (ByteBuffer) value);
     } else {
       throw new IllegalArgumentException(
-          "Unsupported type, name: " + name + ", type: " + value.getClass().getName());
+          CoreError.KEY_BUILD_ERROR_UNSUPPORTED_TYPE.buildMessage(
+              name, value.getClass().getName()));
     }
   }
 

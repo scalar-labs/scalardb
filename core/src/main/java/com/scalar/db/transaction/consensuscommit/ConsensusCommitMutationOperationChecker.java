@@ -14,6 +14,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.checker.ConditionChecker;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -32,7 +33,7 @@ public class ConsensusCommitMutationOperationChecker {
         transactionTableMetadataManager.getTransactionTableMetadata(operation);
     if (metadata == null) {
       throw new IllegalArgumentException(
-          "The specified table is not found: " + operation.forFullTableName().get());
+          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
     }
     return metadata;
   }
@@ -57,7 +58,8 @@ public class ConsensusCommitMutationOperationChecker {
     for (String column : put.getContainedColumnNames()) {
       if (metadata.getTransactionMetaColumnNames().contains(column)) {
         throw new IllegalArgumentException(
-            "Mutating transaction metadata columns is not allowed. column: " + column);
+            CoreError.CONSENSUS_COMMIT_MUTATING_TRANSACTION_METADATA_COLUMNS_NOT_ALLOWED
+                .buildMessage(put.forFullTableName().get(), column));
       }
     }
 
@@ -70,9 +72,8 @@ public class ConsensusCommitMutationOperationChecker {
         || condition instanceof PutIfNotExists
         || condition instanceof PutIfExists)) {
       throw new IllegalArgumentException(
-          "A "
-              + condition.getClass().getSimpleName()
-              + " condition is not allowed on Put operation");
+          CoreError.CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_PUT.buildMessage(
+              condition.getClass().getSimpleName()));
     }
     checkConditionIsNotTargetingMetadataColumns(condition, metadata);
     ConditionChecker conditionChecker = createConditionChecker(metadata.getTableMetadata());
@@ -87,9 +88,8 @@ public class ConsensusCommitMutationOperationChecker {
 
     if (!(condition instanceof DeleteIf || condition instanceof DeleteIfExists)) {
       throw new IllegalArgumentException(
-          "A "
-              + condition.getClass().getSimpleName()
-              + " condition is not allowed on Delete operation");
+          CoreError.CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_DELETE.buildMessage(
+              condition.getClass().getSimpleName()));
     }
     TransactionTableMetadata transactionMetadata = getTableMetadata(delete);
     checkConditionIsNotTargetingMetadataColumns(condition, transactionMetadata);
@@ -104,8 +104,8 @@ public class ConsensusCommitMutationOperationChecker {
       String column = expression.getColumn().getName();
       if (metadata.getTransactionMetaColumnNames().contains(column)) {
         throw new IllegalArgumentException(
-            "The condition is not allowed to target transaction metadata columns. column: "
-                + column);
+            CoreError.CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_TO_TARGET_TRANSACTION_METADATA_COLUMNS
+                .buildMessage(column));
       }
     }
   }

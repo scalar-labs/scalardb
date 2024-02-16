@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo.bytes;
 import static com.scalar.db.storage.dynamo.bytes.BytesUtils.mask;
 
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.BlobValue;
 import java.nio.ByteBuffer;
 import javax.annotation.concurrent.ThreadSafe;
@@ -29,7 +30,8 @@ public class BlobBytesEncoder implements BytesEncoder<BlobValue> {
       for (byte b : value.getAsBytes().get()) {
         if (b == TERM) {
           throw new IllegalArgumentException(
-              "0x00 bytes not accepted in blob values in DESC order");
+              CoreError.DYNAMO_ENCODER_0X00_BYTES_NOT_ACCEPTED_IN_BLOB_VALUES_IN_DESC_ORDER
+                  .buildMessage());
         }
       }
     }

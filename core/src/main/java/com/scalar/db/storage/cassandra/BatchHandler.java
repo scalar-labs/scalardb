@@ -10,6 +10,7 @@ import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.WriteTimeoutException;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -57,22 +58,24 @@ public class BatchHandler {
       ResultSet results = execute(mutations);
       // it's for conditional update. non-conditional update always return true
       if (!results.wasApplied()) {
-        throw new NoMutationException("No mutation was applied");
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
       }
     } catch (WriteTimeoutException e) {
       logger.warn("Write timeout happened during batch mutate operation", e);
       WriteType writeType = e.getWriteType();
       if (writeType == WriteType.BATCH_LOG) {
-        throw new RetriableExecutionException("Logging failed in the batch", e);
+        throw new RetriableExecutionException(
+            CoreError.CASSANDRA_LOGGING_FAILED_IN_BATCH.buildMessage(), e);
       } else if (writeType == WriteType.BATCH) {
         logger.warn("Logging succeeded, but mutations in the batch partially failed", e);
       } else {
         throw new RetriableExecutionException(
-            "operation failed in the batch with type " + writeType, e);
+            CoreError.CASSANDRA_OPERATION_FAILED_IN_BATCH.buildMessage(writeType), e);
       }
     } catch (RuntimeException e) {
       logger.warn(e.getMessage(), e);
-      throw new RetriableExecutionException(e.getMessage(), e);
+      throw new RetriableExecutionException(
+          CoreError.CASSANDRA_ERROR_OCCURRED_IN_BATCH.buildMessage(e.getMessage()), e);
     }
   }
 

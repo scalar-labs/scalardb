@@ -82,12 +82,15 @@ public class ConsensusCommitMutationOperationCheckerTest {
   public void checkForPut_ThatMutatesMetadataColumns_ShouldThrowIllegalArgumentException()
       throws ExecutionException {
     // Arrange
+    String fullTableName = "ns.tbl";
     Set<String> columns = ImmutableSet.of(ANY_COL_1, ANY_METADATA_COL_1, ANY_COL_2);
+    when(put.forFullTableName()).thenReturn(Optional.of(fullTableName));
     when(put.getContainedColumnNames()).thenReturn(columns);
 
     // Act Assert
     Assertions.assertThatThrownBy(() -> checker.check(put))
         .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(fullTableName)
         .hasMessageContaining(ANY_METADATA_COL_1);
     verify(metadataManager).getTransactionTableMetadata(put);
   }

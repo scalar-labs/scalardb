@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
@@ -159,7 +160,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isConflictError(SQLException e) {
+  public boolean isConflict(SQLException e) {
     // Error number: 1213; Symbol: ER_LOCK_DEADLOCK; SQLSTATE: 40001
     // Message: Deadlock found when trying to get lock; try restarting transaction
 
@@ -194,8 +195,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case TEXT:
         return "LONGTEXT";
       default:
-        assert false;
-        return null;
+        throw new AssertionError();
     }
   }
 
@@ -218,8 +218,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case BIT:
         if (columnSize != 1) {
           throw new IllegalArgumentException(
-              String.format(
-                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnSize, columnDescription));
         }
         return DataType.BOOLEAN;
       case TINYINT:
@@ -241,7 +241,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case BIGINT:
         if (typeName.toUpperCase().endsWith("UNSIGNED")) {
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         logger.warn(
             "Data type that may be smaller than that of underlying database is assigned: {} (MySQL {} to ScalarDB BIGINT)",
@@ -258,7 +259,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
         if (!typeName.toUpperCase().endsWith("CHAR") && !typeName.toUpperCase().endsWith("TEXT")) {
           // to exclude ENUM, SET, JSON, etc.
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         if (!typeName.equalsIgnoreCase("LONGTEXT")) {
           logger.info(
@@ -273,7 +275,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
         if (!typeName.toUpperCase().endsWith("BINARY")
             && !typeName.toUpperCase().endsWith("BLOB")) {
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         if (!typeName.equalsIgnoreCase("LONGBLOB")) {
           logger.info(
@@ -284,7 +287,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
     }
   }
 

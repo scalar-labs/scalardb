@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ImmutableLinkedHashSet;
 import java.util.HashMap;
@@ -230,27 +231,28 @@ public class TableMetadata {
 
     public TableMetadata build() {
       if (columns.isEmpty()) {
-        throw new IllegalStateException("Need to specify one or more columns");
+        throw new IllegalStateException(
+            CoreError.TABLE_METADATA_BUILD_ERROR_NO_COLUMNS_SPECIFIED.buildMessage());
       }
       if (partitionKeyNames.isEmpty()) {
-        throw new IllegalStateException("Need to specify one or more partition keys");
+        throw new IllegalStateException(
+            CoreError.TABLE_METADATA_BUILD_ERROR_NO_PARTITION_KEYS_SPECIFIED.buildMessage());
       }
       partitionKeyNames.forEach(
           k -> {
             if (!columns.containsKey(k)) {
               throw new IllegalStateException(
-                  "Need to specify the column definition of "
-                      + k
-                      + " specified as a partition key");
+                  CoreError.TABLE_METADATA_BUILD_ERROR_PARTITION_KEY_COLUMN_DEFINITION_NOT_SPECIFIED
+                      .buildMessage(k));
             }
           });
       clusteringKeyNames.forEach(
           k -> {
             if (!columns.containsKey(k)) {
               throw new IllegalStateException(
-                  "Need to specify the column definition of "
-                      + k
-                      + " specified as a clustering key");
+                  CoreError
+                      .TABLE_METADATA_BUILD_ERROR_CLUSTERING_KEY_COLUMN_DEFINITION_NOT_SPECIFIED
+                      .buildMessage(k));
             }
           });
       return new TableMetadata(

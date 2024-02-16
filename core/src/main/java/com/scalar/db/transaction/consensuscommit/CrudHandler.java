@@ -13,6 +13,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.util.ScalarDbUtils;
@@ -89,7 +90,10 @@ public class CrudHandler {
       return;
     }
     throw new UncommittedRecordException(
-        get, result.get(), "This record needs recovery", snapshot.getId());
+        get,
+        result.get(),
+        CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
+        snapshot.getId());
   }
 
   private Optional<Result> createGetResult(Snapshot.Key key, List<String> projections)
@@ -136,7 +140,10 @@ public class CrudHandler {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
           throw new UncommittedRecordException(
-              scan, result, "The record needs recovery", snapshot.getId());
+              scan,
+              result,
+              CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
+              snapshot.getId());
         }
 
         Snapshot.Key key = new Snapshot.Key(scan, r);
@@ -176,9 +183,9 @@ public class CrudHandler {
     if (put.getCondition().isPresent()
         && (!put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key))) {
       throw new IllegalArgumentException(
-          "Put cannot have a condition when the target record is unread and implicit pre-read is disabled."
-              + " Please read the target record beforehand or enable implicit pre-read: "
-              + put);
+          CoreError
+              .CONSENSUS_COMMIT_PUT_CANNOT_HAVE_CONDITION_WHEN_TARGET_RECORD_UNREAD_AND_IMPLICIT_PRE_READ_DISABLED
+              .buildMessage(put));
     }
 
     if (put.getCondition().isPresent()) {
@@ -252,7 +259,8 @@ public class CrudHandler {
       get.withConsistency(Consistency.LINEARIZABLE);
       return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
-      throw new CrudException("Get failed", e, snapshot.getId());
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_GET_OPERATION_FAILED.buildMessage(), e, snapshot.getId());
     }
   }
 
@@ -269,7 +277,8 @@ public class CrudHandler {
       scan.withConsistency(Consistency.LINEARIZABLE);
       return storage.scan(scan);
     } catch (ExecutionException e) {
-      throw new CrudException("Scan failed", e, snapshot.getId());
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_SCAN_OPERATION_FAILED.buildMessage(), e, snapshot.getId());
     }
   }
 
@@ -279,12 +288,12 @@ public class CrudHandler {
           tableMetadataManager.getTransactionTableMetadata(namespace, table);
       if (metadata == null) {
         throw new IllegalArgumentException(
-            "The specified table is not found: "
-                + ScalarDbUtils.getFullTableName(namespace, table));
+            CoreError.TABLE_NOT_FOUND.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, table)));
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException("Getting a table metadata failed", e, snapshot.getId());
+      throw new CrudException(e.getMessage(), e, snapshot.getId());
     }
   }
 

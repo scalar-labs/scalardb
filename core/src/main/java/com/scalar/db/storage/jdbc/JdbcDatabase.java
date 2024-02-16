@@ -13,6 +13,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -85,7 +86,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection = dataSource.getConnection();
       return jdbcService.get(get, connection);
     } catch (SQLException e) {
-      throw new ExecutionException("Get operation failed", e);
+      throw new ExecutionException(
+          CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     } finally {
       close(connection);
     }
@@ -100,7 +102,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       return jdbcService.getScanner(scan, connection);
     } catch (SQLException e) {
       close(connection);
-      throw new ExecutionException("Scan operation failed", e);
+      throw new ExecutionException(
+          CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -111,10 +114,11 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       connection = dataSource.getConnection();
       if (!jdbcService.put(put, connection)) {
-        throw new NoMutationException("No mutation was applied");
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
       }
     } catch (SQLException e) {
-      throw new ExecutionException("Put operation failed", e);
+      throw new ExecutionException(
+          CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
       close(connection);
     }
@@ -132,10 +136,11 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       connection = dataSource.getConnection();
       if (!jdbcService.delete(delete, connection)) {
-        throw new NoMutationException("No mutation was applied");
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
       }
     } catch (SQLException e) {
-      throw new ExecutionException("Delete operation failed", e);
+      throw new ExecutionException(
+          CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
       close(connection);
     }
@@ -165,7 +170,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection.setAutoCommit(false);
     } catch (SQLException e) {
       close(connection);
-      throw new ExecutionException("Mutate operation failed", e);
+      throw new ExecutionException(
+          CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
 
     try {
@@ -173,9 +179,10 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         try {
           connection.rollback();
         } catch (SQLException e) {
-          throw new ExecutionException("Failed to rollback", e);
+          throw new ExecutionException(
+              CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
         }
-        throw new NoMutationException("No mutation was applied");
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
       } else {
         connection.commit();
       }
@@ -183,14 +190,18 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new ExecutionException("Failed to rollback", sqlException);
+        throw new ExecutionException(
+            CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
       }
-      if (rdbEngine.isConflictError(e)) {
+      if (rdbEngine.isConflict(e)) {
         // Since a mutate operation executes multiple put/delete operations in a transaction,
-        // conflicts can happen. Throw RetriableExecutionException in that case.
-        throw new RetriableExecutionException("Conflict happened in a mutate operation", e);
+        // conflicts can occur. Throw RetriableExecutionException in that case.
+        throw new RetriableExecutionException(
+            CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
+            e);
       }
-      throw new ExecutionException("Mutate operation failed", e);
+      throw new ExecutionException(
+          CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
       close(connection);
     }

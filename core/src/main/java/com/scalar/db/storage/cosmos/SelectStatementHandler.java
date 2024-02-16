@@ -16,6 +16,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.EmptyScanner;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.util.ScalarDbUtils;
@@ -63,14 +64,16 @@ public class SelectStatementHandler extends StatementHandler {
       } else {
         return executeQuery((Scan) selection, tableMetadata);
       }
-
     } catch (CosmosException e) {
       if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
         return new EmptyScanner();
       }
-      throw new ExecutionException(e.getMessage(), e);
+
+      throw new ExecutionException(
+          CoreError.COSMOS_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     } catch (RuntimeException e) {
-      throw new ExecutionException(e.getMessage(), e);
+      throw new ExecutionException(
+          CoreError.COSMOS_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
   }
 
