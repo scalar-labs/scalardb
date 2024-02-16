@@ -67,7 +67,7 @@ public class BatchHandler {
    */
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
     if (mutations.size() > 100) {
-      throw new IllegalArgumentException("DynamoDB cannot batch more than 100 mutations at once");
+      throw new IllegalArgumentException(CoreError.DYNAMO_BATCH_SIZE_EXCEEDED.buildMessage());
     }
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(mutations.get(0));

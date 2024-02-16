@@ -490,6 +490,8 @@ public enum CoreError implements ScalarDbError {
           + " before calling commit()",
       "",
       ""),
+  DYNAMO_BATCH_SIZE_EXCEEDED(
+      Category.USER_ERROR, "0108", "DynamoDB cannot batch more than 100 mutations at once", "", ""),
 
   //
   // Errors for the concurrency error category
