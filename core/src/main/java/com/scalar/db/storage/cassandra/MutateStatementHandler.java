@@ -44,7 +44,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
 
       Mutation mutation = (Mutation) operation;
       if (mutation.getCondition().isPresent() && !results.one().getBool(0)) {
-        throw new NoMutationException("No mutation was applied");
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
       }
       return results;
     } catch (WriteTimeoutException e) {

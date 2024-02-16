@@ -92,7 +92,7 @@ public class BatchHandler {
     int statusCode = exception.getSubStatusCode();
 
     if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
-      throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
+      throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), exception);
     } else if (statusCode == CosmosErrorCode.RETRY_WITH.get()) {
       throw new RetriableExecutionException(
           CoreError.COSMOS_RETRY_WITH_ERROR_OCCURRED_IN_MUTATION.buildMessage(
