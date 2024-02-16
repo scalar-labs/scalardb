@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -94,7 +95,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
       if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            "Currently, BLOB type is not supported for clustering keys in Cosmos DB");
+            CoreError.COSMOS_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(
+                clusteringKeyName));
       }
     }
   }
@@ -546,21 +548,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in Cosmos DB");
+    throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in Cosmos DB");
+    throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public void importTable(String namespace, String table, Map<String, String> options) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in Cosmos DB");
+    throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   private boolean metadataContainerExists() {

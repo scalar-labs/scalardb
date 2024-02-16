@@ -148,7 +148,7 @@ public class SimpleSelectQuery implements SelectQuery {
       case NOT_LIKE:
         return convert((LikeExpression) condition);
       default:
-        throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
+        throw new AssertionError("Unknown operator: " + condition.getOperator());
     }
   }
 

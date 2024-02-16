@@ -43,14 +43,7 @@ public abstract class StatementHandler {
    * @throws ExecutionException if the execution fails
    */
   @Nonnull
-  public ResultSet handle(Operation operation) throws ExecutionException {
-    try {
-      return handleInternal(operation);
-    } catch (RuntimeException e) {
-      logger.error(e.getMessage(), e);
-      throw new ExecutionException(e.getMessage(), e);
-    }
-  }
+  public abstract ResultSet handle(Operation operation) throws ExecutionException;
 
   /**
    * Executes the specified {@code Operation}

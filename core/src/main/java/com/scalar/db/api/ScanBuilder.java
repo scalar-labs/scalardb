@@ -26,6 +26,7 @@ import com.scalar.db.api.OperationBuilder.Where;
 import com.scalar.db.api.OperationBuilder.WhereAnd;
 import com.scalar.db.api.OperationBuilder.WhereOr;
 import com.scalar.db.api.Scan.Conjunction;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -858,37 +859,44 @@ public class ScanBuilder {
     private void checkNotScanWithIndexOrScanAll() {
       if (isScanWithIndex || isScanAll) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when scanning all the records of a database "
-                + "or scanning records of a database using a secondary index");
+            CoreError
+                .SCAN_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_SCANNING_ALL_RECORDS_OF_DATABASE_OR_SCANNING_RECORDS_OF_DATABASE_USING_INDEX
+                .buildMessage());
       }
     }
 
     private void checkScanWithIndex() {
       if (!isScanWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is supported only when scanning records of a database using a secondary index");
+            CoreError
+                .SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_SCANNING_RECORDS_OF_DATABASE_USING_INDEX
+                .buildMessage());
       }
     }
 
     private void checkNotScanWithIndex() {
       if (isScanWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when scanning records of a database using a secondary index");
+            CoreError
+                .SCAN_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_SCANNING_RECORDS_OF_DATABASE_USING_INDEX
+                .buildMessage());
       }
     }
 
     private void checkScanAll() {
       if (!isScanAll) {
         throw new UnsupportedOperationException(
-            "This operation is supported only when scanning all the records of a database");
+            CoreError
+                .SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_SCANNING_ALL_RECORDS_OF_DATABASE
+                .buildMessage());
       }
     }
 
     private void checkConditionsEmpty() {
       if (!conjunctions.isEmpty()) {
         throw new IllegalStateException(
-            "This operation is supported only when no conditions are specified at all. "
-                + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first");
+            CoreError.SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED
+                .buildMessage());
       }
     }
 

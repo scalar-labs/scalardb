@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -75,12 +76,16 @@ public class CommitHandler {
     try {
       prepareRecords(snapshot);
     } catch (NoMutationException e) {
-      throw new PreparationConflictException("Preparing record exists", e, snapshot.getId());
+      throw new PreparationConflictException(
+          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
     } catch (RetriableExecutionException e) {
       throw new PreparationConflictException(
-          "Conflict happened when preparing records", e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS.buildMessage(),
+          e,
+          snapshot.getId());
     } catch (ExecutionException e) {
-      throw new PreparationException("Preparing records failed", e, snapshot.getId());
+      throw new PreparationException(
+          CoreError.CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED.buildMessage(), e, snapshot.getId());
     }
   }
 
@@ -104,12 +109,13 @@ public class CommitHandler {
       // validation is executed when SERIALIZABLE with EXTRA_READ strategy is chosen.
       snapshot.toSerializableWithExtraRead(storage);
     } catch (ExecutionException e) {
-      throw new ValidationException("Validation failed", e, snapshot.getId());
+      throw new ValidationException(
+          CoreError.CONSENSUS_COMMIT_VALIDATION_FAILED.buildMessage(), e, snapshot.getId());
     }
   }
 
   public void commitState(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitConflictException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
       Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
@@ -123,20 +129,26 @@ public class CommitHandler {
           TransactionState state = s.get().getState();
           if (state.equals(TransactionState.ABORTED)) {
             rollbackRecords(snapshot);
-            throw new CommitException(
-                "Committing state in coordinator failed. the transaction is aborted", e, id);
+            throw new CommitConflictException(
+                CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(),
+                e,
+                id);
           }
         } else {
           throw new UnknownTransactionStatusException(
-              "Committing state failed with NoMutationException but the coordinator status doesn't exist",
+              CoreError
+                  .CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
+                  .buildMessage(),
               e,
               id);
         }
       } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException("Can't get the state", e1, id);
+        throw new UnknownTransactionStatusException(
+            CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), e1, id);
       }
     } catch (CoordinatorException e) {
-      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, id);
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(), e, id);
     }
   }
 
@@ -171,14 +183,18 @@ public class CommitHandler {
           return state.get().getState();
         }
         throw new UnknownTransactionStatusException(
-            "Aborting state failed with NoMutationException but the coordinator status doesn't exist",
+            CoreError
+                .CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
+                .buildMessage(),
             e,
             id);
       } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException("Can't get the state", e1, id);
+        throw new UnknownTransactionStatusException(
+            CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), e1, id);
       }
     } catch (CoordinatorException e) {
-      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, id);
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(), e, id);
     }
   }
 

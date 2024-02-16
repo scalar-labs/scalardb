@@ -6,7 +6,9 @@ import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.Admin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableFunction;
 import java.util.Objects;
 import java.util.Optional;
@@ -53,7 +55,8 @@ public class TableMetadataManager {
    */
   public TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
-      throw new IllegalArgumentException("Operation has no target namespace and table name");
+      throw new IllegalArgumentException(
+          CoreError.OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME.buildMessage(operation));
     }
     return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
   }
@@ -71,7 +74,10 @@ public class TableMetadataManager {
       TableKey key = new TableKey(namespace, table);
       return tableMetadataCache.get(key).orElse(null);
     } catch (java.util.concurrent.ExecutionException e) {
-      throw new ExecutionException("Getting a table metadata failed", e);
+      throw new ExecutionException(
+          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
     }
   }
 

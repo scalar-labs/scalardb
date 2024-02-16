@@ -9,6 +9,7 @@ import com.datastax.driver.core.exceptions.WriteTimeoutException;
 import com.datastax.driver.core.querybuilder.BuiltStatement;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -43,30 +44,36 @@ public abstract class MutateStatementHandler extends StatementHandler {
 
       Mutation mutation = (Mutation) operation;
       if (mutation.getCondition().isPresent() && !results.one().getBool(0)) {
-        throw new NoMutationException("No mutation was applied");
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
       }
       return results;
-
     } catch (WriteTimeoutException e) {
       logger.warn("Write timeout happened during mutate operation", e);
       if (e.getWriteType() == WriteType.CAS) {
         // retry needs to be done if applications need to do the operation exactly
-        throw new RetriableExecutionException("Paxos phase in CAS operation failed", e);
+        throw new RetriableExecutionException(
+            CoreError.CASSANDRA_WRITE_TIMEOUT_IN_PAXOS_PHASE_IN_MUTATION.buildMessage(), e);
       } else if (e.getWriteType() == WriteType.SIMPLE) {
         Mutation mutation = (Mutation) operation;
         if (mutation.getCondition().isPresent()) {
           // learn phase needs to be repaired (by re-reading)
-          throw new ReadRepairableExecutionException("Learn phase in CAS operation failed", e);
+          throw new ReadRepairableExecutionException(
+              CoreError.CASSANDRA_WRITE_TIMEOUT_IN_LEARN_PHASE_IN_MUTATION.buildMessage(), e);
         } else {
           // retry needs to be done if applications need to do the operation exactly
-          throw new RetriableExecutionException("Simple write operation failed", e);
+          throw new RetriableExecutionException(
+              CoreError.CASSANDRA_WRITE_TIMEOUT_SIMPLE_WRITE_OPERATION_FAILED_IN_MUTATION
+                  .buildMessage(),
+              e);
         }
       } else {
-        throw new ExecutionException("Something wrong because it is neither CAS nor SIMPLE", e);
+        throw new ExecutionException(
+            CoreError.CASSANDRA_WRITE_TIMEOUT_WITH_OTHER_WRITE_TYPE_IN_MUTATION.buildMessage(), e);
       }
     } catch (RuntimeException e) {
       logger.warn(e.getMessage(), e);
-      throw new RetriableExecutionException(e.getMessage(), e);
+      throw new RetriableExecutionException(
+          CoreError.CASSANDRA_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
   }
 

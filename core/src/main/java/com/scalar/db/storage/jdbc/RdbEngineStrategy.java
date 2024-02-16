@@ -23,7 +23,7 @@ public interface RdbEngineStrategy {
 
   boolean isUndefinedTableError(SQLException e);
 
-  boolean isConflictError(SQLException e);
+  boolean isConflict(SQLException e);
 
   String getDataTypeForEngine(DataType dataType);
 

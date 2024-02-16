@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.config.ConfigUtils.getString;
 
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -28,7 +29,7 @@ public class CosmosConfig {
     }
 
     if (databaseConfig.getContactPoints().isEmpty()) {
-      throw new IllegalArgumentException(DatabaseConfig.CONTACT_POINTS + " is empty");
+      throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
     endpoint = databaseConfig.getContactPoints().get(0);
     key = databaseConfig.getPassword().orElse(null);

@@ -13,6 +13,7 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.common.AbstractDistributedTransaction;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -65,9 +66,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       return jdbcService.get(get, connection);
     } catch (SQLException e) {
-      throw createCrudException(e, "Get operation failed");
+      throw createCrudException(e, CoreError.JDBC_TRANSACTION_GET_OPERATION_FAILED.buildMessage());
     } catch (ExecutionException e) {
-      throw new CrudException("Get operation failed", e, txId);
+      throw new CrudException(
+          CoreError.JDBC_TRANSACTION_GET_OPERATION_FAILED.buildMessage(), e, txId);
     }
   }
 
@@ -77,9 +79,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       return jdbcService.scan(scan, connection);
     } catch (SQLException e) {
-      throw createCrudException(e, "Scan operation failed");
+      throw createCrudException(e, CoreError.JDBC_TRANSACTION_SCAN_OPERATION_FAILED.buildMessage());
     } catch (ExecutionException e) {
-      throw new CrudException("Scan operation failed", e, txId);
+      throw new CrudException(
+          CoreError.JDBC_TRANSACTION_SCAN_OPERATION_FAILED.buildMessage(), e, txId);
     }
   }
 
@@ -92,18 +95,16 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         throwUnsatisfiedConditionException(put);
       }
     } catch (SQLException e) {
-      throw createCrudException(e, "Put operation failed");
+      throw createCrudException(e, CoreError.JDBC_TRANSACTION_PUT_OPERATION_FAILED.buildMessage());
     } catch (ExecutionException e) {
-      throw new CrudException("Put operation failed", e, txId);
+      throw new CrudException(
+          CoreError.JDBC_TRANSACTION_PUT_OPERATION_FAILED.buildMessage(), e, txId);
     }
   }
 
   @Override
   public void put(List<Put> puts) throws CrudException {
-    checkArgument(puts.size() != 0);
-    for (Put put : puts) {
-      put(put);
-    }
+    mutate(puts);
   }
 
   @Override
@@ -115,23 +116,22 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         throwUnsatisfiedConditionException(delete);
       }
     } catch (SQLException e) {
-      throw createCrudException(e, "Delete operation failed");
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_DELETE_OPERATION_FAILED.buildMessage());
     } catch (ExecutionException e) {
-      throw new CrudException("Delete operation failed", e, txId);
+      throw new CrudException(
+          CoreError.JDBC_TRANSACTION_DELETE_OPERATION_FAILED.buildMessage(), e, txId);
     }
   }
 
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
-    checkArgument(deletes.size() != 0);
-    for (Delete delete : deletes) {
-      delete(delete);
-    }
+    mutate(deletes);
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(mutations.size() != 0);
+    checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
         put((Put) mutation);
@@ -149,7 +149,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new UnknownTransactionStatusException("Failed to rollback", sqlException, txId);
+        throw new UnknownTransactionStatusException(
+            CoreError.JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS.buildMessage(),
+            sqlException,
+            txId);
       }
       throw createCommitException(e);
     } finally {
@@ -177,24 +180,12 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
               .collect(Collectors.joining(", "));
     }
 
-    StringBuilder exceptionMessage =
-        new StringBuilder("The ")
-            .append(condition.getClass().getSimpleName())
-            .append(" condition ");
-    if (conditionColumns != null) {
-      // To write 'column' in the plural or singular form
-      if (condition.getExpressions().size() > 1) {
-        exceptionMessage.append("targeting the columns '").append(conditionColumns).append("' ");
-      } else {
-        exceptionMessage.append("targeting the column '").append(conditionColumns).append("' ");
-      }
-    }
-    exceptionMessage
-        .append("of the ")
-        .append(mutation.getClass().getSimpleName())
-        .append(" operation is not satisfied");
-
-    throw new UnsatisfiedConditionException(exceptionMessage.toString(), txId);
+    throw new UnsatisfiedConditionException(
+        CoreError.JDBC_TRANSACTION_CONDITION_NOT_SATISFIED.buildMessage(
+            condition.getClass().getSimpleName(),
+            mutation.getClass().getSimpleName(),
+            conditionColumns == null ? "null" : "[" + conditionColumns + "]"),
+        txId);
   }
 
   @Override
@@ -207,7 +198,8 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
       connection.rollback();
     } catch (SQLException e) {
-      throw new RollbackException("Failed to rollback", e, txId);
+      throw new RollbackException(
+          CoreError.JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_FAILED.buildMessage(), e, txId);
     } finally {
       try {
         connection.close();
@@ -218,16 +210,19 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   }
 
   private CrudException createCrudException(SQLException e, String message) {
-    if (rdbEngine.isConflictError(e)) {
-      return new CrudConflictException("Conflict happened; try restarting transaction", e, txId);
+    if (rdbEngine.isConflict(e)) {
+      return new CrudConflictException(
+          CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(), e, txId);
     }
     return new CrudException(message, e, txId);
   }
 
   private CommitException createCommitException(SQLException e) {
-    if (rdbEngine.isConflictError(e)) {
-      return new CommitConflictException("Conflict happened; try restarting transaction", e, txId);
+    if (rdbEngine.isConflict(e)) {
+      return new CommitConflictException(
+          CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(), e, txId);
     }
-    return new CommitException("Failed to commit", e, txId);
+    return new CommitException(
+        CoreError.JDBC_TRANSACTION_COMMITTING_TRANSACTION_FAILED.buildMessage(), e, txId);
   }
 }

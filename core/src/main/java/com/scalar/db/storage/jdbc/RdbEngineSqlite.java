@@ -62,7 +62,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isConflictError(SQLException e) {
+  public boolean isConflict(SQLException e) {
     // Error code: SQLITE_BUSY (5)
     // Message: The database file is locked (database is locked)
 
@@ -129,7 +129,7 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public DataType getDataTypeForScalarDb(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
-    throw new UnsupportedOperationException("SQLite is not supported");
+    throw new AssertionError("SQLite is not supported");
   }
 
   @Override

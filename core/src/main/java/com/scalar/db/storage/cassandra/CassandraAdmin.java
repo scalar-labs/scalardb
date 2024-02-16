@@ -19,6 +19,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -190,20 +191,20 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in Cassandra");
+        CoreError.CASSANDRA_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType) {
     throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in Cassandra");
+        CoreError.CASSANDRA_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public void importTable(String namespace, String table, Map<String, String> options) {
     throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in Cassandra");
+        CoreError.CASSANDRA_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   private Scan.Ordering.Order convertOrder(ClusteringOrder clusteringOrder) {
@@ -439,7 +440,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
         }
       }
       throw new IllegalArgumentException(
-          String.format("The network strategy %s does not exist", text));
+          CoreError.CASSANDRA_NETWORK_STRATEGY_NOT_FOUND.buildMessage(text));
     }
 
     @Override

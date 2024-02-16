@@ -12,6 +12,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobColumn;
@@ -109,7 +110,8 @@ public final class ScalarDbUtils {
       operation.forTable(tableName.orElse(null));
     }
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
-      throw new IllegalArgumentException("Operation has no target namespace and table name");
+      throw new IllegalArgumentException(
+          CoreError.OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME.buildMessage(operation));
     }
   }
 

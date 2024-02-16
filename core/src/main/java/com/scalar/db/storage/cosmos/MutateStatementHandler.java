@@ -5,6 +5,7 @@ import com.azure.cosmos.CosmosException;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -23,6 +24,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
   public MutateStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
+
   /**
    * Executes the specified {@code Mutation}
    *
@@ -35,7 +37,8 @@ public abstract class MutateStatementHandler extends StatementHandler {
     } catch (CosmosException e) {
       throwException(e);
     } catch (RuntimeException e) {
-      throw new ExecutionException(e.getMessage(), e);
+      throw new ExecutionException(
+          CoreError.COSMOS_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -61,11 +64,16 @@ public abstract class MutateStatementHandler extends StatementHandler {
     int statusCode = exception.getSubStatusCode();
 
     if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
-      throw new NoMutationException("No mutation was applied");
+      throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), exception);
     } else if (statusCode == CosmosErrorCode.RETRY_WITH.get()) {
-      throw new RetriableExecutionException(exception.getMessage(), exception);
+      throw new RetriableExecutionException(
+          CoreError.COSMOS_RETRY_WITH_ERROR_OCCURRED_IN_MUTATION.buildMessage(
+              exception.getMessage()),
+          exception);
     }
 
-    throw new ExecutionException(exception.getMessage(), exception);
+    throw new ExecutionException(
+        CoreError.COSMOS_ERROR_OCCURRED_IN_MUTATION.buildMessage(exception.getMessage()),
+        exception);
   }
 }

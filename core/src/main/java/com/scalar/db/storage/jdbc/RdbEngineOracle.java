@@ -4,6 +4,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
@@ -169,7 +170,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isConflictError(SQLException e) {
+  public boolean isConflict(SQLException e) {
     // ORA-08177: can't serialize access for this transaction
     // ORA-00060: deadlock detected while waiting for resource
     return e.getErrorCode() == 8177 || e.getErrorCode() == 60;
@@ -193,8 +194,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
       case TEXT:
         return "VARCHAR2(4000)";
       default:
-        assert false;
-        return null;
+        throw new AssertionError();
     }
   }
 
@@ -218,8 +218,8 @@ public class RdbEngineOracle implements RdbEngineStrategy {
       case NUMERIC:
         if (columnSize > 15) {
           throw new IllegalArgumentException(
-              String.format(
-                  "Data type %s is unsupported: %s", numericTypeDescription, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  numericTypeDescription, columnDescription));
         }
         if (digits == 0) {
           logger.info(
@@ -238,8 +238,8 @@ public class RdbEngineOracle implements RdbEngineStrategy {
       case FLOAT:
         if (columnSize > 53) {
           throw new IllegalArgumentException(
-              String.format(
-                  "Data type %s is unsupported: %s", numericTypeDescription, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  numericTypeDescription, columnDescription));
         }
         if (columnSize < 53) {
           logger.info(
@@ -278,7 +278,8 @@ public class RdbEngineOracle implements RdbEngineStrategy {
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
     }
   }
 

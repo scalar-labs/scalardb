@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashSet;
@@ -63,7 +64,8 @@ public final class ConsensusCommitUtils {
             c -> {
               if (columnNames.contains(c)) {
                 throw new IllegalArgumentException(
-                    "Column \"" + c + "\" is reserved as transaction metadata");
+                    CoreError.CONSENSUS_COMMIT_COLUMN_RESERVED_AS_TRANSACTION_METADATA.buildMessage(
+                        c));
               }
             });
   }
@@ -75,11 +77,9 @@ public final class ConsensusCommitUtils {
           String beforePrefixed = Attribute.BEFORE_PREFIX + c;
           if (tableMetadata.getColumnNames().contains(beforePrefixed)) {
             throw new IllegalArgumentException(
-                "Non-primary key column with the \""
-                    + Attribute.BEFORE_PREFIX
-                    + "\" prefix, \""
-                    + beforePrefixed
-                    + "\", is reserved as transaction metadata");
+                CoreError
+                    .CONSENSUS_COMMIT_BEFORE_PREFIXED_COLUMN_FOR_NON_PRIMARY_KEY_RESERVED_AS_TRANSACTION_METADATA
+                    .buildMessage(beforePrefixed));
           }
         });
   }

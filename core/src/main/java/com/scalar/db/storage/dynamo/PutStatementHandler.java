@@ -7,6 +7,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -49,11 +50,15 @@ public class PutStatementHandler {
     try {
       execute(put, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
-      throw new NoMutationException("No mutation was applied", e);
+      throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
     } catch (TransactionConflictException e) {
-      throw new RetriableExecutionException(e.getMessage(), e);
+      throw new RetriableExecutionException(
+          CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
+              e.getMessage(), e),
+          e);
     } catch (DynamoDbException e) {
-      throw new ExecutionException(e.getMessage(), e);
+      throw new ExecutionException(
+          CoreError.DYNAMO_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
   }
 

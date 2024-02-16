@@ -16,6 +16,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.List;
@@ -48,7 +49,8 @@ public class Cosmos extends AbstractDistributedStorage {
     if (databaseConfig.isCrossPartitionScanFilteringEnabled()
         || databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
-          "Cross-partition scan with filtering or ordering is not supported in Cosmos DB");
+          CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED
+              .buildMessage());
     }
 
     CosmosConfig config = new CosmosConfig(databaseConfig);
@@ -99,7 +101,8 @@ public class Cosmos extends AbstractDistributedStorage {
     Scanner scanner = selectStatementHandler.handle(get);
     Optional<Result> ret = scanner.one();
     if (scanner.one().isPresent()) {
-      throw new IllegalArgumentException("Please use scan() for non-exact match selection");
+      throw new IllegalArgumentException(
+          CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
     }
 
     return ret;
@@ -141,7 +144,7 @@ public class Cosmos extends AbstractDistributedStorage {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
-    checkArgument(mutations.size() != 0);
+    checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED);
     if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
       if (mutation instanceof Put) {
