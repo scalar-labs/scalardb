@@ -54,7 +54,7 @@ public class TransactionTableMetadataManager {
       throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException(
-          CoreError.OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME.buildMessage());
+          CoreError.OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME.buildMessage(operation));
     }
     return getTransactionTableMetadata(operation.forNamespace().get(), operation.forTable().get());
   }

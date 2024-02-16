@@ -444,7 +444,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_MUTATING_TRANSACTION_METADATA_COLUMNS_NOT_ALLOWED(
       Category.USER_ERROR,
       "0097",
-      "Mutating transaction metadata columns is not allowed. Column: %s",
+      "Mutating transaction metadata columns is not allowed. Table: %s; Column: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_PUT(

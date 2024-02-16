@@ -59,7 +59,7 @@ public class ConsensusCommitMutationOperationChecker {
       if (metadata.getTransactionMetaColumnNames().contains(column)) {
         throw new IllegalArgumentException(
             CoreError.CONSENSUS_COMMIT_MUTATING_TRANSACTION_METADATA_COLUMNS_NOT_ALLOWED
-                .buildMessage(column));
+                .buildMessage(put.forFullTableName().get(), column));
       }
     }
 
