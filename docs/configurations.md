@@ -186,6 +186,19 @@ The following are additional configurations available for ScalarDB:
 | `scalar.db.default_namespace_name`                               | The given namespace name will be used by operations that do not already specify a namespace.                                                                                                |                      |
 | `scalar.db.system_namespace_name`                                | The given namespace name will be used by ScalarDB internally.                                                                                                                               | `scalardb`           |
 
+## Placeholder usage
+
+You can use placeholders in the values, and they are replaced with environment variables (`${env:<ENVIRONMENT_VARIABLE_NAME>}`) or system properties (`${sys:<SYSTEM_PROPERTY_NAME>}`). You can also specify default values in placeholders like `${sys:<SYSTEM_PROPERTY_NAME>:-<DEFAULT_VALUE>}`.
+
+The following is an example of a configuration that uses placeholders:
+
+```properties
+scalar.db.username=${env:<SCALAR_DB_USERNAME>:-admin}
+scalar.db.password=${env:<SCALAR_DB_PASSWORD>}
+```
+
+In this example configuration, ScalarDB reads the username and password from environment variables. If the environment variable `SCALAR_DB_USERNAME` does not exist, ScalarDB uses the default value `admin`.
+
 ## Configuration examples
 
 This section provides some configuration examples.
