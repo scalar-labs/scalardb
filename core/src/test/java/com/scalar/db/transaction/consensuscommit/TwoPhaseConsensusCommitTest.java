@@ -16,6 +16,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -393,7 +394,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     transaction.prepare();
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CommitException.class).when(commit).commitState(snapshot);
+    doThrow(CommitConflictException.class).when(commit).commitState(snapshot);
 
     // Act
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);

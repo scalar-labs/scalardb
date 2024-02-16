@@ -13,6 +13,7 @@ import com.scalar.db.api.OperationBuilder.PartitionKey;
 import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
 import com.scalar.db.api.OperationBuilder.Projection;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -289,14 +290,18 @@ public class GetBuilder {
     private void checkNotGet() {
       if (!isGetWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when getting records of a database without using a secondary index");
+            CoreError
+                .GET_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_GETTING_RECORDS_OF_DATABASE_WITHOUT_USING_INDEX
+                .buildMessage());
       }
     }
 
     private void checkNotGetWithIndex() {
       if (isGetWithIndex) {
         throw new UnsupportedOperationException(
-            "This operation is not supported when getting records of a database using a secondary index");
+            CoreError
+                .GET_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_GETTING_RECORDS_OF_DATABASE_USING_INDEX
+                .buildMessage());
       }
     }
 

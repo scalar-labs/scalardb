@@ -11,6 +11,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.common.AbstractDistributedTransaction;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -137,9 +138,13 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       if (e instanceof UncommittedRecordException) {
         lazyRecovery((UncommittedRecordException) e);
       }
-      throw new CommitConflictException("Conflict occurred while implicit pre-read", e, getId());
+      throw new CommitConflictException(
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(),
+          e,
+          getId());
     } catch (CrudException e) {
-      throw new CommitException("Failed to execute implicit pre-read", e, getId());
+      throw new CommitException(
+          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(), e, getId());
     }
 
     commit.commit(crud.getSnapshot());
@@ -180,7 +185,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     try {
       mutationOperationChecker.check(mutation);
     } catch (ExecutionException e) {
-      throw new CrudException("Checking the operation failed", e, getId());
+      throw new CrudException(e.getMessage(), e, getId());
     }
   }
 }

@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -802,8 +803,8 @@ public class ConditionBuilder {
       if (conditionalExpression.getOperator().equals(Operator.LIKE)
           || conditionalExpression.getOperator().equals(Operator.NOT_LIKE)) {
         throw new IllegalArgumentException(
-            "This condition is not allowed for the PutIf operation. Condition: "
-                + conditionalExpression);
+            CoreError.CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF.buildMessage(
+                conditionalExpression));
       }
     }
   }
@@ -843,8 +844,8 @@ public class ConditionBuilder {
       if (conditionalExpression.getOperator().equals(Operator.LIKE)
           || conditionalExpression.getOperator().equals(Operator.NOT_LIKE)) {
         throw new IllegalArgumentException(
-            "This condition is not allowed for the DeleteIf operation. Condition: "
-                + conditionalExpression);
+            CoreError.CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_DELETE_IF.buildMessage(
+                conditionalExpression));
       }
     }
   }

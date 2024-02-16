@@ -13,6 +13,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -448,13 +449,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     if (!rdbEngine.isImportable()) {
       throw new UnsupportedOperationException(
-          "Importing table is not allowed in this storage: " + rdbEngine.getClass().getName());
+          CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
     }
 
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
-            "The table " + getFullTableName(namespace, table) + "  does not exist");
+            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
@@ -466,7 +467,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
 
       if (!primaryKeyExists) {
-        throw new IllegalStateException("The table must have a primary key");
+        throw new IllegalStateException(
+            CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
+                getFullTableName(namespace, table)));
       }
 
       resultSet = metadata.getColumns(null, namespace, table, "%");
@@ -672,7 +675,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         return false;
       }
       throw new ExecutionException(
-          String.format("Checking if the table %s.%s exists failed", namespace, table), e);
+          String.format(
+              "Checking if the %s table exists failed", getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -683,7 +688,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
-            "The table " + getFullTableName(namespace, table) + "  does not exist");
+            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
 
       if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
@@ -735,7 +740,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
-            "The table " + getFullTableName(namespace, table) + "  does not exist");
+            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
 
       String addNewColumnStatement =

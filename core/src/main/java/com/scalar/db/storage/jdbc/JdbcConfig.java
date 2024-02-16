@@ -4,6 +4,7 @@ import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getString;
 
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Locale;
 import java.util.Optional;
@@ -89,7 +90,7 @@ public class JdbcConfig {
     }
 
     if (databaseConfig.getContactPoints().isEmpty()) {
-      throw new IllegalArgumentException(DatabaseConfig.CONTACT_POINTS + " is empty");
+      throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
     jdbcUrl = databaseConfig.getContactPoints().get(0);
     username = databaseConfig.getUsername().orElse(null);

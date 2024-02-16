@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
@@ -34,13 +35,14 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     if (checkNamespace && namespaceExists(namespace)) {
-      throw new IllegalArgumentException("Namespace already exists: " + namespace);
+      throw new IllegalArgumentException(
+          CoreError.NAMESPACE_ALREADY_EXISTS.buildMessage(namespace));
     }
 
     try {
       admin.createNamespace(namespace, options);
     } catch (ExecutionException e) {
-      throw new ExecutionException("Creating the namespace failed: " + namespace, e);
+      throw new ExecutionException(CoreError.CREATING_NAMESPACE_FAILED.buildMessage(namespace), e);
     }
   }
 
@@ -49,18 +51,21 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     if (checkNamespace && !namespaceExists(namespace)) {
-      throw new IllegalArgumentException("Namespace does not exist: " + namespace);
+      throw new IllegalArgumentException(CoreError.NAMESPACE_NOT_FOUND.buildMessage(namespace));
     }
     if (tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
     try {
       admin.createTable(namespace, table, metadata, options);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Creating the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          CoreError.CREATING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -68,31 +73,33 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void dropTable(String namespace, String table) throws ExecutionException {
     if (!tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
     try {
       admin.dropTable(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Dropping the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          CoreError.DROPPING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
     }
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     if (checkNamespace && !namespaceExists(namespace)) {
-      throw new IllegalArgumentException("Namespace does not exist: " + namespace);
+      throw new IllegalArgumentException(CoreError.NAMESPACE_NOT_FOUND.buildMessage(namespace));
     }
     if (!getNamespaceTableNames(namespace).isEmpty()) {
       throw new IllegalArgumentException(
-          "Namespace is not empty: " + namespace + ", " + getNamespaceTableNames(namespace));
+          CoreError.NAMESPACE_NOT_EMPTY.buildMessage(namespace, getNamespaceTableNames(namespace)));
     }
 
     try {
       admin.dropNamespace(namespace);
     } catch (ExecutionException e) {
-      throw new ExecutionException("Dropping the namespace failed: " + namespace, e);
+      throw new ExecutionException(CoreError.DROPPING_NAMESPACE_FAILED.buildMessage(namespace), e);
     }
   }
 
@@ -100,14 +107,16 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void truncateTable(String namespace, String table) throws ExecutionException {
     if (!tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
     try {
       admin.truncateTable(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Truncating the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          CoreError.TRUNCATING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -118,32 +127,26 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       throw new IllegalArgumentException(
-          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
     }
     if (!tableMetadata.getColumnNames().contains(columnName)) {
       throw new IllegalArgumentException(
-          "Column does not exist: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName);
+          CoreError.COLUMN_NOT_FOUND2.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
     }
 
     if (indexExists(namespace, table, columnName)) {
       throw new IllegalArgumentException(
-          "Index already exists: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName);
+          CoreError.INDEX_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
     }
 
     try {
       admin.createIndex(namespace, table, columnName, options);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Creating the index failed: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName,
+          CoreError.CREATING_INDEX_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName),
           e);
     }
   }
@@ -153,25 +156,21 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     if (!tableExists(namespace, table)) {
       throw new IllegalArgumentException(
-          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
     if (!indexExists(namespace, table, columnName)) {
       throw new IllegalArgumentException(
-          "Index does not exist: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName);
+          CoreError.INDEX_NOT_FOUND.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
     }
 
     try {
       admin.dropIndex(namespace, table, columnName);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Dropping the index failed: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName,
+          CoreError.DROPPING_INDEX_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName),
           e);
     }
   }
@@ -183,7 +182,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       return admin.getTableMetadata(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Getting the table metadata failed: " + ScalarDbUtils.getFullTableName(namespace, table),
+          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
           e);
     }
   }
@@ -194,7 +194,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       return admin.getNamespaceTableNames(namespace);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Getting the table names in the namespace failed: " + namespace, e);
+          CoreError.GETTING_TABLE_NAMES_IN_NAMESPACE_FAILED.buildMessage(namespace), e);
     }
   }
 
@@ -203,7 +203,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     try {
       return admin.namespaceExists(namespace);
     } catch (ExecutionException e) {
-      throw new ExecutionException("Checking if the namespace exists failed: " + namespace, e);
+      throw new ExecutionException(
+          CoreError.CHECKING_NAMESPACE_EXISTENCE_FAILED.buildMessage(namespace), e);
     }
   }
 
@@ -213,8 +214,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       return DistributedStorageAdmin.super.tableExists(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Checking if the table exists failed: "
-              + ScalarDbUtils.getFullTableName(namespace, table),
+          CoreError.CHECKING_TABLE_EXISTENCE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
           e);
     }
   }
@@ -226,10 +227,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       return DistributedStorageAdmin.super.indexExists(namespace, table, columnName);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Checking if the index exists failed: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName,
+          CoreError.CHECKING_INDEX_EXISTENCE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName),
           e);
     }
   }
@@ -242,7 +241,9 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       admin.repairTable(namespace, table, metadata, options);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Repairing the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          CoreError.REPAIRING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -253,25 +254,21 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       throw new IllegalArgumentException(
-          "Table does not exist: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
     if (tableMetadata.getColumnNames().contains(columnName)) {
       throw new IllegalArgumentException(
-          "Column already exists: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName);
+          CoreError.COLUMN_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
     }
 
     try {
       admin.addNewColumnToTable(namespace, table, columnName, columnType);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Adding new column to the table failed: "
-              + ScalarDbUtils.getFullTableName(namespace, table)
-              + ", "
-              + columnName,
+          CoreError.ADDING_NEW_COLUMN_TO_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName, columnType),
           e);
     }
   }
@@ -283,8 +280,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       return admin.getImportTableMetadata(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Getting the table metadata of the importing table failed: "
-              + ScalarDbUtils.getFullTableName(namespace, table),
+          CoreError.GETTING_IMPORT_TABLE_METADATA_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
           e);
     }
   }
@@ -295,14 +292,17 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata != null) {
       throw new IllegalArgumentException(
-          "Table already exists: " + ScalarDbUtils.getFullTableName(namespace, table));
+          CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
     try {
       admin.importTable(namespace, table, options);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Importing the table failed: " + ScalarDbUtils.getFullTableName(namespace, table), e);
+          CoreError.IMPORTING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
     }
   }
 
@@ -314,8 +314,8 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       admin.addRawColumnToTable(namespace, table, columnName, columnType);
     } catch (ExecutionException e) {
       throw new ExecutionException(
-          "Adding the raw column to the table failed: "
-              + ScalarDbUtils.getFullTableName(namespace, table),
+          CoreError.ADDING_RAW_COLUMN_TO_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName, columnType),
           e);
     }
   }

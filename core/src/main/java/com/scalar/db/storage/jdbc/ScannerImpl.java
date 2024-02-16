@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.ScannerIterator;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -50,7 +51,7 @@ public class ScannerImpl implements Scanner {
       }
       return Optional.empty();
     } catch (SQLException e) {
-      throw new ExecutionException("Failed to fetch the next result", e);
+      throw new ExecutionException(CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(), e);
     }
   }
 
@@ -63,7 +64,7 @@ public class ScannerImpl implements Scanner {
       }
       return ret;
     } catch (SQLException e) {
-      throw new ExecutionException("Failed to fetch the next result", e);
+      throw new ExecutionException(CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(), e);
     }
   }
 

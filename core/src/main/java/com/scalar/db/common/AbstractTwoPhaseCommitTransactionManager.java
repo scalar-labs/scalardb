@@ -9,6 +9,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -18,11 +19,9 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.annotation.Nullable;
 
 public abstract class AbstractTwoPhaseCommitTransactionManager
     implements TwoPhaseCommitTransactionManager, TwoPhaseCommitTransactionDecoratorAddable {
@@ -119,49 +118,49 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
 
     @Override
     public Optional<Result> get(Get get) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       return super.get(get);
     }
 
     @Override
     public List<Result> scan(Scan scan) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       return super.scan(scan);
     }
 
     @Override
     public void put(Put put) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.put(put);
     }
 
     @Override
     public void put(List<Put> puts) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.put(puts);
     }
 
     @Override
     public void delete(Delete delete) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.delete(delete);
     }
 
     @Override
     public void delete(List<Delete> deletes) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.delete(deletes);
     }
 
     @Override
     public void mutate(List<? extends Mutation> mutations) throws CrudException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       super.mutate(mutations);
     }
 
     @Override
     public void prepare() throws PreparationException {
-      checkStatus("The transaction is not active", Status.ACTIVE);
+      checkIfActive();
       try {
         super.prepare();
         status = Status.PREPARED;
@@ -173,7 +172,10 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
 
     @Override
     public void validate() throws ValidationException {
-      checkStatus("The transaction is not prepared", Status.PREPARED);
+      if (status != Status.PREPARED) {
+        throw new IllegalStateException(CoreError.TRANSACTION_NOT_PREPARED.buildMessage(status));
+      }
+
       try {
         super.validate();
         status = Status.VALIDATED;
@@ -185,8 +187,11 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
 
     @Override
     public void commit() throws CommitException, UnknownTransactionStatusException {
-      checkStatus(
-          "The transaction is not prepared or validated.", Status.PREPARED, Status.VALIDATED);
+      if (status != Status.PREPARED && status != Status.VALIDATED) {
+        throw new IllegalStateException(
+            CoreError.TRANSACTION_NOT_PREPARED_OR_VALIDATED.buildMessage(status));
+      }
+
       try {
         super.commit();
         status = Status.COMMITTED;
@@ -200,7 +205,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     public void rollback() throws RollbackException {
       if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
         throw new IllegalStateException(
-            "The transaction has already been committed or rolled back");
+            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
       }
       try {
         super.rollback();
@@ -212,7 +217,8 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     @Override
     public void abort() throws AbortException {
       if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
-        throw new IllegalStateException("The transaction has already been committed or aborted");
+        throw new IllegalStateException(
+            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
       }
       try {
         super.abort();
@@ -221,10 +227,9 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
       }
     }
 
-    private void checkStatus(@Nullable String message, Status... expectedStatus) {
-      boolean expected = Arrays.stream(expectedStatus).anyMatch(s -> status == s);
-      if (!expected) {
-        throw new IllegalStateException(message);
+    private void checkIfActive() {
+      if (status != Status.ACTIVE) {
+        throw new IllegalStateException(CoreError.TRANSACTION_NOT_ACTIVE.buildMessage(status));
       }
     }
   }

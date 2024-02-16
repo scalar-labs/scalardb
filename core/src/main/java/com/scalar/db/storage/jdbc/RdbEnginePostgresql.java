@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
@@ -151,7 +152,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isConflictError(SQLException e) {
+  public boolean isConflict(SQLException e) {
     if (e.getSQLState() == null) {
       return false;
     }
@@ -193,8 +194,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case TEXT:
         return "TEXT";
       default:
-        assert false;
-        return null;
+        throw new AssertionError();
     }
   }
 
@@ -213,15 +213,15 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case BIT:
         if (columnSize != 1) {
           throw new IllegalArgumentException(
-              String.format(
-                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnSize, columnDescription));
         }
         return DataType.BOOLEAN;
       case SMALLINT:
         if (typeName.equalsIgnoreCase("smallserial")) {
           throw new IllegalArgumentException(
-              String.format(
-                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         logger.info(
             "Data type larger than that of underlying database is assigned: {} ({} to INT)",
@@ -231,14 +231,15 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case INTEGER:
         if (typeName.equalsIgnoreCase("serial")) {
           throw new IllegalArgumentException(
-              String.format(
-                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         return DataType.INT;
       case BIGINT:
         if (typeName.equalsIgnoreCase("bigserial")) {
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         logger.warn(
             "Data type that may be smaller than that of underlying database is assigned: {} (PostgreSQL {} to ScalarDB BIGINT)",
@@ -250,7 +251,8 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case DOUBLE:
         if (!typeName.equalsIgnoreCase("float8")) {
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         return DataType.DOUBLE;
       case CHAR:
@@ -266,7 +268,8 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
     }
   }
 

@@ -8,6 +8,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.ColumnChecker;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -30,8 +31,7 @@ public class DynamoOperationChecker extends OperationChecker {
             column -> {
               if (!new ColumnChecker(metadata, true, false, true, false).check(column)) {
                 throw new IllegalArgumentException(
-                    "A secondary index column cannot be set to null or an empty value (for Text and Blob) in DynamoDB. Operation: "
-                        + put);
+                    CoreError.DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_NULL_OR_EMPTY.buildMessage(put));
               }
             });
     checkCondition(put, metadata);
@@ -55,7 +55,8 @@ public class DynamoOperationChecker extends OperationChecker {
             && expression.getOperator() != ConditionalExpression.Operator.IS_NULL
             && expression.getOperator() != ConditionalExpression.Operator.IS_NOT_NULL) {
           throw new IllegalArgumentException(
-              "DynamoDB only supports EQ, NE, IS_NULL, and IS_NOT_NULL operations for BOOLEAN type in conditions");
+              CoreError.DYNAMO_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BOOLEAN_TYPE.buildMessage(
+                  mutation));
         }
       }
     }

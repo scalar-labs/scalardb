@@ -7,6 +7,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -64,7 +65,8 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
   private void add(ActiveTransaction transaction) throws TransactionException {
     if (activeTransactions.putIfAbsent(transaction.getId(), transaction).isPresent()) {
       transaction.rollback();
-      throw new TransactionException("The transaction already exists", transaction.getId());
+      throw new TransactionException(
+          CoreError.TRANSACTION_ALREADY_EXISTS.buildMessage(), transaction.getId());
     }
   }
 
@@ -79,9 +81,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
         .orElseThrow(
             () ->
                 new TransactionNotFoundException(
-                    "A transaction associated with the specified transaction ID is not found. "
-                        + "It might have been expired",
-                    txId));
+                    CoreError.TRANSACTION_NOT_FOUND.buildMessage(), txId));
   }
 
   @Override

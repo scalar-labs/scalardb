@@ -18,6 +18,7 @@ import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -121,7 +122,8 @@ public class Snapshot {
 
   public void put(Key key, Put put) {
     if (deleteSet.containsKey(key)) {
-      throw new IllegalArgumentException("Writing already deleted data is not allowed");
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED.buildMessage());
     }
     if (writeSet.containsKey(key)) {
       // merge the previous put in the write set and the new put
@@ -167,7 +169,8 @@ public class Snapshot {
       }
     }
     throw new IllegalArgumentException(
-        "Getting data neither in the read set nor the delete set is not allowed");
+        CoreError.CONSENSUS_COMMIT_GETTING_DATA_NEITHER_IN_READ_SET_NOR_DELETE_SET_NOT_ALLOWED
+            .buildMessage());
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
@@ -176,29 +179,22 @@ public class Snapshot {
           tableMetadataManager.getTransactionTableMetadata(key.getNamespace(), key.getTable());
       if (metadata == null) {
         throw new IllegalArgumentException(
-            "The specified table is not found: "
-                + ScalarDbUtils.getFullTableName(key.getNamespace(), key.getTable()));
+            CoreError.TABLE_NOT_FOUND.buildMessage(
+                ScalarDbUtils.getFullTableName(key.getNamespace(), key.getTable())));
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
-      throw new CrudException("Getting a table metadata failed", e, id);
+      throw new CrudException(e.getMessage(), e, id);
     }
   }
 
   private TableMetadata getTableMetadata(Scan scan) throws ExecutionException {
-    try {
-      TransactionTableMetadata metadata =
-          tableMetadataManager.getTransactionTableMetadata(
-              scan.forNamespace().get(), scan.forTable().get());
-      if (metadata == null) {
-        throw new IllegalArgumentException(
-            "The specified table is not found: "
-                + ScalarDbUtils.getFullTableName(scan.forNamespace().get(), scan.forTable().get()));
-      }
-      return metadata.getTableMetadata();
-    } catch (ExecutionException e) {
-      throw new ExecutionException("Getting a table metadata failed", e);
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(scan);
+    if (metadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(scan.forFullTableName().get()));
     }
+    return metadata.getTableMetadata();
   }
 
   public Optional<List<Key>> get(Scan scan) {
@@ -210,7 +206,8 @@ public class Snapshot {
 
   public void verify(Scan scan) {
     if (isWriteSetOverlappedWith(scan)) {
-      throw new IllegalArgumentException("Reading already written data is not allowed");
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_DATA_NOT_ALLOWED.buildMessage());
     }
   }
 
@@ -365,7 +362,7 @@ public class Snapshot {
       case NOT_LIKE:
         return isMatched((LikeExpression) condition, column.getTextValue());
       default:
-        throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
+        throw new AssertionError("Unknown operator: " + condition.getOperator());
     }
   }
 
@@ -523,12 +520,12 @@ public class Snapshot {
 
   private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
     throw new PreparationConflictException(
-        "Reading empty records might cause write skew anomaly so aborting the transaction for safety",
-        id);
+        CoreError.CONSENSUS_COMMIT_READING_EMPTY_RECORDS_IN_EXTRA_WRITE.buildMessage(), id);
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
-    throw new ValidationConflictException("Anti-dependency found. Aborting the transaction", id);
+    throw new ValidationConflictException(
+        CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND_IN_EXTRA_READ.buildMessage(), id);
   }
 
   private boolean isExtraReadEnabled() {

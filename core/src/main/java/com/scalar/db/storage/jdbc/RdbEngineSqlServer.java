@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
@@ -134,7 +135,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isConflictError(SQLException e) {
+  public boolean isConflict(SQLException e) {
     // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and
     // has been chosen as the deadlock victim. Rerun the transaction.
     return e.getErrorCode() == 1205;
@@ -173,8 +174,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case TEXT:
         return "VARCHAR(8000) COLLATE Latin1_General_BIN";
       default:
-        assert false;
-        return null;
+        throw new AssertionError();
     }
   }
 
@@ -191,8 +191,8 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case BIT:
         if (columnSize != 1) {
           throw new IllegalArgumentException(
-              String.format(
-                  "Data type %s(%d) is unsupported: %s", typeName, columnSize, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnSize, columnDescription));
         }
         return DataType.BOOLEAN;
       case TINYINT:
@@ -220,7 +220,8 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case NVARCHAR:
         if (typeName.equalsIgnoreCase("uniqueidentifier")) {
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         logger.info(
             "Data type larger than that of underlying database is assigned: {} ({} to TEXT)",
@@ -231,14 +232,16 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case LONGNVARCHAR:
         if (typeName.equalsIgnoreCase("xml")) {
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         return DataType.TEXT;
       case BINARY:
       case VARBINARY:
         if (!typeName.equalsIgnoreCase("binary") && !typeName.equalsIgnoreCase("varbinary")) {
           throw new IllegalArgumentException(
-              String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
         }
         if (columnSize < Integer.MAX_VALUE) {
           logger.info(
@@ -251,7 +254,8 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.BLOB;
       default:
         throw new IllegalArgumentException(
-            String.format("Data type %s is unsupported: %s", typeName, columnDescription));
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
     }
   }
 
