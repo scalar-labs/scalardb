@@ -144,9 +144,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
           getId());
     } catch (CrudException e) {
       throw new CommitException(
-          CoreError.CONSENSUS_COMMIT_FAILED_TO_EXECUTE_IMPLICIT_PRE_READ.buildMessage(),
-          e,
-          getId());
+          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(), e, getId());
     }
 
     commit.commit(crud.getSnapshot());

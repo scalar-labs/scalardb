@@ -51,7 +51,7 @@ public class ScannerImpl implements Scanner {
       }
       return Optional.empty();
     } catch (SQLException e) {
-      throw new ExecutionException(CoreError.JDBC_FAILED_TO_FETCH_NEXT_RESULT.buildMessage(), e);
+      throw new ExecutionException(CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(), e);
     }
   }
 
@@ -64,7 +64,7 @@ public class ScannerImpl implements Scanner {
       }
       return ret;
     } catch (SQLException e) {
-      throw new ExecutionException(CoreError.JDBC_FAILED_TO_FETCH_NEXT_RESULT.buildMessage(), e);
+      throw new ExecutionException(CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(), e);
     }
   }
 

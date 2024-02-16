@@ -181,7 +181,7 @@ public abstract class AbstractDistributedTransactionManager
     public void abort() throws AbortException {
       if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
         throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ABORTED.buildMessage(status));
+            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
       }
       try {
         super.abort();

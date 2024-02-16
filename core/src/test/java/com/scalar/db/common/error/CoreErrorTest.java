@@ -43,6 +43,6 @@ public class CoreErrorTest {
 
     // Assert
     Assertions.assertThat(message)
-        .isEqualTo("CORE-10000: Only a single column index is supported. Operation: " + put);
+        .isEqualTo("CORE-10000: Only a single-column index is supported. Operation: " + put);
   }
 }

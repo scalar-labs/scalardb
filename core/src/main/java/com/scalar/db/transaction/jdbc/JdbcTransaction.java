@@ -199,7 +199,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       connection.rollback();
     } catch (SQLException e) {
       throw new RollbackException(
-          CoreError.JDBC_TRANSACTION_FAILED_TO_ROLLBACK.buildMessage(), e, txId);
+          CoreError.JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_FAILED.buildMessage(), e, txId);
     } finally {
       try {
         connection.close();
@@ -222,6 +222,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       return new CommitConflictException(
           CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(), e, txId);
     }
-    return new CommitException(CoreError.JDBC_TRANSACTION_FAILED_TO_COMMIT.buildMessage(), e, txId);
+    return new CommitException(
+        CoreError.JDBC_TRANSACTION_COMMITTING_TRANSACTION_FAILED.buildMessage(), e, txId);
   }
 }

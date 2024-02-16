@@ -155,7 +155,7 @@ public final class ConfigUtils {
       return new String(Files.readAllBytes(new File(path).toPath()), StandardCharsets.UTF_8);
     } catch (IOException e) {
       throw new UncheckedIOException(
-          CoreError.CONFIG_UTILS_FAILED_TO_READ_FILE.buildMessage(path), e);
+          CoreError.CONFIG_UTILS_READING_FILE_FAILED.buildMessage(path), e);
     }
   }
 
