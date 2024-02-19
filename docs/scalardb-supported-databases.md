@@ -11,6 +11,7 @@ ScalarDB supports the following databases and their versions.
 | **ScalarDB 3.10** | ✅        |
 | **ScalarDB 3.9**  | ✅        |
 | **ScalarDB 3.8**  | ✅        |
+| **ScalarDB 3.7**  | ✅        |
 
 ## Apache Cassandra
 
@@ -29,6 +30,7 @@ For requirements when using Cassandra or Cassandra-compatible databases, see [Ca
 | **ScalarDB 3.10** | ❌             | ❌             | ✅              | ✅             |
 | **ScalarDB 3.9**  | ❌             | ❌             | ✅              | ✅             |
 | **ScalarDB 3.8**  | ❌             | ❌             | ✅              | ✅             |
+| **ScalarDB 3.7**  | ❌             | ❌             | ✅              | ✅             |
 
 ## Azure Cosmos DB for NoSQL
 
@@ -39,6 +41,7 @@ For requirements when using Cassandra or Cassandra-compatible databases, see [Ca
 | **ScalarDB 3.10** | ✅                   |
 | **ScalarDB 3.9**  | ✅                   |
 | **ScalarDB 3.8**  | ✅                   |
+| **ScalarDB 3.7**  | ✅                   |
 
 ## JDBC databases
 
@@ -59,6 +62,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅              | ✅              |
 | **ScalarDB 3.9**  | ✅              | ✅              |
 | **ScalarDB 3.8**  | ✅              | ✅              |
+| **ScalarDB 3.7**  | ✅              | ✅              |
 
 ### Amazon Aurora PostgreSQL
 
@@ -69,6 +73,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅                    | ✅                    | ✅                    | ✅                    |
 | **ScalarDB 3.9**  | ✅                    | ✅                    | ✅                    | ✅                    |
 | **ScalarDB 3.8**  | ✅                    | ✅                    | ✅                    | ✅                    |
+| **ScalarDB 3.7**  | ✅                    | ✅                    | ✅                    | ✅                    |
 
 ### MariaDB
 
@@ -79,6 +84,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅            |
 | **ScalarDB 3.9**  | ✅            |
 | **ScalarDB 3.8**  | ✅            |
+| **ScalarDB 3.7**  | ✅            |
 
 ### Microsoft SQL Server
 
@@ -89,6 +95,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅               | ✅               | ✅               |
 | **ScalarDB 3.9**  | ✅               | ✅               | ✅               |
 | **ScalarDB 3.8**  | ✅               | ✅               | ✅               |
+| **ScalarDB 3.7**  | ✅               | ✅               | ✅               |
 
 ### MySQL
 
@@ -99,6 +106,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅         | ✅         | ✅         |
 | **ScalarDB 3.9**  | ✅         | ✅         | ✅         |
 | **ScalarDB 3.8**  | ✅         | ✅         | ✅         |
+| **ScalarDB 3.7**  | ✅         | ✅         | ✅         |
 
 ### Oracle
 
@@ -109,6 +117,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅                  | ✅                | ✅                |
 | **ScalarDB 3.9**  | ✅                  | ✅                | ✅                |
 | **ScalarDB 3.8**  | ✅                  | ✅                | ✅                |
+| **ScalarDB 3.7**  | ✅                  | ✅                | ✅                |
 
 ### PostgreSQL
 
@@ -119,6 +128,7 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅             | ✅             | ✅             | ✅             |
 | **ScalarDB 3.9**  | ✅             | ✅             | ✅             | ✅             |
 | **ScalarDB 3.8**  | ✅             | ✅             | ✅             | ✅             |
+| **ScalarDB 3.7**  | ✅             | ✅             | ✅             | ✅             |
 
 ### SQLite
 
@@ -129,3 +139,4 @@ For recommendations when using JDBC databases, see [JDBC database recommendation
 | **ScalarDB 3.10** | ✅        |
 | **ScalarDB 3.9**  | ✅        |
 | **ScalarDB 3.8**  | ❌        |
+| **ScalarDB 3.7**  | ❌        |
