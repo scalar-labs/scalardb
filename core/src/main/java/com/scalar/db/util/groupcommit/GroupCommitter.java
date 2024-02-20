@@ -1,28 +1,20 @@
 package com.scalar.db.util.groupcommit;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.StampedLock;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -50,11 +42,6 @@ public class GroupCommitter<K, V> implements Closeable {
   private final KeyManipulator<K> keyManipulator;
   @LazyInit private Emittable<K, V> emitter;
   private final GroupManager groupManager;
-
-  @FunctionalInterface
-  private interface GarbageGroupCollector<K, V> {
-    void collect(Group<K, V> group);
-  }
 
   // This class is just for encapsulation of accesses to Groups
   private class GroupManager {
@@ -166,10 +153,10 @@ public class GroupCommitter<K, V> implements Closeable {
                   this::unregisterDelayedGroup);
 
           // Delegate the value to the client thread
-          notReadySlot.completableFuture.complete(
+          notReadySlot.delegateTask(
               () -> {
                 try {
-                  emitter.execute(fullKey, Collections.singletonList(notReadySlot.value));
+                  emitter.execute(fullKey, Collections.singletonList(notReadySlot.getValue()));
                 } finally {
                   unregisterDelayedGroup(delayedGroup);
                 }
@@ -181,7 +168,7 @@ public class GroupCommitter<K, V> implements Closeable {
           }
         }
         logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#2 BV:{}", normalGroup);
-        if (normalGroup.slots.values().stream().noneMatch(v -> v.value != null)) {
+        if (normalGroup.slots.values().stream().noneMatch(v -> v.getValue() != null)) {
           normalGroupMap.remove(normalGroup.key);
           logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
         }
@@ -191,476 +178,6 @@ public class GroupCommitter<K, V> implements Closeable {
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#3 BV:{}", normalGroup);
 
       return true;
-    }
-  }
-
-  private static class Slot<K, V> {
-    private final NormalGroup<K, V> parentGroup;
-    private final K key;
-    // If a result value is null, the value is already emitted.
-    // Otherwise, the result lambda must be emitted by the receiver's thread.
-    private final CompletableFuture<Runnable> completableFuture = new CompletableFuture<>();
-    @Nullable private volatile V value;
-
-    public Slot(K key, NormalGroup<K, V> parentGroup) {
-      this.key = key;
-      this.parentGroup = parentGroup;
-    }
-
-    public K getFullKey() {
-      return parentGroup.getFullKey(key);
-    }
-
-    public void putValue(V value) {
-      this.value = Objects.requireNonNull(value);
-    }
-
-    public void waitUntilEmit() throws GroupCommitException {
-      try {
-        // If a result value is null, the value is already emitted.
-        // Otherwise, the result lambda must be emitted by the receiver's thread.
-        Runnable emittable = completableFuture.get();
-        if (emittable != null) {
-          // TODO: Enhance the error handling?
-          emittable.run();
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        // TODO: Unified the error message
-        throw new RuntimeException("Group commit was interrupted", e);
-      } catch (ExecutionException e) {
-        // TODO: Sort these exceptions
-        Throwable cause = e.getCause();
-        if (cause instanceof GroupCommitException) {
-          throw (GroupCommitException) cause;
-        }
-        throw new GroupCommitException("Group commit failed", e);
-      }
-    }
-
-    @Override
-    public String toString() {
-      return MoreObjects.toStringHelper(this).add("key", key).toString();
-    }
-  }
-
-  protected abstract static class Group<K, V> {
-    protected final Emittable<K, V> emitter;
-    protected final KeyManipulator<K> keyManipulator;
-    private final int capacity;
-    private final AtomicReference<Integer> size = new AtomicReference<>();
-    protected final K key;
-    private final long moveDelayedSlotExpirationInMillis;
-    private final Instant groupClosedAt;
-    private final AtomicReference<Instant> delayedSlotMovedAt;
-    private final AtomicBoolean done = new AtomicBoolean();
-    protected final Map<K, Slot<K, V>> slots;
-    // Whether to reject a new value slot.
-    protected final AtomicBoolean closed = new AtomicBoolean();
-    protected final GarbageGroupCollector<K, V> garbageGroupCollector;
-
-    @Override
-    public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("hashCode", hashCode())
-          .add("groupClosedAt", groupClosedAt)
-          .add("delayedSlotMovedAt", delayedSlotMovedAt)
-          .add("done", isDone())
-          .add("ready", isReady())
-          .add("sizeFixed", isSizeFixed())
-          .add("valueSlots.size", slots.size())
-          .toString();
-    }
-
-    Group(
-        K key,
-        Emittable<K, V> emitter,
-        KeyManipulator<K> keyManipulator,
-        long groupCloseExpirationInMillis,
-        long moveDelayedSlotExpirationInMillis,
-        int capacity,
-        GarbageGroupCollector<K, V> garbageGroupCollector) {
-      this.emitter = emitter;
-      this.keyManipulator = keyManipulator;
-      this.capacity = capacity;
-      this.moveDelayedSlotExpirationInMillis = moveDelayedSlotExpirationInMillis;
-      this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
-      this.delayedSlotMovedAt = new AtomicReference<>();
-      updateDelayedSlotMovedAt();
-      this.key = key;
-      this.slots = new HashMap<>(capacity);
-      this.garbageGroupCollector = garbageGroupCollector;
-    }
-
-    public void updateDelayedSlotMovedAt() {
-      delayedSlotMovedAt.set(Instant.now().plusMillis(moveDelayedSlotExpirationInMillis));
-    }
-
-    public boolean noMoreSlot() {
-      return slots.size() >= capacity;
-    }
-
-    protected K reserveNewSlot(Slot<K, V> slot) throws GroupCommitAlreadyClosedException {
-      return reserveNewSlot(slot, true);
-    }
-
-    protected K reserveNewSlot(Slot<K, V> slot, boolean autoEmit)
-        throws GroupCommitAlreadyClosedException {
-      synchronized (this) {
-        if (isSizeFixed()) {
-          throw new GroupCommitAlreadyClosedException(
-              "The size of 'slot' is already fixed. Group:" + this);
-        }
-        reserveSlot(slot);
-        ///////// FIXME: DEBUG
-        if (noMoreSlot()) {
-          fixSize(autoEmit);
-        }
-      }
-      ///////// FIXME: DEBUG
-      logger.info("RESERVE:{}, CHILDKEY:{}", this, slot.key);
-      return slot.getFullKey();
-    }
-
-    private synchronized void reserveSlot(Slot<K, V> slot) {
-      // TODO: Check if no existing slot?
-      slots.put(slot.key, slot);
-      updateIsClosed();
-    }
-
-    // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
-    private synchronized Slot<K, V> putValueToSlot(K childKey, V value)
-        throws GroupCommitAlreadyCompletedException, GroupCommitTargetNotFoundException {
-      if (isDone()) {
-        throw new GroupCommitAlreadyCompletedException(
-            "This group is already closed. group:" + this);
-      }
-
-      Slot<K, V> slot = slots.get(childKey);
-      if (slot == null) {
-        throw new GroupCommitTargetNotFoundException(
-            "The slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
-      }
-      slot.putValue(value);
-      return slot;
-    }
-
-    public void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
-      Slot<K, V> slot;
-      synchronized (this) {
-        slot = putValueToSlot(childKey, value);
-
-        // This is in this block since it results in better performance
-        asyncEmitIfReady();
-      }
-      ///////// FIXME: DEBUG
-      logger.info("Put value:{}, childKey:{}", this, childKey);
-      ///////// FIXME: DEBUG
-
-      long start = System.currentTimeMillis();
-      slot.waitUntilEmit();
-
-      logger.info(
-          "Waited(thread_id:{}, parentKey:{}, childKey:{}): {} ms",
-          Thread.currentThread().getId(),
-          key,
-          childKey,
-          System.currentTimeMillis() - start);
-    }
-
-    public Instant groupClosedAt() {
-      return groupClosedAt;
-    }
-
-    public Instant delayedSlotMovedAt() {
-      return delayedSlotMovedAt.get();
-    }
-
-    public void fixSize() {
-      fixSize(true);
-    }
-
-    public void fixSize(boolean autoEmit) {
-      synchronized (this) {
-        // Current Slot that `index` is pointing is not used yet.
-        size.set(slots.size());
-        updateIsClosed();
-        ////// FIXME: DEBUG
-        logger.info("Fixed size: group={}", this);
-        ////// FIXME: DEBUG
-        // This is in this block since it results in better performance
-        if (autoEmit) {
-          asyncEmitIfReady();
-        }
-      }
-    }
-
-    public boolean isSizeFixed() {
-      return size.get() != null;
-    }
-
-    protected int getSize() {
-      return size.get();
-    }
-
-    public synchronized boolean isReady() {
-      if (isSizeFixed()) {
-        int readySlotCount = 0;
-        for (Slot<K, V> slot : slots.values()) {
-          if (slot.value != null) {
-            readySlotCount++;
-            if (readySlotCount >= size.get()) {
-              return true;
-            }
-          }
-        }
-      }
-      return false;
-    }
-
-    public boolean isDone() {
-      return done.get();
-    }
-
-    public boolean isClosed() {
-      return closed.get();
-    }
-
-    public synchronized void updateIsClosed() {
-      closed.set(noMoreSlot() || isDone() || isSizeFixed());
-    }
-
-    protected synchronized void setDone() {
-      done.set(true);
-      updateIsClosed();
-    }
-
-    public void removeSlot(K childKey) {
-      synchronized (this) {
-        if (slots.remove(childKey) != null) {
-          if (size.get() != null && size.get() > 0) {
-            size.set(size.get() - 1);
-          }
-          updateIsClosed();
-        }
-        ////// FIXME: DEBUG
-        logger.info(
-            "REMOVE VS: key={}, childKey={}, valueSlotsSize={}, size={}",
-            this.key,
-            childKey,
-            slots.size(),
-            size.get());
-        ////// FIXME: DEBUG
-        // This is in this block since it results in better performance
-        asyncEmitIfReady();
-      }
-    }
-
-    protected abstract void asyncEmit();
-
-    public synchronized void asyncEmitIfReady() {
-      if (isDone()) {
-        return;
-      }
-
-      if (isReady()) {
-        if (slots.isEmpty()) {
-          // In this case, each transaction has aborted with the full transaction ID.
-          logger.warn("slots are empty. Nothing to do. group:{}", this);
-          setDone();
-          dismiss();
-          return;
-        }
-        asyncEmit();
-        setDone();
-      }
-    }
-
-    protected void dismiss() {
-      garbageGroupCollector.collect(this);
-    }
-  }
-
-  private static class NormalGroup<K, V> extends Group<K, V> {
-    NormalGroup(
-        Emittable<K, V> emitter,
-        KeyManipulator<K> keyManipulator,
-        long sizeFixExpirationInMillis,
-        long timeoutExpirationInMillis,
-        int capacity,
-        GarbageGroupCollector<K, V> garbageGroupCollector) {
-      super(
-          keyManipulator.createParentKey(),
-          emitter,
-          keyManipulator,
-          sizeFixExpirationInMillis,
-          timeoutExpirationInMillis,
-          capacity,
-          garbageGroupCollector);
-    }
-
-    public K getFullKey(K childKey) {
-      return keyManipulator.createFullKey(key, childKey);
-    }
-
-    public K reserveNewSlot(K childKey) throws GroupCommitAlreadyClosedException {
-      return reserveNewSlot(new Slot<>(childKey, this));
-    }
-
-    @Nullable
-    public synchronized List<Slot<K, V>> removeNotReadySlots() {
-      if (!isSizeFixed()) {
-        logger.info(
-            "No need to remove any slot since the size isn't fixed yet. Too early. group:{}", this);
-        return null;
-      }
-
-      // Lazy instantiation might be better, but it's likely there is a not-ready value slot since
-      // it's already timed-out.
-      List<Slot<K, V>> removed = new ArrayList<>();
-      for (Entry<K, Slot<K, V>> entry : slots.entrySet()) {
-        Slot<K, V> slot = entry.getValue();
-        if (slot.value == null) {
-          removed.add(slot);
-        }
-      }
-
-      if (removed.size() >= getSize()) {
-        logger.info("No need to remove any slot since all the slots are not ready. group:{}", this);
-        return null;
-      }
-
-      for (Slot<K, V> slot : removed) {
-        removeSlot(slot.key);
-        logger.info(
-            "Removed a value slot from group to move it to delayed group. group:{}, slot:{}",
-            this,
-            slot);
-      }
-      return removed;
-    }
-
-    @Override
-    public synchronized void asyncEmit() {
-      ////// FIXME: DEBUG
-      logger.info("Delegating emits: group={}", this);
-      ////// FIXME: DEBUG
-
-      if (slots.isEmpty()) {
-        return;
-      }
-
-      final AtomicReference<Slot<K, V>> emitterSlot = new AtomicReference<>();
-
-      boolean isFirst = true;
-      List<V> values = new ArrayList<>(slots.size());
-      // Avoid using java.util.Collection.stream since it's a bit slow.
-      for (Slot<K, V> slot : slots.values()) {
-        // Use the first slot as an emitter.
-        if (isFirst) {
-          isFirst = false;
-          emitterSlot.set(slot);
-        }
-        values.add(slot.value);
-      }
-
-      long startDelegate = System.currentTimeMillis();
-      Runnable taskForEmitterSlot =
-          () -> {
-            try {
-              logger.info(
-                  "Delegated (thread_id:{}, key:{}, num_of_values:{}): {} ms",
-                  Thread.currentThread().getId(),
-                  key,
-                  getSize(),
-                  System.currentTimeMillis() - startDelegate);
-
-              long startEmit = System.currentTimeMillis();
-              emitter.execute(key, values);
-              logger.info(
-                  "Emitted (thread_id:{}, key:{}, num_of_values:{}): {} ms",
-                  Thread.currentThread().getId(),
-                  key,
-                  getSize(),
-                  System.currentTimeMillis() - startEmit);
-
-              long startNotify = System.currentTimeMillis();
-              // Wake up the other waiting threads.
-              // Pass null since the value is already emitted by the thread of `firstSlot`.
-              for (Slot<K, V> slot : slots.values()) {
-                if (slot != emitterSlot.get()) {
-                  slot.completableFuture.complete(null);
-                }
-              }
-              logger.info(
-                  "Notified (thread_id:{}, num_of_values:{}): {} ms",
-                  Thread.currentThread().getId(),
-                  getSize(),
-                  System.currentTimeMillis() - startNotify);
-            } catch (Throwable e) {
-              logger.error("Group commit failed", e);
-              GroupCommitException exception =
-                  new GroupCommitException("Group commit failed. Aborting all the values", e);
-
-              // Let other threads know the exception.
-              for (Slot<K, V> slot : slots.values()) {
-                if (slot != emitterSlot.get()) {
-                  slot.completableFuture.completeExceptionally(exception);
-                }
-              }
-
-              // Throw the exception for the thread of `firstSlot`.
-              throw e;
-            } finally {
-              dismiss();
-            }
-          };
-
-      emitterSlot.get().completableFuture.complete(taskForEmitterSlot);
-    }
-  }
-
-  private static class DelayedGroup<K, V> extends Group<K, V> {
-    DelayedGroup(
-        K fullKey,
-        Emittable<K, V> emitter,
-        KeyManipulator<K> keyManipulator,
-        long sizeFixExpirationInMillis,
-        long timeoutExpirationInMillis,
-        Slot<K, V> slot,
-        GarbageGroupCollector<K, V> garbageGroupCollector) {
-      super(
-          fullKey,
-          emitter,
-          keyManipulator,
-          sizeFixExpirationInMillis,
-          timeoutExpirationInMillis,
-          1,
-          garbageGroupCollector);
-      try {
-        // Auto emit should be disabled since:
-        // - the queue and worker for delayed values will emit this if it's ready
-        // - to avoid taking time in synchronized blocks
-        super.reserveNewSlot(slot, false);
-      } catch (GroupCommitAlreadyClosedException e) {
-        // FIXME Message
-        throw new IllegalStateException(
-            "Failed to reserve a value slot. This shouldn't happen. slot:" + slot, e);
-      }
-    }
-
-    @Override
-    protected void asyncEmit() {
-      for (Entry<K, Slot<K, V>> entry : slots.entrySet()) {
-        Slot<K, V> slot = entry.getValue();
-        // Pass `emitter` to ask the receiver's thread to emit the value
-        slot.completableFuture.complete(
-            () -> emitter.execute(key, Collections.singletonList(slot.value)));
-        // The number of the slots is only 1.
-        dismiss();
-        return;
-      }
     }
   }
 
@@ -925,7 +442,7 @@ public class GroupCommitter<K, V> implements Closeable {
       } catch (GroupCommitAlreadyCompletedException | GroupCommitTargetNotFoundException e) {
         // This can throw an exception in a race condition when the value slot is moved to
         // delayed group. So, retry should be needed.
-        if (group instanceof GroupCommitter.NormalGroup) {
+        if (group instanceof NormalGroup) {
           if (++retry >= 4) {
             throw new GroupCommitException(
                 String.format("Retry over for putting a value to the slot. fullKey=%s", fullKey),
