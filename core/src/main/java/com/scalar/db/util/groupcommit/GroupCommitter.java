@@ -23,7 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.StampedLock;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,16 +63,15 @@ public class GroupCommitter<K, V> implements Closeable {
     // Using ConcurrentHashMap results in less performance.
     private final Map<K, NormalGroup<K, V>> normalGroupMap = new HashMap<>();
     private final Map<K, DelayedGroup<K, V>> delayedGroupMap = new HashMap<>();
-    private final ReentrantReadWriteLock lockOnNormalGroupMap = new ReentrantReadWriteLock();
-    private final ReentrantReadWriteLock lockOnDelayedGroupMap = new ReentrantReadWriteLock();
+    private final StampedLock lock = new StampedLock();
 
     // Returns full key
     private K reserveNewSlot(K childKey) throws GroupCommitAlreadyClosedException {
       boolean isNewGroupCreated = false;
       NormalGroup<K, V> oldGroup = null;
       NormalGroup<K, V> newGroup = null;
+      long stamp = lock.writeLock();
       try {
-        lockOnNormalGroupMap.writeLock().lock();
         if (currentGroup == null || currentGroup.isClosed()) {
           isNewGroupCreated = true;
           oldGroup = currentGroup;
@@ -90,7 +89,7 @@ public class GroupCommitter<K, V> implements Closeable {
           normalGroupMap.put(currentGroup.key, currentGroup);
         }
       } finally {
-        lockOnNormalGroupMap.writeLock().unlock();
+        lock.unlockWrite(stamp);
       }
 
       if (isNewGroupCreated) {
@@ -102,10 +101,8 @@ public class GroupCommitter<K, V> implements Closeable {
     }
 
     private Group<K, V> getGroup(Keys<K> keys) throws GroupCommitException {
+      long stamp = lock.writeLock();
       try {
-        lockOnNormalGroupMap.readLock().lock();
-        lockOnDelayedGroupMap.readLock().lock();
-
         DelayedGroup<K, V> delayedGroup =
             delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
         if (delayedGroup != null) {
@@ -117,8 +114,7 @@ public class GroupCommitter<K, V> implements Closeable {
           return normalGroup;
         }
       } finally {
-        lockOnDelayedGroupMap.readLock().unlock();
-        lockOnNormalGroupMap.readLock().unlock();
+        lock.unlockWrite(stamp);
       }
 
       throw new GroupCommitTargetNotFoundException(
@@ -126,20 +122,20 @@ public class GroupCommitter<K, V> implements Closeable {
     }
 
     private synchronized void unregisterNormalGroup(Group<K, V> group) {
+      long stamp = lock.writeLock();
       try {
-        lockOnNormalGroupMap.writeLock().lock();
         normalGroupMap.remove(group.key);
       } finally {
-        lockOnNormalGroupMap.writeLock().unlock();
+        lock.unlockWrite(stamp);
       }
     }
 
     private synchronized void unregisterDelayedGroup(Group<K, V> group) {
+      long stamp = lock.writeLock();
       try {
-        lockOnDelayedGroupMap.writeLock().lock();
         delayedGroupMap.remove(group.key);
       } finally {
-        lockOnDelayedGroupMap.writeLock().unlock();
+        lock.unlockWrite(stamp);
       }
     }
 
@@ -147,13 +143,11 @@ public class GroupCommitter<K, V> implements Closeable {
       // Already tried to move this code inside NormalGroup.removeNotReadySlots() to remove
       // the `synchronized` keyword on this method. But the performance was degraded.
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#1 BV:{}", normalGroup);
+      long stamp = lock.writeLock();
       try {
-        lockOnNormalGroupMap.writeLock().lock();
-        lockOnDelayedGroupMap.writeLock().lock();
         List<Slot<K, V>> notReadySlots = normalGroup.removeNotReadySlots();
         if (notReadySlots == null) {
           normalGroup.updateDelayedSlotMovedAt();
-          ;
           logger.info(
               "This group isn't needed to remove slots. Updated the expiration timing. group:{}",
               normalGroup);
@@ -192,8 +186,7 @@ public class GroupCommitter<K, V> implements Closeable {
           logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
         }
       } finally {
-        lockOnDelayedGroupMap.writeLock().unlock();
-        lockOnNormalGroupMap.writeLock().unlock();
+        lock.unlockWrite(stamp);
       }
       logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#3 BV:{}", normalGroup);
 

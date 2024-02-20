@@ -245,7 +245,7 @@ if (!project.gradle.startParameter.taskNames.isEmpty() &&
 
 // TODO: This is for replication test. Remove this.
 application {
-    mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitterBench'
+    mainClassName = 'com.scalar.db.util.groupcommit.GroupCommitterBench'
     // mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitterBenchWithReentrantLock'
     applicationDefaultJvmArgs = [
       '-Dorg.slf4j.simpleLogger.defaultLogLevel=INFO',
