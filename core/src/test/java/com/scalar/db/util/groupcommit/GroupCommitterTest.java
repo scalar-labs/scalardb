@@ -1,14 +1,10 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
+package com.scalar.db.util.groupcommit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.scalar.db.util.groupcommit.GroupCommitAlreadyClosedException;
-import com.scalar.db.util.groupcommit.GroupCommitAlreadyCompletedException;
-import com.scalar.db.util.groupcommit.GroupCommitter;
-import com.scalar.db.util.groupcommit.KeyManipulator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
