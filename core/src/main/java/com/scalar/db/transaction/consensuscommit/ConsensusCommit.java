@@ -18,8 +18,8 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
+import com.scalar.db.util.groupcommit.GroupCommitException;
+import com.scalar.db.util.groupcommit.GroupCommitter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -48,7 +48,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  @Nullable private final GroupCommitter3<String, Snapshot> groupCommitter;
+  @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
   private Runnable beforeRecoveryHook;
 
   // FIXME: For PoC
@@ -66,7 +66,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       CommitHandler commit,
       RecoveryHandler recovery,
       ConsensusCommitMutationOperationChecker mutationOperationChecker,
-      @Nullable GroupCommitter3<String, Snapshot> groupCommitter) {
+      @Nullable GroupCommitter<String, Snapshot> groupCommitter) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);

@@ -22,7 +22,7 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
+import com.scalar.db.util.groupcommit.GroupCommitter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +39,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  @Nullable private final GroupCommitter3<String, Snapshot> groupCommitter;
+  @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
   private boolean validated;
   private boolean needRollback;
 
@@ -52,7 +52,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       CommitHandler commit,
       RecoveryHandler recovery,
       ConsensusCommitMutationOperationChecker mutationOperationChecker,
-      @Nullable GroupCommitter3 groupCommitter) {
+      @Nullable GroupCommitter groupCommitter) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;

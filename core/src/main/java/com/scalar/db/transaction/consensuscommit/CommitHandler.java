@@ -2,8 +2,6 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
@@ -19,19 +17,13 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import com.scalar.db.transaction.consensuscommit.replication.LogRecorder;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.DefaultLogRecorder;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.client.PrepareMutationComposerForReplication;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitAlreadyClosedException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitTargetNotFoundException;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
+import com.scalar.db.util.groupcommit.GroupCommitAlreadyCompletedException;
+import com.scalar.db.util.groupcommit.GroupCommitException;
+import com.scalar.db.util.groupcommit.GroupCommitTargetNotFoundException;
+import com.scalar.db.util.groupcommit.GroupCommitter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -49,32 +41,7 @@ public class CommitHandler {
   private final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-
-  // FIXME
-  private final LogRecorder logRecorder;
-  private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-  private final GroupCommitter3<String, Snapshot> groupCommitter;
-
-  private Optional<LogRecorder> prepareLogRecorder() {
-    String replicationDbConfigPath = System.getenv("LOG_RECORDER_REPLICATION_CONFIG");
-    if (replicationDbConfigPath == null) {
-      return Optional.empty();
-    }
-    ReplicationTransactionRepository replicationTransactionRepository;
-    try {
-      replicationTransactionRepository =
-          new ReplicationTransactionRepository(
-              StorageFactory.create(replicationDbConfigPath).getStorage(),
-              objectMapper,
-              "replication",
-              "transactions");
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    return Optional.of(
-        new DefaultLogRecorder(tableMetadataManager, replicationTransactionRepository));
-  }
+  private final GroupCommitter<String, Snapshot> groupCommitter;
 
   private void handleSnapshotsInGroupCommit(String parentId, List<Snapshot> snapshots) {
     try {
@@ -101,7 +68,7 @@ public class CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      @Nullable GroupCommitter3<String, Snapshot> groupCommitter) {
+      @Nullable GroupCommitter<String, Snapshot> groupCommitter) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -113,16 +80,11 @@ public class CommitHandler {
       groupCommitter.setEmitter(this::handleSnapshotsInGroupCommit);
     }
     this.groupCommitter = groupCommitter;
-    logRecorder = prepareLogRecorder().orElse(null);
   }
 
   static class TransactionGroupCommitException extends RuntimeException {
     public TransactionGroupCommitException(TransactionException cause) {
       super(cause);
-    }
-
-    public TransactionException getTransactionException() {
-      return (TransactionException) getCause();
     }
   }
 
@@ -228,7 +190,7 @@ public class CommitHandler {
     try {
       groupCommitter.ready(id, snapshot);
       commitRecords(snapshot);
-    } catch (GroupCommitAlreadyClosedException e) {
+    } catch (GroupCommitAlreadyCompletedException e) {
       cancelGroupCommitIfNeeded(id);
       commitOrRollbackRecordsAccordingToState(snapshot, e);
       throw new CommitConflictException("Group commit failed due to a conflict", e, id);
@@ -275,15 +237,8 @@ public class CommitHandler {
       throws ExecutionException, PreparationConflictException {
     PrepareMutationComposer composer;
     Optional<Future<Void>> logRecordFuture = Optional.empty();
-    if (logRecorder != null) {
-      composer = new PrepareMutationComposerForReplication(snapshot.getId(), tableMetadataManager);
-      snapshot.to(composer);
-      logRecordFuture =
-          Optional.of(logRecorder.record((PrepareMutationComposerForReplication) composer));
-    } else {
-      composer = new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
-      snapshot.to(composer);
-    }
+    composer = new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+    snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
     ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();

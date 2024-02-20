@@ -5,8 +5,8 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator;
+import com.scalar.db.util.groupcommit.GroupCommitter;
+import com.scalar.db.util.groupcommit.KeyManipulator;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -252,7 +252,7 @@ public final class ConsensusCommitUtils {
 
   // FIXME: GroupCommitter3 should be abstract
   @VisibleForTesting
-  public static Optional<GroupCommitter3<String, Snapshot>> prepareGroupCommitter() {
+  public static Optional<GroupCommitter<String, Snapshot>> prepareGroupCommitter() {
     // TODO: Make this configurable
     // TODO: Take care of lazy recovery
     if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
@@ -288,7 +288,7 @@ public final class ConsensusCommitUtils {
     }
 
     return Optional.of(
-        new GroupCommitter3<>(
+        new GroupCommitter<>(
             "coordinator-writer",
             groupCommitSizeFixExpirationInMillis,
             groupCommitTimeoutExpirationInMillis,

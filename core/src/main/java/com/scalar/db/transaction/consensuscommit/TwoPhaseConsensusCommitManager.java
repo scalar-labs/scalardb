@@ -14,7 +14,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
+import com.scalar.db.util.groupcommit.GroupCommitter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +37,7 @@ public class TwoPhaseConsensusCommitManager
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
 
   ////////////// For group commit >>>>>>>>>>>>>>>>>
-  private final GroupCommitter3<String, Snapshot> groupCommitter;
+  private final GroupCommitter<String, Snapshot> groupCommitter;
 
   public boolean isGroupCommitEnabled() {
     return groupCommitter != null;
@@ -98,7 +98,7 @@ public class TwoPhaseConsensusCommitManager
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit,
-      GroupCommitter3<String, Snapshot> groupCommitter) {
+      GroupCommitter<String, Snapshot> groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;

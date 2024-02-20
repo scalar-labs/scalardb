@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
+package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
 

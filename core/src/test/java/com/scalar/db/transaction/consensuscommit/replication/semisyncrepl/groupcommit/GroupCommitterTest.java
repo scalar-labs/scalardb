@@ -1,15 +1,20 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.scalar.db.util.groupcommit.GroupCommitAlreadyClosedException;
+import com.scalar.db.util.groupcommit.GroupCommitAlreadyCompletedException;
+import com.scalar.db.util.groupcommit.GroupCommitter;
+import com.scalar.db.util.groupcommit.KeyManipulator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,14 +25,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
 
-class GroupCommitterBench {
-  private class ExpectedException extends RuntimeException {
-    public ExpectedException(String message) {
-      super(message);
-    }
-  }
-
+class GroupCommitterTest {
   static class MyKeyManipulator implements KeyManipulator<String> {
     @Override
     public String createParentKey() {
@@ -128,8 +128,10 @@ class GroupCommitterBench {
     }
   }
 
-  void benchmark(boolean microBenchmark)
-      throws ExecutionException, InterruptedException, TimeoutException {
+  // $ ./gradlew core:cleanTest core:test --tests
+  // 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3Test'
+  @Test
+  void benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     // Warmup
     benchmarkInternal(
         // For Benchmarker:
@@ -140,8 +142,6 @@ class GroupCommitterBench {
         0,
         0,
         0,
-        0,
-        0,
         // For Group Commit
         new GroupCommitParams(8, 10, 100));
 
@@ -149,21 +149,20 @@ class GroupCommitterBench {
     System.gc();
     System.out.println("STARTING BENCHMARK");
 
+    boolean microBenchmark = false;
     if (microBenchmark) {
       // Benchmark for Micro-benchmark
       benchmarkInternal(
           // For Benchmarker:
           2048, // NumOfThreads
-          400000, // NumOfRequests
+          100000, // NumOfRequests
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
-          1, // ErrorBeforeReadyPercentage
-          1, // ErrorAfterReadyPercentage
           // For Group Commit
           new GroupCommitParams(40, 20, 200));
     } else {
-      List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(40, 40, 200));
+      List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(40, 40, 400));
       Map<GroupCommitParams, Result> results = new HashMap<>();
       for (GroupCommitParams param : params) {
         // Benchmark for Production case
@@ -171,12 +170,10 @@ class GroupCommitterBench {
             benchmarkInternal(
                 // For Benchmarker:
                 2048, // NumOfThreads
-                200000, // NumOfRequests
-                200, // AveragePrepareWaitInMillis
+                100000, // NumOfRequests
+                100, // AveragePrepareWaitInMillis
                 400, // MultiplexerInMillis
                 100, // MaxCommitWaitInMillis
-                1, // ErrorBeforeReadyPercentage
-                1, // ErrorAfterReadyPercentage
                 // For Group Commit
                 param);
         results.put(param, result);
@@ -194,17 +191,14 @@ class GroupCommitterBench {
       int bmAveragePrepareWaitInMillis,
       int bmMultiplexerInMillis,
       int bmMaxCommitWaitInMillis,
-      int bmErrorBeforeReadyPercentage,
-      int bmErrorAfterReadyPercentage,
       GroupCommitParams groupCommitParams)
       throws ExecutionException, InterruptedException, TimeoutException {
     Random rand = new Random();
     AtomicInteger retry = new AtomicInteger();
     Map<String, Boolean> emittedKeys = new ConcurrentHashMap<>();
-    Map<String, Boolean> failedKeys = new ConcurrentHashMap<>();
 
-    try (GroupCommitter3<String, Value> groupCommitter =
-        new GroupCommitter3<>(
+    try (GroupCommitter<String, Value> groupCommitter =
+        new GroupCommitter<>(
             "test",
             groupCommitParams.sizeFixExpirationInMillis,
             groupCommitParams.timeoutExpirationInMillis,
@@ -212,21 +206,13 @@ class GroupCommitterBench {
             20,
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
-          (parentKey, values) -> {
+          ((parentKey, values) -> {
             try {
               if (bmMaxCommitWaitInMillis > 0) {
                 int waitInMillis = rand.nextInt(bmMaxCommitWaitInMillis);
                 System.out.printf(
                     "Waiting for commit. ParentKey=%s, Duration=%d ms \n", parentKey, waitInMillis);
                 TimeUnit.MILLISECONDS.sleep(waitInMillis);
-              }
-              if (bmErrorAfterReadyPercentage > rand.nextInt(100)) {
-                for (Value v : values) {
-                  if (failedKeys.put(v.v, true) != null) {
-                    throw new RuntimeException(v + " is already set");
-                  }
-                }
-                throw new ExpectedException("Error after READY");
               }
             } catch (InterruptedException e) {
               throw new RuntimeException(e);
@@ -236,9 +222,16 @@ class GroupCommitterBench {
                 throw new RuntimeException(v + " is already set");
               }
             }
-          });
+          }));
 
       List<KeyAndFuture> futures = new ArrayList<>();
+      /*
+      ScheduledExecutorService monitor =
+          Executors.newSingleThreadScheduledExecutor(
+              new ThreadFactoryBuilder().setDaemon(true).build());
+      monitor.scheduleAtFixedRate(
+          () -> System.err.println("future.size:" + futures.size()), 1, 1, TimeUnit.SECONDS);
+       */
 
       ExecutorService executorService =
           Executors.newFixedThreadPool(
@@ -267,16 +260,10 @@ class GroupCommitterBench {
                                   fullKey, waitInMillis);
                               TimeUnit.MILLISECONDS.sleep(waitInMillis);
                             }
-                            if (bmErrorBeforeReadyPercentage > rand.nextInt(100)) {
-                              if (failedKeys.put(value.v, true) != null) {
-                                throw new RuntimeException(value.v + " is already set");
-                              }
-                              throw new ExpectedException("Error before READY");
-                            }
                             groupCommitter.ready(fullKey, value);
                             break;
-                          } catch (GroupCommitAlreadyClosedException
-                              | GroupCommitAlreadySizeFixedException e) {
+                          } catch (GroupCommitAlreadyCompletedException
+                              | GroupCommitAlreadyClosedException e) {
                             retry.incrementAndGet();
                           }
                         }
@@ -288,16 +275,6 @@ class GroupCommitterBench {
           try {
             System.err.println("Getting the future of " + kf.key);
             kf.future.get(10, TimeUnit.SECONDS);
-          } catch (ExecutionException e) {
-            if (e.getCause() instanceof ExpectedException
-                || (e.getCause() instanceof GroupCommitException
-                    && e.getCause().getCause() instanceof ExpectedException)) {
-              // Expected ???
-            } else {
-              throw e;
-            }
-          } catch (ExpectedException e) {
-            // Expected.
           } catch (TimeoutException e) {
             System.out.println("Timeout: Key=" + kf.key);
             throw e;
@@ -311,12 +288,13 @@ class GroupCommitterBench {
 
         start = System.currentTimeMillis();
         for (int i = 0; i < bmNumOfRequests; i++) {
-          String expectedKey = key(i);
-          if (!emittedKeys.containsKey(expectedKey) && !failedKeys.containsKey(expectedKey)) {
+          String expectedKey = "ORIG-KEY: " + String.format("%016d", i);
+          if (!emittedKeys.containsKey(expectedKey)) {
             throw new AssertionError(expectedKey + " is not found");
           }
           // System.err.println("Confirmed the key is contained: Key=" + expectedKey);
         }
+        assertEquals(bmNumOfRequests, emittedKeys.size());
 
         System.err.println("Checked all the keys");
         System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
@@ -325,17 +303,5 @@ class GroupCommitterBench {
         MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);
       }
     }
-  }
-
-  private String key(int i) {
-    return "ORIG-KEY: " + String.format("%016d", i);
-  }
-
-  public static void main(String[] args)
-      throws ExecutionException, InterruptedException, TimeoutException {
-    boolean microBenchmark =
-        Boolean.parseBoolean(Optional.ofNullable(System.getenv("MICRO_BENCHMARK")).orElse("false"));
-    System.out.println("microBenchmark: " + microBenchmark);
-    new GroupCommitterBench().benchmark(microBenchmark);
   }
 }

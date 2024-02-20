@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
+package com.scalar.db.util.groupcommit;
 
 public class GroupCommitException extends Exception {
   public GroupCommitException(String message) {

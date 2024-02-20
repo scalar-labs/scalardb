@@ -1,10 +1,10 @@
-package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit;
+package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.LazyInit;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.KeyManipulator.Keys;
+import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,8 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // TODO: K should be separate into PARENT_KEY, CHILD_KEY and FULL_KEY
-public class GroupCommitter3<K, V> implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(GroupCommitter3.class);
+public class GroupCommitter<K, V> implements Closeable {
+  private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
   // Queues
   private final BlockingQueue<NormalGroup<K, V>> queueForNormalGroupClose =
       new LinkedBlockingQueue<>();
@@ -56,7 +56,6 @@ public class GroupCommitter3<K, V> implements Closeable {
     void collect(Group<K, V> group);
   }
 
-  // FIXME: This single instance can be a performance bottleneck. Try multi-partitions.
   // This class is just for encapsulation of accesses to Groups
   private class GroupManager {
     // Groups
@@ -68,7 +67,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     private final ReentrantReadWriteLock lockOnDelayedGroupMap = new ReentrantReadWriteLock();
 
     // Returns full key
-    private K reserveNewSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
+    private K reserveNewSlot(K childKey) throws GroupCommitAlreadyClosedException {
       boolean isNewGroupCreated = false;
       NormalGroup<K, V> oldGroup = null;
       NormalGroup<K, V> newGroup = null;
@@ -239,9 +238,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       } catch (ExecutionException e) {
         // TODO: Sort these exceptions
         Throwable cause = e.getCause();
-        if (cause instanceof GroupCommitCascadeException) {
-          throw (GroupCommitCascadeException) cause;
-        } else if (cause instanceof GroupCommitException) {
+        if (cause instanceof GroupCommitException) {
           throw (GroupCommitException) cause;
         }
         throw new GroupCommitException("Group commit failed", e);
@@ -311,15 +308,15 @@ public class GroupCommitter3<K, V> implements Closeable {
       return slots.size() >= capacity;
     }
 
-    protected K reserveNewSlot(Slot<K, V> slot) throws GroupCommitAlreadySizeFixedException {
+    protected K reserveNewSlot(Slot<K, V> slot) throws GroupCommitAlreadyClosedException {
       return reserveNewSlot(slot, true);
     }
 
     protected K reserveNewSlot(Slot<K, V> slot, boolean autoEmit)
-        throws GroupCommitAlreadySizeFixedException {
+        throws GroupCommitAlreadyClosedException {
       synchronized (this) {
         if (isSizeFixed()) {
-          throw new GroupCommitAlreadySizeFixedException(
+          throw new GroupCommitAlreadyClosedException(
               "The size of 'slot' is already fixed. Group:" + this);
         }
         reserveSlot(slot);
@@ -341,9 +338,10 @@ public class GroupCommitter3<K, V> implements Closeable {
 
     // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
     private synchronized Slot<K, V> putValueToSlot(K childKey, V value)
-        throws GroupCommitAlreadyClosedException, GroupCommitTargetNotFoundException {
+        throws GroupCommitAlreadyCompletedException, GroupCommitTargetNotFoundException {
       if (isDone()) {
-        throw new GroupCommitAlreadyClosedException("This group is already closed. group:" + this);
+        throw new GroupCommitAlreadyCompletedException(
+            "This group is already closed. group:" + this);
       }
 
       Slot<K, V> slot = slots.get(childKey);
@@ -513,7 +511,7 @@ public class GroupCommitter3<K, V> implements Closeable {
       return keyManipulator.createFullKey(key, childKey);
     }
 
-    public K reserveNewSlot(K childKey) throws GroupCommitAlreadySizeFixedException {
+    public K reserveNewSlot(K childKey) throws GroupCommitAlreadyClosedException {
       return reserveNewSlot(new Slot<>(childKey, this));
     }
 
@@ -652,7 +650,7 @@ public class GroupCommitter3<K, V> implements Closeable {
         // - the queue and worker for delayed values will emit this if it's ready
         // - to avoid taking time in synchronized blocks
         super.reserveNewSlot(slot, false);
-      } catch (GroupCommitAlreadySizeFixedException e) {
+      } catch (GroupCommitAlreadyClosedException e) {
         // FIXME Message
         throw new IllegalStateException(
             "Failed to reserve a value slot. This shouldn't happen. slot:" + slot, e);
@@ -673,7 +671,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     }
   }
 
-  public GroupCommitter3(
+  public GroupCommitter(
       String label,
       long sizeFixExpirationInMillis,
       long timeoutExpirationInMillis,
@@ -902,7 +900,7 @@ public class GroupCommitter3<K, V> implements Closeable {
     while (true) {
       try {
         return groupManager.reserveNewSlot(childKey);
-      } catch (GroupCommitAlreadySizeFixedException e) {
+      } catch (GroupCommitAlreadyClosedException e) {
         logger.info("Failed to reserve a new value slot. Retrying. key:{}", childKey);
         ///////// FIXME: DEBUG
         counterForDebug++;
@@ -931,10 +929,10 @@ public class GroupCommitter3<K, V> implements Closeable {
       try {
         group.putValueToSlotAndWait(keys.childKey, value);
         return;
-      } catch (GroupCommitAlreadyClosedException | GroupCommitTargetNotFoundException e) {
+      } catch (GroupCommitAlreadyCompletedException | GroupCommitTargetNotFoundException e) {
         // This can throw an exception in a race condition when the value slot is moved to
         // delayed group. So, retry should be needed.
-        if (group instanceof GroupCommitter3.NormalGroup) {
+        if (group instanceof GroupCommitter.NormalGroup) {
           if (++retry >= 4) {
             throw new GroupCommitException(
                 String.format("Retry over for putting a value to the slot. fullKey=%s", fullKey),

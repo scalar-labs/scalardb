@@ -31,7 +31,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3;
+import com.scalar.db.util.groupcommit.GroupCommitter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -138,7 +138,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     // For PoC
-    GroupCommitter3<String, Snapshot> groupCommitter =
+    GroupCommitter<String, Snapshot> groupCommitter =
         ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
     CommitHandler commit =
         spy(
