@@ -14,6 +14,7 @@ import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -168,7 +169,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   @Override
-  public void commit() throws CommitConflictException, UnknownTransactionStatusException {
+  public void commit() throws CommitException, UnknownTransactionStatusException {
     if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
           CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_EXTRA_READ.buildMessage());

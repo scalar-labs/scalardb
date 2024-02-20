@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -419,14 +418,6 @@ public class CommitHandler {
     /////////////// FIXME: DEBUG
     try {
       cancelGroupCommitIfNeeded(id);
-      if (groupCommitter != null) {
-        try {
-          groupCommitter.remove(id);
-        } catch (GroupCommitException e) {
-          // FIXME: Revisit the exception
-          throw new RuntimeException(e);
-        }
-      }
       Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);
       coordinator.putState(state);
       return TransactionState.ABORTED;
