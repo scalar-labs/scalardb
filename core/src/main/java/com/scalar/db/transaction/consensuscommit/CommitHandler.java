@@ -27,7 +27,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -41,7 +40,7 @@ public class CommitHandler {
   private final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-  private final GroupCommitter<String, Snapshot> groupCommitter;
+  @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
 
   private void handleSnapshotsInGroupCommit(String parentId, List<Snapshot> snapshots) {
     try {
@@ -54,6 +53,7 @@ public class CommitHandler {
     }
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
       Coordinator coordinator,
@@ -74,14 +74,14 @@ public class CommitHandler {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
 
-    // FIXME: These are only for PoC.
     if (groupCommitter != null) {
-      // This method reference will be called via GroupCommitter3.ready().
+      // This method reference will be called via GroupCommitter.ready().
       groupCommitter.setEmitter(this::handleSnapshotsInGroupCommit);
     }
     this.groupCommitter = groupCommitter;
   }
 
+  // TODO: Try to remove this
   static class TransactionGroupCommitException extends RuntimeException {
     public TransactionGroupCommitException(TransactionException cause) {
       super(cause);
@@ -89,20 +89,9 @@ public class CommitHandler {
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    Optional<Future<Void>> logRecordFuture;
     try {
-      long start = System.currentTimeMillis();
-      logRecordFuture = prepare(snapshot);
-
-      // For PoC
-      logger.info(
-          "Prepared(thread_id:{}, txid:{}): {} ms",
-          Thread.currentThread().getId(),
-          snapshot.getId(),
-          System.currentTimeMillis() - start);
+      prepare(snapshot);
     } catch (PreparationException e) {
-      // TODO: This can be removed since it's called in `abortState()` as well.
-      cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
@@ -113,18 +102,8 @@ public class CommitHandler {
     // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
     try {
-      long start = System.currentTimeMillis();
       validate(snapshot);
-
-      // For PoC
-      logger.info(
-          "Validated(thread_id:{}, txid:{}): {} ms",
-          Thread.currentThread().getId(),
-          snapshot.getId(),
-          System.currentTimeMillis() - start);
     } catch (ValidationException e) {
-      // TODO: This can be removed since it's called in `abortState()` as well.
-      cancelGroupCommitIfNeeded(snapshot.getId());
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof ValidationConflictException) {
@@ -134,31 +113,15 @@ public class CommitHandler {
     }
     // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
-    // TODO: Move this before validate()
-    logRecordFuture.ifPresent(
-        logRecord -> {
-          try {
-            logRecord.get();
-          } catch (InterruptedException e) {
-            throw new RuntimeException(
-                String.format(
-                    "Log recording failed due to an interruption. transactionId:%s",
-                    snapshot.getId()),
-                e);
-          } catch (java.util.concurrent.ExecutionException e) {
-            throw new RuntimeException(
-                String.format("Log recording failed. transactionId:%s", snapshot.getId()), e);
-          }
-        });
-
-    if (groupCommitter == null
-        // For the case that a transaction started with `begin(txId)`
-        || !groupCommitter.isGroupCommitFullKey(snapshot.getId())) {
-      commitState(snapshot);
-      commitRecords(snapshot);
-    } else {
+    // For the case that a transaction started with `begin(txId)` > isGroupCommitFullKey()
+    // ^ Is this right...? TODO
+    if (groupCommitter != null && groupCommitter.isGroupCommitFullKey(snapshot.getId())) {
       commitViaGroupCommit(snapshot);
+      return;
     }
+
+    commitState(snapshot);
+    commitRecords(snapshot);
   }
 
   private void commitOrRollbackRecordsAccordingToState(Snapshot snapshot, Exception cause)
@@ -169,33 +132,38 @@ public class CommitHandler {
         TransactionState state = s.get().getState();
         if (state.equals(TransactionState.ABORTED)) {
           rollbackRecords(snapshot);
-          throw new CommitException("The transaction is already aborted", cause, snapshot.getId());
+          throw new CommitConflictException(
+              CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(),
+              cause,
+              snapshot.getId());
         }
       } else {
         throw new UnknownTransactionStatusException(
-            "Committing state failed with NoMutationException but the coordinator status doesn't exist",
+            CoreError
+                .CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
+                .buildMessage(),
             cause,
             snapshot.getId());
       }
       commitRecords(snapshot);
     } catch (CoordinatorException ex) {
-      throw new UnknownTransactionStatusException("Can't get the state", ex, snapshot.getId());
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), ex, snapshot.getId());
     }
   }
 
-  // This is used by TwoPhaseConsensusCommit.
   public void commitViaGroupCommit(Snapshot snapshot)
       throws CommitException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
       groupCommitter.ready(id, snapshot);
-      commitRecords(snapshot);
     } catch (GroupCommitAlreadyCompletedException e) {
       cancelGroupCommitIfNeeded(id);
       commitOrRollbackRecordsAccordingToState(snapshot, e);
       throw new CommitConflictException("Group commit failed due to a conflict", e, id);
     } catch (GroupCommitTargetNotFoundException e) {
       // This would happen with 2PC interface.
+      // TODO: Why...?
       cancelGroupCommitIfNeeded(id);
       commitOrRollbackRecordsAccordingToState(snapshot, e);
     } catch (GroupCommitException e) {
@@ -203,22 +171,18 @@ public class CommitHandler {
       commitOrRollbackRecordsAccordingToState(snapshot, e);
       throw new CommitException("Group commit failed", e, id);
     }
+    commitRecords(snapshot);
   }
 
   private void cancelGroupCommitIfNeeded(String id) {
     if (groupCommitter != null) {
-      try {
-        groupCommitter.remove(id);
-      } catch (GroupCommitException e) {
-        // TODO: Revisit this
-        throw new RuntimeException(e);
-      }
+      groupCommitter.remove(id);
     }
   }
 
-  public Optional<Future<Void>> prepare(Snapshot snapshot) throws PreparationException {
+  public void prepare(Snapshot snapshot) throws PreparationException {
     try {
-      return prepareRecords(snapshot);
+      prepareRecords(snapshot);
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
@@ -233,11 +197,10 @@ public class CommitHandler {
     }
   }
 
-  private Optional<Future<Void>> prepareRecords(Snapshot snapshot)
+  private void prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
-    PrepareMutationComposer composer;
-    Optional<Future<Void>> logRecordFuture = Optional.empty();
-    composer = new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+    PrepareMutationComposer composer =
+        new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
@@ -247,8 +210,6 @@ public class CommitHandler {
       tasks.add(() -> storage.mutate(mutations.get(key)));
     }
     parallelExecutor.prepare(tasks, snapshot.getId());
-
-    return logRecordFuture;
   }
 
   public void validate(Snapshot snapshot) throws ValidationException {
@@ -270,6 +231,7 @@ public class CommitHandler {
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
+      // TODO: The following code can be replaced with commitOrRollbackRecordsAccordingToState()?
       try {
         Optional<Coordinator.State> s = coordinator.getState(id);
         if (s.isPresent()) {
@@ -305,44 +267,21 @@ public class CommitHandler {
       // This means all buffered transactions failed in the prepare phase.
       // Each call of prepare() puts ABORT state for the *full* id.
       // So, just returning is enough...?
-      // throw new IllegalArgumentException("'snapshot' is empty");
       return;
     }
 
     try {
-      long start = System.currentTimeMillis();
       coordinator.putStateForGroupCommit(
           parentId,
           snapshots.stream().map(Snapshot::getId).collect(Collectors.toList()),
           TransactionState.COMMITTED,
           System.currentTimeMillis());
 
-      logger.info(
-          "CommitState-ed(thread_id:{}, txid:{}, num_of_values:{}): {} ms",
-          Thread.currentThread().getId(),
-          snapshots.get(0).getId(),
-          snapshots.size(),
-          System.currentTimeMillis() - start);
-
       logger.debug(
           "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
-      try {
-        Optional<Coordinator.State> s = coordinator.getState(parentId);
-        if (s.isPresent()) {
-          TransactionState state = s.get().getState();
-          if (state.equals(TransactionState.ABORTED)) {
-            throw new CommitException(
-                "Committing state in coordinator failed. the transaction is aborted", e, parentId);
-          }
-        } else {
-          throw new UnknownTransactionStatusException(
-              "Committing state failed with NoMutationException but the coordinator status doesn't exist",
-              e,
-              parentId);
-        }
-      } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException("Can't get the state", e1, parentId);
+      for (Snapshot snapshot : snapshots) {
+        commitOrRollbackRecordsAccordingToState(snapshot, e);
       }
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException("Coordinator status is unknown", e, parentId);
@@ -368,9 +307,6 @@ public class CommitHandler {
   }
 
   public TransactionState abortState(String id) throws UnknownTransactionStatusException {
-    /////////////// FIXME: DEBUG
-    logger.info("ABORT: id={}", id);
-    /////////////// FIXME: DEBUG
     try {
       cancelGroupCommitIfNeeded(id);
       Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);

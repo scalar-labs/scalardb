@@ -18,7 +18,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.util.groupcommit.GroupCommitException;
 import com.scalar.db.util.groupcommit.GroupCommitter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -167,15 +166,9 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void rollback() {
-    // do nothing for this implementation
-    // FIXME: For PoC
+    // Do nothing for this implementation except for group commit.
     if (groupCommitter != null) {
-      try {
-        groupCommitter.remove(crud.getSnapshot().getId());
-      } catch (GroupCommitException e) {
-        // FIXME: Change the exception type
-        throw new RuntimeException(e);
-      }
+      groupCommitter.remove(crud.getSnapshot().getId());
     }
   }
 

@@ -28,7 +28,6 @@ public class GroupCommitter<K, V> implements Closeable {
       new LinkedBlockingQueue<>();
   private final BlockingQueue<NormalGroup<K, V>> queueForDelayedSlotMove =
       new LinkedBlockingQueue<>();
-
   // Parameters
   private final long queueCheckIntervalInMillis;
   private final long normalGroupCloseExpirationInMillis;
@@ -87,7 +86,7 @@ public class GroupCommitter<K, V> implements Closeable {
       return currentGroup.reserveNewSlot(childKey);
     }
 
-    private Group<K, V> getGroup(Keys<K> keys) throws GroupCommitException {
+    private Group<K, V> getGroup(Keys<K> keys) throws GroupCommitTargetNotFoundException {
       long stamp = lock.writeLock();
       try {
         DelayedGroup<K, V> delayedGroup =
@@ -462,7 +461,7 @@ public class GroupCommitter<K, V> implements Closeable {
     }
   }
 
-  public void remove(K fullKey) throws GroupCommitException {
+  public void remove(K fullKey) {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
     try {
       Group<K, V> group = groupManager.getGroup(keys);
