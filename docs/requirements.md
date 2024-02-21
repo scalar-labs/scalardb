@@ -10,7 +10,8 @@ ScalarDB requires each underlying database to provide certain capabilities to ru
 
 #### Transactions
 {:.no_toc}
-ScalarDB requires each underlying database to provide at least the following capabilities for running transactions on the databases:
+ScalarDB requires each underlying database to provide at least the following capabilities to run transactions on the databases:
+
 - Linearizable read and conditional mutations (write and delete) on a single database record.
 - Durability of written database records.
 - Ability to store arbitrary data besides application data in each database record.
