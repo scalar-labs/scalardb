@@ -98,7 +98,7 @@ ScalarDB recommends each underlying database to be configured properly for high 
 {% capture notice--info %}
 **Note**
 
-ScalarDB can be seen as an application of underlying databases, so it is worth trying other knobs and configurations that are commonly effective.
+ScalarDB can be seen as an application of underlying databases, so you may want to try updating other knobs and configurations that are commonly used to improve efficiency.
 {% endcapture %}
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
