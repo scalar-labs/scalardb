@@ -118,8 +118,8 @@ ScalarDB can be seen as an application of underlying databases, so you may want 
 </div>
 
 <div id="DynamoDB2" class="tabcontent" markdown="1">
-- Increase RCU and WCU for high throughput.
-- Enable Point-in-time Recovery (PITR).
+- Increase the number of read capacity units (RCUs) and write capacity units (WCUs) for high throughput.
+- Enable point-in-time recovery (PITR).
 
 {% capture notice--info %}
 **Note**
