@@ -49,7 +49,7 @@ Select your database for details on how to configure it to achieve the general r
 
 #### Analytics
 {:.no_toc}
-- Use read committed or stricter isolation levels.
+- Use read-committed or stricter isolation levels.
 
 </div>
 
