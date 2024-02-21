@@ -13,7 +13,6 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -42,17 +41,6 @@ public class CommitHandler {
   private final ParallelExecutor parallelExecutor;
   @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
 
-  private void handleSnapshotsInGroupCommit(String parentId, List<Snapshot> snapshots) {
-    try {
-      commitStateForGroupCommit(parentId, snapshots);
-    } catch (TransactionException e) {
-      throw new TransactionGroupCommitException(e);
-    } catch (Throwable e) {
-      logger.error("Failed to group-commit", e);
-      throw e;
-    }
-  }
-
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
@@ -76,16 +64,9 @@ public class CommitHandler {
 
     if (groupCommitter != null) {
       // This method reference will be called via GroupCommitter.ready().
-      groupCommitter.setEmitter(this::handleSnapshotsInGroupCommit);
+      groupCommitter.setEmitter(this::commitStateForGroupCommit);
     }
     this.groupCommitter = groupCommitter;
-  }
-
-  // TODO: Try to remove this
-  static class TransactionGroupCommitException extends RuntimeException {
-    public TransactionGroupCommitException(TransactionException cause) {
-      super(cause);
-    }
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {

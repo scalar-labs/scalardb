@@ -11,7 +11,7 @@ class Slot<K, V> {
   private final K key;
   // If a result value is null, the value is already emitted.
   // Otherwise, the result lambda must be emitted by the receiver's thread.
-  private final CompletableFuture<Runnable> completableFuture = new CompletableFuture<>();
+  private final CompletableFuture<ThrowableRunnable> completableFuture = new CompletableFuture<>();
   // TODO: Revisit this
   // This value can be changed from null -> non-null.
   @Nullable private volatile V value;
@@ -33,10 +33,10 @@ class Slot<K, V> {
     try {
       // If a result value is null, the value is already emitted.
       // Otherwise, the result lambda must be emitted by the receiver's thread.
-      Runnable emittable = completableFuture.get();
-      if (emittable != null) {
+      ThrowableRunnable taskToEmit = completableFuture.get();
+      if (taskToEmit != null) {
         // TODO: Enhance the error handling?
-        emittable.run();
+        taskToEmit.run();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -47,6 +47,11 @@ class Slot<K, V> {
       Throwable cause = e.getCause();
       if (cause instanceof GroupCommitException) {
         throw (GroupCommitException) cause;
+      }
+      throw new GroupCommitException("Group commit failed", e);
+    } catch (Exception e) {
+      if (e instanceof GroupCommitException) {
+        throw (GroupCommitException) e;
       }
       throw new GroupCommitException("Group commit failed", e);
     }
@@ -70,7 +75,7 @@ class Slot<K, V> {
     completableFuture.complete(null);
   }
 
-  void delegateTask(Runnable task) {
+  void delegateTask(ThrowableRunnable task) {
     completableFuture.complete(task);
   }
 

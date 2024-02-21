@@ -94,7 +94,7 @@ class NormalGroup<K, V> extends Group<K, V> {
     }
 
     long startDelegate = System.currentTimeMillis();
-    Runnable taskForEmitterSlot =
+    ThrowableRunnable taskForEmitterSlot =
         () -> {
           try {
             logger.info(
