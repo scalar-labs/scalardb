@@ -157,11 +157,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void rollback() {
-    // Do nothing for this implementation except for group commit.
-    // TODO: Is this needed?
-    if (groupCommitter != null) {
-      groupCommitter.remove(crud.getSnapshot().getId());
-    }
+    // Do nothing for this implementation
   }
 
   @VisibleForTesting

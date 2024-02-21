@@ -113,9 +113,8 @@ public class CommitHandler {
     }
     // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
-    // For the case that a transaction started with `begin(txId)` > isGroupCommitFullKey()
-    // ^ Is this right...? TODO
-    if (groupCommitter != null && groupCommitter.isGroupCommitFullKey(snapshot.getId())) {
+    // if (groupCommitter != null && groupCommitter.isGroupCommitFullKey(snapshot.getId())) {
+    if (groupCommitter != null) {
       commitViaGroupCommit(snapshot);
       return;
     }
@@ -266,22 +265,20 @@ public class CommitHandler {
     if (snapshots.isEmpty()) {
       // This means all buffered transactions failed in the prepare phase.
       // Each call of prepare() puts ABORT state for the *full* id.
-      // So, just returning is enough...?
       return;
     }
 
+    List<String> transactionIds =
+        snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
     try {
       coordinator.putStateForGroupCommit(
-          parentId,
-          snapshots.stream().map(Snapshot::getId).collect(Collectors.toList()),
-          TransactionState.COMMITTED,
-          System.currentTimeMillis());
+          parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
 
       logger.debug(
           "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
+      // TODO: Execute this operation in parallel.
       for (Snapshot snapshot : snapshots) {
-        // TODO: Coordinator.putStateForGroupCommit() has a better performance.
         commitOrRollbackRecordsAccordingToState(snapshot, e);
       }
     } catch (CoordinatorException e) {
