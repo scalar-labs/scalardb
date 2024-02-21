@@ -88,7 +88,7 @@ Select your database for details on how to configure it to achieve the general r
 
 #### Analytics
 {:.no_toc}
-- N/A (Thee are no Cassandra-specific requirements since Cassandra always returns committed records.)
+- Not applicable. Cassandra always returns committed records, so there are no Cassandra-specific requirements.
 
 </div>
 </div>
