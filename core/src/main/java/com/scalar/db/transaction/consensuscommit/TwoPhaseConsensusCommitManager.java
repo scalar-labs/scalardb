@@ -35,14 +35,7 @@ public class TwoPhaseConsensusCommitManager
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-
-  ////////////// For group commit >>>>>>>>>>>>>>>>>
   private final GroupCommitter<String, Snapshot> groupCommitter;
-
-  public boolean isGroupCommitEnabled() {
-    return groupCommitter != null;
-  }
-  ////////////// For group commit <<<<<<<<<<<<<<<<<
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -137,11 +130,9 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    // For Group Commit PoC >>>>
-    if (groupCommitter != null) {
+    if (isGroupCommitEnabled()) {
       txId = groupCommitter.reserve(txId);
     }
-    // <<<< For Group Commit PoC
     return createNewTransaction(txId, isolation, strategy);
   }
 
@@ -203,15 +194,17 @@ public class TwoPhaseConsensusCommitManager
     }
   }
 
+  private boolean isGroupCommitEnabled() {
+    return groupCommitter != null;
+  }
+
   @Override
   public void close() {
     storage.close();
     admin.close();
     parallelExecutor.close();
-    // For Group Commit PoC >>>>
-    if (groupCommitter != null) {
+    if (isGroupCommitEnabled()) {
       groupCommitter.close();
     }
-    // <<<< For Group Commit PoC
   }
 }

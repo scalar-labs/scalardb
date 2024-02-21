@@ -7,6 +7,7 @@ import com.scalar.db.io.TextValue;
 
 public final class Attribute {
   public static final String ID = "tx_id";
+  public static final String CHILD_IDS = "tx_child_ids";
   public static final String STATE = "tx_state";
   public static final String VERSION = "tx_version";
   public static final String PREPARED_AT = "tx_prepared_at";
@@ -21,6 +22,10 @@ public final class Attribute {
 
   public static TextValue toIdValue(String transactionId) {
     return new TextValue(Attribute.ID, transactionId);
+  }
+
+  public static TextValue toChildIdsValue(String childTransactionIds) {
+    return new TextValue(Attribute.CHILD_IDS, childTransactionIds);
   }
 
   public static IntValue toStateValue(TransactionState state) {

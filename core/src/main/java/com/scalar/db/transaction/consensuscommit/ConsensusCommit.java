@@ -50,15 +50,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
   private Runnable beforeRecoveryHook;
 
-  // FIXME: For PoC
-  public ConsensusCommit(
-      CrudHandler crud,
-      CommitHandler commit,
-      RecoveryHandler recovery,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
-    this(crud, commit, recovery, mutationOperationChecker, null);
-  }
-
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ConsensusCommit(
       CrudHandler crud,
@@ -167,6 +158,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   @Override
   public void rollback() {
     // Do nothing for this implementation except for group commit.
+    // TODO: Is this needed?
     if (groupCommitter != null) {
       groupCommitter.remove(crud.getSnapshot().getId());
     }

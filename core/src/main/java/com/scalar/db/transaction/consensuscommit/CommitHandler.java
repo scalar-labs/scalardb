@@ -281,6 +281,7 @@ public class CommitHandler {
           "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
       for (Snapshot snapshot : snapshots) {
+        // TODO: Coordinator.putStateForGroupCommit() has a better performance.
         commitOrRollbackRecordsAccordingToState(snapshot, e);
       }
     } catch (CoordinatorException e) {

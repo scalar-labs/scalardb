@@ -37,14 +37,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-
-  ////////////// For group commit >>>>>>>>>>>>>>>>>
   private final GroupCommitter<String, Snapshot> groupCommitter;
-
-  public boolean isGroupCommitEnabled() {
-    return groupCommitter != null;
-  }
-  ////////////// For group commit <<<<<<<<<<<<<<<<<
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -192,11 +185,9 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
       throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
-    // For Group Commit PoC >>>>
-    if (groupCommitter != null) {
+    if (isGroupCommitEnabled()) {
       txId = groupCommitter.reserve(txId);
     }
-    // <<<< For Group Commit PoC
     if (!config.getIsolation().equals(isolation)
         || !config.getSerializableStrategy().equals(strategy)) {
       logger.warn(
@@ -240,15 +231,18 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     }
   }
 
+  @VisibleForTesting
+  boolean isGroupCommitEnabled() {
+    return groupCommitter != null;
+  }
+
   @Override
   public void close() {
     storage.close();
     admin.close();
     parallelExecutor.close();
-    // For Group Commit PoC >>>>
-    if (groupCommitter != null) {
+    if (isGroupCommitEnabled()) {
       groupCommitter.close();
     }
-    // <<<< For Group Commit PoC
   }
 }

@@ -225,10 +225,6 @@ public class GroupCommitter<K, V> implements Closeable {
 
   private boolean handleQueueForNormalGroupClose() {
     NormalGroup<K, V> normalGroup = queueForNormalGroupClose.peek();
-    ////////// FIXME: DEBUG LOG
-    logger.info("[NORMAL-GROUP-CLOSE] Fetched group={}", normalGroup);
-    ////////// FIXME: DEBUG LOG
-
     Long retryWaitInMillis = null;
 
     if (normalGroup == null) {
