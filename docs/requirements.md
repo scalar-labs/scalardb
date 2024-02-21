@@ -19,7 +19,7 @@ ScalarDB requires each underlying database to provide at least the following cap
 {% capture notice--info %}
 **Note**
 
-You need to have database accounts that have enough privileges to access the databases thorough ScalarDB since ScalarDB runs on the underlying databases not only for CRUD operations but also for performing operations like creating or altering schemas, tables, or indexes. ScalarDB basically requires a fully privileged account to access the underlying databases.
+You need to have database accounts that have enough privileges to access the databases through ScalarDB since ScalarDB runs on the underlying databases not only for CRUD operations but also for performing operations like creating or altering schemas, tables, or indexes. ScalarDB basically requires a fully privileged account to access the underlying databases.
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
