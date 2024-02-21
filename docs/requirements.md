@@ -30,6 +30,8 @@ ScalarDB requires each underlying database to provide the following capability f
 
 ### How to configure databases to achieve the general requirements
 
+Select your database for details on how to configure it to achieve the general requirements.
+
 <div id="tabset-1">
 <div class="tab">
   <button class="tablinks" onclick="openTab(event, 'JDBC_databases', 'tabset-1')" id="defaultOpen-1">JDBC databases</button>
