@@ -130,9 +130,9 @@ Since DynamoDB stores data in multiple availability zones by default, so you don
 </div>
 
 <div id="Cosmos_DB_for_NoSQL2" class="tabcontent" markdown="1">
-- Increase RU for high throughput.
-- Enable Point-In-Time-Restore (PITR).
-- Enable Availability Zones.
+- Increase the number of Request Units (RUs) for high throughput.
+- Enable point-in-time restore (PITR).
+- Enable availability zones.
 </div>
 
 <div id="Cassandra2" class="tabcontent" markdown="1">
