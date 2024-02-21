@@ -59,7 +59,7 @@ Select your database for details on how to configure it to achieve the general r
 
 #### Transactions
 {:.no_toc}
-- Use a single primary region for all operations. (No reads and writes on global tables in non-primary regions.)
+- Use a single primary region for all operations. (No read and write operations on global tables in non-primary regions.)
   - There is no concept for primary regions in DynamoDB, so you must designate a primary region by yourself.
 
 #### Analytics
