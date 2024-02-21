@@ -3,7 +3,6 @@ package com.scalar.db.util.groupcommit;
 import com.google.common.base.MoreObjects;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 
 class Slot<K, V> {
@@ -40,15 +39,7 @@ class Slot<K, V> {
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      // TODO: Unified the error message
-      throw new RuntimeException("Group commit was interrupted", e);
-    } catch (ExecutionException e) {
-      // TODO: Sort these exceptions
-      Throwable cause = e.getCause();
-      if (cause instanceof GroupCommitException) {
-        throw (GroupCommitException) cause;
-      }
-      throw new GroupCommitException("Group commit failed", e);
+      throw new GroupCommitException("Group commit was interrupted", e);
     } catch (Exception e) {
       if (e instanceof GroupCommitException) {
         throw (GroupCommitException) e;

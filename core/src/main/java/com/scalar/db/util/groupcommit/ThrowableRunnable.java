@@ -1,6 +1,6 @@
 package com.scalar.db.util.groupcommit;
 
 @FunctionalInterface
-public interface ThrowableRunnable {
+interface ThrowableRunnable {
   void run() throws Exception;
 }

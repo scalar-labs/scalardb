@@ -120,9 +120,6 @@ abstract class Group<K, V> {
       // This is in this block since it results in better performance
       asyncEmitIfReady();
     }
-    ///////// FIXME: DEBUG
-    logger.info("Put value:{}, childKey:{}", this, childKey);
-    ///////// FIXME: DEBUG
 
     long start = System.currentTimeMillis();
     slot.waitUntilEmit();
@@ -152,10 +149,6 @@ abstract class Group<K, V> {
       // Current Slot that `index` is pointing is not used yet.
       size.set(slots.size());
       updateIsClosed();
-      ////// FIXME: DEBUG
-      logger.info("Fixed size: group={}", this);
-      ////// FIXME: DEBUG
-      // This is in this block since it results in better performance
       if (autoEmit) {
         asyncEmitIfReady();
       }

@@ -78,11 +78,6 @@ public class GroupCommitter<K, V> implements Closeable {
         lock.unlockWrite(stamp);
       }
 
-      if (isNewGroupCreated) {
-        ///////// FIXME: DEBUG
-        logger.info("New group:{}, old group:{}, child key:{}", newGroup, oldGroup, childKey);
-        ///////// FIXME: DEBUG
-      }
       return currentGroup.reserveNewSlot(childKey);
     }
 
@@ -231,14 +226,6 @@ public class GroupCommitter<K, V> implements Closeable {
       retryWaitInMillis = queueCheckIntervalInMillis;
     } else if (normalGroup.isSizeFixed()) {
       // Already the size is fixed. Nothing to do. Handle a next element immediately
-      ////////// FIXME: DEBUG LOG
-      if (normalGroup.groupClosedAt().isBefore(Instant.now().minusMillis(5000))) {
-        logger.info(
-            "[NORMAL-GROUP-CLOSE] Too old group: group.key={}, group.values={}",
-            normalGroup.key,
-            normalGroup.slots);
-      }
-      ////////// FIXME: DEBUG LOG
     } else {
       Instant now = Instant.now();
       if (now.isAfter(normalGroup.groupClosedAt())) {
@@ -255,14 +242,10 @@ public class GroupCommitter<K, V> implements Closeable {
         TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        // TODO: Unified the error message
         logger.warn("Interrupted", e);
         return false;
       }
     } else {
-      ////////// FIXME: DEBUG LOG
-      logger.info("[NORMAL-GROUP-CLOSE] Fetched group={}", normalGroup);
-      ////////// FIXME: DEBUG LOG
       // Move the size-fixed group but not ready to the timeout queue
       if (!normalGroup.isReady()) {
         queueForDelayedSlotMove.add(normalGroup);
@@ -285,10 +268,6 @@ public class GroupCommitter<K, V> implements Closeable {
   private boolean handleQueueForDelayedSlotMove() {
     NormalGroup<K, V> normalGroup = queueForDelayedSlotMove.peek();
     Long retryWaitInMillis = null;
-
-    ////////// FIXME: DEBUG LOG
-    logger.info(
-        "[DELAYED-SLOT-MOVE] New group:{}, size:{}", normalGroup, queueForDelayedSlotMove.size());
 
     if (normalGroup == null) {
       retryWaitInMillis = queueCheckIntervalInMillis * 2;
@@ -332,7 +311,6 @@ public class GroupCommitter<K, V> implements Closeable {
         TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        // TODO: Unified the error message
         logger.warn("Interrupted", e);
         return false;
       }
@@ -401,53 +379,37 @@ public class GroupCommitter<K, V> implements Closeable {
 
   // Returns the full key
   public K reserve(K childKey) {
-    int counterForDebug = 0;
     while (true) {
       try {
         return groupManager.reserveNewSlot(childKey);
       } catch (GroupCommitAlreadyClosedException e) {
         logger.info("Failed to reserve a new value slot. Retrying. key:{}", childKey);
-        ///////// FIXME: DEBUG
-        counterForDebug++;
-        if (counterForDebug > 1000) {
-          throw new IllegalStateException("Too many retries. Something is wrong, key:" + childKey);
+        try {
+          TimeUnit.MILLISECONDS.sleep(5);
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(ex);
         }
-        ///////// FIXME: DEBUG
-      } catch (Throwable e) {
-        ///////// FIXME: DEBUG
-        logger.error("Failed to reserve slot #2: Unexpected key={}", childKey);
-        ///////// FIXME: DEBUG
-        throw e;
       }
     }
   }
 
-  public boolean isGroupCommitFullKey(K fullKey) {
-    return keyManipulator.isFullKey(fullKey);
-  }
-
   public void ready(K fullKey, V value) throws GroupCommitException {
     Keys<K> keys = keyManipulator.fromFullKey(fullKey);
-    int retry = 0;
     while (true) {
       Group<K, V> group = groupManager.getGroup(keys);
       try {
         group.putValueToSlotAndWait(keys.childKey, value);
         return;
-      } catch (GroupCommitAlreadyCompletedException | GroupCommitTargetNotFoundException e) {
+      } catch (GroupCommitAlreadyCompletedException e) {
+        // TODO: This concern on race condition doesn't exist now.
         // This can throw an exception in a race condition when the value slot is moved to
         // delayed group. So, retry should be needed.
         if (group instanceof NormalGroup) {
-          if (++retry >= 4) {
-            throw new GroupCommitException(
-                String.format("Retry over for putting a value to the slot. fullKey=%s", fullKey),
-                e);
-          }
           try {
             TimeUnit.MILLISECONDS.sleep(10);
           } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            // TODO: Unified the error message
             throw new RuntimeException(ex);
           }
           continue;

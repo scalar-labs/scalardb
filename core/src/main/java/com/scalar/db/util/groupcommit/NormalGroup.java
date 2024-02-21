@@ -71,10 +71,6 @@ class NormalGroup<K, V> extends Group<K, V> {
 
   @Override
   public synchronized void asyncEmit() {
-    ////// FIXME: DEBUG
-    logger.info("Delegating emits: group={}", this);
-    ////// FIXME: DEBUG
-
     if (slots.isEmpty()) {
       return;
     }
@@ -93,17 +89,9 @@ class NormalGroup<K, V> extends Group<K, V> {
       values.add(slot.getValue());
     }
 
-    long startDelegate = System.currentTimeMillis();
     ThrowableRunnable taskForEmitterSlot =
         () -> {
           try {
-            logger.info(
-                "Delegated (thread_id:{}, key:{}, num_of_values:{}): {} ms",
-                Thread.currentThread().getId(),
-                key,
-                getSize(),
-                System.currentTimeMillis() - startDelegate);
-
             long startEmit = System.currentTimeMillis();
             emitter.execute(key, values);
             logger.info(
@@ -113,7 +101,6 @@ class NormalGroup<K, V> extends Group<K, V> {
                 getSize(),
                 System.currentTimeMillis() - startEmit);
 
-            long startNotify = System.currentTimeMillis();
             // Wake up the other waiting threads.
             // Pass null since the value is already emitted by the thread of `firstSlot`.
             for (Slot<K, V> slot : slots.values()) {
@@ -121,15 +108,10 @@ class NormalGroup<K, V> extends Group<K, V> {
                 slot.success();
               }
             }
-            logger.info(
-                "Notified (thread_id:{}, num_of_values:{}): {} ms",
-                Thread.currentThread().getId(),
-                getSize(),
-                System.currentTimeMillis() - startNotify);
-          } catch (Throwable e) {
-            logger.error("Group commit failed", e);
-            GroupCommitException exception =
-                new GroupCommitException("Group commit failed. Aborting all the values", e);
+          } catch (Exception e) {
+            String msg = "Group commit failed";
+            logger.error(msg, e);
+            GroupCommitFailureException exception = new GroupCommitFailureException(msg, e);
 
             // Let other threads know the exception.
             for (Slot<K, V> slot : slots.values()) {
@@ -138,8 +120,8 @@ class NormalGroup<K, V> extends Group<K, V> {
               }
             }
 
-            // Throw the exception for the thread of `firstSlot`.
-            throw e;
+            // Throw the exception for the thread which executed the group commit.
+            throw exception;
           } finally {
             dismiss();
           }
