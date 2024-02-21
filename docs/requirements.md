@@ -115,8 +115,8 @@ ScalarDB can be seen as an application of underlying databases, so you may want 
 </div>
 
 <div id="JDBC_databases2" class="tabcontent" markdown="1">
-- Use read committed isolation for better performance.
-- Follow each database’s best practices for performance optimization. For example, increasing buffer size (e.g., shared_buffers in PostgreSQL) and increasing the number of connections (e.g., max_connections in PostgreSQL) are usually recommended for better performance.
+- Use read-committed isolation for better performance.
+- Follow the performance optimization best practices for each database. For example, increasing the buffer size (for example, `shared_buffers` in PostgreSQL) and increasing the number of connections (for example, `max_connections` in PostgreSQL) are usually recommended for better performance.
 </div>
 
 <div id="DynamoDB2" class="tabcontent" markdown="1">
