@@ -76,7 +76,7 @@ Select your database for details on how to configure it to achieve the general r
 
 #### Analytics
 {:.no_toc}
-- N/A (Thee are no Cosmos DB-specific requirements since Cosmos DB always returns committed records.)
+- Not applicable. Cosmos DB always returns committed records, so there are no Cosmos DB–specific requirements.
 
 </div>
 
