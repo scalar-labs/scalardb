@@ -44,8 +44,8 @@ Select your database for details on how to configure it to achieve the general r
 
 #### Transactions
 {:.no_toc}
-- Use a single primary server or synchronized multi-primary servers for all operations. (No reads on read replicas that are asynchronously replicated from a primary database.)
-- Use read committed or stricter isolation levels.
+- Use a single primary server or synchronized multi-primary servers for all operations (no read operations on read replicas that are asynchronously replicated from a primary database).
+- Use read-committed or stricter isolation levels.
 
 #### Analytics
 {:.no_toc}
