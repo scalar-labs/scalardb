@@ -93,7 +93,7 @@ ScalarDB requires each underlying database to provide the following capability f
 
 ## Recommendations
 
-ScalarDB recommends each underlying database to be configured properly for high performance and high availability. The following items are some knobs and configurations to update.
+Properly configuring each underlying database of ScalarDB for high performance and high availability is recommended. The following recommendations include some knobs and configurations to update.
 
 {% capture notice--info %}
 **Note**
