@@ -25,7 +25,8 @@ You need to have database accounts that have enough privileges to access the dat
 
 #### Analytics
 {:.no_toc}
-ScalarDB requires each underlying database to provide the following capability for running analytics on the databases:
+ScalarDB requires each underlying database to provide the following capability to run analytics on the databases:
+
 - Ability to return only committed records.
 
 ### How to configure databases to achieve the general requirements
