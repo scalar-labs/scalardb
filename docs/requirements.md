@@ -136,6 +136,6 @@ Since DynamoDB stores data in multiple availability zones by default, so you don
 </div>
 
 <div id="Cassandra2" class="tabcontent" markdown="1">
-- Increase concurrent_reads and concurrent_writes for high throughput. See [the official doc](https://cassandra.apache.org/doc/stable/cassandra/configuration/cass_yaml_file.html#concurrent_writes) for more details.
+- Increase `concurrent_reads` and `concurrent_writes` for high throughput. For details, see the official Cassandra documentation about [`concurrent_writes`](https://cassandra.apache.org/doc/stable/cassandra/configuration/cass_yaml_file.html#concurrent_writes).
 </div>
 </div>
