@@ -4,7 +4,7 @@ This document explains the requirements and recommendations in the underlying da
 
 ## Requirements
 
-ScalarDB requires each underlying database to provide certain capabilities for running transactions and analytics on the databases. This document first explains the general requirements and then explains how to configure each database to achieve the requirements.
+ScalarDB requires each underlying database to provide certain capabilities to run transactions and analytics on the databases. This document explains the general requirements and how to configure each database to achieve the requirements.
 
 ### General requirements
 
