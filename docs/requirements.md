@@ -82,9 +82,9 @@ Select your database for details on how to configure it to achieve the general r
 
 #### Transactions
 {:.no_toc}
-- Use a single primary cluster for all operations. (No reads and writes in non-primary clusters.)
+- Use a single primary cluster for all operations (no read or write operations in non-primary clusters).
 - Use `batch` or `group` for `commitlog_sync`.
-- (In case you use Cassandra-compatible databases) Use Cassandra-compatible databases that properly support Lightweight Transactions (LWT).
+- If you're using Cassandra-compatible databases, those databases must properly support lightweight transactions (LWT).
 
 #### Analytics
 {:.no_toc}
