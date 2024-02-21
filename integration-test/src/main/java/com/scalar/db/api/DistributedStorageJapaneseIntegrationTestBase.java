@@ -177,4 +177,93 @@ public abstract class DistributedStorageJapaneseIntegrationTestBase {
                 .build());
     assertThat(result).isEmpty();
   }
+
+  @Test
+  public void operation_WithHankaku_ShouldWorkProperly() throws ExecutionException, IOException {
+    // Arrange
+    storage.put(
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(COL_NAME1, "ｱｱｱ"))
+            .clusteringKey(Key.ofText(COL_NAME2, "ｱｱｱ"))
+            .textValue(COL_NAME3, "１１１")
+            .build());
+    storage.put(
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(COL_NAME1, "ｱｱｱ"))
+            .clusteringKey(Key.ofText(COL_NAME2, "ｲｲｲ"))
+            .textValue(COL_NAME3, "２２２")
+            .build());
+    storage.put(
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(COL_NAME1, "ｱｱｱ"))
+            .clusteringKey(Key.ofText(COL_NAME2, "ｳｳｳ"))
+            .textValue(COL_NAME3, "３３３")
+            .build());
+    storage.put(
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(COL_NAME1, "ｲｲｲ"))
+            .clusteringKey(Key.ofText(COL_NAME2, "ｱｱｱ"))
+            .textValue(COL_NAME3, "１１１")
+            .build());
+
+    // Act Assert
+    Optional<Result> result =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofText(COL_NAME1, "ｱｱｱ"))
+                .clusteringKey(Key.ofText(COL_NAME2, "ｱｱｱ"))
+                .build());
+    assertThat(result).isPresent();
+    assertThat(result.get().getText(COL_NAME1)).isEqualTo("ｱｱｱ");
+    assertThat(result.get().getText(COL_NAME2)).isEqualTo("ｱｱｱ");
+    assertThat(result.get().getText(COL_NAME3)).isEqualTo("１１１");
+
+    Scanner scanner =
+        storage.scan(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofText(COL_NAME1, "ｱｱｱ"))
+                .build());
+    List<Result> results = scanner.all();
+    assertThat(results).hasSize(3);
+    assertThat(results.get(0).getText(COL_NAME1)).isEqualTo("ｱｱｱ");
+    assertThat(results.get(0).getText(COL_NAME2)).isEqualTo("ｱｱｱ");
+    assertThat(results.get(0).getText(COL_NAME3)).isEqualTo("１１１");
+    assertThat(results.get(1).getText(COL_NAME1)).isEqualTo("ｱｱｱ");
+    assertThat(results.get(1).getText(COL_NAME2)).isEqualTo("ｲｲｲ");
+    assertThat(results.get(1).getText(COL_NAME3)).isEqualTo("２２２");
+    assertThat(results.get(2).getText(COL_NAME1)).isEqualTo("ｱｱｱ");
+    assertThat(results.get(2).getText(COL_NAME2)).isEqualTo("ｳｳｳ");
+    assertThat(results.get(2).getText(COL_NAME3)).isEqualTo("３３３");
+    scanner.close();
+
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(COL_NAME1, "ｱｱｱ"))
+            .clusteringKey(Key.ofText(COL_NAME2, "ｱｱｱ"))
+            .build();
+    storage.delete(delete);
+    result =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofText(COL_NAME1, "ｱｱｱ"))
+                .clusteringKey(Key.ofText(COL_NAME2, "ｱｱｱ"))
+                .build());
+    assertThat(result).isEmpty();
+  }
 }
