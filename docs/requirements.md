@@ -124,7 +124,7 @@ ScalarDB can be seen as an application of underlying databases, so you may want 
 {% capture notice--info %}
 **Note**
 
-Since DynamoDB stores data in multiple availability zones by default, so you don’t need to do anything for better availability.)
+Since DynamoDB stores data in multiple availability zones by default, you don’t need to adjust any configurations to improve availability.
 {% endcapture %}
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 </div>
