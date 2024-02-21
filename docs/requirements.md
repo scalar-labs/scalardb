@@ -63,7 +63,7 @@ Select your database for details on how to configure it to achieve the general r
 
 #### Analytics
 {:.no_toc}
-- N/A (Thee are no DynamoDB-specific requirements since DynamoDB always returns committed records.)
+- Not applicable. DynamoDB always returns committed records, so there are no DynamoDB-specific requirements.
 
 </div>
 
