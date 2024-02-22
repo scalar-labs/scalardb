@@ -20,7 +20,7 @@ ScalarDB supports the following databases and their versions.
 {% capture notice--info %}
 **Note**
 
-For requirements when using Cassandra or Cassandra-compatible databases, see [Cassandra or Cassandra-compatible database requirements](requirements.md#cassandra-or-cassandra-compatible-database-requirements).
+For requirements when using Cassandra or Cassandra-compatible databases, see [How to configure databases to achieve the general requirements](requirements.md#how-to-configure-databases-to-achieve-the-general-requirements).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
@@ -54,7 +54,7 @@ For requirements when using Cassandra or Cassandra-compatible databases, see [Ca
 {% capture notice--info %}
 **Note**
 
-For recommendations when using JDBC databases, see [JDBC database recommendations](requirements.md#jdbc-database-recommendations).
+For recommendations when using JDBC databases, see [Recommendations](requirements.md#recommendations).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
