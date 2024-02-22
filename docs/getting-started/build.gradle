@@ -9,7 +9,7 @@ repositories {
 mainClassName = "sample.ElectronicMoneyMain"
 
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.11.0'
+    implementation 'com.scalar-labs:scalardb:3.11.1'
     implementation 'org.slf4j:slf4j-simple:1.7.30'
 }
 
