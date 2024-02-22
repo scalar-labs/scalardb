@@ -172,7 +172,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case INT:
         return "INT";
       case TEXT:
-        return "VARCHAR(8000) COLLATE Latin1_General_BIN";
+        return "VARCHAR(8000)";
       default:
         throw new AssertionError();
     }
