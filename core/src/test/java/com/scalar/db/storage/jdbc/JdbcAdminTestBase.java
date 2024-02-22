@@ -272,7 +272,7 @@ public abstract class JdbcAdminTestBase {
   public void createNamespace_forMysql_shouldExecuteCreateNamespaceStatement()
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
-        RdbEngine.MYSQL, "CREATE SCHEMA `my_ns` character set utf8 COLLATE utf8_bin");
+        RdbEngine.MYSQL, "CREATE SCHEMA `my_ns`");
   }
 
   @Test
@@ -436,7 +436,7 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
@@ -689,7 +689,7 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
