@@ -16,7 +16,7 @@ RUN set -x && \
     tar -xzvf "dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz" && \
     ./dockerize --version
 
-FROM ghcr.io/scalar-labs/jre8:1.1.15
+FROM ghcr.io/scalar-labs/jre8:1.1.16
 
 COPY --from=tools dockerize /usr/local/bin/
 COPY --from=tools grpc_health_probe /usr/local/bin/
