@@ -227,15 +227,11 @@ jobs:
     name: MySQL 5.7 integration test
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-
     steps:
+      - name: Run MySQL 5.7
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8
@@ -260,15 +256,11 @@ jobs:
     name: MySQL 8.0 integration test
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-
     steps:
+      - name: Run MySQL 8.0
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8
@@ -293,15 +285,11 @@ jobs:
     name: MySQL 8.1 integration test
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.1
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-
     steps:
+      - name: Run MySQL 8.1
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.1 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8
@@ -607,6 +595,7 @@ jobs:
           MSSQL_PID: "Express"
           SA_PASSWORD: "SqlServer17"
           ACCEPT_EULA: "Y"
+          MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
 
@@ -642,6 +631,7 @@ jobs:
           MSSQL_PID: "Express"
           SA_PASSWORD: "SqlServer19"
           ACCEPT_EULA: "Y"
+          MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
 
@@ -677,6 +667,7 @@ jobs:
           MSSQL_PID: "Express"
           SA_PASSWORD: "SqlServer22"
           ACCEPT_EULA: "Y"
+          MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
 
@@ -733,15 +724,11 @@ jobs:
     name: MariaDB 10 integration test
     runs-on: ubuntu-latest
 
-    services:
-      mariadb:
-        image: mariadb:10.11
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-
     steps:
+      - name: Run MariaDB 10.11
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8
@@ -774,14 +761,12 @@ jobs:
           HEAP_NEWSIZE: 512m
         ports:
           - 9042:9042
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
 
     steps:
+      - name: Run MySQL 8
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8
@@ -806,15 +791,11 @@ jobs:
     name: ScalarDB Server integration test
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-
     steps:
+      - name: Run MySQL 8
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 8

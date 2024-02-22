@@ -23,7 +23,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
-    return new String[] {"CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin"};
+    return new String[] {"CREATE SCHEMA " + fullNamespace};
   }
 
   @Override
