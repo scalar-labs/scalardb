@@ -206,10 +206,11 @@ class GroupCommitterBench {
     try (GroupCommitter<String, Value> groupCommitter =
         new GroupCommitter<>(
             "test",
-            groupCommitParams.sizeFixExpirationInMillis,
-            groupCommitParams.timeoutExpirationInMillis,
-            groupCommitParams.numOfRetentionValues,
-            20,
+            new GroupCommitConfig(
+                groupCommitParams.sizeFixExpirationInMillis,
+                groupCommitParams.timeoutExpirationInMillis,
+                groupCommitParams.numOfRetentionValues,
+                20),
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
           (parentKey, values) -> {

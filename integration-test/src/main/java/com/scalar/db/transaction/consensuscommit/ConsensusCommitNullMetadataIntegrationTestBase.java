@@ -139,7 +139,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     // For PoC
     GroupCommitter<String, Snapshot> groupCommitter =
-        ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
+        ConsensusCommitUtils.prepareGroupCommitterFromEnvVar().orElse(null);
     CommitHandler commit =
         spy(
             new CommitHandler(

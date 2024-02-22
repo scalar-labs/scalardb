@@ -4,7 +4,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
+import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import com.scalar.db.util.groupcommit.GroupCommitter;
 import com.scalar.db.util.groupcommit.KeyManipulator;
 import java.util.Collections;
@@ -250,9 +252,22 @@ public final class ConsensusCommitUtils {
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS";
 
-  // FIXME: GroupCommitter3 should be abstract
+  public static Optional<GroupCommitter<String, Snapshot>> prepareGroupCommitter(
+      DatabaseConfig databaseConfig) {
+    if (databaseConfig.isCoordinatorGroupCommitEnabled()) {
+      return Optional.of(
+          new GroupCommitter<>(
+              "coordinator",
+              GroupCommitConfig.fromDatabaseConfig(
+                  databaseConfig, databaseConfig.getCoordinatorGroupCommitPrefix()),
+              ConsensusCommitUtils.keyManipulatorForCoordinatorGroupCommit()));
+    } else {
+      return Optional.empty();
+    }
+  }
+
   @VisibleForTesting
-  public static Optional<GroupCommitter<String, Snapshot>> prepareGroupCommitter() {
+  public static Optional<GroupCommitter<String, Snapshot>> prepareGroupCommitterFromEnvVar() {
     // TODO: Make this configurable
     // TODO: Take care of lazy recovery
     if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
@@ -289,36 +304,41 @@ public final class ConsensusCommitUtils {
 
     return Optional.of(
         new GroupCommitter<>(
-            "coordinator-writer",
-            groupCommitSizeFixExpirationInMillis,
-            groupCommitTimeoutExpirationInMillis,
-            groupCommitNumOfRetentionValues,
-            groupCommitExpirationCheckIntervalInMillis,
-            new KeyManipulator<String>() {
-              @Override
-              public String createParentKey() {
-                return UUID.randomUUID().toString();
-              }
+            "coordinator",
+            new GroupCommitConfig(
+                groupCommitSizeFixExpirationInMillis,
+                groupCommitTimeoutExpirationInMillis,
+                groupCommitNumOfRetentionValues,
+                groupCommitExpirationCheckIntervalInMillis),
+            keyManipulatorForCoordinatorGroupCommit()));
+  }
 
-              @Override
-              public String createFullKey(String parentKey, String childKey) {
-                return parentKey + ":" + childKey;
-              }
+  private static KeyManipulator<String> keyManipulatorForCoordinatorGroupCommit() {
+    return new KeyManipulator<String>() {
+      @Override
+      public String createParentKey() {
+        return UUID.randomUUID().toString();
+      }
 
-              @Override
-              public boolean isFullKey(String fullKey) {
-                String[] parts = fullKey.split(":");
-                return parts.length == 2;
-              }
+      @Override
+      public String createFullKey(String parentKey, String childKey) {
+        return parentKey + ":" + childKey;
+      }
 
-              @Override
-              public Keys<String> fromFullKey(String fullKey) {
-                String[] parts = fullKey.split(":");
-                if (parts.length != 2) {
-                  throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
-                }
-                return new Keys<>(parts[0], parts[1]);
-              }
-            }));
+      @Override
+      public boolean isFullKey(String fullKey) {
+        String[] parts = fullKey.split(":");
+        return parts.length == 2;
+      }
+
+      @Override
+      public Keys<String> fromFullKey(String fullKey) {
+        String[] parts = fullKey.split(":");
+        if (parts.length != 2) {
+          throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
+        }
+        return new Keys<>(parts[0], parts[1]);
+      }
+    };
   }
 }

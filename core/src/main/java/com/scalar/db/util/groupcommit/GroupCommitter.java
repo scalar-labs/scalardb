@@ -175,17 +175,11 @@ public class GroupCommitter<K, V> implements Closeable {
     }
   }
 
-  public GroupCommitter(
-      String label,
-      long sizeFixExpirationInMillis,
-      long timeoutExpirationInMillis,
-      int numberOfRetentionValues,
-      long expirationCheckIntervalInMillis,
-      KeyManipulator<K> keyManipulator) {
-    this.normalGroupCloseExpirationInMillis = sizeFixExpirationInMillis;
-    this.delayedSlotMoveExpirationInMillis = timeoutExpirationInMillis;
-    this.numberOfRetentionValues = numberOfRetentionValues;
-    this.queueCheckIntervalInMillis = expirationCheckIntervalInMillis;
+  public GroupCommitter(String label, GroupCommitConfig config, KeyManipulator<K> keyManipulator) {
+    this.normalGroupCloseExpirationInMillis = config.groupCloseExpirationInMillis();
+    this.delayedSlotMoveExpirationInMillis = config.delayedSlotExpirationInMillis();
+    this.numberOfRetentionValues = config.retentionSlotsCount();
+    this.queueCheckIntervalInMillis = config.checkIntervalInMillis();
     this.keyManipulator = keyManipulator;
     this.groupManager = new GroupManager();
 

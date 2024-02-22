@@ -51,7 +51,7 @@ public class TwoPhaseConsensusCommitManager
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
+    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter(databaseConfig).orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -72,7 +72,7 @@ public class TwoPhaseConsensusCommitManager
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter().orElse(null);
+    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter(databaseConfig).orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);

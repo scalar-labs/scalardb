@@ -37,6 +37,7 @@ public class DatabaseConfig {
   private boolean crossPartitionScanEnabled;
   private boolean crossPartitionScanFilteringEnabled;
   private boolean crossPartitionScanOrderingEnabled;
+  private boolean coordinatorGroupCommitEnabled;
   private String systemNamespaceName;
 
   public static final String PREFIX = "scalar.db.";
@@ -56,6 +57,9 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
   public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
+  public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
+  public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "enabled";
 
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
 
@@ -112,6 +116,8 @@ public class DatabaseConfig {
         getBoolean(getProperties(), CROSS_PARTITION_SCAN_FILTERING, false);
     crossPartitionScanOrderingEnabled =
         getBoolean(getProperties(), CROSS_PARTITION_SCAN_ORDERING, false);
+    coordinatorGroupCommitEnabled =
+        getBoolean(getProperties(), COORDINATOR_GROUP_COMMIT_ENABLED, false);
 
     if (!crossPartitionScanEnabled
         && (crossPartitionScanFilteringEnabled || crossPartitionScanOrderingEnabled)) {
@@ -171,6 +177,14 @@ public class DatabaseConfig {
 
   public boolean isCrossPartitionScanOrderingEnabled() {
     return crossPartitionScanOrderingEnabled;
+  }
+
+  public boolean isCoordinatorGroupCommitEnabled() {
+    return coordinatorGroupCommitEnabled;
+  }
+
+  public String getCoordinatorGroupCommitPrefix() {
+    return COORDINATOR_GROUP_COMMIT_PREFIX;
   }
 
   public String getSystemNamespaceName() {
