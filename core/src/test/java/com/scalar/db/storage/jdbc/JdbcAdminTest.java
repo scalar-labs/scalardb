@@ -288,12 +288,9 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.MYSQL,
-        Collections.singletonList("CREATE SCHEMA `my_ns` character set utf8 COLLATE utf8_bin"),
+        Collections.singletonList("CREATE SCHEMA `my_ns`"),
         "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
-        Collections.singletonList(
-            "CREATE SCHEMA IF NOT EXISTS `"
-                + METADATA_SCHEMA
-                + "` character set utf8 COLLATE utf8_bin"),
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -472,7 +469,7 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
@@ -569,7 +566,7 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
             + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
@@ -754,7 +751,7 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "` character set utf8 COLLATE utf8_bin",
+        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
@@ -920,7 +917,7 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "` character set utf8 COLLATE utf8_bin",
+        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
@@ -2883,13 +2880,9 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.MYSQL,
-        Collections.singletonList(
-            "CREATE SCHEMA IF NOT EXISTS `my_ns` character set utf8 COLLATE utf8_bin"),
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `my_ns`"),
         "SELECT 1 FROM `scalardb`.`namespaces` LIMIT 1",
-        Collections.singletonList(
-            "CREATE SCHEMA IF NOT EXISTS `"
-                + METADATA_SCHEMA
-                + "` character set utf8 COLLATE utf8_bin"),
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -3031,10 +3024,7 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`metadata` LIMIT 1",
         "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
-        ImmutableList.of(
-            "CREATE SCHEMA IF NOT EXISTS `"
-                + METADATA_SCHEMA
-                + "` character set utf8 COLLATE utf8_bin"),
+        ImmutableList.of("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -3244,10 +3234,7 @@ public class JdbcAdminTest {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.MYSQL,
         "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
-        Collections.singletonList(
-            "CREATE SCHEMA IF NOT EXISTS `"
-                + METADATA_SCHEMA
-                + "` character set utf8 COLLATE utf8_bin"),
+        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
