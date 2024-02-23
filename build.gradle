@@ -17,7 +17,7 @@ subprojects {
     apply plugin: 'java-library-distribution'
     apply plugin: 'com.diffplug.spotless'
 
-    project.version = '3.12.1'
+    project.version = '3.12.2-SNAPSHOT'
 
     ext {
         guiceVersion = '5.1.0'
