@@ -16,7 +16,6 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
-import com.scalar.db.util.groupcommit.GroupCommitter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +36,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  private final GroupCommitter<String, String, String, String, Snapshot> groupCommitter;
+  private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -93,7 +92,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit,
-      GroupCommitter<String, String, String, String, Snapshot> groupCommitter) {
+      CoordinatorGroupCommitter groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;

@@ -41,7 +41,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.util.groupcommit.GroupCommitter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -91,7 +90,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private Coordinator coordinator;
   private RecoveryHandler recovery;
   private CommitHandler commit;
-  private GroupCommitter<String, Snapshot> groupCommitter;
+  private CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
   public void beforeAll() throws Exception {

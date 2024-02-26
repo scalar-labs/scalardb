@@ -7,14 +7,11 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
-import com.scalar.db.util.groupcommit.GroupCommitter;
-import com.scalar.db.util.groupcommit.KeyManipulator;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class ConsensusCommitUtils {
@@ -252,23 +249,20 @@ public final class ConsensusCommitUtils {
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS";
 
-  public static Optional<GroupCommitter<String, String, String, String, Snapshot>>
-      prepareGroupCommitter(DatabaseConfig databaseConfig) {
+  public static Optional<CoordinatorGroupCommitter> prepareGroupCommitter(
+      DatabaseConfig databaseConfig) {
     if (databaseConfig.isCoordinatorGroupCommitEnabled()) {
       return Optional.of(
-          new GroupCommitter<>(
-              "coordinator",
+          new CoordinatorGroupCommitter(
               GroupCommitConfig.fromDatabaseConfig(
-                  databaseConfig, databaseConfig.getCoordinatorGroupCommitPrefix()),
-              ConsensusCommitUtils.keyManipulatorForCoordinatorGroupCommit()));
+                  databaseConfig, databaseConfig.getCoordinatorGroupCommitPrefix())));
     } else {
       return Optional.empty();
     }
   }
 
   @VisibleForTesting
-  public static Optional<GroupCommitter<String, String, String, String, Snapshot>>
-      prepareGroupCommitterFromEnvVar() {
+  public static Optional<CoordinatorGroupCommitter> prepareGroupCommitterFromEnvVar() {
     // TODO: Make this configurable
     // TODO: Take care of lazy recovery
     if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
@@ -304,59 +298,11 @@ public final class ConsensusCommitUtils {
     }
 
     return Optional.of(
-        new GroupCommitter<>(
-            "coordinator",
+        new CoordinatorGroupCommitter(
             new GroupCommitConfig(
                 groupCommitSizeFixExpirationInMillis,
                 groupCommitTimeoutExpirationInMillis,
                 groupCommitNumOfRetentionValues,
-                groupCommitExpirationCheckIntervalInMillis),
-            keyManipulatorForCoordinatorGroupCommit()));
-  }
-
-  private static KeyManipulator<String, String, String, String>
-      keyManipulatorForCoordinatorGroupCommit() {
-    return new KeyManipulator<String, String, String, String>() {
-      @Override
-      public String createParentKey() {
-        return UUID.randomUUID().toString();
-      }
-
-      @Override
-      public String createFullKey(String parentKey, String childKey) {
-        return parentKey + ":" + childKey;
-      }
-
-      @Override
-      public boolean isFullKey(Object obj) {
-        if (!(obj instanceof String)) {
-          return false;
-        }
-        String key = (String) obj;
-        String[] parts = key.split(":");
-        return parts.length == 2;
-      }
-
-      @Override
-      public Keys<String, String> fromFullKey(String fullKey) {
-        String[] parts = fullKey.split(":");
-        if (parts.length != 2) {
-          throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
-        }
-        return new Keys<>(parts[0], parts[1]);
-      }
-
-      @Override
-      public String getEmitKeyFromFullKey(String s) {
-        // Return the string as is since the value is already String.
-        return s;
-      }
-
-      @Override
-      public String getEmitKeyFromParentKey(String s) {
-        // Return the string as is since the value is already String.
-        return s;
-      }
-    };
+                groupCommitExpirationCheckIntervalInMillis)));
   }
 }

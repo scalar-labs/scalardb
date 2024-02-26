@@ -21,7 +21,6 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.util.groupcommit.GroupCommitAlreadyCompletedException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
 import com.scalar.db.util.groupcommit.GroupCommitTargetNotFoundException;
-import com.scalar.db.util.groupcommit.GroupCommitter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +38,7 @@ public class CommitHandler {
   private final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-  @Nullable private final GroupCommitter<String, String, String, String, Snapshot> groupCommitter;
+  @Nullable private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -56,7 +55,7 @@ public class CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      @Nullable GroupCommitter<String, String, String, String, Snapshot> groupCommitter) {
+      @Nullable CoordinatorGroupCommitter groupCommitter) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);

@@ -16,6 +16,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,6 +47,7 @@ public class Coordinator {
   private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
   private final DistributedStorage storage;
   private final String coordinatorNamespace;
+  private final CoordinatorGroupCommitKeyManipulator coordinatorGroupCommitKeyManipulator;
 
   /**
    * @param storage a storage
@@ -55,39 +58,18 @@ public class Coordinator {
   public Coordinator(DistributedStorage storage) {
     this.storage = storage;
     coordinatorNamespace = NAMESPACE;
+    coordinatorGroupCommitKeyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
-  }
-
-  private static class IdForGroupCommit {
-    public final String parentId;
-    public final String childId;
-
-    public IdForGroupCommit(String parentId, String childId) {
-      this.parentId = parentId;
-      this.childId = childId;
-    }
-  }
-
-  private boolean isIdForGroupCommit(String id) {
-    // TODO: Move these logics to an expert class
-    return id.contains(":");
-  }
-
-  private IdForGroupCommit idForGroupCommit(String id) {
-    if (!isIdForGroupCommit(id)) {
-      throw new IllegalArgumentException("'id' isn't for group commit. id:" + id);
-    }
-    String[] parts = id.split(":");
-    return new IdForGroupCommit(parts[0], parts[1]);
+    coordinatorGroupCommitKeyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
-    if (isIdForGroupCommit(id)) {
+    if (coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
       // In group commit mode, checking the two transaction ID formats is executed in non-atomic.
       // So, it's possible the insertion of transaction ID occurs between the two read operations.
       // But, it occurs only if the two transactions of checking transaction IDs and inserting the
@@ -106,10 +88,13 @@ public class Coordinator {
 
   private Optional<Coordinator.State> getStateForGroupCommit(String id)
       throws CoordinatorException {
-    IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
+    if (!coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
+      throw new IllegalArgumentException("'id' isn't for group commit. id:" + id);
+    }
+    Keys<String, String> idForGroupCommit = coordinatorGroupCommitKeyManipulator.fromFullKey(id);
 
-    String parentId = idForGroupCommit.parentId;
-    String childId = idForGroupCommit.childId;
+    String parentId = idForGroupCommit.parentKey;
+    String childId = idForGroupCommit.childKey;
     Get get = createGetWith(parentId);
     Optional<State> state = get(get);
     return state.flatMap(
@@ -139,19 +124,22 @@ public class Coordinator {
 
   @VisibleForTesting
   void putStateForGroupCommit(
-      String parentId, Collection<String> ids, TransactionState transactionState, long createdAt)
+      String parentId,
+      Collection<String> fullIds,
+      TransactionState transactionState,
+      long createdAt)
       throws CoordinatorException {
     boolean isFirst = true;
     StringBuilder sb = new StringBuilder();
-    for (String id : ids) {
-      IdForGroupCommit idForGroupCommit = idForGroupCommit(id);
+    for (String id : fullIds) {
+      Keys<String, String> idForGroupCommit = coordinatorGroupCommitKeyManipulator.fromFullKey(id);
       // TODO: Verify the parentId
       if (isFirst) {
         isFirst = false;
       } else {
         sb.append(",");
       }
-      sb.append(idForGroupCommit.childId);
+      sb.append(idForGroupCommit.childKey);
     }
 
     Put put =
