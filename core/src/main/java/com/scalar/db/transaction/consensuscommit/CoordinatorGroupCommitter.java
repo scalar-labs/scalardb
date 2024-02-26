@@ -3,7 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import com.scalar.db.util.groupcommit.GroupCommitter;
 import com.scalar.db.util.groupcommit.KeyManipulator;
-import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CoordinatorGroupCommitter
     extends GroupCommitter<String, String, String, String, Snapshot> {
@@ -13,15 +13,102 @@ public class CoordinatorGroupCommitter
 
   static class CoordinatorGroupCommitKeyManipulator
       implements KeyManipulator<String, String, String, String> {
+    private static final int PRIMARY_KEY_SIZE = 24;
+    private static final char DELIMITER = ':';
+    private static final int MAX_FULL_KEY_SIZE = 64;
+    private static final int MAX_CHILD_KEY_SIZE =
+        MAX_FULL_KEY_SIZE - PRIMARY_KEY_SIZE - 1 /* delimiter */;
+    private static final char[] CHARS_FOR_PRIMARY_KEY = {
+      // 10 + 26 + 26 = 62
+      '0',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      'A',
+      'B',
+      'C',
+      'D',
+      'E',
+      'F',
+      'G',
+      'H',
+      'I',
+      'J',
+      'K',
+      'L',
+      'M',
+      'N',
+      'O',
+      'P',
+      'Q',
+      'R',
+      'S',
+      'T',
+      'U',
+      'V',
+      'W',
+      'X',
+      'Y',
+      'Z',
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+      'f',
+      'g',
+      'h',
+      'i',
+      'j',
+      'k',
+      'l',
+      'm',
+      'n',
+      'o',
+      'p',
+      'q',
+      'r',
+      's',
+      't',
+      'u',
+      'v',
+      'w',
+      'x',
+      'y',
+      'z'
+    };
+    private static final int CHARS_FOR_PRIMARY_KEY_SIZE = CHARS_FOR_PRIMARY_KEY.length;
+    ThreadLocalRandom random = ThreadLocalRandom.current();
+
     @Override
     public String createParentKey() {
-      return UUID.randomUUID().toString();
+      char[] chars = new char[PRIMARY_KEY_SIZE];
+      for (int i = 0; i < PRIMARY_KEY_SIZE; i++) {
+        chars[i] = CHARS_FOR_PRIMARY_KEY[random.nextInt(CHARS_FOR_PRIMARY_KEY_SIZE)];
+      }
+      return new String(chars);
     }
 
     @Override
     public String createFullKey(String parentKey, String childKey) {
-      // TODO: Validation
-      return parentKey + ":" + childKey;
+      if (parentKey.length() != PRIMARY_KEY_SIZE) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The length of parent key must be %d. ParentKey: %s", PRIMARY_KEY_SIZE, childKey));
+      }
+      if (childKey.length() > MAX_CHILD_KEY_SIZE) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The length of child key must not exceed %d. ChildKey: %s",
+                MAX_CHILD_KEY_SIZE, childKey));
+      }
+      return parentKey + DELIMITER + childKey;
     }
 
     @Override
@@ -30,17 +117,17 @@ public class CoordinatorGroupCommitter
         return false;
       }
       String key = (String) obj;
-      String[] parts = key.split(":");
-      return parts.length == 2;
+      return key.charAt(PRIMARY_KEY_SIZE) == DELIMITER;
     }
 
     @Override
     public Keys<String, String> fromFullKey(String fullKey) {
-      String[] parts = fullKey.split(":");
-      if (parts.length != 2) {
+      if (!isFullKey(fullKey)) {
         throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
       }
-      return new Keys<>(parts[0], parts[1]);
+      return new Keys<>(
+          fullKey.substring(0, PRIMARY_KEY_SIZE),
+          fullKey.substring(PRIMARY_KEY_SIZE + 1 /* delimiter */));
     }
 
     @Override

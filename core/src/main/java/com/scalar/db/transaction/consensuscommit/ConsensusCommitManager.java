@@ -53,6 +53,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     groupCommitter = ConsensusCommitUtils.prepareGroupCommitter(databaseConfig).orElse(null);
+    // FIXME: Remove this
+    logger.info("GROUP-COMMITTER: {}, DATABASE-CONFIG: {}", groupCommitter, databaseConfig);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -74,6 +76,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     groupCommitter = ConsensusCommitUtils.prepareGroupCommitter(databaseConfig).orElse(null);
+    // FIXME: Remove this
+    logger.info("GROUP-COMMITTER: {}, DATABASE-CONFIG: {}", groupCommitter, databaseConfig);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -105,6 +109,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.recovery = recovery;
     this.commit = commit;
     this.groupCommitter = groupCommitter;
+    // FIXME: Remove this
+    logger.info("GROUP-COMMITTER: {}, DATABASE-CONFIG: {}", groupCommitter, databaseConfig);
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);

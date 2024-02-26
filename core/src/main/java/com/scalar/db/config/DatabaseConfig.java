@@ -57,6 +57,7 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
   public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
+  // TODO: Move this into ConsensusCommitConfig
   public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
   public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
       COORDINATOR_GROUP_COMMIT_PREFIX + "enabled";
