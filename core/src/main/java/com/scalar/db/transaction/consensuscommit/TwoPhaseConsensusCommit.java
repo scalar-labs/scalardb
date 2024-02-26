@@ -39,7 +39,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
+  @Nullable private final GroupCommitter<String, String, String, String, Snapshot> groupCommitter;
   private boolean validated;
   private boolean needRollback;
 
@@ -52,7 +52,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       CommitHandler commit,
       RecoveryHandler recovery,
       ConsensusCommitMutationOperationChecker mutationOperationChecker,
-      @Nullable GroupCommitter groupCommitter) {
+      @Nullable GroupCommitter<String, String, String, String, Snapshot> groupCommitter) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;

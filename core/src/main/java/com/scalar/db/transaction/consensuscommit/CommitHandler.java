@@ -39,7 +39,7 @@ public class CommitHandler {
   private final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-  @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
+  @Nullable private final GroupCommitter<String, String, String, String, Snapshot> groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -56,7 +56,7 @@ public class CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      @Nullable GroupCommitter<String, Snapshot> groupCommitter) {
+      @Nullable GroupCommitter<String, String, String, String, Snapshot> groupCommitter) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);

@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class GroupCommitterTest {
-  static class MyKeyManipulator implements KeyManipulator<String> {
+  static class MyKeyManipulator implements KeyManipulator<String, String, String, String> {
     @Override
     public String createParentKey() {
       return UUID.randomUUID().toString();
@@ -36,14 +36,28 @@ class GroupCommitterTest {
     }
 
     @Override
-    public boolean isFullKey(String fullKey) {
-      return fullKey.contains(":");
+    public boolean isFullKey(Object obj) {
+      if (!(obj instanceof String)) {
+        return false;
+      }
+      String key = (String) obj;
+      return key.contains(":");
     }
 
     @Override
-    public Keys<String> fromFullKey(String fullKey) {
+    public Keys<String, String> fromFullKey(String fullKey) {
       String[] parts = fullKey.split(":");
       return new Keys<>(parts[0], parts[1]);
+    }
+
+    @Override
+    public String getEmitKeyFromFullKey(String s) {
+      return s;
+    }
+
+    @Override
+    public String getEmitKeyFromParentKey(String s) {
+      return s;
     }
   }
 
@@ -193,13 +207,14 @@ class GroupCommitterTest {
     AtomicInteger retry = new AtomicInteger();
     Map<String, Boolean> emittedKeys = new ConcurrentHashMap<>();
 
-    try (GroupCommitter<String, Value> groupCommitter =
+    try (GroupCommitter<String, String, String, String, Value> groupCommitter =
         new GroupCommitter<>(
             "test",
-            groupCommitParams.sizeFixExpirationInMillis,
-            groupCommitParams.timeoutExpirationInMillis,
-            groupCommitParams.numOfRetentionValues,
-            20,
+            new GroupCommitConfig(
+                groupCommitParams.sizeFixExpirationInMillis,
+                groupCommitParams.timeoutExpirationInMillis,
+                groupCommitParams.numOfRetentionValues,
+                20),
             new MyKeyManipulator())) {
       groupCommitter.setEmitter(
           ((parentKey, values) -> {

@@ -22,13 +22,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class GroupCommitterBench {
-  private class ExpectedException extends RuntimeException {
+  private static class ExpectedException extends RuntimeException {
     public ExpectedException(String message) {
       super(message);
     }
   }
 
-  static class MyKeyManipulator implements KeyManipulator<String> {
+  static class MyKeyManipulator implements KeyManipulator<String, String, String, String> {
     @Override
     public String createParentKey() {
       return UUID.randomUUID().toString();
@@ -40,14 +40,28 @@ class GroupCommitterBench {
     }
 
     @Override
-    public boolean isFullKey(String fullKey) {
-      return fullKey.contains(":");
+    public boolean isFullKey(Object obj) {
+      if (!(obj instanceof String)) {
+        return false;
+      }
+      String key = (String) obj;
+      return key.contains(":");
     }
 
     @Override
-    public Keys<String> fromFullKey(String fullKey) {
+    public Keys<String, String> fromFullKey(String fullKey) {
       String[] parts = fullKey.split(":");
       return new Keys<>(parts[0], parts[1]);
+    }
+
+    @Override
+    public String getEmitKeyFromFullKey(String s) {
+      return s;
+    }
+
+    @Override
+    public String getEmitKeyFromParentKey(String s) {
+      return s;
     }
   }
 
@@ -203,7 +217,7 @@ class GroupCommitterBench {
     Map<String, Boolean> emittedKeys = new ConcurrentHashMap<>();
     Map<String, Boolean> failedKeys = new ConcurrentHashMap<>();
 
-    try (GroupCommitter<String, Value> groupCommitter =
+    try (GroupCommitter<String, String, String, String, Value> groupCommitter =
         new GroupCommitter<>(
             "test",
             new GroupCommitConfig(

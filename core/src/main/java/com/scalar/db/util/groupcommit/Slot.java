@@ -6,9 +6,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 
-class Slot<K, V> {
-  private final NormalGroup<K, V> parentGroup;
-  private final K key;
+class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
+  private final Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup;
+  private final CHILD_KEY key;
   // If a result value is null, the value is already emitted.
   // Otherwise, the result lambda must be emitted by the receiver's thread.
   private final CompletableFuture<ThrowableRunnable> completableFuture = new CompletableFuture<>();
@@ -16,12 +16,12 @@ class Slot<K, V> {
   // This value can be changed from null -> non-null.
   @Nullable private volatile V value;
 
-  Slot(K key, NormalGroup<K, V> parentGroup) {
+  Slot(CHILD_KEY key, Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
     this.key = key;
     this.parentGroup = parentGroup;
   }
 
-  K getFullKey() {
+  FULL_KEY getFullKey() {
     return parentGroup.getFullKey(key);
   }
 
@@ -60,7 +60,7 @@ class Slot<K, V> {
     return MoreObjects.toStringHelper(this).add("key", key).toString();
   }
 
-  K getKey() {
+  CHILD_KEY getKey() {
     return key;
   }
 

@@ -9,27 +9,24 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-abstract class Group<K, V> {
+abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);
 
-  protected final Emittable<K, V> emitter;
-  protected final KeyManipulator<K> keyManipulator;
+  protected final Emittable<EMIT_KEY, V> emitter;
+  protected final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
   private final int capacity;
   private final AtomicReference<Integer> size = new AtomicReference<>();
-  protected final K key;
   private final long moveDelayedSlotExpirationInMillis;
   private final Instant groupClosedAt;
   private final AtomicReference<Instant> delayedSlotMovedAt;
   private final AtomicBoolean done = new AtomicBoolean();
-  protected final Map<K, Slot<K, V>> slots;
+  protected final Map<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> slots;
   // Whether to reject a new value slot.
   protected final AtomicBoolean closed = new AtomicBoolean();
-  protected final GarbageGroupCollector<K, V> garbageGroupCollector;
 
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("key", key)
         .add("hashCode", hashCode())
         .add("groupClosedAt", groupClosedAt)
         .add("delayedSlotMovedAt", delayedSlotMovedAt)
@@ -40,14 +37,14 @@ abstract class Group<K, V> {
         .toString();
   }
 
+  abstract String getKeyName();
+
   Group(
-      K key,
-      Emittable<K, V> emitter,
-      KeyManipulator<K> keyManipulator,
+      Emittable<EMIT_KEY, V> emitter,
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
       long groupCloseExpirationInMillis,
       long moveDelayedSlotExpirationInMillis,
-      int capacity,
-      GarbageGroupCollector<K, V> garbageGroupCollector) {
+      int capacity) {
     this.emitter = emitter;
     this.keyManipulator = keyManipulator;
     this.capacity = capacity;
@@ -55,9 +52,7 @@ abstract class Group<K, V> {
     this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
     this.delayedSlotMovedAt = new AtomicReference<>();
     updateDelayedSlotMovedAt();
-    this.key = key;
     this.slots = new HashMap<>(capacity);
-    this.garbageGroupCollector = garbageGroupCollector;
   }
 
   void updateDelayedSlotMovedAt() {
@@ -68,11 +63,15 @@ abstract class Group<K, V> {
     return slots.size() >= capacity;
   }
 
-  K reserveNewSlot(Slot<K, V> slot) throws GroupCommitAlreadyClosedException {
+  FULL_KEY reserveNewSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot)
+      throws GroupCommitAlreadyClosedException {
     return reserveNewSlot(slot, true);
   }
 
-  protected K reserveNewSlot(Slot<K, V> slot, boolean autoEmit)
+  abstract FULL_KEY getFullKey(CHILD_KEY childKey);
+
+  protected FULL_KEY reserveNewSlot(
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot, boolean autoEmit)
       throws GroupCommitAlreadyClosedException {
     synchronized (this) {
       if (isSizeFixed()) {
@@ -80,40 +79,38 @@ abstract class Group<K, V> {
             "The size of 'slot' is already fixed. Group:" + this);
       }
       reserveSlot(slot);
-      ///////// FIXME: DEBUG
       if (noMoreSlot()) {
         fixSize(autoEmit);
       }
     }
-    ///////// FIXME: DEBUG
-    logger.info("RESERVE:{}, CHILDKEY:{}", this, slot.getKey());
     return slot.getFullKey();
   }
 
-  private synchronized void reserveSlot(Slot<K, V> slot) {
+  private synchronized void reserveSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
     // TODO: Check if no existing slot?
     slots.put(slot.getKey(), slot);
     updateIsClosed();
   }
 
   // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
-  private synchronized Slot<K, V> putValueToSlot(K childKey, V value)
+  private synchronized Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> putValueToSlot(
+      CHILD_KEY childKey, V value)
       throws GroupCommitAlreadyCompletedException, GroupCommitTargetNotFoundException {
     if (isDone()) {
       throw new GroupCommitAlreadyCompletedException("This group is already closed. group:" + this);
     }
 
-    Slot<K, V> slot = slots.get(childKey);
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = slots.get(childKey);
     if (slot == null) {
       throw new GroupCommitTargetNotFoundException(
-          "The slot doesn't exist. fullKey:" + keyManipulator.createFullKey(key, childKey));
+          "The slot doesn't exist. fullKey:" + getFullKey(childKey));
     }
     slot.putValue(value);
     return slot;
   }
 
-  void putValueToSlotAndWait(K childKey, V value) throws GroupCommitException {
-    Slot<K, V> slot;
+  void putValueToSlotAndWait(CHILD_KEY childKey, V value) throws GroupCommitException {
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot;
     synchronized (this) {
       slot = putValueToSlot(childKey, value);
 
@@ -127,7 +124,7 @@ abstract class Group<K, V> {
     logger.info(
         "Waited(thread_id:{}, parentKey:{}, childKey:{}): {} ms",
         Thread.currentThread().getId(),
-        key,
+        getKeyName(),
         childKey,
         System.currentTimeMillis() - start);
   }
@@ -166,7 +163,7 @@ abstract class Group<K, V> {
   synchronized boolean isReady() {
     if (isSizeFixed()) {
       int readySlotCount = 0;
-      for (Slot<K, V> slot : slots.values()) {
+      for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
         if (slot.getValue() != null) {
           readySlotCount++;
           if (readySlotCount >= size.get()) {
@@ -195,7 +192,7 @@ abstract class Group<K, V> {
     updateIsClosed();
   }
 
-  void removeSlot(K childKey) {
+  void removeSlot(CHILD_KEY childKey) {
     synchronized (this) {
       if (slots.remove(childKey) != null) {
         if (size.get() != null && size.get() > 0) {
@@ -203,14 +200,6 @@ abstract class Group<K, V> {
         }
         updateIsClosed();
       }
-      ////// FIXME: DEBUG
-      logger.info(
-          "REMOVE VS: key={}, childKey={}, valueSlotsSize={}, size={}",
-          this.key,
-          childKey,
-          slots.size(),
-          size.get());
-      ////// FIXME: DEBUG
       // This is in this block since it results in better performance
       asyncEmitIfReady();
     }
@@ -236,7 +225,5 @@ abstract class Group<K, V> {
     }
   }
 
-  protected void dismiss() {
-    garbageGroupCollector.collect(this);
-  }
+  protected abstract void dismiss();
 }

@@ -47,7 +47,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  @Nullable private final GroupCommitter<String, Snapshot> groupCommitter;
+  @Nullable private final GroupCommitter<String, String, String, String, Snapshot> groupCommitter;
   private Runnable beforeRecoveryHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -56,7 +56,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       CommitHandler commit,
       RecoveryHandler recovery,
       ConsensusCommitMutationOperationChecker mutationOperationChecker,
-      @Nullable GroupCommitter<String, Snapshot> groupCommitter) {
+      @Nullable GroupCommitter<String, String, String, String, Snapshot> groupCommitter) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);

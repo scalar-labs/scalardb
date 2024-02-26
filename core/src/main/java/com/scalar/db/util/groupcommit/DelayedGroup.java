@@ -1,25 +1,27 @@
 package com.scalar.db.util.groupcommit;
 
+import com.google.common.base.Objects;
 import java.util.Collections;
 import java.util.Map.Entry;
 
-class DelayedGroup<K, V> extends Group<K, V> {
+class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+    extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
+  private final FULL_KEY fullKey;
+  private final GarbageDelayedGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+      garbageGroupCollector;
+
   DelayedGroup(
-      K fullKey,
-      Emittable<K, V> emitter,
-      KeyManipulator<K> keyManipulator,
+      FULL_KEY fullKey,
+      Emittable<EMIT_KEY, V> emitter,
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
       long sizeFixExpirationInMillis,
       long timeoutExpirationInMillis,
-      Slot<K, V> slot,
-      GarbageGroupCollector<K, V> garbageGroupCollector) {
-    super(
-        fullKey,
-        emitter,
-        keyManipulator,
-        sizeFixExpirationInMillis,
-        timeoutExpirationInMillis,
-        1,
-        garbageGroupCollector);
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot,
+      GarbageDelayedGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+          garbageGroupCollector) {
+    super(emitter, keyManipulator, sizeFixExpirationInMillis, timeoutExpirationInMillis, 1);
+    this.fullKey = fullKey;
+    this.garbageGroupCollector = garbageGroupCollector;
     try {
       // Auto emit should be disabled since:
       // - the queue and worker for delayed values will emit this if it's ready
@@ -32,15 +34,52 @@ class DelayedGroup<K, V> extends Group<K, V> {
     }
   }
 
+  FULL_KEY getFullKey() {
+    return fullKey;
+  }
+
+  @Override
+  String getKeyName() {
+    return fullKey.toString();
+  }
+
+  @Override
+  FULL_KEY getFullKey(CHILD_KEY childKey) {
+    return fullKey;
+  }
+
   @Override
   protected void asyncEmit() {
-    for (Entry<K, Slot<K, V>> entry : slots.entrySet()) {
-      Slot<K, V> slot = entry.getValue();
+    for (Entry<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> entry :
+        slots.entrySet()) {
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = entry.getValue();
       // Pass `emitter` to ask the receiver's thread to emit the value
-      slot.delegateTask(() -> emitter.execute(key, Collections.singletonList(slot.getValue())));
+      slot.delegateTask(
+          () ->
+              emitter.execute(
+                  keyManipulator.getEmitKeyFromFullKey(fullKey),
+                  Collections.singletonList(slot.getValue())));
       // The number of the slots is only 1.
       dismiss();
       return;
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof DelayedGroup)) return false;
+    DelayedGroup<?, ?, ?, ?, ?> that = (DelayedGroup<?, ?, ?, ?, ?>) o;
+    return Objects.equal(fullKey, that.fullKey);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(fullKey);
+  }
+
+  @Override
+  protected void dismiss() {
+    garbageGroupCollector.collect(this);
   }
 }

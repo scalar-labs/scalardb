@@ -2,12 +2,12 @@ package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
 
-public interface KeyManipulator<K> {
-  class Keys<K> {
-    public final K parentKey;
-    public final K childKey;
+public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> {
+  class Keys<PARENT_KEY, CHILD_KEY> {
+    public final PARENT_KEY parentKey;
+    public final CHILD_KEY childKey;
 
-    public Keys(K parentKey, K childKey) {
+    public Keys(PARENT_KEY parentKey, CHILD_KEY childKey) {
       this.parentKey = parentKey;
       this.childKey = childKey;
     }
@@ -21,11 +21,15 @@ public interface KeyManipulator<K> {
     }
   }
 
-  K createParentKey();
+  PARENT_KEY createParentKey();
 
-  K createFullKey(K parentKey, K childKey);
+  FULL_KEY createFullKey(PARENT_KEY parentKey, CHILD_KEY childKey);
 
-  boolean isFullKey(K fullKey);
+  boolean isFullKey(Object obj);
 
-  Keys<K> fromFullKey(K fullKey);
+  Keys<PARENT_KEY, CHILD_KEY> fromFullKey(FULL_KEY fullKey);
+
+  EMIT_KEY getEmitKeyFromFullKey(FULL_KEY fullKey);
+
+  EMIT_KEY getEmitKeyFromParentKey(PARENT_KEY parentKey);
 }

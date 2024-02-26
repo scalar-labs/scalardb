@@ -35,7 +35,7 @@ public class TwoPhaseConsensusCommitManager
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  private final GroupCommitter<String, Snapshot> groupCommitter;
+  private final GroupCommitter<String, String, String, String, Snapshot> groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -91,7 +91,7 @@ public class TwoPhaseConsensusCommitManager
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit,
-      GroupCommitter<String, Snapshot> groupCommitter) {
+      GroupCommitter<String, String, String, String, Snapshot> groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
