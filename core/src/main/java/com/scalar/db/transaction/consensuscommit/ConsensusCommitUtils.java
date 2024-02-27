@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.Collections;
@@ -237,7 +236,17 @@ public final class ConsensusCommitUtils {
     return !isBeforeImageColumn(columnName, tableMetadata);
   }
 
+  public static Optional<CoordinatorGroupCommitter> createGroupCommitter(
+      ConsensusCommitConfig config) {
+    if (config.isCoordinatorGroupCommitEnabled()) {
+      return Optional.of(new CoordinatorGroupCommitter(config));
+    } else {
+      return Optional.empty();
+    }
+  }
+
   ////////////// For group commit >>>>>>>>>>>>>>>>>
+  // TODO: Remove these ones
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
@@ -248,18 +257,6 @@ public final class ConsensusCommitUtils {
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS";
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS";
-
-  public static Optional<CoordinatorGroupCommitter> prepareGroupCommitter(
-      DatabaseConfig databaseConfig) {
-    if (databaseConfig.isCoordinatorGroupCommitEnabled()) {
-      return Optional.of(
-          new CoordinatorGroupCommitter(
-              GroupCommitConfig.fromDatabaseConfig(
-                  databaseConfig, databaseConfig.getCoordinatorGroupCommitPrefix())));
-    } else {
-      return Optional.empty();
-    }
-  }
 
   @VisibleForTesting
   public static Optional<CoordinatorGroupCommitter> prepareGroupCommitterFromEnvVar() {

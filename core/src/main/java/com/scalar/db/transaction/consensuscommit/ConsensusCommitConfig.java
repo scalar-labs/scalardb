@@ -41,6 +41,18 @@ public class ConsensusCommitConfig {
 
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
 
+  public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
+  public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "enabled";
+  public static final String COORDINATOR_GROUP_COMMIT_RETENTION_SLOTS_COUNT =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "retention_slots_count";
+  public static final String COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_EXPIRATION_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "group_close_expiration_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_EXPIRATION_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "delayed_slot_expiration_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_CHECK_INTERVAL_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "check_interval_millis";
+
   private final Isolation isolation;
   private final SerializableStrategy strategy;
   @Nullable private final String coordinatorNamespace;
@@ -56,6 +68,12 @@ public class ConsensusCommitConfig {
   private final boolean isIncludeMetadataEnabled;
 
   private final boolean parallelImplicitPreReadEnabled;
+
+  private final boolean coordinatorGroupCommitEnabled;
+  private final int coordinatorGroupCommitRetentionSlotsCount;
+  private final int coordinatorGroupCommitGroupCloseExpirationInMillis;
+  private final int coordinatorGroupCommitDelayedSlotExpirationInMillis;
+  private final int coordinatorGroupCommitCheckIntervalInMillis;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -124,6 +142,23 @@ public class ConsensusCommitConfig {
 
     parallelImplicitPreReadEnabled =
         getBoolean(databaseConfig.getProperties(), PARALLEL_IMPLICIT_PRE_READ, true);
+
+    coordinatorGroupCommitEnabled =
+        getBoolean(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_ENABLED, false);
+    coordinatorGroupCommitRetentionSlotsCount =
+        getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_RETENTION_SLOTS_COUNT, 20);
+    coordinatorGroupCommitGroupCloseExpirationInMillis =
+        getInt(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_EXPIRATION_MILLIS,
+            40);
+    coordinatorGroupCommitDelayedSlotExpirationInMillis =
+        getInt(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_EXPIRATION_MILLIS,
+            1200);
+    coordinatorGroupCommitCheckIntervalInMillis =
+        getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_CHECK_INTERVAL_MILLIS, 20);
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
@@ -176,6 +211,26 @@ public class ConsensusCommitConfig {
 
   public boolean isParallelImplicitPreReadEnabled() {
     return parallelImplicitPreReadEnabled;
+  }
+
+  public boolean isCoordinatorGroupCommitEnabled() {
+    return coordinatorGroupCommitEnabled;
+  }
+
+  public int getCoordinatorGroupCommitRetentionSlotsCount() {
+    return coordinatorGroupCommitRetentionSlotsCount;
+  }
+
+  public int getCoordinatorGroupCommitGroupCloseExpirationInMillis() {
+    return coordinatorGroupCommitGroupCloseExpirationInMillis;
+  }
+
+  public int getCoordinatorGroupCommitDelayedSlotExpirationInMillis() {
+    return coordinatorGroupCommitDelayedSlotExpirationInMillis;
+  }
+
+  public int getCoordinatorGroupCommitCheckIntervalInMillis() {
+    return coordinatorGroupCommitCheckIntervalInMillis;
   }
 
   private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {

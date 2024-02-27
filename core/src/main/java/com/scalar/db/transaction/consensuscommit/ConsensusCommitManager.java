@@ -52,9 +52,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter(databaseConfig).orElse(null);
-    // FIXME: Remove this
-    logger.info("GROUP-COMMITTER: {}, DATABASE-CONFIG: {}", groupCommitter, databaseConfig);
+    groupCommitter = ConsensusCommitUtils.createGroupCommitter(config).orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -75,9 +73,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = ConsensusCommitUtils.prepareGroupCommitter(databaseConfig).orElse(null);
-    // FIXME: Remove this
-    logger.info("GROUP-COMMITTER: {}, DATABASE-CONFIG: {}", groupCommitter, databaseConfig);
+    groupCommitter = ConsensusCommitUtils.createGroupCommitter(config).orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -109,8 +105,6 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.recovery = recovery;
     this.commit = commit;
     this.groupCommitter = groupCommitter;
-    // FIXME: Remove this
-    logger.info("GROUP-COMMITTER: {}, DATABASE-CONFIG: {}", groupCommitter, databaseConfig);
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);
@@ -205,7 +199,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new CrudHandler(
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
     ConsensusCommit consensus =
-        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
+        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
     return decorate(consensus);

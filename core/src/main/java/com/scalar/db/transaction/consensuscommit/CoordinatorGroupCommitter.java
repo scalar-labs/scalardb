@@ -7,8 +7,17 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CoordinatorGroupCommitter
     extends GroupCommitter<String, String, String, String, Snapshot> {
-  public CoordinatorGroupCommitter(GroupCommitConfig config) {
+  CoordinatorGroupCommitter(GroupCommitConfig config) {
     super("coordinator", config, new CoordinatorGroupCommitKeyManipulator());
+  }
+
+  public CoordinatorGroupCommitter(ConsensusCommitConfig config) {
+    this(
+        new GroupCommitConfig(
+            config.getCoordinatorGroupCommitRetentionSlotsCount(),
+            config.getCoordinatorGroupCommitGroupCloseExpirationInMillis(),
+            config.getCoordinatorGroupCommitDelayedSlotExpirationInMillis(),
+            config.getCoordinatorGroupCommitCheckIntervalInMillis()));
   }
 
   static class CoordinatorGroupCommitKeyManipulator
