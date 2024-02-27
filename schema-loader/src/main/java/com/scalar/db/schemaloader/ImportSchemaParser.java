@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.io.Reader;
@@ -19,23 +18,15 @@ public class ImportSchemaParser {
   private final JsonObject schemaJson;
   private final Map<String, String> options;
 
-  public ImportSchemaParser(Path jsonFilePath, Map<String, String> options)
-      throws SchemaLoaderException {
+  public ImportSchemaParser(Path jsonFilePath, Map<String, String> options) throws IOException {
     try (Reader reader = Files.newBufferedReader(jsonFilePath)) {
       schemaJson = JsonParser.parseReader(reader).getAsJsonObject();
-    } catch (IOException | JsonParseException e) {
-      throw new SchemaLoaderException("Parsing the schema JSON failed", e);
     }
     this.options = ImmutableMap.copyOf(options);
   }
 
-  public ImportSchemaParser(String serializedSchemaJson, Map<String, String> options)
-      throws SchemaLoaderException {
-    try {
-      schemaJson = JsonParser.parseString(serializedSchemaJson).getAsJsonObject();
-    } catch (JsonParseException e) {
-      throw new SchemaLoaderException("Parsing the schema JSON failed", e);
-    }
+  public ImportSchemaParser(String serializedSchemaJson, Map<String, String> options) {
+    schemaJson = JsonParser.parseString(serializedSchemaJson).getAsJsonObject();
     this.options = ImmutableMap.copyOf(options);
   }
 
@@ -43,7 +34,7 @@ public class ImportSchemaParser {
   @Override
   protected final void finalize() {}
 
-  public List<ImportTableSchema> parse() throws SchemaLoaderException {
+  public List<ImportTableSchema> parse() {
     List<ImportTableSchema> tableSchemaList = new ArrayList<>();
     for (Map.Entry<String, JsonElement> entry : schemaJson.entrySet()) {
       tableSchemaList.add(

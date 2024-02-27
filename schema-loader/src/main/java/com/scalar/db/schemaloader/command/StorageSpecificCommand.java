@@ -5,6 +5,7 @@ import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.schemaloader.SchemaOperator;
 import com.scalar.db.schemaloader.SchemaParser;
 import com.scalar.db.schemaloader.TableSchema;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +106,12 @@ public abstract class StorageSpecificCommand {
 
   @VisibleForTesting
   SchemaParser getSchemaParser(Map<String, String> options) throws SchemaLoaderException {
-    return new SchemaParser(schemaFile, options);
+    try {
+      return new SchemaParser(schemaFile, options);
+    } catch (IOException e) {
+      throw new SchemaLoaderException(
+          "Reading the schema file failed; File: " + schemaFile.toAbsolutePath(), e);
+    }
   }
 
   @VisibleForTesting

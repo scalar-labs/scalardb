@@ -5,12 +5,14 @@ import com.google.common.base.Suppliers;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.schemaloader.alteration.TableMetadataAlteration;
 import com.scalar.db.schemaloader.alteration.TableMetadataAlterationProcessor;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -307,10 +309,9 @@ public class SchemaOperator implements AutoCloseable {
 
       try {
         if (!tableExists(namespace, table, isTransactional)) {
-          throw new UnsupportedOperationException(
-              String.format(
-                  "Altering the table %s.%s is not possible as the table was not created beforehand",
-                  namespace, table));
+          throw new IllegalArgumentException(
+              CoreError.TABLE_NOT_FOUND.buildMessage(
+                  ScalarDbUtils.getFullTableName(namespace, table)));
         }
         TableMetadata currentMetadata = getCurrentTableMetadata(namespace, table, isTransactional);
         TableMetadataAlteration metadataAlteration =
@@ -438,7 +439,7 @@ public class SchemaOperator implements AutoCloseable {
       transactionAdmin.get().upgrade(options);
       logger.info("Upgrading the environment succeeded.");
     } catch (ExecutionException e) {
-      throw new RuntimeException("Upgrading the environment failed", e);
+      throw new SchemaLoaderException("Upgrading the environment failed", e);
     }
   }
 

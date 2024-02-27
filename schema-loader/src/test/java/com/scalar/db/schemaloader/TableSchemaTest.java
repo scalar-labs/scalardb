@@ -59,20 +59,20 @@ public class TableSchemaTest {
 
   @Test
   public void
-      buildTableMetadata_MissingPartitionKeyInTableDefinition_ShouldThrowSchemaLoaderException() {
+      buildTableMetadata_MissingPartitionKeyInTableDefinition_ShouldThrowIllegalArgumentException() {
     // Arrange
     when(tableDefinition.keySet())
         .thenReturn(ImmutableSet.<String>builder().add("clustering-key").add("columns").build());
     tableSchema = new TableSchema();
 
     // Act Assert
-    Assertions.assertThatThrownBy(() -> tableSchema.buildTableMetadata(tableDefinition))
-        .isInstanceOf(SchemaLoaderException.class);
+    Assertions.assertThatThrownBy(() -> tableSchema.buildTableMetadata("ns.tbl", tableDefinition))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      buildTableMetadata_InvalidClusteringKeyInTableDefinition_ShouldThrowSchemaLoaderException() {
+      buildTableMetadata_InvalidClusteringKeyInTableDefinition_ShouldThrowIllegalArgumentException() {
     // Arrange
     String tableDefinitionJson =
         "{\"transaction\": false,"
@@ -84,12 +84,12 @@ public class TableSchemaTest {
     // Act Assert
     Assertions.assertThatThrownBy(
             () -> new TableSchema("ns.tb", invalidTableDefinition, Collections.emptyMap()))
-        .isInstanceOf(SchemaLoaderException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      buildTableMetadata_InvalidOrderOfClusteringKeyInTableDefinition_ShouldThrowSchemaLoaderException() {
+      buildTableMetadata_InvalidOrderOfClusteringKeyInTableDefinition_ShouldThrowIllegalArgumentException() {
     // Arrange
     String tableDefinitionJson =
         "{\"transaction\": false,"
@@ -101,12 +101,12 @@ public class TableSchemaTest {
     // Act Assert
     Assertions.assertThatThrownBy(
             () -> new TableSchema("ns.tb", invalidTableDefinition, Collections.emptyMap()))
-        .isInstanceOf(SchemaLoaderException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      buildTableMetadata_MissingColumnDefinitionInTableDefinition_ShouldThrowSchemaLoaderException() {
+      buildTableMetadata_MissingColumnDefinitionInTableDefinition_ShouldThrowIllegalArgumentException() {
     // Arrange
     String tableDefinitionJson =
         "{\"transaction\": false,"
@@ -118,12 +118,12 @@ public class TableSchemaTest {
     // Act Assert
     Assertions.assertThatThrownBy(
             () -> new TableSchema("ns.tb", invalidTableDefinition, Collections.emptyMap()))
-        .isInstanceOf(SchemaLoaderException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      buildTableMetadata_InvalidColumnTypeDefinitionInTableDefinition_ShouldThrowSchemaLoaderException() {
+      buildTableMetadata_InvalidColumnTypeDefinitionInTableDefinition_ShouldThrowIllegalArgumentException() {
     // Arrange
     String tableDefinitionJson =
         "{\"transaction\": false,"
@@ -136,7 +136,7 @@ public class TableSchemaTest {
     // Act Assert
     Assertions.assertThatThrownBy(
             () -> new TableSchema("ns.tb", invalidTableDefinition, Collections.emptyMap()))
-        .isInstanceOf(SchemaLoaderException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -183,14 +183,14 @@ public class TableSchemaTest {
   }
 
   @Test
-  public void Table_WrongFormatTableFullNameGiven_ShouldThrowSchemaLoaderException() {
+  public void Table_WrongFormatTableFullNameGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     String tableFullName = "namespace_and_table_without_dot_separator";
 
     // Act Assert
     Assertions.assertThatThrownBy(
             () -> new TableSchema(tableFullName, tableDefinition, Collections.emptyMap()))
-        .isInstanceOf(SchemaLoaderException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
