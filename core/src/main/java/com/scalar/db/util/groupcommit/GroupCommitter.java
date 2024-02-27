@@ -123,14 +123,13 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
       // Already tried to move this code inside NormalGroup.removeNotReadySlots() to remove
       // the `synchronized` keyword on this method. But the performance was degraded.
-      logger.info("[DELAYED-SLOT-MOVE] moveDelayedSlotToDelayedGroup#1 BV:{}", normalGroup);
       long stamp = lock.writeLock();
       try {
         List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> notReadySlots =
             normalGroup.removeNotReadySlots();
         if (notReadySlots == null) {
           normalGroup.updateDelayedSlotMovedAt();
-          logger.info(
+          logger.debug(
               "This group isn't needed to remove slots. Updated the expiration timing. group:{}",
               normalGroup);
           return false;
@@ -350,6 +349,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     monitorExecutorService.execute(
         () -> {
           while (!monitorExecutorService.isShutdown()) {
+            // TODO: Move this to other metrics mechanism
             logger.info(
                 "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
@@ -373,7 +373,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       try {
         return groupManager.reserveNewSlot(childKey);
       } catch (GroupCommitAlreadyClosedException e) {
-        logger.info("Failed to reserve a new value slot. Retrying. key:{}", childKey);
+        logger.debug("Failed to reserve a new value slot. Retrying. key:{}", childKey);
         try {
           TimeUnit.MILLISECONDS.sleep(5);
         } catch (InterruptedException ex) {
