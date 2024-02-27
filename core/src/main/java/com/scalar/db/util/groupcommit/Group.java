@@ -118,15 +118,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       asyncEmitIfReady();
     }
 
-    long start = System.currentTimeMillis();
     slot.waitUntilEmit();
-
-    logger.info(
-        "Waited(thread_id:{}, parentKey:{}, childKey:{}): {} ms",
-        Thread.currentThread().getId(),
-        getKeyName(),
-        childKey,
-        System.currentTimeMillis() - start);
   }
 
   Instant groupClosedAt() {

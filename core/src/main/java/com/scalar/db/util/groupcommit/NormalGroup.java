@@ -68,7 +68,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     }
 
     if (removed.size() >= getSize()) {
-      logger.info("No need to remove any slot since all the slots are not ready. group:{}", this);
+      logger.debug("No need to remove any slot since all the slots are not ready. group:{}", this);
       return null;
     }
 
@@ -106,14 +106,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     ThrowableRunnable taskForEmitterSlot =
         () -> {
           try {
-            long startEmit = System.currentTimeMillis();
             emitter.execute(keyManipulator.getEmitKeyFromParentKey(parentKey), values);
-            logger.info(
-                "Emitted (thread_id:{}, key:{}, num_of_values:{}): {} ms",
-                Thread.currentThread().getId(),
-                getKeyName(),
-                getSize(),
-                System.currentTimeMillis() - startEmit);
 
             // Wake up the other waiting threads.
             // Pass null since the value is already emitted by the thread of `firstSlot`.
