@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/** A tentative benchmarker. This will be removed later. */
 class GroupCommitterBench {
   private static class ExpectedException extends RuntimeException {
     public ExpectedException(String message) {

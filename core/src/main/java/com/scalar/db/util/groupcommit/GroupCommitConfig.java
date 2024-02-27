@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import javax.annotation.concurrent.Immutable;
 
+/** A configuration for group commit */
 @Immutable
 public class GroupCommitConfig {
   private final int retentionSlotsCount;

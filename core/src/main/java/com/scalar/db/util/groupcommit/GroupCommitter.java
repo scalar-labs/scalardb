@@ -20,39 +20,67 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A group committer which handles the group and slot managements and emits ready groups.
+ *
+ * @param <PARENT_KEY> A key type to NormalGroup which contains multiple slots and is
+ *     group-committed.
+ * @param <CHILD_KEY> A key type to slot in NormalGroup which can contain a value ready to commit.
+ * @param <FULL_KEY> A key type to DelayedGroup which contains a single slot and is
+ *     singly-committed.
+ * @param <EMIT_KEY> A key type that Emitter can interpret.
+ * @param <V> A value type to be set to a slot.
+ */
 public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
   // Queues
+
+  // A queue to contain NormalGroup instances. The following timeouts occur in this queue:
+  // - `group-close-expiration` fixes the size of expired NormalGroup.
+  // - `delayed-slot-move-expiration` moves expired slots in NormalGroup to DelayedGroup.
   private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
       queueForNormalGroupClose = new LinkedBlockingQueue<>();
+
+  // A queue to contain DelayedGroup instances. The following timeout occurs in this queue:
+  // - `delayed-slot-emit-expiration` tries to emit expired slots.
   private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
       queueForDelayedSlotMove = new LinkedBlockingQueue<>();
+
   // Parameters
+
   private final long queueCheckIntervalInMillis;
   private final long normalGroupCloseExpirationInMillis;
   private final long delayedSlotMoveExpirationInMillis;
   private final int numberOfRetentionValues;
+
   // Executors
+
   private final ExecutorService normalGroupCloseExecutorService;
   private final ExecutorService delayedSlotMoveExecutorService;
   private final ExecutorService monitorExecutorService;
+
   // Custom operations injected by the client
+
+  // This contains logics about how to treat keys.
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
+  // This is capable of emitting multiple values at once.
   @LazyInit private Emittable<EMIT_KEY, V> emitter;
-  private final GroupManager groupManager;
 
   // This class is just for encapsulation of accesses to Groups
+  private final GroupManager groupManager;
+
   private class GroupManager {
     // Groups
     @Nullable private NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> currentGroup;
-    // Using ConcurrentHashMap results in less performance.
+    // Note: Using ConcurrentHashMap results in less performance.
     private final Map<PARENT_KEY, NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
         normalGroupMap = new HashMap<>();
     private final Map<FULL_KEY, DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
         delayedGroupMap = new HashMap<>();
     private final StampedLock lock = new StampedLock();
 
-    // Returns full key
+    // Reserves a new slot in the current NormalGroup. A new NormalGroup will be created and
+    // registered to `normalGroupMap` if the current NormalGroup is already closed.
     private FULL_KEY reserveNewSlot(CHILD_KEY childKey) throws GroupCommitAlreadyClosedException {
       long stamp = lock.writeLock();
       try {
@@ -76,6 +104,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       return currentGroup.reserveNewSlot(childKey);
     }
 
+    // Gets the corresponding group associated with the given key.
     private Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> getGroup(
         Keys<PARENT_KEY, CHILD_KEY> keys) throws GroupCommitTargetNotFoundException {
       long stamp = lock.writeLock();
@@ -119,6 +148,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       }
     }
 
+    // Moves delayed slots from the NormalGroup to a new DelayedGroup. The new one is also
+    // registered to `delayedGroupMap`.
     private boolean moveDelayedSlotToDelayedGroup(
         NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
       // Already tried to move this code inside NormalGroup.removeNotReadySlots() to remove
@@ -176,6 +207,11 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     }
   }
 
+  /**
+   * @param label A label used for thread name.
+   * @param config A configuration.
+   * @param keyManipulator A key manipulator that contains logics how to treat keys.
+   */
   public GroupCommitter(
       String label,
       GroupCommitConfig config,
@@ -212,10 +248,18 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     startDelayedSlotMoveExecutorService();
   }
 
+  /**
+   * Set an emitter which contains implementation to emit values. Ideally, this should be passed to
+   * the constructor, but the instantiation timings of {@link GroupCommitter} and {@link Emittable}
+   * can be different. That's why this API exists.
+   *
+   * @param emitter An emitter.
+   */
   public void setEmitter(Emittable<EMIT_KEY, V> emitter) {
     this.emitter = emitter;
   }
 
+  // TODO: This logic should be isolated in a dedicated class.
   private boolean handleQueueForNormalGroupClose() {
     NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup =
         queueForNormalGroupClose.peek();
@@ -265,6 +309,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     return true;
   }
 
+  // TODO: This logic should be isolated in a dedicated class.
   private boolean handleQueueForDelayedSlotMove() {
     NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup =
         queueForDelayedSlotMove.peek();
@@ -345,6 +390,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         });
   }
 
+  // TODO: This logic should be isolated in a dedicated class.
   private void startMonitorExecutorService() {
     monitorExecutorService.execute(
         () -> {
@@ -368,6 +414,13 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         });
   }
 
+  /**
+   * Reserves a new slot in the current {@link NormalGroup}. The slot may be moved to a {@link
+   * DelayedGroup} later.
+   *
+   * @param childKey A child key.
+   * @return The full key associated with the reserved slot.
+   */
   public FULL_KEY reserve(CHILD_KEY childKey) {
     while (true) {
       try {
@@ -384,6 +437,15 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     }
   }
 
+  /**
+   * Marks the slot associated with the specified key READY and then, waits until the group which
+   * contains the slot is emitted.
+   *
+   * @param fullKey A full key associated with the slot already reserved with {@link
+   *     GroupCommitter#reserve(CHILD_KEY childKey)}.
+   * @param value A value to be set to the slot.
+   * @throws GroupCommitException
+   */
   public void ready(FULL_KEY fullKey, V value) throws GroupCommitException {
     Keys<PARENT_KEY, CHILD_KEY> keys = keyManipulator.fromFullKey(fullKey);
     while (true) {
@@ -409,6 +471,11 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     }
   }
 
+  /**
+   * Removes the slot from the group.
+   *
+   * @param fullKey A full key to specify the slot.
+   */
   public void remove(FULL_KEY fullKey) {
     Keys<PARENT_KEY, CHILD_KEY> keys = keyManipulator.fromFullKey(fullKey);
     try {
@@ -419,8 +486,10 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     }
   }
 
-  // The ExecutorServices are created as daemon, so calling this method isn't needed.
-  // But for testing, this should be called for resources.
+  /**
+   * Closes the resources. The ExecutorServices are created as daemon, so calling this method isn't
+   * needed. But for testing, this should be called for resources.
+   */
   @Override
   public void close() {
     if (delayedSlotMoveExecutorService != null) {
