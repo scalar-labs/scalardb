@@ -3,7 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import com.scalar.db.util.groupcommit.GroupCommitter;
 import com.scalar.db.util.groupcommit.KeyManipulator;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 public class CoordinatorGroupCommitter
     extends GroupCommitter<String, String, String, String, Snapshot> {
@@ -93,7 +93,8 @@ public class CoordinatorGroupCommitter
       'z'
     };
     private static final int CHARS_FOR_PRIMARY_KEY_SIZE = CHARS_FOR_PRIMARY_KEY.length;
-    ThreadLocalRandom random = ThreadLocalRandom.current();
+    // Use Random instead of ThreadLocalRandom in favor of global randomness.
+    private final Random random = new Random();
 
     @Override
     public String createParentKey() {
@@ -134,6 +135,7 @@ public class CoordinatorGroupCommitter
       if (!isFullKey(fullKey)) {
         throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
       }
+
       return new Keys<>(
           fullKey.substring(0, PRIMARY_KEY_SIZE),
           fullKey.substring(PRIMARY_KEY_SIZE + 1 /* delimiter */));
