@@ -462,12 +462,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         return groupManager.reserveNewSlot(childKey);
       } catch (GroupCommitAlreadyClosedException e) {
         logger.debug("Failed to reserve a new value slot. Retrying. key:{}", childKey);
-        try {
-          TimeUnit.MILLISECONDS.sleep(5);
-        } catch (InterruptedException ex) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(ex);
-        }
       }
     }
   }
