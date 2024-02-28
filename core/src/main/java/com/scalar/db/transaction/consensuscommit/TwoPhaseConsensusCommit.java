@@ -38,7 +38,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private boolean validated;
   private boolean needRollback;
 
@@ -56,7 +55,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     this.commit = commit;
     this.recovery = recovery;
     this.mutationOperationChecker = mutationOperationChecker;
-    this.groupCommitter = groupCommitter;
   }
 
   @Override
@@ -172,17 +170,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     if (crud.getSnapshot().isValidationRequired() && !validated) {
       throw new IllegalStateException(
           CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_EXTRA_READ.buildMessage());
-    }
-
-    if (groupCommitter != null) {
-      try {
-        commit.commitViaGroupCommit(crud.getSnapshot());
-        return;
-      } catch (CommitConflictException | UnknownTransactionStatusException e) {
-        // no need to rollback because the transaction has already been rolled back
-        needRollback = false;
-        throw e;
-      }
     }
 
     try {

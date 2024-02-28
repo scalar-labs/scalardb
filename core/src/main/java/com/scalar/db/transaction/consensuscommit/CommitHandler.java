@@ -18,9 +18,7 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import com.scalar.db.util.groupcommit.GroupCommitAlreadyCompletedException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
-import com.scalar.db.util.groupcommit.GroupCommitTargetNotFoundException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +61,7 @@ public class CommitHandler {
 
     if (groupCommitter != null) {
       // This method reference will be called via GroupCommitter.ready().
-      groupCommitter.setEmitter(this::commitStateForGroupCommit);
+      groupCommitter.setEmitter(this::groupCommitState);
     }
     this.groupCommitter = groupCommitter;
   }
@@ -93,18 +91,12 @@ public class CommitHandler {
     }
     // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
-    // if (groupCommitter != null && groupCommitter.isGroupCommitFullKey(snapshot.getId())) {
-    if (groupCommitter != null) {
-      commitViaGroupCommit(snapshot);
-      return;
-    }
-
     commitState(snapshot);
     commitRecords(snapshot);
   }
 
-  private void commitOrRollbackRecordsAccordingToState(Snapshot snapshot, Exception cause)
-      throws CommitException, UnknownTransactionStatusException {
+  private void checkStateAndAbortIfNeeded(Snapshot snapshot, Exception cause)
+      throws CommitConflictException, UnknownTransactionStatusException {
     try {
       Optional<State> s = coordinator.getState(snapshot.getId());
       if (s.isPresent()) {
@@ -124,36 +116,25 @@ public class CommitHandler {
             cause,
             snapshot.getId());
       }
-      commitRecords(snapshot);
     } catch (CoordinatorException ex) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), ex, snapshot.getId());
     }
   }
 
-  public void commitViaGroupCommit(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
+  public void commitStateViaGroupCommit(Snapshot snapshot)
+      throws CommitConflictException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
       assert groupCommitter != null;
       // Group commit the state
       groupCommitter.ready(id, snapshot);
-    } catch (GroupCommitAlreadyCompletedException e) {
-      cancelGroupCommitIfNeeded(id);
-      commitOrRollbackRecordsAccordingToState(snapshot, e);
-      throw new CommitConflictException("Group commit failed due to a conflict", e, id);
-    } catch (GroupCommitTargetNotFoundException e) {
-      // This would happen with 2PC interface.
-      // TODO: Why...? Probably, implicit rollbacks happen...
-      cancelGroupCommitIfNeeded(id);
-      commitOrRollbackRecordsAccordingToState(snapshot, e);
-      return;
+      logger.debug(
+          "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (GroupCommitException e) {
       cancelGroupCommitIfNeeded(id);
-      commitOrRollbackRecordsAccordingToState(snapshot, e);
-      throw new CommitException("Group commit failed", e, id);
+      checkStateAndAbortIfNeeded(snapshot, e);
     }
-    commitRecords(snapshot);
   }
 
   private void cancelGroupCommitIfNeeded(String id) {
@@ -206,6 +187,11 @@ public class CommitHandler {
 
   public void commitState(Snapshot snapshot)
       throws CommitConflictException, UnknownTransactionStatusException {
+    if (groupCommitter != null) {
+      commitStateViaGroupCommit(snapshot);
+      return;
+    }
+
     String id = snapshot.getId();
     try {
       Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
@@ -213,7 +199,7 @@ public class CommitHandler {
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
-      // TODO: The following code can be replaced with commitOrRollbackRecordsAccordingToState()?
+      // TODO: The following code can be replaced with rollbackRecordsAccordingToState()?
       try {
         Optional<Coordinator.State> s = coordinator.getState(id);
         if (s.isPresent()) {
@@ -243,7 +229,7 @@ public class CommitHandler {
     }
   }
 
-  private void commitStateForGroupCommit(String parentId, List<Snapshot> snapshots)
+  private void groupCommitState(String parentId, List<Snapshot> snapshots)
       throws CommitException, UnknownTransactionStatusException {
     if (snapshots.isEmpty()) {
       // This means all buffered transactions failed in the prepare phase.
@@ -262,7 +248,7 @@ public class CommitHandler {
     } catch (CoordinatorConflictException e) {
       // TODO: Execute this operation in parallel.
       for (Snapshot snapshot : snapshots) {
-        commitOrRollbackRecordsAccordingToState(snapshot, e);
+        checkStateAndAbortIfNeeded(snapshot, e);
       }
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException("Coordinator status is unknown", e, parentId);
