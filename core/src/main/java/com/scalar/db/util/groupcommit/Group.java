@@ -1,7 +1,6 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -16,9 +15,6 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   protected final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
   private final int capacity;
   private final AtomicReference<Integer> size = new AtomicReference<>();
-  private final long moveDelayedSlotExpirationInMillis;
-  private final Instant groupClosedAt;
-  private final AtomicReference<Instant> delayedSlotMovedAt;
   private final AtomicBoolean done = new AtomicBoolean();
   protected final Map<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> slots;
   // Whether to reject a new value slot.
@@ -28,8 +24,6 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("hashCode", hashCode())
-        .add("groupClosedAt", groupClosedAt)
-        .add("delayedSlotMovedAt", delayedSlotMovedAt)
         .add("done", isDone())
         .add("ready", isReady())
         .add("sizeFixed", isSizeFixed())
@@ -37,26 +31,14 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         .toString();
   }
 
-  abstract String getKeyName();
-
   Group(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      long groupCloseExpirationInMillis,
-      long moveDelayedSlotExpirationInMillis,
       int capacity) {
     this.emitter = emitter;
     this.keyManipulator = keyManipulator;
     this.capacity = capacity;
-    this.moveDelayedSlotExpirationInMillis = moveDelayedSlotExpirationInMillis;
-    this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
-    this.delayedSlotMovedAt = new AtomicReference<>();
-    updateDelayedSlotMovedAt();
     this.slots = new HashMap<>(capacity);
-  }
-
-  void updateDelayedSlotMovedAt() {
-    delayedSlotMovedAt.set(Instant.now().plusMillis(moveDelayedSlotExpirationInMillis));
   }
 
   boolean noMoreSlot() {
@@ -119,14 +101,6 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     }
 
     slot.waitUntilEmit();
-  }
-
-  Instant groupClosedAt() {
-    return groupClosedAt;
-  }
-
-  Instant delayedSlotMovedAt() {
-    return delayedSlotMovedAt.get();
   }
 
   void fixSize() {

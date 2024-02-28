@@ -4,6 +4,7 @@ import com.google.common.base.Objects;
 import java.util.Collections;
 import java.util.Map.Entry;
 
+// A group for a delayed slot. This group contains only a single slot.
 class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final FULL_KEY fullKey;
@@ -14,12 +15,10 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       FULL_KEY fullKey,
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      long sizeFixExpirationInMillis,
-      long timeoutExpirationInMillis,
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot,
       GarbageDelayedGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
           garbageGroupCollector) {
-    super(emitter, keyManipulator, sizeFixExpirationInMillis, timeoutExpirationInMillis, 1);
+    super(emitter, keyManipulator, 1);
     this.fullKey = fullKey;
     this.garbageGroupCollector = garbageGroupCollector;
     try {
@@ -39,11 +38,6 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Override
-  String getKeyName() {
-    return fullKey.toString();
-  }
-
-  @Override
   FULL_KEY getFullKey(CHILD_KEY childKey) {
     return fullKey;
   }
@@ -54,7 +48,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
         slots.entrySet()) {
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = entry.getValue();
       // Pass `emitter` to ask the receiver's thread to emit the value
-      slot.delegateTask(
+      slot.delegateTaskToWaiter(
           () ->
               emitter.execute(
                   keyManipulator.getEmitKeyFromFullKey(fullKey),

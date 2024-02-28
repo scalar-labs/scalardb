@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 
+// A container of value which is stored in a group.
 class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup;
   private final CHILD_KEY key;
@@ -13,7 +14,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // Otherwise, the result lambda must be emitted by the receiver's thread.
   private final CompletableFuture<ThrowableRunnable> completableFuture = new CompletableFuture<>();
   // TODO: Revisit this
-  // This value can be changed from null -> non-null.
+  // This value can be changed from null -> non-null, not vice versa.
   @Nullable private volatile V value;
 
   Slot(CHILD_KEY key, Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
@@ -69,15 +70,15 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return value;
   }
 
-  void success() {
+  void markAsSuccess() {
     completableFuture.complete(null);
   }
 
-  void delegateTask(ThrowableRunnable task) {
-    completableFuture.complete(task);
+  void markAsFail(Exception e) {
+    completableFuture.completeExceptionally(e);
   }
 
-  void fail(Exception e) {
-    completableFuture.completeExceptionally(e);
+  void delegateTaskToWaiter(ThrowableRunnable task) {
+    completableFuture.complete(task);
   }
 }

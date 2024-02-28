@@ -1,6 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.Objects;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -9,34 +10,37 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// A group for multiple slots that will be group-committed at once.
 class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);
 
   private final PARENT_KEY parentKey;
+  private final long moveDelayedSlotExpirationInMillis;
+  private final Instant groupClosedAt;
+  private final AtomicReference<Instant> delayedSlotMovedAt;
   private final GarbageNormalGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       garbageGroupCollector;
 
   NormalGroup(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      long sizeFixExpirationInMillis,
+      long groupCloseExpirationInMillis,
       long timeoutExpirationInMillis,
       int capacity,
       GarbageNormalGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
           garbageGroupCollector) {
-    super(emitter, keyManipulator, sizeFixExpirationInMillis, timeoutExpirationInMillis, capacity);
+    super(emitter, keyManipulator, capacity);
+    this.moveDelayedSlotExpirationInMillis = timeoutExpirationInMillis;
+    this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
+    this.delayedSlotMovedAt = new AtomicReference<>();
+    updateDelayedSlotMovedAt();
     this.parentKey = keyManipulator.createParentKey();
     this.garbageGroupCollector = garbageGroupCollector;
   }
 
   PARENT_KEY getParentKey() {
     return parentKey;
-  }
-
-  @Override
-  String getKeyName() {
-    return parentKey.toString();
   }
 
   @Override
@@ -112,7 +116,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
             // Pass null since the value is already emitted by the thread of `firstSlot`.
             for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
               if (slot != emitterSlot.get()) {
-                slot.success();
+                slot.markAsSuccess();
               }
             }
           } catch (Exception e) {
@@ -123,7 +127,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
             // Let other threads know the exception.
             for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
               if (slot != emitterSlot.get()) {
-                slot.fail(exception);
+                slot.markAsFail(exception);
               }
             }
 
@@ -134,7 +138,19 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
           }
         };
 
-    emitterSlot.get().delegateTask(taskForEmitterSlot);
+    emitterSlot.get().delegateTaskToWaiter(taskForEmitterSlot);
+  }
+
+  void updateDelayedSlotMovedAt() {
+    delayedSlotMovedAt.set(Instant.now().plusMillis(moveDelayedSlotExpirationInMillis));
+  }
+
+  Instant groupClosedAt() {
+    return groupClosedAt;
+  }
+
+  Instant delayedSlotMovedAt() {
+    return delayedSlotMovedAt.get();
   }
 
   @Override

@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A group committer which handles the group and slot managements and emits ready groups.
+ * A group committer which is responsible for the group and slot managements and emits ready groups.
  *
  * @param <PARENT_KEY> A key type to NormalGroup which contains multiple slots and is
  *     group-committed.
@@ -61,7 +61,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
 
   // Custom operations injected by the client
 
-  // This contains logics about how to treat keys.
+  // This contains logics of how to treat keys.
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
   // This is capable of emitting multiple values at once.
   @LazyInit private Emittable<EMIT_KEY, V> emitter;
@@ -93,7 +93,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
                   delayedSlotMoveExpirationInMillis,
                   numberOfRetentionValues,
                   this::unregisterNormalGroup);
-          // TODO: This can be a faster queue?
           queueForNormalGroupClose.add(currentGroup);
           normalGroupMap.put(currentGroup.getParentKey(), currentGroup);
         }
@@ -169,16 +168,13 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
           FULL_KEY fullKey = notReadySlot.getFullKey();
           DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
               new DelayedGroup<>(
-                  fullKey,
-                  emitter,
-                  keyManipulator,
-                  normalGroupCloseExpirationInMillis,
-                  delayedSlotMoveExpirationInMillis,
-                  notReadySlot,
-                  this::unregisterDelayedGroup);
+                  fullKey, emitter, keyManipulator, notReadySlot, this::unregisterDelayedGroup);
+
+          DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
+              delayedGroupMap.put(fullKey, delayedGroup);
 
           // Delegate the value to the client thread
-          notReadySlot.delegateTask(
+          notReadySlot.delegateTaskToWaiter(
               () -> {
                 try {
                   emitter.execute(
@@ -189,8 +185,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
                 }
               });
 
-          DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
-              delayedGroupMap.put(fullKey, delayedGroup);
           if (old != null) {
             logger.warn("The slow group value map already has the same key group. {}", old);
           }

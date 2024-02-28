@@ -10,6 +10,16 @@ public class GroupCommitConfig {
   private final int delayedSlotExpirationInMillis;
   private final int checkIntervalInMillis;
 
+  /**
+   * A configuration of group commit.
+   *
+   * @param retentionSlotsCount How many slots can be stored in a {@link NormalGroup}.
+   * @param groupCloseExpirationInMillis An expiration timeout to close (or size-fix) a {@link
+   *     NormalGroup}.
+   * @param delayedSlotExpirationInMillis An expiration timeout to move a delayed slot from {@link
+   *     NormalGroup} to {@link DelayedGroup}.
+   * @param checkIntervalInMillis An interval to check the queues.
+   */
   public GroupCommitConfig(
       int retentionSlotsCount,
       int groupCloseExpirationInMillis,
