@@ -13,9 +13,8 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // If a result value is null, the value is already emitted.
   // Otherwise, the result lambda must be emitted by the receiver's thread.
   private final CompletableFuture<ThrowableRunnable> completableFuture = new CompletableFuture<>();
-  // TODO: Revisit this
   // This value can be changed from null -> non-null, not vice versa.
-  @Nullable private volatile V value;
+  @Nullable private V value;
 
   Slot(CHILD_KEY key, Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
     this.key = key;
@@ -36,7 +35,6 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       // Otherwise, the result lambda must be emitted by the receiver's thread.
       ThrowableRunnable taskToEmit = completableFuture.get();
       if (taskToEmit != null) {
-        // TODO: Enhance the error handling?
         taskToEmit.run();
       }
     } catch (InterruptedException e) {

@@ -442,27 +442,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   public void ready(FULL_KEY fullKey, V value) throws GroupCommitException {
     Keys<PARENT_KEY, CHILD_KEY> keys = keyManipulator.fromFullKey(fullKey);
-    while (true) {
-      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
-      try {
-        group.putValueToSlotAndWait(keys.childKey, value);
-        return;
-      } catch (GroupCommitAlreadyCompletedException e) {
-        // TODO: This concern on race condition doesn't exist now.
-        // This can throw an exception in a race condition when the value slot is moved to
-        // delayed group. So, retry should be needed.
-        if (group instanceof NormalGroup) {
-          try {
-            TimeUnit.MILLISECONDS.sleep(10);
-          } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(ex);
-          }
-          continue;
-        }
-        throw e;
-      }
-    }
+    Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
+    group.putValueToSlotAndWait(keys.childKey, value);
   }
 
   /**

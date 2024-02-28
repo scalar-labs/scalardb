@@ -69,8 +69,10 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   private synchronized void reserveSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
-    // TODO: Check if no existing slot?
-    slots.put(slot.getKey(), slot);
+    Slot<?, ?, ?, ?, ?> oldSlot = slots.put(slot.getKey(), slot);
+    if (oldSlot != null) {
+      logger.warn("An old slot exist unexpectedly. {}", oldSlot.getFullKey());
+    }
     updateIsClosed();
   }
 
