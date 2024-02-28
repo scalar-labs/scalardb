@@ -35,26 +35,22 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
 
   // Queues
-
   private final QueueForClosingNormalGroup queueForClosingNormalGroup;
   private final QueueForMovingDelayedSlot queueForMovingDelayedSlot;
 
   // Parameters
-
   private final long queueCheckIntervalInMillis;
   private final long normalGroupCloseExpirationInMillis;
   private final long delayedSlotMoveExpirationInMillis;
   private final int numberOfRetentionValues;
 
   // Executors
-
   private final ExecutorService monitorExecutorService;
 
   // Custom operations injected by the client
-
-  // This contains logics of how to treat keys.
+  // - This contains logics of how to treat keys.
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
-  // This is capable of emitting multiple values at once.
+  // - This is capable of emitting multiple values at once.
   @LazyInit private Emittable<EMIT_KEY, V> emitter;
 
   // This class is just for encapsulation of accesses to Groups
