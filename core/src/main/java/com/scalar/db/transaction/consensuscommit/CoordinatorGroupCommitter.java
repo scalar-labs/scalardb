@@ -127,7 +127,7 @@ public class CoordinatorGroupCommitter
         return false;
       }
       String key = (String) obj;
-      return key.charAt(PRIMARY_KEY_SIZE) == DELIMITER;
+      return key.length() > PRIMARY_KEY_SIZE && key.charAt(PRIMARY_KEY_SIZE) == DELIMITER;
     }
 
     @Override

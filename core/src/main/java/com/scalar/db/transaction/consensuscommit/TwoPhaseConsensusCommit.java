@@ -175,9 +175,14 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     if (groupCommitter != null) {
-      // TODO: Revisit here to consider `needRollback` and so on
-      commit.commitViaGroupCommit(crud.getSnapshot());
-      return;
+      try {
+        commit.commitViaGroupCommit(crud.getSnapshot());
+        return;
+      } catch (CommitConflictException | UnknownTransactionStatusException e) {
+        // no need to rollback because the transaction has already been rolled back
+        needRollback = false;
+        throw e;
+      }
     }
 
     try {

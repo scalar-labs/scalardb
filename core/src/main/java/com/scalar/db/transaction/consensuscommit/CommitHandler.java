@@ -135,6 +135,8 @@ public class CommitHandler {
       throws CommitException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
+      assert groupCommitter != null;
+      // Group commit the state
       groupCommitter.ready(id, snapshot);
     } catch (GroupCommitAlreadyCompletedException e) {
       cancelGroupCommitIfNeeded(id);
@@ -142,9 +144,10 @@ public class CommitHandler {
       throw new CommitConflictException("Group commit failed due to a conflict", e, id);
     } catch (GroupCommitTargetNotFoundException e) {
       // This would happen with 2PC interface.
-      // TODO: Why...?
+      // TODO: Why...? Probably, implicit rollbacks happen...
       cancelGroupCommitIfNeeded(id);
       commitOrRollbackRecordsAccordingToState(snapshot, e);
+      return;
     } catch (GroupCommitException e) {
       cancelGroupCommitIfNeeded(id);
       commitOrRollbackRecordsAccordingToState(snapshot, e);
