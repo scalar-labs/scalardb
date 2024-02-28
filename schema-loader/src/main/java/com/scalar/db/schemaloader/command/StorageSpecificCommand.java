@@ -110,7 +110,7 @@ public abstract class StorageSpecificCommand {
       return new SchemaParser(schemaFile, options);
     } catch (IOException e) {
       throw new SchemaLoaderException(
-          "Reading the schema file failed; File: " + schemaFile.toAbsolutePath(), e);
+          "Reading the schema file failed. File: " + schemaFile.toAbsolutePath(), e);
     }
   }
 
