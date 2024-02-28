@@ -33,18 +33,11 @@ import org.slf4j.LoggerFactory;
  */
 public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
+
   // Queues
 
-  // A queue to contain NormalGroup instances. The following timeouts occur in this queue:
-  // - `group-close-expiration` fixes the size of expired NormalGroup.
-  // - `delayed-slot-move-expiration` moves expired slots in NormalGroup to DelayedGroup.
-  private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
-      queueForNormalGroupClose = new LinkedBlockingQueue<>();
-
-  // A queue to contain DelayedGroup instances. The following timeout occurs in this queue:
-  // - `delayed-slot-emit-expiration` tries to emit expired slots.
-  private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
-      queueForDelayedSlotMove = new LinkedBlockingQueue<>();
+  private final QueueForClosingNormalGroup queueForClosingNormalGroup;
+  private final QueueForMovingDelayedSlot queueForMovingDelayedSlot;
 
   // Parameters
 
@@ -55,8 +48,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
 
   // Executors
 
-  private final ExecutorService normalGroupCloseExecutorService;
-  private final ExecutorService delayedSlotMoveExecutorService;
   private final ExecutorService monitorExecutorService;
 
   // Custom operations injected by the client
@@ -93,7 +84,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
                   delayedSlotMoveExpirationInMillis,
                   numberOfRetentionValues,
                   this::unregisterNormalGroup);
-          queueForNormalGroupClose.add(currentGroup);
+          queueForClosingNormalGroup.add(currentGroup);
           normalGroupMap.put(currentGroup.getParentKey(), currentGroup);
         }
       } finally {
@@ -201,6 +192,199 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     }
   }
 
+  // A queue to contain NormalGroup instances. The following timeout occurs in this queue:
+  // - `group-close-expiration` fixes the size of expired NormalGroup.
+  private class QueueForClosingNormalGroup implements Closeable {
+    // Append-to-Last operation is executed by another thread via `add()` API and the worker thread.
+    // Remove-from-First is executed by the worker thread.
+    private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> queue =
+        new LinkedBlockingQueue<>();
+    private final QueueForMovingDelayedSlot queueForMovingDelayedSlot;
+    private final ExecutorService executorService;
+
+    QueueForClosingNormalGroup(String label, QueueForMovingDelayedSlot queueForMovingDelayedSlot) {
+      this.queueForMovingDelayedSlot = queueForMovingDelayedSlot;
+      this.executorService =
+          Executors.newSingleThreadExecutor(
+              new ThreadFactoryBuilder()
+                  .setDaemon(true)
+                  .setNameFormat(label + "-group-commit-normal-group-close-%d")
+                  .build());
+      startNormalGroupCloseExecutorService();
+    }
+
+    void add(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
+      queue.add(normalGroup);
+    }
+
+    int size() {
+      return queue.size();
+    }
+
+    private void startNormalGroupCloseExecutorService() {
+      executorService.execute(
+          () -> {
+            while (!executorService.isShutdown()) {
+              if (!process()) {
+                break;
+              }
+            }
+          });
+    }
+
+    private boolean process() {
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup = queue.peek();
+      Long retryWaitInMillis = null;
+
+      if (normalGroup == null) {
+        retryWaitInMillis = queueCheckIntervalInMillis;
+      } else if (normalGroup.isSizeFixed()) {
+        // Already the size is fixed. Nothing to do. Handle a next element immediately
+      } else {
+        Instant now = Instant.now();
+        if (now.isAfter(normalGroup.groupClosedAt())) {
+          // Expired. Fix the size
+          normalGroup.fixSize();
+        } else {
+          // Not expired. Retry
+          retryWaitInMillis = queueCheckIntervalInMillis;
+        }
+      }
+
+      if (retryWaitInMillis != null) {
+        try {
+          TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.warn("Interrupted", e);
+          return false;
+        }
+      } else {
+        // Move the size-fixed group but not ready to the timeout queue
+        if (!normalGroup.isReady()) {
+          queueForMovingDelayedSlot.add(normalGroup);
+        }
+        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = queue.poll();
+        // Check if the removed group is expected just in case.
+        if (removed == null || !removed.equals(normalGroup)) {
+          logger.error(
+              "The queue for normal-group-close returned an inconsistent value. Re-enqueuing it. expected:{}, actual:{}",
+              normalGroup,
+              removed);
+          if (removed != null) {
+            queue.add(removed);
+          }
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public void close() {
+      MoreExecutors.shutdownAndAwaitTermination(executorService, 5, TimeUnit.SECONDS);
+    }
+  }
+
+  // A queue to contain DelayedGroup instances. The following timeout occurs in this queue:
+  // - `delayed-slot-move-expiration` moves expired slots in NormalGroup to DelayedGroup.
+  private class QueueForMovingDelayedSlot implements Closeable {
+    // Append-to-Last operation is executed by another thread via `add()` API and the worker thread.
+    // Remove-from-First is executed by the worker thread.
+    private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> queue =
+        new LinkedBlockingQueue<>();
+
+    private final ExecutorService executorService;
+
+    QueueForMovingDelayedSlot(String label) {
+      this.executorService =
+          Executors.newSingleThreadExecutor(
+              new ThreadFactoryBuilder()
+                  .setDaemon(true)
+                  .setNameFormat(label + "-group-commit-delayed-slot-move-%d")
+                  .build());
+      startDelayedSlotMoveExecutorService();
+    }
+
+    void add(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
+      queue.add(normalGroup);
+    }
+
+    int size() {
+      return queue.size();
+    }
+
+    private void startDelayedSlotMoveExecutorService() {
+      executorService.execute(
+          () -> {
+            while (!executorService.isShutdown()) {
+              if (!handleQueueForDelayedSlotMove()) {
+                break;
+              }
+            }
+          });
+    }
+
+    private boolean handleQueueForDelayedSlotMove() {
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup = queue.peek();
+      Long retryWaitInMillis = null;
+
+      if (normalGroup == null) {
+        retryWaitInMillis = queueCheckIntervalInMillis * 2;
+      } else if (normalGroup.isReady()) {
+        // Already ready. Nothing to do. Handle a next element immediately
+      } else {
+        Instant now = Instant.now();
+        if (now.isAfter(normalGroup.delayedSlotMovedAt())) {
+          if (!groupManager.moveDelayedSlotToDelayedGroup(normalGroup)) {
+            NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = queue.poll();
+            // Check if the removed slot is expected just in case.
+            if (removed == null || !removed.equals(normalGroup)) {
+              logger.error(
+                  "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
+                  normalGroup,
+                  removed);
+            }
+            if (removed != null) {
+              queue.add(removed);
+            }
+            return true;
+          }
+        } else {
+          // Not expired. Retry
+          retryWaitInMillis = queueCheckIntervalInMillis * 2;
+        }
+      }
+
+      if (retryWaitInMillis != null) {
+        try {
+          TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.warn("Interrupted", e);
+          return false;
+        }
+      } else {
+        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = queue.poll();
+        // Check if the removed slot is expected just in case.
+        if (removed == null || !removed.equals(normalGroup)) {
+          logger.error(
+              "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
+              normalGroup,
+              removed);
+          if (removed != null) {
+            queue.add(removed);
+          }
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public void close() {
+      MoreExecutors.shutdownAndAwaitTermination(executorService, 5, TimeUnit.SECONDS);
+    }
+  }
+
   /**
    * @param label A label used for thread name.
    * @param config A configuration.
@@ -216,7 +400,11 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     this.queueCheckIntervalInMillis = config.checkIntervalInMillis();
     this.keyManipulator = keyManipulator;
     this.groupManager = new GroupManager();
+    this.queueForMovingDelayedSlot = new QueueForMovingDelayedSlot(label);
+    this.queueForClosingNormalGroup =
+        new QueueForClosingNormalGroup(label, queueForMovingDelayedSlot);
 
+    // TODO: This should be replaced by other metrics mechanism.
     this.monitorExecutorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
@@ -224,22 +412,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
                 .setNameFormat(label + "-group-commit-monitor-%d")
                 .build());
     startMonitorExecutorService();
-
-    this.normalGroupCloseExecutorService =
-        Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(label + "-group-commit-normal-group-close-%d")
-                .build());
-    startNormalGroupCloseExecutorService();
-
-    this.delayedSlotMoveExecutorService =
-        Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(label + "-group-commit-delayed-slot-move-%d")
-                .build());
-    startDelayedSlotMoveExecutorService();
   }
 
   /**
@@ -253,138 +425,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     this.emitter = emitter;
   }
 
-  // TODO: This logic should be isolated in a dedicated class.
-  private boolean handleQueueForNormalGroupClose() {
-    NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup =
-        queueForNormalGroupClose.peek();
-    Long retryWaitInMillis = null;
-
-    if (normalGroup == null) {
-      retryWaitInMillis = queueCheckIntervalInMillis;
-    } else if (normalGroup.isSizeFixed()) {
-      // Already the size is fixed. Nothing to do. Handle a next element immediately
-    } else {
-      Instant now = Instant.now();
-      if (now.isAfter(normalGroup.groupClosedAt())) {
-        // Expired. Fix the size
-        normalGroup.fixSize();
-      } else {
-        // Not expired. Retry
-        retryWaitInMillis = queueCheckIntervalInMillis;
-      }
-    }
-
-    if (retryWaitInMillis != null) {
-      try {
-        TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        logger.warn("Interrupted", e);
-        return false;
-      }
-    } else {
-      // Move the size-fixed group but not ready to the timeout queue
-      if (!normalGroup.isReady()) {
-        queueForDelayedSlotMove.add(normalGroup);
-      }
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed =
-          queueForNormalGroupClose.poll();
-      // Check if the removed group is expected just in case.
-      if (removed == null || !removed.equals(normalGroup)) {
-        logger.error(
-            "The queue for normal-group-close returned an inconsistent value. Re-enqueuing it. expected:{}, actual:{}",
-            normalGroup,
-            removed);
-        if (removed != null) {
-          queueForNormalGroupClose.add(removed);
-        }
-      }
-    }
-    return true;
-  }
-
-  // TODO: This logic should be isolated in a dedicated class.
-  private boolean handleQueueForDelayedSlotMove() {
-    NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup =
-        queueForDelayedSlotMove.peek();
-    Long retryWaitInMillis = null;
-
-    if (normalGroup == null) {
-      retryWaitInMillis = queueCheckIntervalInMillis * 2;
-    } else if (normalGroup.isReady()) {
-      // Already ready. Nothing to do. Handle a next element immediately
-    } else {
-      Instant now = Instant.now();
-      if (now.isAfter(normalGroup.delayedSlotMovedAt())) {
-        if (!groupManager.moveDelayedSlotToDelayedGroup(normalGroup)) {
-          NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed =
-              queueForDelayedSlotMove.poll();
-          // Check if the removed slot is expected just in case.
-          if (removed == null || !removed.equals(normalGroup)) {
-            logger.error(
-                "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
-                normalGroup,
-                removed);
-          }
-          if (removed != null) {
-            queueForDelayedSlotMove.add(removed);
-          }
-          return true;
-        }
-      } else {
-        // Not expired. Retry
-        retryWaitInMillis = queueCheckIntervalInMillis * 2;
-      }
-    }
-
-    if (retryWaitInMillis != null) {
-      try {
-        TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        logger.warn("Interrupted", e);
-        return false;
-      }
-    } else {
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed =
-          queueForDelayedSlotMove.poll();
-      // Check if the removed slot is expected just in case.
-      if (removed == null || !removed.equals(normalGroup)) {
-        logger.error(
-            "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
-            normalGroup,
-            removed);
-        if (removed != null) {
-          queueForDelayedSlotMove.add(removed);
-        }
-      }
-    }
-    return true;
-  }
-
-  private void startNormalGroupCloseExecutorService() {
-    normalGroupCloseExecutorService.execute(
-        () -> {
-          while (!normalGroupCloseExecutorService.isShutdown()) {
-            if (!handleQueueForNormalGroupClose()) {
-              break;
-            }
-          }
-        });
-  }
-
-  private void startDelayedSlotMoveExecutorService() {
-    delayedSlotMoveExecutorService.execute(
-        () -> {
-          while (!delayedSlotMoveExecutorService.isShutdown()) {
-            if (!handleQueueForDelayedSlotMove()) {
-              break;
-            }
-          }
-        });
-  }
-
-  // TODO: This logic should be isolated in a dedicated class.
+  // TODO: This should be replaced by other metrics mechanism.
   private void startMonitorExecutorService() {
     monitorExecutorService.execute(
         () -> {
@@ -393,8 +434,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
             logger.info(
                 "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
-                queueForNormalGroupClose.size(),
-                queueForDelayedSlotMove.size(),
+                queueForClosingNormalGroup.size(),
+                queueForMovingDelayedSlot.size(),
                 groupManager.normalGroupMap.size(),
                 groupManager.delayedGroupMap.size());
             try {
@@ -467,16 +508,10 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   @Override
   public void close() {
-    if (delayedSlotMoveExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(
-          delayedSlotMoveExecutorService, 5, TimeUnit.SECONDS);
-    }
-    if (normalGroupCloseExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(
-          normalGroupCloseExecutorService, 5, TimeUnit.SECONDS);
-    }
     if (monitorExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(monitorExecutorService, 5, TimeUnit.SECONDS);
     }
+    queueForMovingDelayedSlot.close();
+    queueForClosingNormalGroup.close();
   }
 }
