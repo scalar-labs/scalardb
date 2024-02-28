@@ -161,8 +161,7 @@ public class TwoPhaseConsensusCommitManager
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
 
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(
-            crud, commit, recovery, mutationOperationChecker, groupCommitter);
+        new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return decorate(transaction);

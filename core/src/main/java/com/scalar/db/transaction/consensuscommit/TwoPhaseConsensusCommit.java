@@ -25,7 +25,6 @@ import com.scalar.db.exception.transaction.ValidationException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,8 +48,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       CrudHandler crud,
       CommitHandler commit,
       RecoveryHandler recovery,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker,
-      @Nullable CoordinatorGroupCommitter groupCommitter) {
+      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
@@ -173,6 +171,10 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
+      // TODO: With group commit enabled, commit-state should be executed only by the coordinator,
+      //       since which transactions are put together depends on timing and it's likely that
+      //       each instance has a different group of transactions. So, a participant must not
+      //       commit the transaction even if receiving a commit request.
       commit.commitState(crud.getSnapshot());
     } catch (CommitConflictException | UnknownTransactionStatusException e) {
       // no need to rollback because the transaction has already been rolled back
