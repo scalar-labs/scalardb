@@ -598,6 +598,7 @@ jobs:
           MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
+        options: --name sqlserver17
 
     steps:
       - uses: actions/checkout@v4
@@ -608,10 +609,13 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
+      - name: Create no superuser
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer17
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -634,6 +638,7 @@ jobs:
           MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
+        options: --name sqlserver19
 
     steps:
       - uses: actions/checkout@v4
@@ -644,10 +649,13 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
+      - name: Create no superuser
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -670,6 +678,7 @@ jobs:
           MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
+        options: --name sqlserver22
 
     steps:
       - uses: actions/checkout@v4
@@ -680,10 +689,13 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
+      - name: Create no superuser
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
