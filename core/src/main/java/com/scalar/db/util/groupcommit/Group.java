@@ -1,6 +1,5 @@
 package com.scalar.db.util.groupcommit;
 
-import com.google.common.base.MoreObjects;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,17 +19,6 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   protected final Map<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> slots;
   // Whether to reject a new value slot.
   protected final AtomicBoolean closed = new AtomicBoolean();
-
-  @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("hashCode", hashCode())
-        .add("done", isDone())
-        .add("ready", isReady())
-        .add("sizeFixed", isSizeFixed())
-        .add("valueSlots.size", slots.size())
-        .toString();
-  }
 
   Group(
       Emittable<EMIT_KEY, V> emitter,
@@ -90,12 +78,13 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   void putValueToSlotAndWait(CHILD_KEY childKey, V value) throws GroupCommitException {
     Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot;
     synchronized (this) {
+      // This can throw GroupCommitAlreadyCompletedException or GroupCommitTargetNotFoundException
+      // since it's possible GroupManager or etc. has moved the slot from NormalGroup to
+      // DelayedGroup.
       slot = putValueToSlot(childKey, value);
 
-      // This is in this block since it results in better performance
       asyncEmitIfReady();
     }
-
     slot.waitUntilEmit();
   }
 
@@ -156,7 +145,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         }
         updateIsClosed();
       }
-      // This is in this block since it results in better performance
+
       asyncEmitIfReady();
     }
   }
@@ -169,17 +158,12 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     }
 
     if (isReady()) {
-      if (slots.isEmpty()) {
-        // In this case, each transaction has aborted with the full transaction ID.
-        logger.warn("slots are empty. Nothing to do. group:{}", this);
-        markAsDone();
-        dismiss();
-        return;
-      }
       asyncEmit();
       markAsDone();
     }
   }
 
+  // TODO: This method calls GroupManager's methods and it might cause deadlocks.
+  //       Probably creating a new queue for cleaning up would be safer.
   protected abstract void dismiss();
 }

@@ -1,5 +1,6 @@
 package com.scalar.db.util.groupcommit;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import java.util.Collections;
 
@@ -66,5 +67,16 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   @Override
   protected void dismiss() {
     garbageGroupCollector.collect(this);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("fullKey", fullKey)
+        .add("done", isDone())
+        .add("ready", isReady())
+        .add("sizeFixed", isSizeFixed())
+        .add("valueSlots.size", slots.size())
+        .toString();
   }
 }

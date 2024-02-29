@@ -76,8 +76,15 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   public void ready(FULL_KEY fullKey, V value) throws GroupCommitException {
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
-    Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
-    group.putValueToSlotAndWait(keys.childKey, value);
+    while (true) {
+      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
+      try {
+        group.putValueToSlotAndWait(keys.childKey, value);
+        return;
+      } catch (GroupCommitAlreadyCompletedException e) {
+        logger.warn("The group is already closed. Retrying. Group:{}, Keys:{}", group, keys);
+      }
+    }
   }
 
   /**

@@ -270,8 +270,9 @@ class GroupCommitterBench {
                   executorService.submit(
                       () -> {
                         while (true) {
+                          String fullKey = null;
                           try {
-                            String fullKey = groupCommitter.reserve(childKey);
+                            fullKey = groupCommitter.reserve(childKey);
                             int waitInMillis =
                                 (int)
                                     (bmAveragePrepareWaitInMillis
@@ -291,8 +292,12 @@ class GroupCommitterBench {
                             }
                             groupCommitter.ready(fullKey, value);
                             break;
-                          } catch (GroupCommitAlreadyCompletedException e) {
-                            retry.incrementAndGet();
+                          } catch (Exception e) {
+                            if (fullKey != null) {
+                              // TODO: Revisit here after the improvement of Group.dismiss().
+                              // groupCommitter.remove(fullKey);
+                            }
+                            throw e;
                           }
                         }
                         return null;
