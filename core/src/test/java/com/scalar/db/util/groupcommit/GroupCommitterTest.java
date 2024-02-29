@@ -258,24 +258,20 @@ class GroupCommitterTest {
                   executorService.submit(
                       () -> {
                         while (true) {
-                          try {
-                            String fullKey = groupCommitter.reserve(childKey);
-                            int waitInMillis =
-                                (int)
-                                    (bmAveragePrepareWaitInMillis
-                                        + rand.nextGaussian() * bmMultiplexerInMillis);
-                            waitInMillis = Math.max(waitInMillis, bmAveragePrepareWaitInMillis);
-                            if (waitInMillis > 0) {
-                              System.out.printf(
-                                  "Waiting for prepare. FullKey=%s, Duration=%d ms \n",
-                                  fullKey, waitInMillis);
-                              TimeUnit.MILLISECONDS.sleep(waitInMillis);
-                            }
-                            groupCommitter.ready(fullKey, value);
-                            break;
-                          } catch (GroupCommitAlreadyCompletedException e) {
-                            retry.incrementAndGet();
+                          String fullKey = groupCommitter.reserve(childKey);
+                          int waitInMillis =
+                              (int)
+                                  (bmAveragePrepareWaitInMillis
+                                      + rand.nextGaussian() * bmMultiplexerInMillis);
+                          waitInMillis = Math.max(waitInMillis, bmAveragePrepareWaitInMillis);
+                          if (waitInMillis > 0) {
+                            System.out.printf(
+                                "Waiting for prepare. FullKey=%s, Duration=%d ms \n",
+                                fullKey, waitInMillis);
+                            TimeUnit.MILLISECONDS.sleep(waitInMillis);
                           }
+                          groupCommitter.ready(fullKey, value);
+                          break;
                         }
                         return null;
                       })));

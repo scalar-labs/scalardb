@@ -59,33 +59,35 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
+  @Nullable
+  // Returns null if the state of the group is changed.
   private synchronized Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> putValueToSlot(
-      CHILD_KEY childKey, V value)
-      throws GroupCommitAlreadyCompletedException, GroupCommitTargetNotFoundException {
+      CHILD_KEY childKey, V value) {
     if (isDone()) {
-      throw new GroupCommitAlreadyCompletedException("This group is already closed. group:" + this);
+      return null;
     }
 
     Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = slots.get(childKey);
     if (slot == null) {
-      throw new GroupCommitTargetNotFoundException(
-          "The slot doesn't exist. fullKey:" + fullKey(childKey));
+      return null;
     }
     slot.setValue(value);
     return slot;
   }
 
-  void putValueToSlotAndWait(CHILD_KEY childKey, V value) throws GroupCommitException {
+  boolean putValueToSlotAndWait(CHILD_KEY childKey, V value) throws GroupCommitException {
     Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot;
     synchronized (this) {
-      // This can throw GroupCommitAlreadyCompletedException or GroupCommitTargetNotFoundException
-      // since it's possible GroupManager or etc. has moved the slot from NormalGroup to
-      // DelayedGroup.
       slot = putValueToSlot(childKey, value);
+      if (slot == null) {
+        // Needs a retry since the state of the group is changed.
+        return false;
+      }
 
       asyncEmitIfReady();
     }
     slot.waitUntilEmit();
+    return true;
   }
 
   void fixSize() {

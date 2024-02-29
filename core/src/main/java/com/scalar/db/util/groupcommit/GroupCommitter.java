@@ -72,18 +72,17 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    * @param fullKey A full key associated with the slot already reserved with {@link
    *     GroupCommitter#reserve(CHILD_KEY childKey)}.
    * @param value A value to be set to the slot.
-   * @throws GroupCommitException
+   * @throws GroupCommitException when group commit fails
    */
   public void ready(FULL_KEY fullKey, V value) throws GroupCommitException {
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
     while (true) {
       Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
-      try {
-        group.putValueToSlotAndWait(keys.childKey, value);
+      if (group.putValueToSlotAndWait(keys.childKey, value)) {
         return;
-      } catch (GroupCommitAlreadyCompletedException e) {
-        logger.warn("The group is already closed. Retrying. Group:{}, Keys:{}", group, keys);
       }
+      logger.info(
+          "The state of the group has been changed. Retrying. Group:{}, Keys:{}", group, keys);
     }
   }
 
