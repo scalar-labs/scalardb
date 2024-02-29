@@ -129,8 +129,7 @@ public class SchemaOperator implements AutoCloseable {
         }
         logger.info("Repairing the namespace {} succeeded", tableSchema.getNamespace());
       } catch (ExecutionException e) {
-        throw new SchemaLoaderException(
-            "Repairing the namespace " + tableSchema.getNamespace() + " failed", e);
+        throw new SchemaLoaderException(e.getMessage(), e);
       }
     }
   }
@@ -153,8 +152,7 @@ public class SchemaOperator implements AutoCloseable {
         }
         logger.info("Repairing the table {} in the namespace {} succeeded", tableName, namespace);
       } catch (ExecutionException e) {
-        throw new SchemaLoaderException(
-            "Repairing the table " + tableName + " in the namespace " + namespace + " failed", e);
+        throw new SchemaLoaderException(e.getMessage(), e);
       }
     }
   }
@@ -166,7 +164,7 @@ public class SchemaOperator implements AutoCloseable {
       // storage
       transactionAdmin.get().createNamespace(namespace, true, options);
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Creating the namespace " + namespace + " failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -187,8 +185,7 @@ public class SchemaOperator implements AutoCloseable {
       }
       logger.info("Creating the table {} in the namespace {} succeeded", tableName, namespace);
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException(
-          "Creating the table " + tableName + " in the namespace " + namespace + " failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -219,8 +216,7 @@ public class SchemaOperator implements AutoCloseable {
       }
       logger.info("Deleting the table {} in the namespace {} succeeded", tableName, namespace);
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException(
-          "Deleting the table " + tableName + " in the namespace " + namespace + " failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -233,7 +229,7 @@ public class SchemaOperator implements AutoCloseable {
           transactionAdmin.get().dropNamespace(namespace, true);
         }
       } catch (ExecutionException e) {
-        throw new SchemaLoaderException("Deleting the namespace " + namespace + " failed", e);
+        throw new SchemaLoaderException(e.getMessage(), e);
       }
     }
   }
@@ -247,13 +243,7 @@ public class SchemaOperator implements AutoCloseable {
         return storageAdmin.get().tableExists(namespace, tableName);
       }
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException(
-          "Checking the existence of the table "
-              + tableName
-              + " in the namespace "
-              + namespace
-              + " failed",
-          e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -266,7 +256,7 @@ public class SchemaOperator implements AutoCloseable {
       transactionAdmin.get().createCoordinatorTables(options);
       logger.info("Creating the coordinator tables succeeded");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Creating the coordinator tables failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -279,7 +269,7 @@ public class SchemaOperator implements AutoCloseable {
       transactionAdmin.get().dropCoordinatorTables();
       logger.info("Deleting the coordinator tables succeeded");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Deleting the coordinator tables failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -287,7 +277,7 @@ public class SchemaOperator implements AutoCloseable {
     try {
       return transactionAdmin.get().coordinatorTablesExist();
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Checking the existence of the coordinator tables failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -296,7 +286,7 @@ public class SchemaOperator implements AutoCloseable {
       transactionAdmin.get().repairCoordinatorTables(options);
       logger.info("Repairing the coordinator tables succeeded");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Repairing the coordinator tables failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
@@ -324,8 +314,7 @@ public class SchemaOperator implements AutoCloseable {
               String.format("No alterations were detected for the table %s.%s", namespace, table));
         }
       } catch (ExecutionException e) {
-        throw new SchemaLoaderException(
-            String.format("Altering the table %s.%s failed", namespace, table), e);
+        throw new SchemaLoaderException(e.getMessage(), e);
       }
     }
   }
@@ -425,8 +414,7 @@ public class SchemaOperator implements AutoCloseable {
         }
         logger.info("Importing the table {} in the namespace {} succeeded", table, namespace);
       } catch (ExecutionException e) {
-        throw new SchemaLoaderException(
-            String.format("Importing the table %s.%s failed", namespace, table), e);
+        throw new SchemaLoaderException(e.getMessage(), e);
       }
     }
   }
@@ -439,7 +427,7 @@ public class SchemaOperator implements AutoCloseable {
       transactionAdmin.get().upgrade(options);
       logger.info("Upgrading the environment succeeded.");
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Upgrading the environment failed", e);
+      throw new SchemaLoaderException(e.getMessage(), e);
     }
   }
 
