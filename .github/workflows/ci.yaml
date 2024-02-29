@@ -610,7 +610,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 1
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
@@ -650,7 +650,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19 10 1
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
@@ -690,7 +690,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22 10 1
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
