@@ -97,7 +97,7 @@ public class CoordinatorGroupCommitter
     private final Random random = new Random();
 
     @Override
-    public String createParentKey() {
+    public String generateParentKey() {
       char[] chars = new char[PRIMARY_KEY_SIZE];
       for (int i = 0; i < PRIMARY_KEY_SIZE; i++) {
         chars[i] = CHARS_FOR_PRIMARY_KEY[random.nextInt(CHARS_FOR_PRIMARY_KEY_SIZE)];
@@ -106,7 +106,7 @@ public class CoordinatorGroupCommitter
     }
 
     @Override
-    public String createFullKey(String parentKey, String childKey) {
+    public String getFullKey(String parentKey, String childKey) {
       if (parentKey.length() != PRIMARY_KEY_SIZE) {
         throw new IllegalArgumentException(
             String.format(
@@ -131,14 +131,15 @@ public class CoordinatorGroupCommitter
     }
 
     @Override
-    public Keys<String, String> fromFullKey(String fullKey) {
+    public Keys<String, String, String> keysFromFullKey(String fullKey) {
       if (!isFullKey(fullKey)) {
         throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
       }
 
       return new Keys<>(
           fullKey.substring(0, PRIMARY_KEY_SIZE),
-          fullKey.substring(PRIMARY_KEY_SIZE + 1 /* delimiter */));
+          fullKey.substring(PRIMARY_KEY_SIZE + 1 /* delimiter */),
+          fullKey);
     }
 
     @Override

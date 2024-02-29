@@ -70,6 +70,7 @@ public class Coordinator {
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
     if (coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
+      // TODO: Revise this comment.
       // In group commit mode, checking the two transaction ID formats is executed in non-atomic.
       // So, it's possible the insertion of transaction ID occurs between the two read operations.
       // But, it occurs only if the two transactions of checking transaction IDs and inserting the
@@ -89,9 +90,10 @@ public class Coordinator {
   private Optional<Coordinator.State> getStateForGroupCommit(String id)
       throws CoordinatorException {
     if (!coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
-      throw new IllegalArgumentException("'id' isn't for group commit. id:" + id);
+      throw new IllegalArgumentException("This id format isn't for group commit. Id:" + id);
     }
-    Keys<String, String> idForGroupCommit = coordinatorGroupCommitKeyManipulator.fromFullKey(id);
+    Keys<String, String, String> idForGroupCommit =
+        coordinatorGroupCommitKeyManipulator.keysFromFullKey(id);
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
@@ -132,7 +134,8 @@ public class Coordinator {
     boolean isFirst = true;
     StringBuilder sb = new StringBuilder();
     for (String id : fullIds) {
-      Keys<String, String> idForGroupCommit = coordinatorGroupCommitKeyManipulator.fromFullKey(id);
+      Keys<String, String, String> idForGroupCommit =
+          coordinatorGroupCommitKeyManipulator.keysFromFullKey(id);
       // TODO: Verify the parentId
       if (isFirst) {
         isFirst = false;

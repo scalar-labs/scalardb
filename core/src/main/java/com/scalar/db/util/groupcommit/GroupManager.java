@@ -97,12 +97,12 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   }
 
   // Gets the corresponding group associated with the given key.
-  Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> getGroup(Keys<PARENT_KEY, CHILD_KEY> keys)
-      throws GroupCommitTargetNotFoundException {
+  Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> getGroup(
+      Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys) throws GroupCommitTargetNotFoundException {
     long stamp = lock.writeLock();
     try {
       DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
-          delayedGroupMap.get(keyManipulator.createFullKey(keys.parentKey, keys.childKey));
+          delayedGroupMap.get(keys.fullKey);
       if (delayedGroup != null) {
         return delayedGroup;
       }
@@ -117,7 +117,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     }
 
     throw new GroupCommitTargetNotFoundException(
-        "The group for the reserved value slot doesn't exist. keys:" + keys);
+        "The group for the reserved value slot doesn't exist. Keys:" + keys);
   }
 
   private synchronized void unregisterNormalGroup(

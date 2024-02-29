@@ -35,7 +35,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
     this.delayedSlotMovedAt = new AtomicReference<>();
     updateDelayedSlotMovedAt();
-    this.parentKey = keyManipulator.createParentKey();
+    this.parentKey = keyManipulator.generateParentKey();
     this.garbageGroupCollector = garbageGroupCollector;
   }
 
@@ -45,7 +45,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   FULL_KEY getFullKey(CHILD_KEY childKey) {
-    return keyManipulator.createFullKey(parentKey, childKey);
+    return keyManipulator.getFullKey(parentKey, childKey);
   }
 
   FULL_KEY reserveNewSlot(CHILD_KEY childKey) throws GroupCommitAlreadyClosedException {

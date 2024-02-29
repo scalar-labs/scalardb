@@ -26,12 +26,12 @@ import org.junit.jupiter.api.Test;
 class GroupCommitterTest {
   static class MyKeyManipulator implements KeyManipulator<String, String, String, String> {
     @Override
-    public String createParentKey() {
+    public String generateParentKey() {
       return UUID.randomUUID().toString();
     }
 
     @Override
-    public String createFullKey(String parentKey, String childKey) {
+    public String getFullKey(String parentKey, String childKey) {
       return parentKey + ":" + childKey;
     }
 
@@ -45,9 +45,9 @@ class GroupCommitterTest {
     }
 
     @Override
-    public Keys<String, String> fromFullKey(String fullKey) {
+    public Keys<String, String, String> keysFromFullKey(String fullKey) {
       String[] parts = fullKey.split(":");
-      return new Keys<>(parts[0], parts[1]);
+      return new Keys<>(parts[0], parts[1], fullKey);
     }
 
     @Override

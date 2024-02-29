@@ -13,13 +13,15 @@ import com.google.common.base.MoreObjects;
  * @param <EMIT_KEY> A key type that Emitter can interpret.
  */
 public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> {
-  class Keys<PARENT_KEY, CHILD_KEY> {
+  class Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> {
     public final PARENT_KEY parentKey;
     public final CHILD_KEY childKey;
+    public final FULL_KEY fullKey;
 
-    public Keys(PARENT_KEY parentKey, CHILD_KEY childKey) {
+    public Keys(PARENT_KEY parentKey, CHILD_KEY childKey, FULL_KEY fullKey) {
       this.parentKey = parentKey;
       this.childKey = childKey;
+      this.fullKey = fullKey;
     }
 
     @Override
@@ -27,17 +29,18 @@ public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> {
       return MoreObjects.toStringHelper(this)
           .add("parentKey", parentKey)
           .add("childKey", childKey)
+          .add("fullKey", fullKey)
           .toString();
     }
   }
 
-  PARENT_KEY createParentKey();
+  PARENT_KEY generateParentKey();
 
-  FULL_KEY createFullKey(PARENT_KEY parentKey, CHILD_KEY childKey);
+  FULL_KEY getFullKey(PARENT_KEY parentKey, CHILD_KEY childKey);
 
   boolean isFullKey(Object obj);
 
-  Keys<PARENT_KEY, CHILD_KEY> fromFullKey(FULL_KEY fullKey);
+  Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keysFromFullKey(FULL_KEY fullKey);
 
   EMIT_KEY getEmitKeyFromFullKey(FULL_KEY fullKey);
 
