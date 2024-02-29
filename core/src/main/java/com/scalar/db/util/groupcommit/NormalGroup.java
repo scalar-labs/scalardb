@@ -48,7 +48,9 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     return keyManipulator.fullKey(parentKey, childKey);
   }
 
-  FULL_KEY reserveNewSlot(CHILD_KEY childKey) throws GroupCommitAlreadyClosedException {
+  // If it returns null, the Group is already closed and a retry is needed.
+  @Nullable
+  FULL_KEY reserveNewSlot(CHILD_KEY childKey) {
     return reserveNewSlot(new Slot<>(childKey, this));
   }
 

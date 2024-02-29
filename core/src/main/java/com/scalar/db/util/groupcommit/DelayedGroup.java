@@ -1,8 +1,9 @@
 package com.scalar.db.util.groupcommit;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.Objects;
 import java.util.Collections;
-import java.util.Map.Entry;
 
 // A group for a delayed slot. This group contains only a single slot.
 class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
@@ -21,16 +22,12 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     super(emitter, keyManipulator, 1);
     this.fullKey = fullKey;
     this.garbageGroupCollector = garbageGroupCollector;
-    try {
-      // Auto emit should be disabled since:
-      // - the queue and worker for delayed values will emit this if it's ready
-      // - to avoid taking time in synchronized blocks
-      super.reserveNewSlot(slot, false);
-    } catch (GroupCommitAlreadyClosedException e) {
-      // FIXME: Message
-      throw new IllegalStateException(
-          "Failed to reserve a value slot. This shouldn't happen. slot:" + slot, e);
-    }
+
+    // TODO: Revisit here
+    // Auto emit should be disabled since:
+    // - the queue and worker for delayed values will emit this if it's ready
+    // - to avoid taking time in synchronized blocks
+    checkNotNull(reserveNewSlot(slot, false));
   }
 
   FULL_KEY fullKey() {
@@ -44,9 +41,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   protected void asyncEmit() {
-    for (Entry<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> entry :
-        slots.entrySet()) {
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = entry.getValue();
+    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
       // Pass `emitter` to ask the receiver's thread to emit the value
       slot.delegateTaskToWaiter(
           () ->

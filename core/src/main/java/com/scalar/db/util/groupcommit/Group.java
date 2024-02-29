@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,20 +46,21 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return slots.size() >= capacity;
   }
 
-  FULL_KEY reserveNewSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot)
-      throws GroupCommitAlreadyClosedException {
+  // If it returns null, the Group is already closed and a retry is needed.
+  @Nullable
+  FULL_KEY reserveNewSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
     return reserveNewSlot(slot, true);
   }
 
   abstract FULL_KEY fullKey(CHILD_KEY childKey);
 
+  // If it returns null, the Group is already closed and a retry is needed.
+  @Nullable
   protected FULL_KEY reserveNewSlot(
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot, boolean autoEmit)
-      throws GroupCommitAlreadyClosedException {
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot, boolean autoEmit) {
     synchronized (this) {
       if (isSizeFixed()) {
-        throw new GroupCommitAlreadyClosedException(
-            "The size of 'slot' is already fixed. Group:" + this);
+        return null;
       }
       reserveSlot(slot);
       if (noMoreSlot()) {

@@ -273,8 +273,7 @@ class GroupCommitterTest {
                             }
                             groupCommitter.ready(fullKey, value);
                             break;
-                          } catch (GroupCommitAlreadyCompletedException
-                              | GroupCommitAlreadyClosedException e) {
+                          } catch (GroupCommitAlreadyCompletedException e) {
                             retry.incrementAndGet();
                           }
                         }

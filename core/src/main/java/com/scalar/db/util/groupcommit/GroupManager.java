@@ -74,7 +74,10 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
 
   // Reserves a new slot in the current NormalGroup. A new NormalGroup will be created and
   // registered to `normalGroupMap` if the current NormalGroup is already closed.
-  FULL_KEY reserveNewSlot(CHILD_KEY childKey) throws GroupCommitAlreadyClosedException {
+  //
+  // If it returns null, the Group is already closed and a retry is needed.
+  @Nullable
+  FULL_KEY reserveNewSlot(CHILD_KEY childKey) {
     long stamp = lock.writeLock();
     try {
       if (currentGroup == null || currentGroup.isClosed()) {
