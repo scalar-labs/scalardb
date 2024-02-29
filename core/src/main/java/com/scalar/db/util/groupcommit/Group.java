@@ -50,15 +50,14 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   // If it returns null, the Group is already closed and a retry is needed.
   @Nullable
-  protected FULL_KEY reserveNewSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
-    synchronized (this) {
-      if (isSizeFixed()) {
-        return null;
-      }
-      reserveSlot(slot);
-      if (noMoreSlot()) {
-        fixSize();
-      }
+  protected synchronized FULL_KEY reserveNewSlot(
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
+    if (isSizeFixed()) {
+      return null;
+    }
+    reserveSlot(slot);
+    if (noMoreSlot()) {
+      fixSize();
     }
     return slot.fullKey();
   }

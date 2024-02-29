@@ -32,15 +32,20 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   protected void asyncEmit() {
+    assert slots.size() == 1;
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
       // Pass `emitter` to ask the receiver's thread to emit the value
       slot.delegateTaskToWaiter(
-          () ->
+          () -> {
+            try {
               emitter.execute(
                   keyManipulator.emitKeyFromFullKey(fullKey),
-                  Collections.singletonList(slot.value())));
-      // The number of the slots is only 1.
-      dismiss();
+                  Collections.singletonList(slot.value()));
+            } finally {
+              dismiss();
+            }
+          });
+      // Return since the number of the slots is only 1.
       return;
     }
   }

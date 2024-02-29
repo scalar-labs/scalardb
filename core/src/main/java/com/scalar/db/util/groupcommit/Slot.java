@@ -4,11 +4,13 @@ import com.google.common.base.MoreObjects;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 
 // A container of value which is stored in a group.
 class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
-  private final Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup;
+  private final AtomicReference<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> parentGroup =
+      new AtomicReference<>();
   private final CHILD_KEY key;
   // If a result value is null, the value is already emitted.
   // Otherwise, the result lambda must be emitted by the receiver's thread.
@@ -16,13 +18,18 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // This value can be changed from null -> non-null, not vice versa.
   @Nullable private V value;
 
-  Slot(CHILD_KEY key, Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
+  Slot(CHILD_KEY key, NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
     this.key = key;
-    this.parentGroup = parentGroup;
+    this.parentGroup.set(parentGroup);
+  }
+
+  void changeParentGroupToDelayedGroup(
+      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
+    this.parentGroup.set(parentGroup);
   }
 
   FULL_KEY fullKey() {
-    return parentGroup.fullKey(key);
+    return parentGroup.get().fullKey(key);
   }
 
   void setValue(V value) {

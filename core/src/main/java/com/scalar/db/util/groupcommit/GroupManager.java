@@ -124,7 +124,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
         "The group for the reserved value slot doesn't exist. Keys:" + keys);
   }
 
-  private synchronized void unregisterNormalGroup(
+  private void unregisterNormalGroup(
       NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
     long stamp = lock.writeLock();
     try {
@@ -134,7 +134,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     }
   }
 
-  private synchronized void unregisterDelayedGroup(
+  private void unregisterDelayedGroup(
       DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
     long stamp = lock.writeLock();
     try {
@@ -148,8 +148,6 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   // registered to `delayedGroupMap`.
   private boolean moveDelayedSlotToDelayedGroup(
       NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
-    // Already tried to move this code inside NormalGroup.removeNotReadySlots() to remove
-    // the `synchronized` keyword on this method. But the performance was degraded.
     long stamp = lock.writeLock();
     try {
       List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> notReadySlots =
@@ -188,10 +186,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
 
   // TODO: This should be replaced by other metrics mechanism.
   private void startMonitorExecutorService() {
-    monitorExecutorService.execute(
-        () -> {
-          while (!monitorExecutorService.isShutdown()) {
-            // TODO: Move this to other metrics mechanism
+    Runnable print =
+        () ->
             logger.info(
                 "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
@@ -199,7 +195,12 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
                 queueForMovingDelayedSlot.size(),
                 normalGroupMap.size(),
                 delayedGroupMap.size());
+
+    monitorExecutorService.execute(
+        () -> {
+          while (!monitorExecutorService.isShutdown()) {
             try {
+              print.run();
               TimeUnit.SECONDS.sleep(1);
             } catch (InterruptedException e) {
               Thread.currentThread().interrupt();
@@ -207,6 +208,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
               break;
             }
           }
+          print.run();
         });
   }
 
