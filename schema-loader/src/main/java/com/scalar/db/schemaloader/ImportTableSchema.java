@@ -20,7 +20,7 @@ public class ImportTableSchema {
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length != 2) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAINS_NAMESPACE_AND_TABLE
+          CoreError.SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE
               .buildMessage(tableFullName));
     }
     namespace = fullName[0];

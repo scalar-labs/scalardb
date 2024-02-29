@@ -492,19 +492,19 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_BATCH_SIZE_EXCEEDED(
       Category.USER_ERROR, "0108", "DynamoDB cannot batch more than 100 mutations at once", "", ""),
-  SCHEMA_LOADER_MODIFYING_PARTITION_KEYS_NOT_SUPPORTED(
+  SCHEMA_LOADER_ALTERING_PARTITION_KEYS_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0109",
       "The partition keys of the table %s.%s were modified, but altering partition keys is not supported",
       "",
       ""),
-  SCHEMA_LOADER_MODIFYING_CLUSTERING_KEYS_NOT_SUPPORTED(
+  SCHEMA_LOADER_ALTERING_CLUSTERING_KEYS_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0110",
       "The clustering keys of the table %s.%s were modified, but altering clustering keys is not supported",
       "",
       ""),
-  SCHEMA_LOADER_MODIFYING_CLUSTERING_ORDER_NOT_SUPPORTED(
+  SCHEMA_LOADER_ALTERING_CLUSTERING_ORDER_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0111",
       "The clustering ordering of the table %s.%s were modified, but altering clustering ordering is not supported",
@@ -516,7 +516,7 @@ public enum CoreError implements ScalarDbError {
       "The column %s of the table %s.%s has been deleted. Column deletion is not supported when altering a table",
       "",
       ""),
-  SCHEMA_LOADER_MODIFYING_COLUMN_DATA_TYPE_NOT_SUPPORTED(
+  SCHEMA_LOADER_ALTERING_COLUMN_DATA_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0113",
       "The data type of the column %s of the table %s.%s was modified, but altering data types is not supported",
@@ -553,7 +553,7 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0119", "Reading the schema file failed. File: %s", "", ""),
   SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED(
       Category.USER_ERROR, "0120", "Parsing the schema JSON failed. Details: %s", "", ""),
-  SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAINS_NAMESPACE_AND_TABLE(
+  SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE(
       Category.USER_ERROR,
       "0121",
       "The table name must contain the namespace and the table. Table: %s",

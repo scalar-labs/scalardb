@@ -48,17 +48,17 @@ public class TableMetadataAlterationProcessor {
       String namespace, String table, TableMetadata oldMetadata, TableMetadata newMetadata) {
     if (!newMetadata.getPartitionKeyNames().equals(oldMetadata.getPartitionKeyNames())) {
       throw new UnsupportedOperationException(
-          CoreError.SCHEMA_LOADER_MODIFYING_PARTITION_KEYS_NOT_SUPPORTED.buildMessage(
+          CoreError.SCHEMA_LOADER_ALTERING_PARTITION_KEYS_NOT_SUPPORTED.buildMessage(
               namespace, table));
     }
     if (!newMetadata.getClusteringKeyNames().equals(oldMetadata.getClusteringKeyNames())) {
       throw new UnsupportedOperationException(
-          CoreError.SCHEMA_LOADER_MODIFYING_CLUSTERING_KEYS_NOT_SUPPORTED.buildMessage(
+          CoreError.SCHEMA_LOADER_ALTERING_CLUSTERING_KEYS_NOT_SUPPORTED.buildMessage(
               namespace, table));
     }
     if (!newMetadata.getClusteringOrders().equals(oldMetadata.getClusteringOrders())) {
       throw new UnsupportedOperationException(
-          CoreError.SCHEMA_LOADER_MODIFYING_CLUSTERING_ORDER_NOT_SUPPORTED.buildMessage(
+          CoreError.SCHEMA_LOADER_ALTERING_CLUSTERING_ORDER_NOT_SUPPORTED.buildMessage(
               namespace, table));
     }
     for (String oldColumn : oldMetadata.getColumnNames()) {
@@ -71,7 +71,7 @@ public class TableMetadataAlterationProcessor {
     for (String column : oldMetadata.getColumnNames()) {
       if (!oldMetadata.getColumnDataType(column).equals(newMetadata.getColumnDataType(column))) {
         throw new UnsupportedOperationException(
-            CoreError.SCHEMA_LOADER_MODIFYING_COLUMN_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+            CoreError.SCHEMA_LOADER_ALTERING_COLUMN_DATA_TYPE_NOT_SUPPORTED.buildMessage(
                 column, namespace, table));
       }
     }
