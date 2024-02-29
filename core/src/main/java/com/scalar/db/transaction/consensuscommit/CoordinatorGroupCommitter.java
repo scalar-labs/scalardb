@@ -106,7 +106,7 @@ public class CoordinatorGroupCommitter
     }
 
     @Override
-    public String getFullKey(String parentKey, String childKey) {
+    public String fullKey(String parentKey, String childKey) {
       if (parentKey.length() != PRIMARY_KEY_SIZE) {
         throw new IllegalArgumentException(
             String.format(
@@ -143,13 +143,13 @@ public class CoordinatorGroupCommitter
     }
 
     @Override
-    public String getEmitKeyFromFullKey(String s) {
+    public String emitKeyFromFullKey(String s) {
       // Return the string as is since the value is already String.
       return s;
     }
 
     @Override
-    public String getEmitKeyFromParentKey(String s) {
+    public String emitKeyFromParentKey(String s) {
       // Return the string as is since the value is already String.
       return s;
     }

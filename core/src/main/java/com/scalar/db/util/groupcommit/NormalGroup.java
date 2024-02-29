@@ -44,8 +44,8 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Override
-  FULL_KEY getFullKey(CHILD_KEY childKey) {
-    return keyManipulator.getFullKey(parentKey, childKey);
+  FULL_KEY fullKey(CHILD_KEY childKey) {
+    return keyManipulator.fullKey(parentKey, childKey);
   }
 
   FULL_KEY reserveNewSlot(CHILD_KEY childKey) throws GroupCommitAlreadyClosedException {
@@ -66,18 +66,18 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     for (Entry<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> entry :
         slots.entrySet()) {
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = entry.getValue();
-      if (slot.getValue() == null) {
+      if (slot.value() == null) {
         removed.add(slot);
       }
     }
 
-    if (removed.size() >= getSize()) {
+    if (removed.size() >= size()) {
       logger.debug("No need to remove any slot since all the slots are not ready. group:{}", this);
       return null;
     }
 
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : removed) {
-      removeSlot(slot.getKey());
+      removeSlot(slot.key());
       logger.info(
           "Removed a value slot from group to move it to delayed group. group:{}, slot:{}",
           this,
@@ -104,13 +104,13 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
         isFirst = false;
         emitterSlot.set(slot);
       }
-      values.add(slot.getValue());
+      values.add(slot.value());
     }
 
     ThrowableRunnable taskForEmitterSlot =
         () -> {
           try {
-            emitter.execute(keyManipulator.getEmitKeyFromParentKey(parentKey), values);
+            emitter.execute(keyManipulator.emitKeyFromParentKey(parentKey), values);
 
             // Wake up the other waiting threads.
             // Pass null since the value is already emitted by the thread of `firstSlot`.

@@ -134,7 +134,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
     long stamp = lock.writeLock();
     try {
-      delayedGroupMap.remove(group.getFullKey());
+      delayedGroupMap.remove(group.fullKey());
     } finally {
       lock.unlockWrite(stamp);
     }
@@ -158,7 +158,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
         return false;
       }
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> notReadySlot : notReadySlots) {
-        FULL_KEY fullKey = notReadySlot.getFullKey();
+        FULL_KEY fullKey = notReadySlot.fullKey();
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
             new DelayedGroup<>(
                 fullKey, emitter, keyManipulator, notReadySlot, this::unregisterDelayedGroup);
@@ -171,8 +171,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
             () -> {
               try {
                 emitter.execute(
-                    keyManipulator.getEmitKeyFromFullKey(fullKey),
-                    Collections.singletonList(notReadySlot.getValue()));
+                    keyManipulator.emitKeyFromFullKey(fullKey),
+                    Collections.singletonList(notReadySlot.value()));
               } finally {
                 unregisterDelayedGroup(delayedGroup);
               }
@@ -182,7 +182,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
           logger.warn("The slow group value map already has the same key group. {}", old);
         }
       }
-      if (normalGroup.slots.values().stream().noneMatch(v -> v.getValue() != null)) {
+      if (normalGroup.slots.values().stream().noneMatch(v -> v.value() != null)) {
         normalGroupMap.remove(normalGroup.getParentKey());
         logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
       }

@@ -50,7 +50,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return reserveNewSlot(slot, true);
   }
 
-  abstract FULL_KEY getFullKey(CHILD_KEY childKey);
+  abstract FULL_KEY fullKey(CHILD_KEY childKey);
 
   protected FULL_KEY reserveNewSlot(
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot, boolean autoEmit)
@@ -65,13 +65,13 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         fixSize(autoEmit);
       }
     }
-    return slot.getFullKey();
+    return slot.fullKey();
   }
 
   private synchronized void reserveSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
-    Slot<?, ?, ?, ?, ?> oldSlot = slots.put(slot.getKey(), slot);
+    Slot<?, ?, ?, ?, ?> oldSlot = slots.put(slot.key(), slot);
     if (oldSlot != null) {
-      logger.warn("An old slot exist unexpectedly. {}", oldSlot.getFullKey());
+      logger.warn("An old slot exist unexpectedly. {}", oldSlot.fullKey());
     }
     updateIsClosed();
   }
@@ -87,9 +87,9 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = slots.get(childKey);
     if (slot == null) {
       throw new GroupCommitTargetNotFoundException(
-          "The slot doesn't exist. fullKey:" + getFullKey(childKey));
+          "The slot doesn't exist. fullKey:" + fullKey(childKey));
     }
-    slot.putValue(value);
+    slot.setValue(value);
     return slot;
   }
 
@@ -124,7 +124,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return size.get() != null;
   }
 
-  int getSize() {
+  int size() {
     return size.get();
   }
 
@@ -132,7 +132,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     if (isSizeFixed()) {
       int readySlotCount = 0;
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
-        if (slot.getValue() != null) {
+        if (slot.value() != null) {
           readySlotCount++;
           if (readySlotCount >= size.get()) {
             return true;
@@ -155,7 +155,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     closed.set(noMoreSlot() || isDone() || isSizeFixed());
   }
 
-  protected synchronized void setDone() {
+  protected synchronized void markAsDone() {
     done.set(true);
     updateIsClosed();
   }
@@ -184,12 +184,12 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       if (slots.isEmpty()) {
         // In this case, each transaction has aborted with the full transaction ID.
         logger.warn("slots are empty. Nothing to do. group:{}", this);
-        setDone();
+        markAsDone();
         dismiss();
         return;
       }
       asyncEmit();
-      setDone();
+      markAsDone();
     }
   }
 

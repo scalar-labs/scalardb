@@ -31,7 +31,7 @@ class GroupCommitterTest {
     }
 
     @Override
-    public String getFullKey(String parentKey, String childKey) {
+    public String fullKey(String parentKey, String childKey) {
       return parentKey + ":" + childKey;
     }
 
@@ -51,12 +51,12 @@ class GroupCommitterTest {
     }
 
     @Override
-    public String getEmitKeyFromFullKey(String s) {
+    public String emitKeyFromFullKey(String s) {
       return s;
     }
 
     @Override
-    public String getEmitKeyFromParentKey(String s) {
+    public String emitKeyFromParentKey(String s) {
       return s;
     }
   }

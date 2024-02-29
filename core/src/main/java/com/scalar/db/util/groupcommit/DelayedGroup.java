@@ -33,12 +33,12 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     }
   }
 
-  FULL_KEY getFullKey() {
+  FULL_KEY fullKey() {
     return fullKey;
   }
 
   @Override
-  FULL_KEY getFullKey(CHILD_KEY childKey) {
+  FULL_KEY fullKey(CHILD_KEY childKey) {
     return fullKey;
   }
 
@@ -51,8 +51,8 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       slot.delegateTaskToWaiter(
           () ->
               emitter.execute(
-                  keyManipulator.getEmitKeyFromFullKey(fullKey),
-                  Collections.singletonList(slot.getValue())));
+                  keyManipulator.emitKeyFromFullKey(fullKey),
+                  Collections.singletonList(slot.value())));
       // The number of the slots is only 1.
       dismiss();
       return;

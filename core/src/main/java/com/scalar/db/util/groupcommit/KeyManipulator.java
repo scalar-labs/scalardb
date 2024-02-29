@@ -36,13 +36,13 @@ public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> {
 
   PARENT_KEY generateParentKey();
 
-  FULL_KEY getFullKey(PARENT_KEY parentKey, CHILD_KEY childKey);
+  FULL_KEY fullKey(PARENT_KEY parentKey, CHILD_KEY childKey);
 
   boolean isFullKey(Object obj);
 
   Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keysFromFullKey(FULL_KEY fullKey);
 
-  EMIT_KEY getEmitKeyFromFullKey(FULL_KEY fullKey);
+  EMIT_KEY emitKeyFromFullKey(FULL_KEY fullKey);
 
-  EMIT_KEY getEmitKeyFromParentKey(PARENT_KEY parentKey);
+  EMIT_KEY emitKeyFromParentKey(PARENT_KEY parentKey);
 }

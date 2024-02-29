@@ -21,11 +21,11 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     this.parentGroup = parentGroup;
   }
 
-  FULL_KEY getFullKey() {
-    return parentGroup.getFullKey(key);
+  FULL_KEY fullKey() {
+    return parentGroup.fullKey(key);
   }
 
-  void putValue(V value) {
+  void setValue(V value) {
     this.value = Objects.requireNonNull(value);
   }
 
@@ -59,12 +59,12 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return MoreObjects.toStringHelper(this).add("key", key).toString();
   }
 
-  CHILD_KEY getKey() {
+  CHILD_KEY key() {
     return key;
   }
 
   @Nullable
-  V getValue() {
+  V value() {
     return value;
   }
 
