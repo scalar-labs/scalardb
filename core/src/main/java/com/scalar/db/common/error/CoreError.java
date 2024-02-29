@@ -495,19 +495,19 @@ public enum CoreError implements ScalarDbError {
   SCHEMA_LOADER_MODIFYING_PARTITION_KEYS_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0109",
-      "The partition keys of the table %s.%s were modified, altering them is not supported",
+      "The partition keys of the table %s.%s were modified, but altering partition keys is not supported",
       "",
       ""),
   SCHEMA_LOADER_MODIFYING_CLUSTERING_KEYS_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0110",
-      "The clustering keys of the table %s.%s were modified, altering them is not supported",
+      "The clustering keys of the table %s.%s were modified, but altering clustering keys is not supported",
       "",
       ""),
   SCHEMA_LOADER_MODIFYING_CLUSTERING_ORDER_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0111",
-      "The clustering ordering of the table %s.%s were modified, altering them is not supported",
+      "The clustering ordering of the table %s.%s were modified, but altering clustering ordering is not supported",
       "",
       ""),
   SCHEMA_LOADER_DELETING_COLUMN_NOT_SUPPORTED(
@@ -519,7 +519,7 @@ public enum CoreError implements ScalarDbError {
   SCHEMA_LOADER_MODIFYING_COLUMN_DATA_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0113",
-      "The data type of the column %s of the table %s.%s was modified, altering it is not supported",
+      "The data type of the column %s of the table %s.%s was modified, but altering data types is not supported",
       "",
       ""),
   SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL(
@@ -544,11 +544,11 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0117",
       "Specifying the '--coordinator' option with the '--import' option is not allowed."
-          + " Create coordinator tables separately",
+          + " Create Coordinator tables separately",
       "",
       ""),
   SCHEMA_LOADER_READING_CONFIG_FILE_FAILED(
-      Category.USER_ERROR, "0118", "Reading the config file failed. File: %s", "", ""),
+      Category.USER_ERROR, "0118", "Reading the configuration file failed. File: %s", "", ""),
   SCHEMA_LOADER_READING_SCHEMA_FILE_FAILED(
       Category.USER_ERROR, "0119", "Reading the schema file failed. File: %s", "", ""),
   SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED(
@@ -556,7 +556,7 @@ public enum CoreError implements ScalarDbError {
   SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAINS_NAMESPACE_AND_TABLE(
       Category.USER_ERROR,
       "0121",
-      "The table name must contains the namespace and the table. Table: %s",
+      "The table name must contain the namespace and the table. Table: %s",
       "",
       ""),
   SCHEMA_LOADER_PARSE_ERROR_PARTITION_KEY_MUST_BE_SPECIFIED(
@@ -564,7 +564,7 @@ public enum CoreError implements ScalarDbError {
   SCHEMA_LOADER_PARSE_ERROR_INVALID_CLUSTERING_KEY_FORMAT(
       Category.USER_ERROR,
       "0123",
-      "Invalid clustering key format. Clustering key must be in the format of 'column_name' or 'column_name ASC/DESC'."
+      "Invalid clustering key format. The clustering key must be in the format of 'column_name' or 'column_name ASC/DESC'."
           + " Table: %s; Clustering key: %s",
       "",
       ""),
