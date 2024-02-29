@@ -1,7 +1,5 @@
 package com.scalar.db.util.groupcommit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.base.Objects;
 import java.util.Collections;
 
@@ -16,18 +14,11 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       FULL_KEY fullKey,
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot,
       GarbageDelayedGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
           garbageGroupCollector) {
     super(emitter, keyManipulator, 1);
     this.fullKey = fullKey;
     this.garbageGroupCollector = garbageGroupCollector;
-
-    // TODO: Revisit here
-    // Auto emit should be disabled since:
-    // - the queue and worker for delayed values will emit this if it's ready
-    // - to avoid taking time in synchronized blocks
-    checkNotNull(reserveNewSlot(slot, false));
   }
 
   FULL_KEY fullKey() {

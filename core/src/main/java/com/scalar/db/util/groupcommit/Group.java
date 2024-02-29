@@ -46,31 +46,24 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return slots.size() >= capacity;
   }
 
-  // If it returns null, the Group is already closed and a retry is needed.
-  @Nullable
-  FULL_KEY reserveNewSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
-    return reserveNewSlot(slot, true);
-  }
-
   abstract FULL_KEY fullKey(CHILD_KEY childKey);
 
   // If it returns null, the Group is already closed and a retry is needed.
   @Nullable
-  protected FULL_KEY reserveNewSlot(
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot, boolean autoEmit) {
+  protected FULL_KEY reserveNewSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
     synchronized (this) {
       if (isSizeFixed()) {
         return null;
       }
       reserveSlot(slot);
       if (noMoreSlot()) {
-        fixSize(autoEmit);
+        fixSize();
       }
     }
     return slot.fullKey();
   }
 
-  private synchronized void reserveSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
+  private void reserveSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
     Slot<?, ?, ?, ?, ?> oldSlot = slots.put(slot.key(), slot);
     if (oldSlot != null) {
       logger.warn("An old slot exist unexpectedly. {}", oldSlot.fullKey());
@@ -108,17 +101,11 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   void fixSize() {
-    fixSize(true);
-  }
-
-  void fixSize(boolean autoEmit) {
     synchronized (this) {
       // Current Slot that `index` is pointing is not used yet.
       size.set(slots.size());
       updateIsClosed();
-      if (autoEmit) {
-        asyncEmitIfReady();
-      }
+      asyncEmitIfReady();
     }
   }
 

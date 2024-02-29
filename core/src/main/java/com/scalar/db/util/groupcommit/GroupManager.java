@@ -1,12 +1,13 @@
 package com.scalar.db.util.groupcommit;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,27 +164,16 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> notReadySlot : notReadySlots) {
         FULL_KEY fullKey = notReadySlot.fullKey();
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
-            new DelayedGroup<>(
-                fullKey, emitter, keyManipulator, notReadySlot, this::unregisterDelayedGroup);
+            new DelayedGroup<>(fullKey, emitter, keyManipulator, this::unregisterDelayedGroup);
 
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
             delayedGroupMap.put(fullKey, delayedGroup);
-
-        // Delegate the value to the client thread
-        notReadySlot.delegateTaskToWaiter(
-            () -> {
-              try {
-                emitter.execute(
-                    keyManipulator.emitKeyFromFullKey(fullKey),
-                    Collections.singletonList(notReadySlot.value()));
-              } finally {
-                unregisterDelayedGroup(delayedGroup);
-              }
-            });
-
         if (old != null) {
           logger.warn("The slow group value map already has the same key group. {}", old);
         }
+
+        // Internally delegate the value to the client thread
+        checkNotNull(delayedGroup.reserveNewSlot(notReadySlot));
       }
       if (normalGroup.slots.values().stream().noneMatch(v -> v.value() != null)) {
         normalGroupMap.remove(normalGroup.getParentKey());
