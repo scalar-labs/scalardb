@@ -564,7 +564,7 @@ public enum CoreError implements ScalarDbError {
   SCHEMA_LOADER_PARSE_ERROR_INVALID_CLUSTERING_KEY_FORMAT(
       Category.USER_ERROR,
       "0123",
-      "Invalid clustering key format. The clustering key must be in the format of 'column_name' or 'column_name ASC/DESC'."
+      "Invalid clustering-key format. The clustering key must be in the format of 'column_name' or 'column_name ASC/DESC'."
           + " Table: %s; Clustering key: %s",
       "",
       ""),
