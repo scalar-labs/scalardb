@@ -11,10 +11,8 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 import javax.annotation.Nullable;
@@ -25,8 +23,12 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
 
   // Queues
-  private final QueueForClosingNormalGroup queueForClosingNormalGroup;
-  private final QueueForMovingDelayedSlot queueForMovingDelayedSlot;
+  private final QueueForClosingNormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+      queueForClosingNormalGroup;
+  private final QueueForMovingDelayedSlot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+      queueForMovingDelayedSlot;
+  private final QueueForCleaningUpGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+      queueForCleaningUpGroup;
 
   // Executors
   private final ExecutorService monitorExecutorService;
@@ -44,8 +46,6 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
   @LazyInit private Emittable<EMIT_KEY, V> emitter;
 
-  // Parameters
-  private final long queueCheckIntervalInMillis;
   private final long normalGroupCloseExpirationInMillis;
   private final long delayedSlotMoveExpirationInMillis;
   private final int numberOfRetentionValues;
@@ -55,13 +55,20 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     this.keyManipulator = keyManipulator;
-    this.queueCheckIntervalInMillis = config.checkIntervalInMillis();
     this.normalGroupCloseExpirationInMillis = config.groupCloseExpirationInMillis();
     this.delayedSlotMoveExpirationInMillis = config.delayedSlotExpirationInMillis();
     this.numberOfRetentionValues = config.retentionSlotsCount();
-    this.queueForMovingDelayedSlot = new QueueForMovingDelayedSlot(label);
+    this.queueForCleaningUpGroup =
+        new QueueForCleaningUpGroup<>(label, config.checkIntervalInMillis(), this);
+    this.queueForMovingDelayedSlot =
+        new QueueForMovingDelayedSlot<>(
+            label, config.checkIntervalInMillis(), this, queueForCleaningUpGroup);
     this.queueForClosingNormalGroup =
-        new QueueForClosingNormalGroup(label, queueForMovingDelayedSlot);
+        new QueueForClosingNormalGroup<>(
+            label,
+            config.checkIntervalInMillis(),
+            queueForMovingDelayedSlot,
+            queueForCleaningUpGroup);
 
     // TODO: This should be replaced by other metrics mechanism.
     this.monitorExecutorService =
@@ -88,10 +95,9 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
                 keyManipulator,
                 normalGroupCloseExpirationInMillis,
                 delayedSlotMoveExpirationInMillis,
-                numberOfRetentionValues,
-                this::unregisterNormalGroup);
+                numberOfRetentionValues);
         queueForClosingNormalGroup.add(currentGroup);
-        normalGroupMap.put(currentGroup.getParentKey(), currentGroup);
+        normalGroupMap.put(currentGroup.parentKey(), currentGroup);
       }
     } finally {
       lock.unlockWrite(stamp);
@@ -124,21 +130,50 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
         "The group for the reserved value slot doesn't exist. Keys:" + keys);
   }
 
-  private void unregisterNormalGroup(
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
+  // Remove the specified group from group map.
+  boolean removeGroupFromMap(Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
     long stamp = lock.writeLock();
     try {
-      normalGroupMap.remove(group.getParentKey());
+      if (group instanceof NormalGroup) {
+        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup =
+            (NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>) group;
+        return normalGroupMap.remove(normalGroup.parentKey()) != null;
+      } else {
+        assert group instanceof DelayedGroup;
+        DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
+            (DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>) group;
+        return delayedGroupMap.remove(delayedGroup.fullKey()) != null;
+      }
     } finally {
       lock.unlockWrite(stamp);
     }
   }
 
-  private void unregisterDelayedGroup(
-      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
+  // Remove the specified slot from the associated group.
+  boolean removeSlotFromGroup(Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys) {
     long stamp = lock.writeLock();
     try {
-      delayedGroupMap.remove(group.fullKey());
+      boolean removed = false;
+
+      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
+          delayedGroupMap.get(keys.fullKey);
+      if (delayedGroup != null) {
+        removed = delayedGroup.removeSlot(keys.childKey);
+        if (delayedGroup.slots.isEmpty()) {
+          delayedGroupMap.remove(keys.fullKey);
+        }
+      }
+
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup =
+          normalGroupMap.get(keys.parentKey);
+      if (normalGroup != null) {
+        removed = normalGroup.removeSlot(keys.childKey) || removed;
+        if (normalGroup.slots.isEmpty()) {
+          normalGroupMap.remove(keys.parentKey);
+        }
+      }
+
+      return removed;
     } finally {
       lock.unlockWrite(stamp);
     }
@@ -146,7 +181,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
 
   // Moves delayed slots from the NormalGroup to a new DelayedGroup. The new one is also
   // registered to `delayedGroupMap`.
-  private boolean moveDelayedSlotToDelayedGroup(
+  boolean moveDelayedSlotToDelayedGroup(
       NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
     long stamp = lock.writeLock();
     try {
@@ -162,7 +197,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> notReadySlot : notReadySlots) {
         FULL_KEY fullKey = notReadySlot.fullKey();
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
-            new DelayedGroup<>(fullKey, emitter, keyManipulator, this::unregisterDelayedGroup);
+            new DelayedGroup<>(fullKey, emitter, keyManipulator);
         notReadySlot.changeParentGroupToDelayedGroup(delayedGroup);
 
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
@@ -173,9 +208,10 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
 
         // Internally delegate the value to the client thread
         checkNotNull(delayedGroup.reserveNewSlot(notReadySlot));
+        System.out.printf("GM-MOVE-SLOT: NEW-GROUP:%s\n", delayedGroup);
       }
       if (normalGroup.slots.values().stream().noneMatch(v -> v.value() != null)) {
-        normalGroupMap.remove(normalGroup.getParentKey());
+        normalGroupMap.remove(normalGroup.parentKey());
         logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
       }
     } finally {
@@ -190,10 +226,11 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     Runnable print =
         () ->
             logger.info(
-                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
+                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, GroupCleanup.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
                 Instant.now(),
                 queueForClosingNormalGroup.size(),
                 queueForMovingDelayedSlot.size(),
+                queueForCleaningUpGroup.size(),
                 normalGroupMap.size(),
                 delayedGroupMap.size());
 
@@ -213,6 +250,10 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
         });
   }
 
+  void setEmitter(Emittable<EMIT_KEY, V> emitter) {
+    this.emitter = emitter;
+  }
+
   /**
    * Closes the resources. The ExecutorServices are created as daemon, so calling this method isn't
    * needed. But for testing, this should be called for resources.
@@ -224,202 +265,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     }
     queueForMovingDelayedSlot.close();
     queueForClosingNormalGroup.close();
-  }
+    queueForCleaningUpGroup.close();
 
-  void setEmitter(Emittable<EMIT_KEY, V> emitter) {
-    this.emitter = emitter;
-  }
-
-  // A queue to contain NormalGroup instances. The following timeout occurs in this queue:
-  // - `group-close-expiration` fixes the size of expired NormalGroup.
-  private class QueueForClosingNormalGroup implements Closeable {
-    // Append-to-Last operation is executed by another thread via `add()` API and the worker thread.
-    // Remove-from-First is executed by the worker thread.
-    private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> queue =
-        new LinkedBlockingQueue<>();
-    private final QueueForMovingDelayedSlot queueForMovingDelayedSlot;
-    private final ExecutorService executorService;
-
-    QueueForClosingNormalGroup(String label, QueueForMovingDelayedSlot queueForMovingDelayedSlot) {
-      this.queueForMovingDelayedSlot = queueForMovingDelayedSlot;
-      this.executorService =
-          Executors.newSingleThreadExecutor(
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat(label + "-group-commit-normal-group-close-%d")
-                  .build());
-      startNormalGroupCloseExecutorService();
-    }
-
-    void add(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
-      queue.add(normalGroup);
-    }
-
-    int size() {
-      return queue.size();
-    }
-
-    private void startNormalGroupCloseExecutorService() {
-      executorService.execute(
-          () -> {
-            while (!executorService.isShutdown()) {
-              if (!process()) {
-                break;
-              }
-            }
-          });
-    }
-
-    private boolean process() {
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup = queue.peek();
-      Long retryWaitInMillis = null;
-
-      if (normalGroup == null) {
-        retryWaitInMillis = queueCheckIntervalInMillis;
-      } else if (normalGroup.isSizeFixed()) {
-        // Already the size is fixed. Nothing to do. Handle a next element immediately
-      } else {
-        Instant now = Instant.now();
-        if (now.isAfter(normalGroup.groupClosedAt())) {
-          // Expired. Fix the size
-          normalGroup.fixSize();
-        } else {
-          // Not expired. Retry
-          retryWaitInMillis = queueCheckIntervalInMillis;
-        }
-      }
-
-      if (retryWaitInMillis != null) {
-        try {
-          TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          logger.warn("Interrupted", e);
-          return false;
-        }
-      } else {
-        // Move the size-fixed group but not ready to the timeout queue
-        if (!normalGroup.isReady()) {
-          queueForMovingDelayedSlot.add(normalGroup);
-        }
-        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = queue.poll();
-        // Check if the removed group is expected just in case.
-        if (removed == null || !removed.equals(normalGroup)) {
-          logger.error(
-              "The queue for normal-group-close returned an inconsistent value. Re-enqueuing it. expected:{}, actual:{}",
-              normalGroup,
-              removed);
-          if (removed != null) {
-            queue.add(removed);
-          }
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public void close() {
-      MoreExecutors.shutdownAndAwaitTermination(executorService, 5, TimeUnit.SECONDS);
-    }
-  }
-
-  // A queue to contain DelayedGroup instances. The following timeout occurs in this queue:
-  // - `delayed-slot-move-expiration` moves expired slots in NormalGroup to DelayedGroup.
-  private class QueueForMovingDelayedSlot implements Closeable {
-    // Append-to-Last operation is executed by another thread via `add()` API and the worker thread.
-    // Remove-from-First is executed by the worker thread.
-    private final BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> queue =
-        new LinkedBlockingQueue<>();
-
-    private final ExecutorService executorService;
-
-    QueueForMovingDelayedSlot(String label) {
-      this.executorService =
-          Executors.newSingleThreadExecutor(
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat(label + "-group-commit-delayed-slot-move-%d")
-                  .build());
-      startDelayedSlotMoveExecutorService();
-    }
-
-    void add(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
-      queue.add(normalGroup);
-    }
-
-    int size() {
-      return queue.size();
-    }
-
-    private void startDelayedSlotMoveExecutorService() {
-      executorService.execute(
-          () -> {
-            while (!executorService.isShutdown()) {
-              if (!handleQueueForDelayedSlotMove()) {
-                break;
-              }
-            }
-          });
-    }
-
-    private boolean handleQueueForDelayedSlotMove() {
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup = queue.peek();
-      Long retryWaitInMillis = null;
-
-      if (normalGroup == null) {
-        retryWaitInMillis = queueCheckIntervalInMillis * 2;
-      } else if (normalGroup.isReady()) {
-        // Already ready. Nothing to do. Handle a next element immediately
-      } else {
-        Instant now = Instant.now();
-        if (now.isAfter(normalGroup.delayedSlotMovedAt())) {
-          if (!moveDelayedSlotToDelayedGroup(normalGroup)) {
-            NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = queue.poll();
-            // Check if the removed slot is expected just in case.
-            if (removed == null || !removed.equals(normalGroup)) {
-              logger.error(
-                  "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
-                  normalGroup,
-                  removed);
-            }
-            if (removed != null) {
-              queue.add(removed);
-            }
-            return true;
-          }
-        } else {
-          // Not expired. Retry
-          retryWaitInMillis = queueCheckIntervalInMillis * 2;
-        }
-      }
-
-      if (retryWaitInMillis != null) {
-        try {
-          TimeUnit.MILLISECONDS.sleep(retryWaitInMillis);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          logger.warn("Interrupted", e);
-          return false;
-        }
-      } else {
-        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = queue.poll();
-        // Check if the removed slot is expected just in case.
-        if (removed == null || !removed.equals(normalGroup)) {
-          logger.error(
-              "The queue for move-delayed-slot returned an inconsistent value. expected:{}, actual:{}",
-              normalGroup,
-              removed);
-          if (removed != null) {
-            queue.add(removed);
-          }
-        }
-      }
-      return true;
-    }
-
-    @Override
-    public void close() {
-      MoreExecutors.shutdownAndAwaitTermination(executorService, 5, TimeUnit.SECONDS);
-    }
+    normalGroupMap.values().forEach(x -> System.out.printf("GM-NORMAL-GROUP: %s\n", x));
   }
 }

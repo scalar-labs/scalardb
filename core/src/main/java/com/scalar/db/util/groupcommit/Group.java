@@ -20,6 +20,18 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // Whether to reject a new value slot.
   protected final AtomicBoolean closed = new AtomicBoolean();
 
+  static class GroupStatus {
+    public final boolean isClosed;
+    public final boolean isReady;
+    public final boolean isDone;
+
+    public GroupStatus(boolean isClosed, boolean isReady, boolean isDone) {
+      this.isClosed = isClosed;
+      this.isReady = isReady;
+      this.isDone = isDone;
+    }
+  }
+
   Group(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
@@ -90,6 +102,10 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return true;
   }
 
+  synchronized GroupStatus status() {
+    return new GroupStatus(isClosed(), isReady(), isDone());
+  }
+
   void fixSize() {
     synchronized (this) {
       // Current Slot that `index` is pointing is not used yet.
@@ -113,11 +129,9 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
         if (slot.value() != null) {
           readySlotCount++;
-          if (readySlotCount >= size.get()) {
-            return true;
-          }
         }
       }
+      return readySlotCount >= size.get();
     }
     return false;
   }
@@ -135,37 +149,45 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   protected synchronized void markAsDone() {
+    size.set(slots.size());
     done.set(true);
     updateIsClosed();
   }
 
-  void removeSlot(CHILD_KEY childKey) {
-    synchronized (this) {
-      if (slots.remove(childKey) != null) {
-        if (size.get() != null && size.get() > 0) {
-          size.set(size.get() - 1);
-        }
-        updateIsClosed();
+  synchronized boolean removeSlot(CHILD_KEY childKey) {
+    boolean removed = false;
+    if (slots.remove(childKey) != null) {
+      removed = true;
+      if (size.get() != null && size.get() > 0) {
+        size.set(size.get() - 1);
       }
-
-      asyncEmitIfReady();
+      updateIsClosed();
     }
+
+    asyncEmitIfReady();
+    return removed;
   }
 
   protected abstract void asyncEmit();
 
   synchronized void asyncEmitIfReady() {
-    if (isDone()) {
+    // Must not return even if the group is done since all the client threads need to get the result
+    // from the slot.
+
+    if (slots.isEmpty()) {
+      System.out.printf("GROUP-EMIT-EMPTY: GROUP:%s\n", this);
+      markAsDone();
       return;
     }
 
     if (isReady()) {
-      asyncEmit();
-      markAsDone();
+      try {
+        System.out.printf("GROUP-EMITTING: GROUP:%s\n", this);
+        asyncEmit();
+        System.out.printf("GROUP-EMITTED: GROUP:%s\n", this);
+      } finally {
+        markAsDone();
+      }
     }
   }
-
-  // TODO: This method calls GroupManager's methods and it might cause deadlocks.
-  //       Probably creating a new queue for cleaning up would be safer.
-  protected abstract void dismiss();
 }

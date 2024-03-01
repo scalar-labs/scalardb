@@ -145,21 +145,22 @@ class GroupCommitterBench {
 
   void benchmark(boolean microBenchmark)
       throws ExecutionException, InterruptedException, TimeoutException {
-    // Warmup
-    benchmarkInternal(
-        // For Benchmarker:
-        // NumOfThreads,NumOfRequests
-        256,
-        40000,
-        // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
-        0,
-        0,
-        0,
-        0,
-        0,
-        // For Group Commit
-        new GroupCommitParams(8, 10, 100));
-
+    /*
+        // Warmup
+        benchmarkInternal(
+            // For Benchmarker:
+            // NumOfThreads,NumOfRequests
+            256,
+            40000,
+            // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
+            0,
+            0,
+            0,
+            0,
+            0,
+            // For Group Commit
+            new GroupCommitParams(8, 10, 100));
+    */
     System.out.println("FINISHED WARMUP");
     System.gc();
     System.out.println("STARTING BENCHMARK");
@@ -169,7 +170,8 @@ class GroupCommitterBench {
       benchmarkInternal(
           // For Benchmarker:
           2048, // NumOfThreads
-          400000, // NumOfRequests
+          //          800000, // NumOfRequests
+          8000, // NumOfRequests
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
@@ -269,36 +271,34 @@ class GroupCommitterBench {
                   childKey,
                   executorService.submit(
                       () -> {
-                        while (true) {
-                          String fullKey = null;
-                          try {
-                            fullKey = groupCommitter.reserve(childKey);
-                            int waitInMillis =
-                                (int)
-                                    (bmAveragePrepareWaitInMillis
-                                        + rand.nextGaussian() * bmMultiplexerInMillis);
-                            waitInMillis = Math.max(waitInMillis, bmAveragePrepareWaitInMillis);
-                            if (waitInMillis > 0) {
-                              System.out.printf(
-                                  "Waiting for prepare. FullKey=%s, Duration=%d ms \n",
-                                  fullKey, waitInMillis);
-                              TimeUnit.MILLISECONDS.sleep(waitInMillis);
-                            }
-                            if (bmErrorBeforeReadyPercentage > rand.nextInt(100)) {
-                              if (failedKeys.put(value.v, true) != null) {
-                                throw new RuntimeException(value.v + " is already set");
-                              }
-                              throw new ExpectedException("Error before READY");
-                            }
-                            groupCommitter.ready(fullKey, value);
-                            break;
-                          } catch (Exception e) {
-                            if (fullKey != null) {
-                              // TODO: Revisit here after the improvement of Group.dismiss().
-                              // groupCommitter.remove(fullKey);
-                            }
-                            throw e;
+                        String fullKey = null;
+                        try {
+                          fullKey = groupCommitter.reserve(childKey);
+                          int waitInMillis =
+                              (int)
+                                  (bmAveragePrepareWaitInMillis
+                                      + rand.nextGaussian() * bmMultiplexerInMillis);
+                          waitInMillis = Math.max(waitInMillis, bmAveragePrepareWaitInMillis);
+                          if (waitInMillis > 0) {
+                            System.out.printf(
+                                "Waiting for prepare. FullKey=%s, Duration=%d ms \n",
+                                fullKey, waitInMillis);
+                            TimeUnit.MILLISECONDS.sleep(waitInMillis);
                           }
+                          if (bmErrorBeforeReadyPercentage > rand.nextInt(100)) {
+                            if (failedKeys.put(value.v, true) != null) {
+                              throw new RuntimeException(value.v + " is already set");
+                            }
+                            throw new ExpectedException("Error before READY");
+                          }
+                          groupCommitter.ready(fullKey, value);
+                        } catch (Exception e) {
+                          if (fullKey != null) {
+                            // This is needed since GroupCommitter can't remove the garbage when
+                            // an exception is thrown before `ready()`.
+                            groupCommitter.remove(fullKey);
+                          }
+                          throw e;
                         }
                         return null;
                       })));
@@ -340,6 +340,7 @@ class GroupCommitterBench {
 
         System.err.println("Checked all the keys");
         System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
+        TimeUnit.SECONDS.sleep(20);
         return new Result(tps, retry.get());
       } finally {
         MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);

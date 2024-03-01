@@ -8,18 +8,13 @@ import java.util.Collections;
 class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final FULL_KEY fullKey;
-  private final GarbageDelayedGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-      garbageGroupCollector;
 
   DelayedGroup(
       FULL_KEY fullKey,
       Emittable<EMIT_KEY, V> emitter,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      GarbageDelayedGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-          garbageGroupCollector) {
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     super(emitter, keyManipulator, 1);
     this.fullKey = fullKey;
-    this.garbageGroupCollector = garbageGroupCollector;
   }
 
   FULL_KEY fullKey() {
@@ -38,13 +33,9 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       // Pass `emitter` to ask the receiver's thread to emit the value
       slot.delegateTaskToWaiter(
           () -> {
-            try {
-              emitter.execute(
-                  keyManipulator.emitKeyFromFullKey(fullKey),
-                  Collections.singletonList(slot.value()));
-            } finally {
-              dismiss();
-            }
+            emitter.execute(
+                keyManipulator.emitKeyFromFullKey(fullKey),
+                Collections.singletonList(slot.value()));
           });
       // Return since the number of the slots is only 1.
       return;
@@ -62,11 +53,6 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   @Override
   public int hashCode() {
     return Objects.hashCode(fullKey);
-  }
-
-  @Override
-  protected void dismiss() {
-    garbageGroupCollector.collect(this);
   }
 
   @Override

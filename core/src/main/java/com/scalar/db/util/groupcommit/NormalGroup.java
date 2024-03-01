@@ -20,27 +20,22 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   private final long moveDelayedSlotExpirationInMillis;
   private final Instant groupClosedAt;
   private final AtomicReference<Instant> delayedSlotMovedAt;
-  private final GarbageNormalGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-      garbageGroupCollector;
 
   NormalGroup(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
       long groupCloseExpirationInMillis,
       long timeoutExpirationInMillis,
-      int capacity,
-      GarbageNormalGroupCollector<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-          garbageGroupCollector) {
+      int capacity) {
     super(emitter, keyManipulator, capacity);
     this.moveDelayedSlotExpirationInMillis = timeoutExpirationInMillis;
     this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
     this.delayedSlotMovedAt = new AtomicReference<>();
     updateDelayedSlotMovedAt();
     this.parentKey = keyManipulator.generateParentKey();
-    this.garbageGroupCollector = garbageGroupCollector;
   }
 
-  PARENT_KEY getParentKey() {
+  PARENT_KEY parentKey() {
     return parentKey;
   }
 
@@ -91,10 +86,6 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   public synchronized void asyncEmit() {
-    if (slots.isEmpty()) {
-      return;
-    }
-
     final AtomicReference<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> emitterSlot =
         new AtomicReference<>();
 
@@ -115,29 +106,30 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
           try {
             emitter.execute(keyManipulator.emitKeyFromParentKey(parentKey), values);
 
-            // Wake up the other waiting threads.
-            // Pass null since the value is already emitted by the thread of `firstSlot`.
-            for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
-              if (slot != emitterSlot.get()) {
-                slot.markAsSuccess();
+            synchronized (this) {
+              // Wake up the other waiting threads.
+              // Pass null since the value is already emitted by the thread of `firstSlot`.
+              for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
+                if (slot != emitterSlot.get()) {
+                  slot.markAsSuccess();
+                }
               }
             }
           } catch (Exception e) {
-            String msg = "Group commit failed";
-            logger.error(msg, e);
-            GroupCommitFailureException exception = new GroupCommitFailureException(msg, e);
+            GroupCommitFailureException exception =
+                new GroupCommitFailureException("Group commit failure", e);
 
             // Let other threads know the exception.
-            for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
-              if (slot != emitterSlot.get()) {
-                slot.markAsFail(exception);
+            synchronized (this) {
+              for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
+                if (slot != emitterSlot.get()) {
+                  slot.markAsFail(exception);
+                }
               }
             }
 
             // Throw the exception for the thread which executed the group commit.
             throw exception;
-          } finally {
-            dismiss();
           }
         };
 
@@ -167,11 +159,6 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   @Override
   public int hashCode() {
     return Objects.hashCode(parentKey);
-  }
-
-  @Override
-  protected void dismiss() {
-    garbageGroupCollector.collect(this);
   }
 
   @Override
