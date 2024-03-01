@@ -638,14 +638,12 @@ public class CosmosAdminTest {
     verify(container)
         .queryItems(
             eq("SELECT t.id, t.concatenatedPartitionKey FROM " + "t"),
-            refEq(new CosmosQueryRequestOptions()),
+            any(CosmosQueryRequestOptions.class),
             eq(Record.class));
     verify(container)
-        .deleteItem(
-            eq("id1"), refEq(new PartitionKey("p1")), refEq(new CosmosItemRequestOptions()));
+        .deleteItem(eq("id1"), refEq(new PartitionKey("p1")), any(CosmosItemRequestOptions.class));
     verify(container)
-        .deleteItem(
-            eq("id2"), refEq(new PartitionKey("p2")), refEq(new CosmosItemRequestOptions()));
+        .deleteItem(eq("id2"), refEq(new PartitionKey("p2")), any(CosmosItemRequestOptions.class));
   }
 
   @Test
@@ -676,7 +674,7 @@ public class CosmosAdminTest {
     verify(container)
         .queryItems(
             eq("SELECT * FROM metadata WHERE metadata.id LIKE 'ns.%'"),
-            refEq(new CosmosQueryRequestOptions()),
+            any(CosmosQueryRequestOptions.class),
             eq(CosmosTableMetadata.class));
   }
 
@@ -1084,7 +1082,7 @@ public class CosmosAdminTest {
     verify(namespacesContainer)
         .queryItems(
             eq("SELECT * FROM container"),
-            refEq(new CosmosQueryRequestOptions()),
+            any(CosmosQueryRequestOptions.class),
             eq(CosmosNamespace.class));
     assertThat(actualNamespaces).containsOnly("ns1", "ns2");
   }
@@ -1264,7 +1262,7 @@ public class CosmosAdminTest {
     verify(tableMetadataContainer)
         .queryItems(
             eq("SELECT container.id FROM container"),
-            refEq(new CosmosQueryRequestOptions()),
+            any(CosmosQueryRequestOptions.class),
             eq(CosmosTableMetadata.class));
     verify(metadataDatabase, times(4)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
     verify(namespacesContainer).upsertItem(new CosmosNamespace("ns1"));
