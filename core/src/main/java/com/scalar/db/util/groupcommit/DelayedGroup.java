@@ -59,9 +59,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("fullKey", fullKey)
-        .add("done", isDone())
-        .add("ready", isReady())
-        .add("sizeFixed", isSizeFixed())
+        .add("status", status)
         .add("valueSlots.size", slots.size())
         .toString();
   }

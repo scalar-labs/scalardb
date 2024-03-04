@@ -337,6 +337,8 @@ class GroupCommitterBench {
 
         System.err.println("Checked all the keys");
         System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
+        // To see garbage groups remain.
+        TimeUnit.SECONDS.sleep(5);
         return new Result(tps, retry.get());
       } finally {
         MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);

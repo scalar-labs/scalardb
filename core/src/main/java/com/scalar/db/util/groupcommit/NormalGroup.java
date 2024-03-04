@@ -52,7 +52,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Nullable
   synchronized List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> removeNotReadySlots() {
-    if (!isSizeFixed()) {
+    if (!isClosed()) {
       logger.info(
           "No need to remove any slot since the size isn't fixed yet. Too early. group:{}", this);
       return null;
@@ -64,7 +64,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     for (Entry<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> entry :
         slots.entrySet()) {
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = entry.getValue();
-      if (slot.value() == null) {
+      if (!slot.isReady()) {
         removed.add(slot);
       }
     }
@@ -76,7 +76,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : removed) {
       removeSlot(slot.key());
-      logger.info(
+      logger.debug(
           "Removed a value slot from group to move it to delayed group. group:{}, slot:{}",
           this,
           slot);
@@ -165,9 +165,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("parentKey", parentKey)
-        .add("done", isDone())
-        .add("ready", isReady())
-        .add("sizeFixed", isSizeFixed())
+        .add("status", status)
         .add("valueSlots.size", slots.size())
         .toString();
   }

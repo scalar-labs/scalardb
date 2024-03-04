@@ -20,15 +20,15 @@ class QueueForCleaningUpGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   boolean processItem(Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
-    if (group != null) {
-      // FIXME: Should see if all the slots are checked by the client thread.
-      if (group.isDone()) {
-        if (!groupManager.removeGroupFromMap(group)) {
-          logger.warn("Failed to remove the group from the group map. Group:{}", group);
-        }
-        // The group is removed from the group map. Should remove it.
-        return true;
+    // Groups don't have chance to update the status from READY to DONE since the condition is
+    // satisfied after all the client threads get the result lazily. So, update the status here.
+    group.updateStatus();
+    if (group.isDone()) {
+      if (!groupManager.removeGroupFromMap(group)) {
+        logger.warn("Failed to remove the group from the group map. Group:{}", group);
       }
+      // The group is removed from the group map. Should remove it.
+      return true;
     }
     // Should not remove the item.
     return false;

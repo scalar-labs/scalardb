@@ -47,7 +47,7 @@ class QueueForClosingNormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     Instant now = Instant.now();
     if (now.isAfter(normalGroup.groupClosedAt())) {
       // Expired. Fix the size (== close).
-      normalGroup.fixSize();
+      normalGroup.close();
 
       enqueueItemToNextQueue(normalGroup);
 

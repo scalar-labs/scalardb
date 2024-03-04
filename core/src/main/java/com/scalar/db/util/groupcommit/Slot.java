@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 
@@ -16,7 +17,11 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // Otherwise, the result lambda must be emitted by the receiver's thread.
   private final CompletableFuture<ThrowableRunnable> completableFuture = new CompletableFuture<>();
   // This value can be changed from null -> non-null, not vice versa.
-  @Nullable private V value;
+  private final AtomicReference<V> value = new AtomicReference<>();
+  // Slot gets done once the client thread tries to obtain the result not when a value is set.
+  // In NormalGroup, any client thread can be delayed to obtain the result. the group should not
+  // move to State.DONE until all the client threads wait on the slot.
+  private final AtomicBoolean isDone = new AtomicBoolean();
 
   Slot(CHILD_KEY key, NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
     this.key = key;
@@ -33,7 +38,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   void setValue(V value) {
-    this.value = Objects.requireNonNull(value);
+    this.value.set(Objects.requireNonNull(value));
   }
 
   void waitUntilEmit() throws GroupCommitException {
@@ -58,12 +63,19 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         throw (GroupCommitException) e;
       }
       throw new GroupCommitException("Group commit failed", e);
+    } finally {
+      // Slot gets done once the client thread captures the result.
+      isDone.set(true);
     }
   }
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("key", key).toString();
+    return MoreObjects.toStringHelper(this)
+        .add("key", key)
+        .add("isReady", isReady())
+        .add("isDone", isDone())
+        .toString();
   }
 
   CHILD_KEY key() {
@@ -72,7 +84,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   @Nullable
   V value() {
-    return value;
+    return value.get();
   }
 
   void markAsSuccess() {
@@ -85,5 +97,13 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   void delegateTaskToWaiter(ThrowableRunnable task) {
     completableFuture.complete(task);
+  }
+
+  boolean isReady() {
+    return value.get() != null;
+  }
+
+  boolean isDone() {
+    return isDone.get();
   }
 }

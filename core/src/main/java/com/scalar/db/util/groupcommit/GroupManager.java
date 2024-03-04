@@ -271,5 +271,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     queueForMovingDelayedSlot.close();
     queueForClosingNormalGroup.close();
     queueForCleaningUpGroup.close();
+
+    // TODO: Add an API to return metrics to see any garbage groups remain.
   }
 }
