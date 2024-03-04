@@ -3,6 +3,7 @@ package com.scalar.db.util.groupcommit;
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.scalar.db.util.groupcommit.GroupManager.Metrics;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -338,7 +339,24 @@ class GroupCommitterBench {
         System.err.println("Checked all the keys");
         System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
         // To see garbage groups remain.
-        TimeUnit.SECONDS.sleep(5);
+        boolean noGarbage = false;
+        Metrics metrics = null;
+        for (int i = 0; i < 10; i++) {
+          metrics = groupCommitter.getMetrics();
+          if (metrics.sizeOfNormalGroupMap == 0
+              && metrics.sizeOfDelayedGroupMap == 0
+              && metrics.sizeOfQueueForClosingNormalGroup == 0
+              && metrics.sizeOfQueueForMovingDelayedSlot == 0
+              && metrics.sizeOfQueueForCleaningUpGroup == 0) {
+            System.out.println("No garbage remains in GroupCommitter.");
+            noGarbage = true;
+            break;
+          }
+          TimeUnit.SECONDS.sleep(1);
+        }
+        if (!noGarbage) {
+          System.out.println("Some garbage remains in GroupCommitter. " + metrics);
+        }
         return new Result(tps, retry.get());
       } finally {
         MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);

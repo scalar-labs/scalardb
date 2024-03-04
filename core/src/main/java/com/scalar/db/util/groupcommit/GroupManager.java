@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.LazyInit;
@@ -49,6 +50,39 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   private final long normalGroupCloseExpirationInMillis;
   private final long delayedSlotMoveExpirationInMillis;
   private final int numberOfRetentionValues;
+
+  // TODO: Remove after introducing a proper metrics.
+  public static class Metrics {
+    public final int sizeOfQueueForClosingNormalGroup;
+    public final int sizeOfQueueForMovingDelayedSlot;
+    public final int sizeOfQueueForCleaningUpGroup;
+    public final int sizeOfNormalGroupMap;
+    public final int sizeOfDelayedGroupMap;
+
+    public Metrics(
+        int sizeOfQueueForClosingNormalGroup,
+        int sizeOfQueueForMovingDelayedSlot,
+        int sizeOfQueueForCleaningUpGroup,
+        int sizeOfNormalGroupMap,
+        int sizeOfDelayedGroupMap) {
+      this.sizeOfQueueForClosingNormalGroup = sizeOfQueueForClosingNormalGroup;
+      this.sizeOfQueueForMovingDelayedSlot = sizeOfQueueForMovingDelayedSlot;
+      this.sizeOfQueueForCleaningUpGroup = sizeOfQueueForCleaningUpGroup;
+      this.sizeOfNormalGroupMap = sizeOfNormalGroupMap;
+      this.sizeOfDelayedGroupMap = sizeOfDelayedGroupMap;
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("sizeOfQueueForClosingNormalGroup", sizeOfQueueForClosingNormalGroup)
+          .add("sizeOfQueueForMovingDelayedSlot", sizeOfQueueForMovingDelayedSlot)
+          .add("sizeOfQueueForCleaningUpGroup", sizeOfQueueForCleaningUpGroup)
+          .add("sizeOfNormalGroupMap", sizeOfNormalGroupMap)
+          .add("sizeOfDelayedGroupMap", sizeOfDelayedGroupMap)
+          .toString();
+    }
+  }
 
   public GroupManager(
       String label,
@@ -226,18 +260,19 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     return true;
   }
 
+  Metrics getMetrics() {
+    return new Metrics(
+        queueForClosingNormalGroup.size(),
+        queueForMovingDelayedSlot.size(),
+        queueForCleaningUpGroup.size(),
+        normalGroupMap.size(),
+        delayedGroupMap.size());
+  }
+
   // TODO: This should be replaced by other metrics mechanism.
   private void startMonitorExecutorService() {
     Runnable print =
-        () ->
-            logger.info(
-                "[MONITOR] Timestamp={}, NormalGroupClose.queue.size={}, DelayedSlotMove.queue.size={}, GroupCleanup.queue.size={}, NormalGroupMap.size={}, DelayedGroupMap.size={}",
-                Instant.now(),
-                queueForClosingNormalGroup.size(),
-                queueForMovingDelayedSlot.size(),
-                queueForCleaningUpGroup.size(),
-                normalGroupMap.size(),
-                delayedGroupMap.size());
+        () -> logger.info("[MONITOR] Timestamp={}, Metrics={}", Instant.now(), getMetrics());
 
     monitorExecutorService.execute(
         () -> {
