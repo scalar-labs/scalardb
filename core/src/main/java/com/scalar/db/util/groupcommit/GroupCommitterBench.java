@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** A tentative benchmarker. This will be removed later. */
 class GroupCommitterBench {
   private static class ExpectedException extends RuntimeException {
     public ExpectedException(String message) {
@@ -109,244 +108,263 @@ class GroupCommitterBench {
   void benchmark(boolean microBenchmark)
       throws ExecutionException, InterruptedException, TimeoutException {
     // Warmup
-    benchmarkInternal(
-        // For Benchmarker:
-        // NumOfThreads,NumOfRequests
-        256,
-        40000,
-        // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
-        0,
-        0,
-        0,
-        0,
-        0,
-        new GroupCommitConfig(8, 10, 100, 20));
+    new Runner(
+            256, // NumOfThreads
+            40000, // NumOfRequests
+            0, // AveragePrepareWaitInMillis
+            0, // MultiplexerInMillis
+            0, // MaxCommitWaitInMillis
+            0, // ErrorBeforeReadyPercentage
+            0 // ErrorAfterReadyPercentage
+            )
+        .benchmark(new GroupCommitConfig(8, 10, 100, 20));
+
     System.out.println("FINISHED WARMUP");
     System.gc();
     System.out.println("STARTING BENCHMARK");
 
     if (microBenchmark) {
       // Benchmark for Micro-benchmark
-      benchmarkInternal(
-          // For Benchmarker:
-          2048, // NumOfThreads
-          800000, // NumOfRequests
-          0, // AveragePrepareWaitInMillis
-          0, // MultiplexerInMillis
-          0, // MaxCommitWaitInMillis
-          1, // ErrorBeforeReadyPercentage
-          1, // ErrorAfterReadyPercentage
-          // For Group Commit
-          new GroupCommitConfig(40, 20, 200, 20));
+      new Runner(
+              2048, // NumOfThreads
+              800000, // NumOfRequests
+              0, // AveragePrepareWaitInMillis
+              0, // MultiplexerInMillis
+              0, // MaxCommitWaitInMillis
+              1, // ErrorBeforeReadyPercentage
+              1 // ErrorAfterReadyPercentage
+              )
+          .benchmark(new GroupCommitConfig(40, 20, 200, 20));
     } else {
       List<GroupCommitConfig> configs = Arrays.asList(new GroupCommitConfig(40, 40, 200, 20));
       Map<GroupCommitConfig, Result> results = new HashMap<>();
-      for (GroupCommitConfig config : configs) {
-        // Benchmark for Production case
+      for (GroupCommitConfig groupCommitConfig : configs) {
+        // Benchmark for Micro-benchmark
         Result result =
-            benchmarkInternal(
-                // For Benchmarker:
-                2048, // NumOfThreads
-                200000, // NumOfRequests
-                200, // AveragePrepareWaitInMillis
-                400, // MultiplexerInMillis
-                100, // MaxCommitWaitInMillis
-                1, // ErrorBeforeReadyPercentage
-                1, // ErrorAfterReadyPercentage
-                config);
-        results.put(config, result);
+            new Runner(
+                    2048, // NumOfThreads
+                    200000, // NumOfRequests
+                    200, // AveragePrepareWaitInMillis
+                    400, // MultiplexerInMillis
+                    100, // MaxCommitWaitInMillis
+                    1, // ErrorBeforeReadyPercentage
+                    1 // ErrorAfterReadyPercentage
+                    )
+                .benchmark(groupCommitConfig);
+        results.put(groupCommitConfig, result);
         System.gc();
-        System.out.println("FINISH: " + config);
+        System.out.println("FINISH: " + groupCommitConfig);
         TimeUnit.SECONDS.sleep(10);
       }
       System.out.println("RESULT: " + results);
     }
   }
 
-  Result benchmarkInternal(
-      int numOfThreads,
-      int numOfRequests,
-      int averageDurationBeforeReadyInMillis,
-      int multiplexerInMillis,
-      int maxEmitDurationInMillis,
-      int errorBeforeReadyPercentage,
-      int errorAfterReadyPercentage,
-      GroupCommitConfig groupCommitConfig)
-      throws ExecutionException, InterruptedException, TimeoutException {
-    Random rand = new Random();
-    AtomicInteger retry = new AtomicInteger();
-    Map<String, Boolean> emittedKeys = new ConcurrentHashMap<>();
-    Map<String, Boolean> failedKeys = new ConcurrentHashMap<>();
-    Emittable<String, Value> emitter =
-        (parentKey, values) -> {
-          // This lambda is executed once the group is ready to group-commit.
-          try {
-            if (maxEmitDurationInMillis > 0) {
-              int waitInMillis = rand.nextInt(maxEmitDurationInMillis);
-              TimeUnit.MILLISECONDS.sleep(waitInMillis);
-            }
-            if (errorAfterReadyPercentage > rand.nextInt(100)) {
-              for (Value v : values) {
-                // Remember the value as a failure.
-                if (failedKeys.put(v.v, true) != null) {
-                  throw new RuntimeException(v + " is already set");
-                }
-              }
-              throw new ExpectedException("Error after READY");
-            }
-          } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-          }
-          for (Value v : values) {
-            // Remember the value as a success.
-            if (emittedKeys.put(v.v, true) != null) {
-              throw new RuntimeException(v + " is already set");
-            }
-          }
-        };
+  private static class Runner {
+    private final int numOfThreads;
+    private final int numOfRequests;
+    private final int averageDurationBeforeReadyInMillis;
+    private final int multiplexerInMillis;
+    private final int maxEmitDurationInMillis;
+    private final int errorBeforeReadyPercentage;
+    private final int errorAfterReadyPercentage;
+    private final Map<String, Boolean> emittedKeys = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> failedKeys = new ConcurrentHashMap<>();
+    private final Random rand = new Random();
+    private final AtomicInteger retry = new AtomicInteger();
 
-    try (GroupCommitter<String, String, String, String, Value> groupCommitter =
-        new GroupCommitter<>("test", groupCommitConfig, new MyKeyManipulator())) {
-      groupCommitter.setEmitter(emitter);
-
-      List<KeyAndFuture> futures = new ArrayList<>();
-
-      ExecutorService executorService =
-          Executors.newFixedThreadPool(
-              numOfThreads, new ThreadFactoryBuilder().setDaemon(true).build());
-      try {
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < numOfRequests; i++) {
-          String childKey = String.format("%016d", i);
-          Value value = new Value("ORIG-KEY: " + childKey);
-          Callable<Void> groupCommitCaller =
-              () -> {
-                String fullKey = null;
-                try {
-                  // Reserve a slot to put a value later.
-                  fullKey = groupCommitter.reserve(childKey);
-
-                  // Wait for a random duration following Gaussian (or normal) distribution.
-                  int waitInMillis =
-                      (int)
-                          (averageDurationBeforeReadyInMillis
-                              + rand.nextGaussian() * multiplexerInMillis);
-                  waitInMillis = Math.max(waitInMillis, averageDurationBeforeReadyInMillis);
-                  if (waitInMillis > 0) {
-                    TimeUnit.MILLISECONDS.sleep(waitInMillis);
-                  }
-
-                  // Fail at a certain rate.
-                  if (errorBeforeReadyPercentage > rand.nextInt(100)) {
-                    if (failedKeys.put(value.v, true) != null) {
-                      throw new RuntimeException(value.v + " is already set");
-                    }
-                    throw new ExpectedException("Error before READY");
-                  }
-
-                  // Put the value in the slot and wait until the group is emitted.
-                  groupCommitter.ready(fullKey, value);
-                } catch (Exception e) {
-                  if (fullKey != null) {
-                    // This is needed since GroupCommitter can't remove the garbage when
-                    // an exception is thrown before `ready()`.
-                    groupCommitter.remove(fullKey);
-                  }
-                  throw e;
-                }
-                return null;
-              };
-
-          futures.add(new KeyAndFuture(childKey, executorService.submit(groupCommitCaller)));
-        }
-
-        // Check the futures.
-        checkFutures(futures);
-
-        // Print the summary.
-        int tps = printSummary(numOfRequests, start, retry.get());
-
-        // Check the results.
-        checkResults(numOfRequests, emittedKeys, failedKeys);
-
-        // To see garbage groups remain.
-        checkGarbage(groupCommitter);
-
-        return new Result(tps, retry.get());
-      } finally {
-        MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);
-      }
+    Runner(
+        int numOfThreads,
+        int numOfRequests,
+        int averageDurationBeforeReadyInMillis,
+        int multiplexerInMillis,
+        int maxEmitDurationInMillis,
+        int errorBeforeReadyPercentage,
+        int errorAfterReadyPercentage) {
+      this.numOfThreads = numOfThreads;
+      this.numOfRequests = numOfRequests;
+      this.averageDurationBeforeReadyInMillis = averageDurationBeforeReadyInMillis;
+      this.multiplexerInMillis = multiplexerInMillis;
+      this.maxEmitDurationInMillis = maxEmitDurationInMillis;
+      this.errorBeforeReadyPercentage = errorBeforeReadyPercentage;
+      this.errorAfterReadyPercentage = errorAfterReadyPercentage;
     }
-  }
 
-  private void checkFutures(List<KeyAndFuture> futures)
-      throws ExecutionException, TimeoutException, InterruptedException {
-    for (KeyAndFuture kf : futures) {
-      try {
-        System.err.println("Getting the future of " + kf.key);
-        kf.future.get(10, TimeUnit.SECONDS);
-      } catch (ExecutionException e) {
-        if (e.getCause() instanceof ExpectedException
-            || (e.getCause() instanceof GroupCommitException
-                && e.getCause().getCause() instanceof ExpectedException)) {
-          // Expected ???
-        } else {
+    // Returns a lambda that will be executed once the group is ready to group-commit.
+    private Emittable<String, Value> emitter() {
+      return (parentKey, values) -> {
+        try {
+          if (maxEmitDurationInMillis > 0) {
+            int waitInMillis = rand.nextInt(maxEmitDurationInMillis);
+            TimeUnit.MILLISECONDS.sleep(waitInMillis);
+          }
+          if (errorAfterReadyPercentage > rand.nextInt(100)) {
+            for (Value v : values) {
+              // Remember the value as a failure.
+              if (failedKeys.put(v.v, true) != null) {
+                throw new RuntimeException(v + " is already set");
+              }
+            }
+            throw new ExpectedException("Error after READY");
+          }
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        for (Value v : values) {
+          // Remember the value as a success.
+          if (emittedKeys.put(v.v, true) != null) {
+            throw new RuntimeException(v + " is already set");
+          }
+        }
+      };
+    }
+
+    private Callable<Void> groupCommitterCaller(
+        GroupCommitter<String, String, String, String, Value> groupCommitter,
+        String childKey,
+        Value value) {
+      return () -> {
+        String fullKey = null;
+        try {
+          // Reserve a slot to put a value later.
+          fullKey = groupCommitter.reserve(childKey);
+
+          // Wait for a random duration following Gaussian (or normal) distribution.
+          int waitInMillis =
+              (int)
+                  (averageDurationBeforeReadyInMillis + rand.nextGaussian() * multiplexerInMillis);
+          waitInMillis = Math.max(waitInMillis, averageDurationBeforeReadyInMillis);
+          if (waitInMillis > 0) {
+            TimeUnit.MILLISECONDS.sleep(waitInMillis);
+          }
+
+          // Fail at a certain rate.
+          if (errorBeforeReadyPercentage > rand.nextInt(100)) {
+            if (failedKeys.put(value.v, true) != null) {
+              throw new RuntimeException(value.v + " is already set");
+            }
+            throw new ExpectedException("Error before READY");
+          }
+
+          // Put the value in the slot and wait until the group is emitted.
+          groupCommitter.ready(fullKey, value);
+        } catch (Exception e) {
+          if (fullKey != null) {
+            // This is needed since GroupCommitter can't remove the garbage when
+            // an exception is thrown before `ready()`.
+            groupCommitter.remove(fullKey);
+          }
           throw e;
         }
-      } catch (ExpectedException e) {
-        // Expected.
-      } catch (TimeoutException e) {
-        System.out.println("Timeout: Key=" + kf.key);
-        throw e;
+        return null;
+      };
+    }
+
+    private Result benchmark(GroupCommitConfig groupCommitConfig)
+        throws ExecutionException, InterruptedException, TimeoutException {
+      try (GroupCommitter<String, String, String, String, Value> groupCommitter =
+          new GroupCommitter<>("test", groupCommitConfig, new MyKeyManipulator())) {
+        groupCommitter.setEmitter(emitter());
+
+        List<KeyAndFuture> futures = new ArrayList<>();
+
+        ExecutorService executorService =
+            Executors.newFixedThreadPool(
+                numOfThreads, new ThreadFactoryBuilder().setDaemon(true).build());
+        try {
+          long startInMillis = System.currentTimeMillis();
+          for (int i = 0; i < numOfRequests; i++) {
+            String childKey = String.format("%016d", i);
+            Value value = new Value("ORIG-KEY: " + childKey);
+            Callable<Void> groupCommitCaller =
+                groupCommitterCaller(groupCommitter, childKey, value);
+            futures.add(new KeyAndFuture(childKey, executorService.submit(groupCommitCaller)));
+          }
+
+          // Check the futures.
+          checkFutures(futures);
+
+          // Print the summary.
+          int tps = printSummary(startInMillis);
+
+          // Check the results.
+          checkResults();
+
+          // To see garbage groups remain.
+          checkGarbage(groupCommitter);
+
+          return new Result(tps, retry.get());
+        } finally {
+          MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);
+        }
       }
     }
-  }
 
-  private int printSummary(long numOfRequests, long startInMillis, int retry) {
-    long duration = System.currentTimeMillis() - startInMillis;
-    int tps = (int) ((double) numOfRequests / (duration / 1000.0));
-    System.err.println("Duration(ms): " + duration);
-    System.err.println("TPS:          " + tps);
-    System.err.println("Retry:        " + retry);
-    return tps;
-  }
-
-  private void checkResults(
-      long numOfRequests, Map<String, Boolean> emittedKeys, Map<String, Boolean> failedKeys) {
-    for (int i = 0; i < numOfRequests; i++) {
-      String expectedKey = key(i);
-      if (!emittedKeys.containsKey(expectedKey) && !failedKeys.containsKey(expectedKey)) {
-        throw new AssertionError(expectedKey + " is not found");
+    private void checkFutures(List<KeyAndFuture> futures)
+        throws ExecutionException, TimeoutException, InterruptedException {
+      for (KeyAndFuture kf : futures) {
+        try {
+          System.err.println("Getting the future of " + kf.key);
+          kf.future.get(10, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+          if (e.getCause() instanceof ExpectedException
+              || (e.getCause() instanceof GroupCommitException
+                  && e.getCause().getCause() instanceof ExpectedException)) {
+            // Expected ???
+          } else {
+            throw e;
+          }
+        } catch (ExpectedException e) {
+          // Expected.
+        } catch (TimeoutException e) {
+          System.out.println("Timeout: Key=" + kf.key);
+          throw e;
+        }
       }
-      // System.err.println("Confirmed the key is contained: Key=" + expectedKey);
     }
-    System.err.println("Checked all the keys");
-  }
 
-  private void checkGarbage(GroupCommitter<String, String, String, String, Value> groupCommitter)
-      throws InterruptedException {
-    boolean noGarbage = false;
-    Metrics metrics = null;
-    for (int i = 0; i < 10; i++) {
-      metrics = groupCommitter.getMetrics();
-      if (metrics.sizeOfNormalGroupMap == 0
-          && metrics.sizeOfDelayedGroupMap == 0
-          && metrics.sizeOfQueueForClosingNormalGroup == 0
-          && metrics.sizeOfQueueForMovingDelayedSlot == 0
-          && metrics.sizeOfQueueForCleaningUpGroup == 0) {
-        System.out.println("No garbage remains in GroupCommitter.");
-        noGarbage = true;
-        break;
+    private int printSummary(long startInMillis) {
+      long duration = System.currentTimeMillis() - startInMillis;
+      int tps = (int) ((double) numOfRequests / (duration / 1000.0));
+      System.err.println("Duration(ms): " + duration);
+      System.err.println("TPS:          " + tps);
+      System.err.println("Retry:        " + retry.get());
+      return tps;
+    }
+
+    private void checkResults() {
+      for (int i = 0; i < numOfRequests; i++) {
+        String expectedKey = key(i);
+        if (!emittedKeys.containsKey(expectedKey) && !failedKeys.containsKey(expectedKey)) {
+          throw new AssertionError(expectedKey + " is not found");
+        }
       }
-      TimeUnit.SECONDS.sleep(1);
     }
-    if (!noGarbage) {
-      System.out.println("Some garbage remains in GroupCommitter. " + metrics);
-    }
-  }
 
-  private String key(int i) {
-    return "ORIG-KEY: " + String.format("%016d", i);
+    private void checkGarbage(GroupCommitter<String, String, String, String, Value> groupCommitter)
+        throws InterruptedException {
+      boolean noGarbage = false;
+      Metrics metrics = null;
+      for (int i = 0; i < 10; i++) {
+        metrics = groupCommitter.getMetrics();
+        if (metrics.sizeOfNormalGroupMap == 0
+            && metrics.sizeOfDelayedGroupMap == 0
+            && metrics.sizeOfQueueForClosingNormalGroup == 0
+            && metrics.sizeOfQueueForMovingDelayedSlot == 0
+            && metrics.sizeOfQueueForCleaningUpGroup == 0) {
+          noGarbage = true;
+          break;
+        }
+        TimeUnit.SECONDS.sleep(1);
+      }
+      if (!noGarbage) {
+        System.out.println("Some garbage remains in GroupCommitter. " + metrics);
+      }
+    }
+
+    private String key(int i) {
+      return "ORIG-KEY: " + String.format("%016d", i);
+    }
   }
 
   public static void main(String[] args)
