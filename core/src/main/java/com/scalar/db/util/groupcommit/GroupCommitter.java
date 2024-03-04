@@ -56,16 +56,12 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    * @return The full key associated with the reserved slot.
    */
   public FULL_KEY reserve(CHILD_KEY childKey) {
-    int counter = 0;
     while (true) {
       FULL_KEY fullKey = groupManager.reserveNewSlot(childKey);
       if (fullKey != null) {
         return fullKey;
       }
       logger.debug("Failed to reserve a new value slot. Retrying. key:{}", childKey);
-      if (counter++ > 100) {
-        throw new RuntimeException("AAAAAAAAAAAAAAAAAAAAAAAAAAA");
-      }
     }
   }
 
@@ -80,7 +76,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   public void ready(FULL_KEY fullKey, V value) throws GroupCommitException {
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
-    int counter = 0;
     while (true) {
       Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
       if (group.putValueToSlotAndWait(keys.childKey, value)) {
@@ -88,9 +83,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       }
       logger.info(
           "The state of the group has been changed. Retrying. Group:{}, Keys:{}", group, keys);
-      if (counter++ > 100) {
-        throw new RuntimeException("AAAAAAAAAAAAAAAAAAAAAAAAAAA");
-      }
     }
   }
 
@@ -101,13 +93,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   public void remove(FULL_KEY fullKey) {
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
-    try {
-      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
-      if (!group.removeSlot(keys.childKey)) {
-        logger.warn("The slot wasn't found. FullKey:{}, Group:{}", fullKey, group);
-      }
-    } catch (GroupCommitTargetNotFoundException e) {
-      logger.warn("Failed to remove the slot. FullKey:{}", fullKey);
+    if (!groupManager.removeSlotFromGroup(keys)) {
+      logger.warn("The slot wasn't found. FullKey:{}", fullKey);
     }
   }
 

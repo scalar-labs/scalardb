@@ -145,22 +145,20 @@ class GroupCommitterBench {
 
   void benchmark(boolean microBenchmark)
       throws ExecutionException, InterruptedException, TimeoutException {
-    /*
-        // Warmup
-        benchmarkInternal(
-            // For Benchmarker:
-            // NumOfThreads,NumOfRequests
-            256,
-            40000,
-            // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
-            0,
-            0,
-            0,
-            0,
-            0,
-            // For Group Commit
-            new GroupCommitParams(8, 10, 100));
-    */
+    // Warmup
+    benchmarkInternal(
+        // For Benchmarker:
+        // NumOfThreads,NumOfRequests
+        256,
+        40000,
+        // AveragePrepareWaitInMillis,MultiplexerInMillis,MaxCommitWaitInMillis
+        0,
+        0,
+        0,
+        0,
+        0,
+        // For Group Commit
+        new GroupCommitParams(8, 10, 100));
     System.out.println("FINISHED WARMUP");
     System.gc();
     System.out.println("STARTING BENCHMARK");
@@ -170,8 +168,7 @@ class GroupCommitterBench {
       benchmarkInternal(
           // For Benchmarker:
           2048, // NumOfThreads
-          //          800000, // NumOfRequests
-          8000, // NumOfRequests
+          800000, // NumOfRequests
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
@@ -340,7 +337,6 @@ class GroupCommitterBench {
 
         System.err.println("Checked all the keys");
         System.err.println("Duration(ms): " + (System.currentTimeMillis() - start));
-        TimeUnit.SECONDS.sleep(20);
         return new Result(tps, retry.get());
       } finally {
         MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);

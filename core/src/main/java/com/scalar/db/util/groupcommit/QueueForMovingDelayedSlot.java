@@ -29,18 +29,27 @@ class QueueForMovingDelayedSlot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   boolean processItem(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
-    if (normalGroup != null) {
+    if (normalGroup.isReady()) {
+      queueForCleaningUpGroup.add(normalGroup);
+      // Already ready. Should remove the item.
+      return true;
+    }
+
+    if (Instant.now().isAfter(normalGroup.delayedSlotMovedAt())) {
+      // Move delayed slots to a DelayedGroup so that the NormalGroup can be ready.
+      boolean movedDelayedSlots = groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
+
+      // The status of the group may have changed
       if (normalGroup.isReady()) {
         queueForCleaningUpGroup.add(normalGroup);
         // Already ready. Should remove the item.
         return true;
-      } else {
-        if (Instant.now().isAfter(normalGroup.delayedSlotMovedAt())) {
-          // Should remove the item if it's handled well.
-          return groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
-        }
       }
+
+      // If this is true, it means all delayed slots are moved and the normal group must be ready.
+      assert !movedDelayedSlots;
     }
+
     // Should not remove the item.
     return false;
   }

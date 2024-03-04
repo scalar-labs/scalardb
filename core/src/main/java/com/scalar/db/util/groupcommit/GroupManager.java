@@ -159,6 +159,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
           delayedGroupMap.get(keys.fullKey);
       if (delayedGroup != null) {
         removed = delayedGroup.removeSlot(keys.childKey);
+        // TODO: Ask the cleanup queue for this deletion from the map?
         if (delayedGroup.slots.isEmpty()) {
           delayedGroupMap.remove(keys.fullKey);
         }
@@ -169,6 +170,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       if (normalGroup != null) {
         removed = normalGroup.removeSlot(keys.childKey) || removed;
         if (normalGroup.slots.isEmpty()) {
+          // TODO: Ask the cleanup queue for this deletion from the map?
           normalGroupMap.remove(keys.parentKey);
         }
       }
@@ -179,12 +181,16 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     }
   }
 
-  // Moves delayed slots from the NormalGroup to a new DelayedGroup. The new one is also
-  // registered to `delayedGroupMap`.
+  // Moves delayed slots from the NormalGroup to a new DelayedGroup so that the NormalGroup can be
+  // ready. The new one is also
+  // registered to the group map and the cleanup queue.
+  //
+  // Returns true if any delayed slot is moved, false otherwise.
   boolean moveDelayedSlotToDelayedGroup(
       NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
     long stamp = lock.writeLock();
     try {
+      // Remove delayed tasks from the NormalGroup so that it can be ready.
       List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> notReadySlots =
           normalGroup.removeNotReadySlots();
       if (notReadySlots == null) {
@@ -195,24 +201,23 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
         return false;
       }
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> notReadySlot : notReadySlots) {
+        // Create a new DelayedGroup
         FULL_KEY fullKey = notReadySlot.fullKey();
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
             new DelayedGroup<>(fullKey, emitter, keyManipulator);
         notReadySlot.changeParentGroupToDelayedGroup(delayedGroup);
 
+        // Register the new DelayedGroup to the map and cleanup queue.
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
             delayedGroupMap.put(fullKey, delayedGroup);
         if (old != null) {
           logger.warn("The slow group value map already has the same key group. {}", old);
         }
+        queueForCleaningUpGroup.add(delayedGroup);
 
-        // Internally delegate the value to the client thread
+        // Set the slot stored in the NormalGroup into the new DelayedGroup.
+        // Internally delegate the emit-task to the client thread.
         checkNotNull(delayedGroup.reserveNewSlot(notReadySlot));
-        System.out.printf("GM-MOVE-SLOT: NEW-GROUP:%s\n", delayedGroup);
-      }
-      if (normalGroup.slots.values().stream().noneMatch(v -> v.value() != null)) {
-        normalGroupMap.remove(normalGroup.parentKey());
-        logger.info("Removed a group as it's empty. normalGroup:{}", normalGroup);
       }
     } finally {
       lock.unlockWrite(stamp);
@@ -266,7 +271,5 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     queueForMovingDelayedSlot.close();
     queueForClosingNormalGroup.close();
     queueForCleaningUpGroup.close();
-
-    normalGroupMap.values().forEach(x -> System.out.printf("GM-NORMAL-GROUP: %s\n", x));
   }
 }

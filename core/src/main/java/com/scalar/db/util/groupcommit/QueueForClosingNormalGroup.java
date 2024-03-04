@@ -26,26 +26,35 @@ class QueueForClosingNormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     this.queueForCleaningUpGroup = queueForCleaningUpGroup;
   }
 
+  private void enqueueItemToNextQueue(
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
+    if (normalGroup.isReady()) {
+      queueForCleaningUpGroup.add(normalGroup);
+    } else {
+      queueForMovingDelayedSlot.add(normalGroup);
+    }
+  }
+
   @Override
   boolean processItem(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
     // Close the group if needed.
     if (normalGroup.isClosed()) {
-      if (normalGroup.isReady()) {
-        queueForCleaningUpGroup.add(normalGroup);
-      } else {
-        queueForMovingDelayedSlot.add(normalGroup);
-      }
+      enqueueItemToNextQueue(normalGroup);
       // It's already closed. Should remove the item.
       return true;
-    } else {
-      Instant now = Instant.now();
-      if (now.isAfter(normalGroup.groupClosedAt())) {
-        // Expired. Fix the size (== close).
-        normalGroup.fixSize();
-        // Should remove the item.
-        return true;
-      }
     }
+
+    Instant now = Instant.now();
+    if (now.isAfter(normalGroup.groupClosedAt())) {
+      // Expired. Fix the size (== close).
+      normalGroup.fixSize();
+
+      enqueueItemToNextQueue(normalGroup);
+
+      // Should remove the item.
+      return true;
+    }
+
     // Should not remove the item.
     return false;
   }

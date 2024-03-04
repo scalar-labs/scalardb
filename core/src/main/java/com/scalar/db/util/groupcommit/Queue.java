@@ -58,7 +58,6 @@ abstract class Queue<T> implements Closeable {
 
     if (item != null) {
       boolean shouldRemove = processItem(item);
-      logger.info("Q: PROCESSED-ITEM: ITEM:{}, SHOULD_REMOVE:{}", item, shouldRemove);
       if (shouldRemove) {
         // Remove the handled item.
         T removed = queue.poll();

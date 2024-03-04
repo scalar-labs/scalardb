@@ -175,16 +175,13 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     // from the slot.
 
     if (slots.isEmpty()) {
-      System.out.printf("GROUP-EMIT-EMPTY: GROUP:%s\n", this);
       markAsDone();
       return;
     }
 
     if (isReady()) {
       try {
-        System.out.printf("GROUP-EMITTING: GROUP:%s\n", this);
         asyncEmit();
-        System.out.printf("GROUP-EMITTED: GROUP:%s\n", this);
       } finally {
         markAsDone();
       }
