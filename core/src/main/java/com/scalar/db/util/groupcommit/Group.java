@@ -18,19 +18,23 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // Whether to reject a new value slot.
   protected final AtomicReference<Status> status = new AtomicReference<>(Status.OPEN);
 
+  // Status of the group.
   enum Status {
-    OPEN(0, false, false, false),
-    CLOSED(1, true, false, false),
-    READY(2, true, true, false),
-    DONE(3, true, true, true);
+    // Accepting new slot reservation since the number of slots isn't fixed yet.
+    OPEN(false, false, false),
+    // Not accepting new slot reservation since the number of slots is already fixed.
+    // Waiting all the slots are set with values.
+    CLOSED(true, false, false),
+    // All the slots are set with values. Ready to commit.
+    READY(true, true, false),
+    // Group commit is done and all the clients have get the results.
+    DONE(true, true, true);
 
-    final int stage;
     final boolean isClosed;
     final boolean isReady;
     final boolean isDone;
 
-    Status(int stage, boolean isClosed, boolean isReady, boolean isDone) {
-      this.stage = stage;
+    Status(boolean isClosed, boolean isReady, boolean isDone) {
       this.isClosed = isClosed;
       this.isReady = isReady;
       this.isDone = isDone;
@@ -80,16 +84,9 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   @Nullable
   private synchronized Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> putValueToSlot(
       CHILD_KEY childKey, V value) {
-    // FIXME
-    /*
     if (isReady()) {
-      logger.warn("This group is already ready, but trying to put a value to the slot. Group:{}, ChildKey:{}", this, childKey);
-      return null;
-    }
-     */
-    if (isDone()) {
-      logger.warn(
-          "This group is already done, but trying to put a value to the slot. Group:{}, ChildKey:{}",
+      logger.info(
+          "This group is already ready, but trying to put a value to the slot. Group:{}, ChildKey:{}",
           this,
           childKey);
       return null;

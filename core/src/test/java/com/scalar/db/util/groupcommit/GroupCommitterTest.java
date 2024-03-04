@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -100,44 +99,6 @@ class GroupCommitterTest {
     }
   }
 
-  static class GroupCommitParams {
-    public final int numOfRetentionValues;
-    public final int sizeFixExpirationInMillis;
-    public final int timeoutExpirationInMillis;
-
-    public GroupCommitParams(
-        int numOfRetentionValues, int sizeFixExpirationInMillis, int timeoutExpirationInMillis) {
-      this.numOfRetentionValues = numOfRetentionValues;
-      this.sizeFixExpirationInMillis = sizeFixExpirationInMillis;
-      this.timeoutExpirationInMillis = timeoutExpirationInMillis;
-    }
-
-    @Override
-    public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("numOfRetentionValues", numOfRetentionValues)
-          .add("sizeFixExpirationInMillis", sizeFixExpirationInMillis)
-          .add("timeoutExpirationInMillis", timeoutExpirationInMillis)
-          .toString();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof GroupCommitParams)) return false;
-      GroupCommitParams that = (GroupCommitParams) o;
-      return numOfRetentionValues == that.numOfRetentionValues
-          && sizeFixExpirationInMillis == that.sizeFixExpirationInMillis
-          && timeoutExpirationInMillis == that.timeoutExpirationInMillis;
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(
-          numOfRetentionValues, sizeFixExpirationInMillis, timeoutExpirationInMillis);
-    }
-  }
-
   // $ ./gradlew core:cleanTest core:test --tests
   // 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitter3Test'
   @Test
@@ -152,8 +113,7 @@ class GroupCommitterTest {
         0,
         0,
         0,
-        // For Group Commit
-        new GroupCommitParams(8, 10, 100));
+        new GroupCommitConfig(8, 10, 100, 20));
 
     System.out.println("FINISHED WARMUP");
     System.gc();
@@ -169,12 +129,11 @@ class GroupCommitterTest {
           0, // AveragePrepareWaitInMillis
           0, // MultiplexerInMillis
           0, // MaxCommitWaitInMillis
-          // For Group Commit
-          new GroupCommitParams(40, 20, 200));
+          new GroupCommitConfig(40, 20, 200, 20));
     } else {
-      List<GroupCommitParams> params = Arrays.asList(new GroupCommitParams(40, 40, 400));
-      Map<GroupCommitParams, Result> results = new HashMap<>();
-      for (GroupCommitParams param : params) {
+      List<GroupCommitConfig> configs = Arrays.asList(new GroupCommitConfig(40, 40, 400, 20));
+      Map<GroupCommitConfig, Result> results = new HashMap<>();
+      for (GroupCommitConfig config : configs) {
         // Benchmark for Production case
         Result result =
             benchmarkInternal(
@@ -185,10 +144,10 @@ class GroupCommitterTest {
                 400, // MultiplexerInMillis
                 100, // MaxCommitWaitInMillis
                 // For Group Commit
-                param);
-        results.put(param, result);
+                config);
+        results.put(config, result);
         System.gc();
-        System.out.println("FINISH: " + param);
+        System.out.println("FINISH: " + config);
         TimeUnit.SECONDS.sleep(10);
       }
       System.out.println("RESULT: " + results);
@@ -201,21 +160,14 @@ class GroupCommitterTest {
       int bmAveragePrepareWaitInMillis,
       int bmMultiplexerInMillis,
       int bmMaxCommitWaitInMillis,
-      GroupCommitParams groupCommitParams)
+      GroupCommitConfig groupCommitConfig)
       throws ExecutionException, InterruptedException, TimeoutException {
     Random rand = new Random();
     AtomicInteger retry = new AtomicInteger();
     Map<String, Boolean> emittedKeys = new ConcurrentHashMap<>();
 
     try (GroupCommitter<String, String, String, String, Value> groupCommitter =
-        new GroupCommitter<>(
-            "test",
-            new GroupCommitConfig(
-                groupCommitParams.sizeFixExpirationInMillis,
-                groupCommitParams.timeoutExpirationInMillis,
-                groupCommitParams.numOfRetentionValues,
-                20),
-            new MyKeyManipulator())) {
+        new GroupCommitter<>("test", groupCommitConfig, new MyKeyManipulator())) {
       groupCommitter.setEmitter(
           ((parentKey, values) -> {
             try {
@@ -236,14 +188,6 @@ class GroupCommitterTest {
           }));
 
       List<KeyAndFuture> futures = new ArrayList<>();
-      /*
-      ScheduledExecutorService monitor =
-          Executors.newSingleThreadScheduledExecutor(
-              new ThreadFactoryBuilder().setDaemon(true).build());
-      monitor.scheduleAtFixedRate(
-          () -> System.err.println("future.size:" + futures.size()), 1, 1, TimeUnit.SECONDS);
-       */
-
       ExecutorService executorService =
           Executors.newFixedThreadPool(
               bmNumOfThreads, new ThreadFactoryBuilder().setDaemon(true).build());
@@ -298,7 +242,6 @@ class GroupCommitterTest {
           if (!emittedKeys.containsKey(expectedKey)) {
             throw new AssertionError(expectedKey + " is not found");
           }
-          // System.err.println("Confirmed the key is contained: Key=" + expectedKey);
         }
         assertEquals(bmNumOfRequests, emittedKeys.size());
 

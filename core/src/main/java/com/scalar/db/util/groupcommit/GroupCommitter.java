@@ -1,6 +1,5 @@
 package com.scalar.db.util.groupcommit;
 
-import com.scalar.db.util.groupcommit.GroupManager.Metrics;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import org.slf4j.Logger;
@@ -108,12 +107,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     groupManager.close();
   }
 
-  /**
-   * Return the metrics of resources
-   *
-   * @return Metrics metrics
-   */
-  public Metrics getMetrics() {
+  Metrics getMetrics() {
     return groupManager.getMetrics();
   }
 }

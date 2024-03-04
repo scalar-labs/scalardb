@@ -3,7 +3,6 @@ package com.scalar.db.util.groupcommit;
 import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.scalar.db.util.groupcommit.GroupManager.Metrics;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
