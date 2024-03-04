@@ -1,6 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
@@ -51,8 +52,8 @@ class GroupCommitterBench {
 
     @Override
     public Keys<String, String, String> keysFromFullKey(String fullKey) {
-      String[] parts = fullKey.split(":");
-      return new Keys<>(parts[0], parts[1], fullKey);
+      List<String> parts = Splitter.on(':').splitToList(fullKey);
+      return new Keys<>(parts.get(0), parts.get(1), fullKey);
     }
 
     @Override
