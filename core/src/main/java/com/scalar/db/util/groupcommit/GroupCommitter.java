@@ -33,6 +33,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       String label,
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+    logger.info("Staring GroupCommitter. Label:{}, Config:{}", label, config);
     this.keyManipulator = keyManipulator;
     this.groupManager = new GroupManager<>(label, config, keyManipulator);
   }
