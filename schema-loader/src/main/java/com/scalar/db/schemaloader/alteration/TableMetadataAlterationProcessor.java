@@ -1,6 +1,7 @@
 package com.scalar.db.schemaloader.alteration;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,35 +48,30 @@ public class TableMetadataAlterationProcessor {
       String namespace, String table, TableMetadata oldMetadata, TableMetadata newMetadata) {
     if (!newMetadata.getPartitionKeyNames().equals(oldMetadata.getPartitionKeyNames())) {
       throw new UnsupportedOperationException(
-          String.format(
-              "The partition keys of the table %s.%s were modified, altering them is not supported",
+          CoreError.SCHEMA_LOADER_ALTERING_PARTITION_KEYS_NOT_SUPPORTED.buildMessage(
               namespace, table));
     }
     if (!newMetadata.getClusteringKeyNames().equals(oldMetadata.getClusteringKeyNames())) {
       throw new UnsupportedOperationException(
-          String.format(
-              "The clustering keys of the table %s.%s were modified, altering them is not supported",
+          CoreError.SCHEMA_LOADER_ALTERING_CLUSTERING_KEYS_NOT_SUPPORTED.buildMessage(
               namespace, table));
     }
     if (!newMetadata.getClusteringOrders().equals(oldMetadata.getClusteringOrders())) {
       throw new UnsupportedOperationException(
-          String.format(
-              "The clustering key sort ordering of the table %s.%s were modified, altering them is not supported",
+          CoreError.SCHEMA_LOADER_ALTERING_CLUSTERING_ORDER_NOT_SUPPORTED.buildMessage(
               namespace, table));
     }
     for (String oldColumn : oldMetadata.getColumnNames()) {
       if (!newMetadata.getColumnNames().contains(oldColumn)) {
         throw new UnsupportedOperationException(
-            String.format(
-                "The column %s of the table %s.%s has been deleted. Column deletion is not supported when altering a table",
+            CoreError.SCHEMA_LOADER_DELETING_COLUMN_NOT_SUPPORTED.buildMessage(
                 oldColumn, namespace, table));
       }
     }
     for (String column : oldMetadata.getColumnNames()) {
       if (!oldMetadata.getColumnDataType(column).equals(newMetadata.getColumnDataType(column))) {
         throw new UnsupportedOperationException(
-            String.format(
-                "The data type of the column %s of the table %s.%s was modified, altering it is not supported",
+            CoreError.SCHEMA_LOADER_ALTERING_COLUMN_DATA_TYPE_NOT_SUPPORTED.buildMessage(
                 column, namespace, table));
       }
     }
