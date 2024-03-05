@@ -56,14 +56,14 @@ public class ImportTableSchemaTest {
   }
 
   @Test
-  public void constructor_WrongFormatTableFullNameGiven_ShouldThrowSchemaLoaderException() {
+  public void constructor_WrongFormatTableFullNameGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     String tableFullName = "namespace_and_table_without_dot_separator";
 
     // Act Assert
     Assertions.assertThatThrownBy(
             () -> new ImportTableSchema(tableFullName, tableDefinition, Collections.emptyMap()))
-        .isInstanceOf(SchemaLoaderException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

@@ -3,6 +3,7 @@ package com.scalar.db.schemaloader;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonObject;
+import com.scalar.db.common.error.CoreError;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.Immutable;
@@ -15,13 +16,12 @@ public class ImportTableSchema {
   private final ImmutableMap<String, String> options;
 
   public ImportTableSchema(
-      String tableFullName, JsonObject tableDefinition, Map<String, String> options)
-      throws SchemaLoaderException {
+      String tableFullName, JsonObject tableDefinition, Map<String, String> options) {
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length != 2) {
-      throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table full name must contains namespace and table: "
-              + tableFullName);
+      throw new IllegalArgumentException(
+          CoreError.SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE
+              .buildMessage(tableFullName));
     }
     namespace = fullName[0];
     tableName = fullName[1];
