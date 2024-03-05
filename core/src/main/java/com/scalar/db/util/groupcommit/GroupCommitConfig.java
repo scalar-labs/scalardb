@@ -1,5 +1,6 @@
 package com.scalar.db.util.groupcommit;
 
+import com.google.common.base.MoreObjects;
 import javax.annotation.concurrent.Immutable;
 
 /** A configuration for group commit */
@@ -49,5 +50,15 @@ public class GroupCommitConfig {
 
   public int checkIntervalInMillis() {
     return checkIntervalInMillis;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("retentionSlotsCount", retentionSlotsCount)
+        .add("groupCloseExpirationInMillis", groupCloseExpirationInMillis)
+        .add("delayedSlotExpirationInMillis", delayedSlotExpirationInMillis)
+        .add("checkIntervalInMillis", checkIntervalInMillis)
+        .toString();
   }
 }
