@@ -199,7 +199,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new CrudHandler(
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
     ConsensusCommit consensus =
-        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker);
+        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
     return decorate(consensus);
