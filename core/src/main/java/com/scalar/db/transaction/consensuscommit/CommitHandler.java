@@ -165,7 +165,7 @@ public class CommitHandler {
       }
       parallelExecutor.commitRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("Committing records failed. transaction ID: {}", snapshot.getId(), e);
+      logger.warn("Committing records failed. Transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }
@@ -213,7 +213,7 @@ public class CommitHandler {
       }
       parallelExecutor.rollbackRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("Rolling back records failed. transaction ID: {}", snapshot.getId(), e);
+      logger.warn("Rolling back records failed. Transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }
