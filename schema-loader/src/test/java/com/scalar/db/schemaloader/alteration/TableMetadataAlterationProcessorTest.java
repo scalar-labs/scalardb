@@ -91,7 +91,7 @@ public class TableMetadataAlterationProcessorTest {
     assertThatThrownBy(
             () -> processor.computeAlteration(NAMESPACE, TABLE, oldMetadata, newMetadata))
         .isInstanceOf(UnsupportedOperationException.class)
-        .hasMessageContaining("clustering key sort");
+        .hasMessageContaining("clustering ordering");
   }
 
   @Test

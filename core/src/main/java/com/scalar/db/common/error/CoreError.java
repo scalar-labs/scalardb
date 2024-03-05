@@ -89,7 +89,7 @@ public enum CoreError implements ScalarDbError {
       "The condition is not properly specified. Operation: %s",
       "",
       ""),
-  TABLE_NOT_FOUND(Category.USER_ERROR, "0016", "Table does not exist. Table: %s", "", ""),
+  TABLE_NOT_FOUND(Category.USER_ERROR, "0016", "The table does not exist. Table: %s", "", ""),
   OPERATION_CHECK_ERROR_INVALID_COLUMN(
       Category.USER_ERROR,
       "0017",
@@ -492,6 +492,86 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_BATCH_SIZE_EXCEEDED(
       Category.USER_ERROR, "0108", "DynamoDB cannot batch more than 100 mutations at once", "", ""),
+  SCHEMA_LOADER_ALTERING_PARTITION_KEYS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0109",
+      "The partition keys of the table %s.%s were modified, but altering partition keys is not supported",
+      "",
+      ""),
+  SCHEMA_LOADER_ALTERING_CLUSTERING_KEYS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0110",
+      "The clustering keys of the table %s.%s were modified, but altering clustering keys is not supported",
+      "",
+      ""),
+  SCHEMA_LOADER_ALTERING_CLUSTERING_ORDER_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0111",
+      "The clustering ordering of the table %s.%s were modified, but altering clustering ordering is not supported",
+      "",
+      ""),
+  SCHEMA_LOADER_DELETING_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0112",
+      "The column %s of the table %s.%s has been deleted. Column deletion is not supported when altering a table",
+      "",
+      ""),
+  SCHEMA_LOADER_ALTERING_COLUMN_DATA_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0113",
+      "The data type of the column %s of the table %s.%s was modified, but altering data types is not supported",
+      "",
+      ""),
+  SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL(
+      Category.USER_ERROR,
+      "0114",
+      "Specifying the '--schema-file' option is required when using the '--repair-all' option",
+      "",
+      ""),
+  SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_ALTER(
+      Category.USER_ERROR,
+      "0115",
+      "Specifying the '--schema-file' option is required when using the '--alter' option",
+      "",
+      ""),
+  SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_IMPORT(
+      Category.USER_ERROR,
+      "0116",
+      "Specifying the '--schema-file' option is required when using the '--import' option",
+      "",
+      ""),
+  SCHEMA_LOADER_SPECIFYING_COORDINATOR_WITH_IMPORT_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0117",
+      "Specifying the '--coordinator' option with the '--import' option is not allowed."
+          + " Create Coordinator tables separately",
+      "",
+      ""),
+  SCHEMA_LOADER_READING_CONFIG_FILE_FAILED(
+      Category.USER_ERROR, "0118", "Reading the configuration file failed. File: %s", "", ""),
+  SCHEMA_LOADER_READING_SCHEMA_FILE_FAILED(
+      Category.USER_ERROR, "0119", "Reading the schema file failed. File: %s", "", ""),
+  SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED(
+      Category.USER_ERROR, "0120", "Parsing the schema JSON failed. Details: %s", "", ""),
+  SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE(
+      Category.USER_ERROR,
+      "0121",
+      "The table name must contain the namespace and the table. Table: %s",
+      "",
+      ""),
+  SCHEMA_LOADER_PARSE_ERROR_PARTITION_KEY_MUST_BE_SPECIFIED(
+      Category.USER_ERROR, "0122", "The partition key must be specified. Table: %s", "", ""),
+  SCHEMA_LOADER_PARSE_ERROR_INVALID_CLUSTERING_KEY_FORMAT(
+      Category.USER_ERROR,
+      "0123",
+      "Invalid clustering-key format. The clustering key must be in the format of 'column_name' or 'column_name ASC/DESC'."
+          + " Table: %s; Clustering key: %s",
+      "",
+      ""),
+  SCHEMA_LOADER_PARSE_ERROR_COLUMNS_NOT_SPECIFIED(
+      Category.USER_ERROR, "0124", "Columns must be specified. Table: %s", "", ""),
+  SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE(
+      Category.USER_ERROR, "0125", "Invalid column type. Table: %s; Column: %s; Type: %s", "", ""),
 
   //
   // Errors for the concurrency error category

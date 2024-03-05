@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -53,18 +54,19 @@ public class TableSchema {
     this.traveledKeys = traveledKeys;
   }
 
-  public TableSchema(String tableFullName, JsonObject tableDefinition, Map<String, String> options)
-      throws SchemaLoaderException {
+  public TableSchema(
+      String tableFullName, JsonObject tableDefinition, Map<String, String> options) {
     traveledKeys = new HashSet<>();
 
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length < 2) {
-      throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. The table full name must contains table name and namespace");
+      throw new IllegalArgumentException(
+          CoreError.SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE
+              .buildMessage(tableFullName));
     }
     namespace = fullName[0];
     tableName = fullName[1];
-    tableMetadata = buildTableMetadata(tableDefinition);
+    tableMetadata = buildTableMetadata(tableFullName, tableDefinition);
     this.options = buildOptions(tableDefinition, options);
   }
 
@@ -72,14 +74,14 @@ public class TableSchema {
   @Override
   protected final void finalize() {}
 
-  protected TableMetadata buildTableMetadata(JsonObject tableDefinition)
-      throws SchemaLoaderException {
+  protected TableMetadata buildTableMetadata(String tableFullName, JsonObject tableDefinition) {
     TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
 
     // Add partition keys
     if (!tableDefinition.keySet().contains(PARTITION_KEY)) {
-      throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table must contains partition key");
+      throw new IllegalArgumentException(
+          CoreError.SCHEMA_LOADER_PARSE_ERROR_PARTITION_KEY_MUST_BE_SPECIFIED.buildMessage(
+              tableFullName));
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
     traveledKeys.add(PARTITION_KEY);
@@ -105,8 +107,9 @@ public class TableSchema {
           order = clusteringKeyFull[1];
           tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(order.toUpperCase()));
         } else {
-          throw new SchemaLoaderException(
-              "Parsing the schema JSON failed. Invalid clustering keys");
+          throw new IllegalArgumentException(
+              CoreError.SCHEMA_LOADER_PARSE_ERROR_INVALID_CLUSTERING_KEY_FORMAT.buildMessage(
+                  tableFullName, clusteringKeyRaw.getAsString()));
         }
       }
     }
@@ -118,8 +121,8 @@ public class TableSchema {
 
     // Add columns
     if (!tableDefinition.keySet().contains(COLUMNS)) {
-      throw new SchemaLoaderException(
-          "Parsing the schema JSON failed. Table must contains columns");
+      throw new IllegalArgumentException(
+          CoreError.SCHEMA_LOADER_PARSE_ERROR_COLUMNS_NOT_SPECIFIED.buildMessage(tableFullName));
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
@@ -127,8 +130,9 @@ public class TableSchema {
       String columnName = column.getKey();
       DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
       if (columnDataType == null) {
-        throw new SchemaLoaderException(
-            "Parsing the schema JSON failed. Invalid column type for column " + columnName);
+        throw new IllegalArgumentException(
+            CoreError.SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE.buildMessage(
+                tableFullName, columnName, column.getValue().getAsString()));
       }
       tableBuilder.addColumn(columnName, columnDataType);
     }
