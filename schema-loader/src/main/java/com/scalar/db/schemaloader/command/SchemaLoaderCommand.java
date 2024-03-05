@@ -1,6 +1,7 @@
 package com.scalar.db.schemaloader.command;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.schemaloader.SchemaLoader;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
@@ -135,7 +136,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private void repairAll() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          "Specifying the '--schema-file' option is required when using the '--repair-all' option");
+          CoreError.SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL
+              .buildMessage());
     }
     Map<String, String> options = prepareAllOptions();
     SchemaLoader.repairAll(configPath, schemaFile, options, coordinator);
@@ -144,7 +146,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private void alterTables() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          "Specifying the '--schema-file' option is required when using the '--alter' option");
+          CoreError.SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_ALTER.buildMessage());
     }
     Map<String, String> options = prepareOptions(DynamoAdmin.NO_SCALING);
     SchemaLoader.alterTables(configPath, schemaFile, options);
@@ -153,13 +155,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private void importTables() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          "Specifying the '--schema-file' option is required when using the '--import' option");
+          CoreError.SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_IMPORT.buildMessage());
     }
 
     if (coordinator) {
       throw new IllegalArgumentException(
-          "Specifying the '--coordinator' option with the '--import' option is not allowed."
-              + " Create coordinator tables separately");
+          CoreError.SCHEMA_LOADER_SPECIFYING_COORDINATOR_WITH_IMPORT_NOT_ALLOWED.buildMessage());
     }
     Map<String, String> options = prepareAllOptions();
     SchemaLoader.importTables(configPath, schemaFile, options);

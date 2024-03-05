@@ -2,6 +2,8 @@ package com.scalar.db.schemaloader;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.gson.JsonParseException;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.schemaloader.command.CassandraCommand;
 import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
@@ -199,7 +201,7 @@ public class SchemaLoader {
    * Delete tables defined in the schema file.
    *
    * @param configProperties ScalarDB config properties.
-   * @param schemaFilePath path to schema json file.
+   * @param schemaFilePath path to schema file.
    * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
    */
@@ -215,7 +217,7 @@ public class SchemaLoader {
    * Delete tables defined in the schema file.
    *
    * @param configFilePath path to ScalarDB config file.
-   * @param schemaFilePath path to schema json file.
+   * @param schemaFilePath path to schema file.
    * @param deleteCoordinatorTables delete coordinator tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
    */
@@ -635,11 +637,14 @@ public class SchemaLoader {
   static SchemaOperator getSchemaOperator(Either<Path, Properties> config)
       throws SchemaLoaderException {
     if (config.isLeft()) {
+      assert config.getLeft() != null;
       try {
-        assert config.getLeft() != null;
         return new SchemaOperator(config.getLeft());
       } catch (IOException e) {
-        throw new SchemaLoaderException("Initializing schema operator failed", e);
+        throw new SchemaLoaderException(
+            CoreError.SCHEMA_LOADER_READING_CONFIG_FILE_FAILED.buildMessage(
+                config.getLeft().toAbsolutePath()),
+            e);
       }
     } else {
       assert config.getRight() != null;
@@ -651,8 +656,13 @@ public class SchemaLoader {
       Either<Path, String> schema, Map<String, String> options) throws SchemaLoaderException {
     if ((schema.isLeft() && schema.getLeft() != null)
         || (schema.isRight() && schema.getRight() != null)) {
-      SchemaParser schemaParser = getSchemaParser(schema, options);
-      return schemaParser.parse();
+      try {
+        SchemaParser schemaParser = getSchemaParser(schema, options);
+        return schemaParser.parse();
+      } catch (IllegalArgumentException | IllegalStateException | JsonParseException e) {
+        throw new SchemaLoaderException(
+            CoreError.SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED.buildMessage(e.getMessage()), e);
+      }
     }
     return Collections.emptyList();
   }
@@ -663,7 +673,15 @@ public class SchemaLoader {
     assert (schema.isLeft() && schema.getLeft() != null)
         || (schema.isRight() && schema.getRight() != null);
     if (schema.isLeft()) {
-      return new SchemaParser(schema.getLeft(), options);
+      assert schema.getLeft() != null;
+      try {
+        return new SchemaParser(schema.getLeft(), options);
+      } catch (IOException e) {
+        throw new SchemaLoaderException(
+            CoreError.SCHEMA_LOADER_READING_SCHEMA_FILE_FAILED.buildMessage(
+                schema.getLeft().toAbsolutePath()),
+            e);
+      }
     } else {
       return new SchemaParser(schema.getRight(), options);
     }
@@ -673,8 +691,13 @@ public class SchemaLoader {
       Either<Path, String> schema, Map<String, String> options) throws SchemaLoaderException {
     if ((schema.isLeft() && schema.getLeft() != null)
         || (schema.isRight() && schema.getRight() != null)) {
-      ImportSchemaParser schemaParser = getImportSchemaParser(schema, options);
-      return schemaParser.parse();
+      try {
+        ImportSchemaParser schemaParser = getImportSchemaParser(schema, options);
+        return schemaParser.parse();
+      } catch (IllegalArgumentException | IllegalStateException | JsonParseException e) {
+        throw new SchemaLoaderException(
+            CoreError.SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED.buildMessage(e.getMessage()), e);
+      }
     }
     return Collections.emptyList();
   }
@@ -685,7 +708,15 @@ public class SchemaLoader {
     assert (schema.isLeft() && schema.getLeft() != null)
         || (schema.isRight() && schema.getRight() != null);
     if (schema.isLeft()) {
-      return new ImportSchemaParser(schema.getLeft(), options);
+      assert schema.getLeft() != null;
+      try {
+        return new ImportSchemaParser(schema.getLeft(), options);
+      } catch (IOException e) {
+        throw new SchemaLoaderException(
+            CoreError.SCHEMA_LOADER_READING_SCHEMA_FILE_FAILED.buildMessage(
+                schema.getLeft().toAbsolutePath()),
+            e);
+      }
     } else {
       return new ImportSchemaParser(schema.getRight(), options);
     }
