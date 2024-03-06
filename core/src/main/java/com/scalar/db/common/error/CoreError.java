@@ -155,7 +155,7 @@ public enum CoreError implements ScalarDbError {
       "The LIKE pattern must not end with an escape character",
       "",
       ""),
-  COLUMN_NOT_FOUND(Category.USER_ERROR, "0030", "Column %s does not exist", "", ""),
+  COLUMN_NOT_FOUND(Category.USER_ERROR, "0030", "The column %s does not exist", "", ""),
   GET_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_GETTING_RECORDS_OF_DATABASE_WITHOUT_USING_INDEX(
       Category.USER_ERROR,
       "0031",
@@ -458,7 +458,7 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_COLUMN_RESERVED_AS_TRANSACTION_METADATA(
-      Category.USER_ERROR, "0101", "Column '%s' is reserved as transaction metadata", "", ""),
+      Category.USER_ERROR, "0101", "The column '%s' is reserved as transaction metadata", "", ""),
   CONSENSUS_COMMIT_BEFORE_PREFIXED_COLUMN_FOR_NON_PRIMARY_KEY_RESERVED_AS_TRANSACTION_METADATA(
       Category.USER_ERROR,
       "0102",
