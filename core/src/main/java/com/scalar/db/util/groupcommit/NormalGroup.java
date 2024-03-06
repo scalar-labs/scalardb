@@ -116,8 +116,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
               }
             }
           } catch (Exception e) {
-            GroupCommitFailureException exception =
-                new GroupCommitFailureException("Group commit failure", e);
+            GroupCommitException exception = new GroupCommitException("Group commit failed", e);
 
             // Let other threads know the exception.
             synchronized (this) {

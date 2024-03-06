@@ -18,7 +18,6 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -131,7 +130,7 @@ public class CommitHandler {
       groupCommitter.ready(id, snapshot);
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
-    } catch (GroupCommitException e) {
+    } catch (Exception e) {
       cancelGroupCommitIfNeeded(id);
       checkStateAndAbortIfNeeded(snapshot, e);
     }

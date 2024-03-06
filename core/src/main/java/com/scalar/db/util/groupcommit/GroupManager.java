@@ -103,7 +103,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
 
   // Gets the corresponding group associated with the given key.
   Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> getGroup(
-      Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys) throws GroupCommitTargetNotFoundException {
+      Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys) throws GroupCommitException {
     long stamp = lock.writeLock();
     try {
       DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
@@ -121,7 +121,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       lock.unlockWrite(stamp);
     }
 
-    throw new GroupCommitTargetNotFoundException(
+    throw new GroupCommitException(
         "The group for the reserved value slot doesn't exist. Keys:" + keys);
   }
 
