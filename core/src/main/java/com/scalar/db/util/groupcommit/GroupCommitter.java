@@ -71,7 +71,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    * contains the slot is emitted.
    *
    * @param fullKey A full key associated with the slot already reserved with {@link
-   *     GroupCommitter#reserve(CHILD_KEY childKey)}.
+   *     GroupCommitter#reserve}.
    * @param value A value to be set to the slot.
    * @throws GroupCommitException when group commit fails
    */

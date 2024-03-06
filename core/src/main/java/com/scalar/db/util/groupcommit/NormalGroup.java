@@ -17,19 +17,19 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);
 
   private final PARENT_KEY parentKey;
-  private final long moveDelayedSlotExpirationInMillis;
+  private final long delayedSlotMoveTimeoutMillis;
   private final Instant groupClosedAt;
   private final AtomicReference<Instant> delayedSlotMovedAt;
 
   NormalGroup(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      long groupCloseExpirationInMillis,
-      long timeoutExpirationInMillis,
+      long groupCloseTimeoutMillis,
+      long delayedSlotMoveTimeoutMillis,
       int capacity) {
     super(emitter, keyManipulator, capacity);
-    this.moveDelayedSlotExpirationInMillis = timeoutExpirationInMillis;
-    this.groupClosedAt = Instant.now().plusMillis(groupCloseExpirationInMillis);
+    this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
+    this.groupClosedAt = Instant.now().plusMillis(groupCloseTimeoutMillis);
     this.delayedSlotMovedAt = new AtomicReference<>();
     updateDelayedSlotMovedAt();
     this.parentKey = keyManipulator.generateParentKey();
@@ -137,7 +137,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   void updateDelayedSlotMovedAt() {
-    delayedSlotMovedAt.set(Instant.now().plusMillis(moveDelayedSlotExpirationInMillis));
+    delayedSlotMovedAt.set(Instant.now().plusMillis(delayedSlotMoveTimeoutMillis));
   }
 
   Instant groupClosedAt() {

@@ -349,9 +349,9 @@ class GroupCommitterBench {
         metrics = groupCommitter.getMetrics();
         if (metrics.sizeOfNormalGroupMap == 0
             && metrics.sizeOfDelayedGroupMap == 0
-            && metrics.sizeOfQueueForClosingNormalGroup == 0
-            && metrics.sizeOfQueueForMovingDelayedSlot == 0
-            && metrics.sizeOfQueueForCleaningUpGroup == 0) {
+            && metrics.queueLengthOfGroupCloseWorker == 0
+            && metrics.queueLengthOfDelayedSlotMoveWorker == 0
+            && metrics.queueLengthOfGroupCleanupWorker == 0) {
           noGarbage = true;
           break;
         }

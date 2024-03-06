@@ -3,13 +3,13 @@ package com.scalar.db.util.groupcommit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// A queue to contain ready Group instances which removes completed groups as cleaning up.
-class QueueForCleaningUpGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-    extends Queue<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
-  private static final Logger logger = LoggerFactory.getLogger(QueueForCleaningUpGroup.class);
+// A worker manages Group instances to removes completed ones.
+class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+    extends BackgroundWorker<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
+  private static final Logger logger = LoggerFactory.getLogger(GroupCleanupWorker.class);
   private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager;
 
-  QueueForCleaningUpGroup(
+  GroupCleanupWorker(
       String label,
       long queueCheckIntervalInMillis,
       GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager) {

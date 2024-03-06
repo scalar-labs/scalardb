@@ -1,24 +1,26 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
+import jdk.nashorn.internal.ir.annotations.Immutable;
 
 // TODO: Remove after introducing a proper metrics.
+@Immutable
 class Metrics {
-  public final int sizeOfQueueForClosingNormalGroup;
-  public final int sizeOfQueueForMovingDelayedSlot;
-  public final int sizeOfQueueForCleaningUpGroup;
+  public final int queueLengthOfGroupCloseWorker;
+  public final int queueLengthOfDelayedSlotMoveWorker;
+  public final int queueLengthOfGroupCleanupWorker;
   public final int sizeOfNormalGroupMap;
   public final int sizeOfDelayedGroupMap;
 
   Metrics(
-      int sizeOfQueueForClosingNormalGroup,
-      int sizeOfQueueForMovingDelayedSlot,
-      int sizeOfQueueForCleaningUpGroup,
+      int queueLengthOfGroupCloseWorker,
+      int queueLengthOfDelayedSlotMoveWorker,
+      int queueLengthOfGroupCleanupWorker,
       int sizeOfNormalGroupMap,
       int sizeOfDelayedGroupMap) {
-    this.sizeOfQueueForClosingNormalGroup = sizeOfQueueForClosingNormalGroup;
-    this.sizeOfQueueForMovingDelayedSlot = sizeOfQueueForMovingDelayedSlot;
-    this.sizeOfQueueForCleaningUpGroup = sizeOfQueueForCleaningUpGroup;
+    this.queueLengthOfGroupCloseWorker = queueLengthOfGroupCloseWorker;
+    this.queueLengthOfDelayedSlotMoveWorker = queueLengthOfDelayedSlotMoveWorker;
+    this.queueLengthOfGroupCleanupWorker = queueLengthOfGroupCleanupWorker;
     this.sizeOfNormalGroupMap = sizeOfNormalGroupMap;
     this.sizeOfDelayedGroupMap = sizeOfDelayedGroupMap;
   }
@@ -26,9 +28,9 @@ class Metrics {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("sizeOfQueueForClosingNormalGroup", sizeOfQueueForClosingNormalGroup)
-        .add("sizeOfQueueForMovingDelayedSlot", sizeOfQueueForMovingDelayedSlot)
-        .add("sizeOfQueueForCleaningUpGroup", sizeOfQueueForCleaningUpGroup)
+        .add("queueLengthOfGroupCloseWorker", queueLengthOfGroupCloseWorker)
+        .add("queueLengthOfDelayedSlotMoveWorker", queueLengthOfDelayedSlotMoveWorker)
+        .add("queueLengthOfGroupCleanupWorker", queueLengthOfGroupCleanupWorker)
         .add("sizeOfNormalGroupMap", sizeOfNormalGroupMap)
         .add("sizeOfDelayedGroupMap", sizeOfDelayedGroupMap)
         .toString();

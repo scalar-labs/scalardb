@@ -11,11 +11,11 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-abstract class Queue<T> implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(Queue.class);
+abstract class BackgroundWorker<T> implements Closeable {
+  private static final Logger logger = LoggerFactory.getLogger(BackgroundWorker.class);
   private final BlockingQueue<T> queue = new LinkedBlockingQueue<>();
   private final ExecutorService executorService;
-  private final long queueCheckIntervalInMillis;
+  private final long timeoutCheckIntervalMillis;
   private final RetryMode retryMode;
 
   enum RetryMode {
@@ -23,11 +23,11 @@ abstract class Queue<T> implements Closeable {
     MOVE_TO_TAIL
   }
 
-  Queue(String threadName, long queueCheckIntervalInMillis, RetryMode retryMode) {
+  BackgroundWorker(String threadName, long timeoutCheckIntervalMillis, RetryMode retryMode) {
     this.executorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName + "-%d").build());
-    this.queueCheckIntervalInMillis = queueCheckIntervalInMillis;
+    this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
     this.retryMode = retryMode;
     startExecutorService();
   }
@@ -94,7 +94,7 @@ abstract class Queue<T> implements Closeable {
     }
 
     try {
-      TimeUnit.MILLISECONDS.sleep(queueCheckIntervalInMillis);
+      TimeUnit.MILLISECONDS.sleep(timeoutCheckIntervalMillis);
       return true;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -105,6 +105,6 @@ abstract class Queue<T> implements Closeable {
 
   @Override
   public void close() {
-    MoreExecutors.shutdownAndAwaitTermination(executorService, 5, TimeUnit.SECONDS);
+    MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);
   }
 }

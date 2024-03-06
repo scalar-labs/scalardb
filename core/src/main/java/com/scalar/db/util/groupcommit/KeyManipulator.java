@@ -1,6 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A key manipulator which contains logics how to treat keys.
@@ -12,6 +13,7 @@ import com.google.common.base.MoreObjects;
  *     singly-committed.
  * @param <EMIT_KEY> A key type that Emitter can interpret.
  */
+@Immutable
 public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> {
   class Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> {
     public final PARENT_KEY parentKey;

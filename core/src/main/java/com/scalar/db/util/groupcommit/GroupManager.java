@@ -22,13 +22,11 @@ import org.slf4j.LoggerFactory;
 class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
 
-  // Queues
-  private final QueueForClosingNormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-      queueForClosingNormalGroup;
-  private final QueueForMovingDelayedSlot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-      queueForMovingDelayedSlot;
-  private final QueueForCleaningUpGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-      queueForCleaningUpGroup;
+  // Background workers
+  private final GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker;
+  private final DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+      delayedSlotMoveWorker;
+  private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
 
   // Executors
   private final ExecutorService monitorExecutorService;
@@ -46,29 +44,26 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
   @LazyInit private Emittable<EMIT_KEY, V> emitter;
 
-  private final long normalGroupCloseExpirationInMillis;
-  private final long delayedSlotMoveExpirationInMillis;
-  private final int numberOfRetentionValues;
+  private final long groupCloseTimeoutMillis;
+  private final long delayedSlotMoveTimeoutMillis;
+  private final int slotCapacity;
 
   public GroupManager(
       String label,
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     this.keyManipulator = keyManipulator;
-    this.normalGroupCloseExpirationInMillis = config.groupCloseExpirationInMillis();
-    this.delayedSlotMoveExpirationInMillis = config.delayedSlotExpirationInMillis();
-    this.numberOfRetentionValues = config.retentionSlotsCount();
-    this.queueForCleaningUpGroup =
-        new QueueForCleaningUpGroup<>(label, config.checkIntervalInMillis(), this);
-    this.queueForMovingDelayedSlot =
-        new QueueForMovingDelayedSlot<>(
-            label, config.checkIntervalInMillis(), this, queueForCleaningUpGroup);
-    this.queueForClosingNormalGroup =
-        new QueueForClosingNormalGroup<>(
-            label,
-            config.checkIntervalInMillis(),
-            queueForMovingDelayedSlot,
-            queueForCleaningUpGroup);
+    this.groupCloseTimeoutMillis = config.groupCloseTimeoutMillis();
+    this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
+    this.slotCapacity = config.slotCapacity();
+    this.groupCleanupWorker =
+        new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), this);
+    this.delayedSlotMoveWorker =
+        new DelayedSlotMoveWorker<>(
+            label, config.timeoutCheckIntervalMillis(), this, groupCleanupWorker);
+    this.groupCloseWorker =
+        new GroupCloseWorker<>(
+            label, config.timeoutCheckIntervalMillis(), delayedSlotMoveWorker, groupCleanupWorker);
 
     // TODO: This should be replaced by other metrics mechanism.
     this.monitorExecutorService =
@@ -93,10 +88,10 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
             new NormalGroup<>(
                 emitter,
                 keyManipulator,
-                normalGroupCloseExpirationInMillis,
-                delayedSlotMoveExpirationInMillis,
-                numberOfRetentionValues);
-        queueForClosingNormalGroup.add(currentGroup);
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                slotCapacity);
+        groupCloseWorker.add(currentGroup);
         normalGroupMap.put(currentGroup.parentKey(), currentGroup);
       }
     } finally {
@@ -196,8 +191,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       if (notReadySlots == null) {
         normalGroup.updateDelayedSlotMovedAt();
         logger.debug(
-            "This group isn't needed to remove slots. Updated the expiration timing. group:{}",
-            normalGroup);
+            "This group isn't needed to remove slots. Updated the timeout. group:{}", normalGroup);
         return false;
       }
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> notReadySlot : notReadySlots) {
@@ -213,7 +207,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
         if (old != null) {
           logger.warn("The slow group value map already has the same key group. {}", old);
         }
-        queueForCleaningUpGroup.add(delayedGroup);
+        groupCleanupWorker.add(delayedGroup);
 
         // Set the slot stored in the NormalGroup into the new DelayedGroup.
         // Internally delegate the emit-task to the client thread.
@@ -228,9 +222,9 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
 
   Metrics getMetrics() {
     return new Metrics(
-        queueForClosingNormalGroup.size(),
-        queueForMovingDelayedSlot.size(),
-        queueForCleaningUpGroup.size(),
+        groupCloseWorker.size(),
+        delayedSlotMoveWorker.size(),
+        groupCleanupWorker.size(),
         normalGroupMap.size(),
         delayedGroupMap.size());
   }
@@ -269,8 +263,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     if (monitorExecutorService != null) {
       MoreExecutors.shutdownAndAwaitTermination(monitorExecutorService, 5, TimeUnit.SECONDS);
     }
-    queueForMovingDelayedSlot.close();
-    queueForClosingNormalGroup.close();
-    queueForCleaningUpGroup.close();
+    delayedSlotMoveWorker.close();
+    groupCloseWorker.close();
+    groupCleanupWorker.close();
   }
 }

@@ -6,59 +6,58 @@ import javax.annotation.concurrent.Immutable;
 /** A configuration for group commit */
 @Immutable
 public class GroupCommitConfig {
-  private final int retentionSlotsCount;
-  private final int groupCloseExpirationInMillis;
-  private final int delayedSlotExpirationInMillis;
-  private final int checkIntervalInMillis;
+  private final int slotCapacity;
+  private final int groupCloseTimeoutMillis;
+  private final int delayedSlotMoveTimeoutMillis;
+  private final int timeoutCheckIntervalMillis;
 
   /**
    * A configuration of group commit.
    *
-   * @param retentionSlotsCount How many slots can be stored in a {@link NormalGroup}.
-   * @param groupCloseExpirationInMillis An expiration timeout to close (or size-fix) a {@link
-   *     NormalGroup}.
-   * @param delayedSlotExpirationInMillis An expiration timeout to move a delayed slot from {@link
-   *     NormalGroup} to {@link DelayedGroup}.
-   * @param checkIntervalInMillis An interval to check the queues.
+   * @param slotCapacity How many slots can be stored in a {@link NormalGroup}.
+   * @param groupCloseTimeoutMillis A timeout to close (or size-fix) a {@link NormalGroup}.
+   * @param delayedSlotMoveTimeoutMillis A timeout to move a delayed slot from {@link NormalGroup}
+   *     to {@link DelayedGroup}.
+   * @param timeoutCheckIntervalMillis An interval to check the queues.
    */
   public GroupCommitConfig(
-      int retentionSlotsCount,
-      int groupCloseExpirationInMillis,
-      int delayedSlotExpirationInMillis,
-      int checkIntervalInMillis) {
-    this.retentionSlotsCount = retentionSlotsCount;
-    this.groupCloseExpirationInMillis = groupCloseExpirationInMillis;
-    this.delayedSlotExpirationInMillis = delayedSlotExpirationInMillis;
-    this.checkIntervalInMillis = checkIntervalInMillis;
+      int slotCapacity,
+      int groupCloseTimeoutMillis,
+      int delayedSlotMoveTimeoutMillis,
+      int timeoutCheckIntervalMillis) {
+    this.slotCapacity = slotCapacity;
+    this.groupCloseTimeoutMillis = groupCloseTimeoutMillis;
+    this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
+    this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
   @Override
   protected final void finalize() {}
 
-  public int retentionSlotsCount() {
-    return retentionSlotsCount;
+  public int slotCapacity() {
+    return slotCapacity;
   }
 
-  public int groupCloseExpirationInMillis() {
-    return groupCloseExpirationInMillis;
+  public int groupCloseTimeoutMillis() {
+    return groupCloseTimeoutMillis;
   }
 
-  public int delayedSlotExpirationInMillis() {
-    return delayedSlotExpirationInMillis;
+  public int delayedSlotMoveTimeoutMillis() {
+    return delayedSlotMoveTimeoutMillis;
   }
 
-  public int checkIntervalInMillis() {
-    return checkIntervalInMillis;
+  public int timeoutCheckIntervalMillis() {
+    return timeoutCheckIntervalMillis;
   }
 
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("retentionSlotsCount", retentionSlotsCount)
-        .add("groupCloseExpirationInMillis", groupCloseExpirationInMillis)
-        .add("delayedSlotExpirationInMillis", delayedSlotExpirationInMillis)
-        .add("checkIntervalInMillis", checkIntervalInMillis)
+        .add("slotCapacity", slotCapacity)
+        .add("groupCloseTimeoutMillis", groupCloseTimeoutMillis)
+        .add("delayedSlotMoveTimeoutMillis", delayedSlotMoveTimeoutMillis)
+        .add("timeoutCheckIntervalMillis", timeoutCheckIntervalMillis)
         .toString();
   }
 }

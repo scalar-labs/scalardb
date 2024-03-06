@@ -2,32 +2,30 @@ package com.scalar.db.util.groupcommit;
 
 import java.time.Instant;
 
-// A queue to contain DelayedGroup instances. The following timeout occurs in this queue:
-// - `delayed-slot-move-expiration` moves expired slots in NormalGroup to DelayedGroup.
-class QueueForMovingDelayedSlot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-    extends Queue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
+// A worker manages NormalGroup instances to move delayed slots to a new DelayedGroup.
+// Ready NormalGroup is passed to GroupCleanupWorker.
+class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+    extends BackgroundWorker<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
   private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager;
-  private final QueueForCleaningUpGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-      queueForCleaningUpGroup;
+  private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
 
-  QueueForMovingDelayedSlot(
+  DelayedSlotMoveWorker(
       String label,
       long queueCheckIntervalInMillis,
       GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
-      QueueForCleaningUpGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-          queueForCleaningUpGroup) {
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
     super(
         label + "-group-commit-delayed-slot-move",
         queueCheckIntervalInMillis,
         RetryMode.MOVE_TO_TAIL);
     this.groupManager = groupManager;
-    this.queueForCleaningUpGroup = queueForCleaningUpGroup;
+    this.groupCleanupWorker = groupCleanupWorker;
   }
 
   @Override
   boolean processItem(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
     if (normalGroup.isReady()) {
-      queueForCleaningUpGroup.add(normalGroup);
+      groupCleanupWorker.add(normalGroup);
       // Already ready. Should remove the item.
       return true;
     }
@@ -38,7 +36,7 @@ class QueueForMovingDelayedSlot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
       // The status of the group may have changed
       if (normalGroup.isReady()) {
-        queueForCleaningUpGroup.add(normalGroup);
+        groupCleanupWorker.add(normalGroup);
         // Already ready. Should remove the item.
         return true;
       }

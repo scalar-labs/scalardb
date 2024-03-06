@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// An abstract class that has logics and implementations to manage slots and trigger to emit it.
 abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);
 
@@ -21,13 +22,24 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // Status of the group.
   enum Status {
     // Accepting new slot reservation since the number of slots isn't fixed yet.
+    //
+    // Initial status of groups. No group can move back to OPEN.
     OPEN(false, false, false),
+
     // Not accepting new slot reservations since the number of slots is already fixed.
     // Waiting all the slots are set with values.
+    //
+    // Groups with OPEN status can move to CLOSED.
     CLOSED(true, false, false),
+
     // All the slots are set with values. Ready to commit.
+    //
+    // Groups with OPEN or CLOSED status can move to READY.
     READY(true, true, false),
+
     // Group commit is done and all the clients have get the results.
+    //
+    // Groups with OPEN, CLOSED or READY status can move to DONE.
     DONE(true, true, true);
 
     final boolean isClosed;

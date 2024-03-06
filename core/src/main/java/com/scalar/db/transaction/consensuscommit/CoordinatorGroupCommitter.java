@@ -14,10 +14,10 @@ public class CoordinatorGroupCommitter
   public CoordinatorGroupCommitter(ConsensusCommitConfig config) {
     this(
         new GroupCommitConfig(
-            config.getCoordinatorGroupCommitRetentionSlotsCount(),
-            config.getCoordinatorGroupCommitGroupCloseExpirationInMillis(),
-            config.getCoordinatorGroupCommitDelayedSlotExpirationInMillis(),
-            config.getCoordinatorGroupCommitCheckIntervalInMillis()));
+            config.getCoordinatorGroupCommitSlotCapacity(),
+            config.getCoordinatorGroupCommitGroupCloseTimeoutMillis(),
+            config.getCoordinatorGroupCommitDelayedSlotMoveTimeoutMillis(),
+            config.getCoordinatorGroupCommitTimeoutCheckIntervalMillis()));
   }
 
   static class CoordinatorGroupCommitKeyManipulator

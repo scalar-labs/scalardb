@@ -249,13 +249,13 @@ public final class ConsensusCommitUtils {
   // TODO: Remove these ones
   private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES =
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS =
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS =
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS =
+  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
       "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS";
 
   @VisibleForTesting
@@ -266,40 +266,39 @@ public final class ConsensusCommitUtils {
       return Optional.empty();
     }
 
-    int groupCommitNumOfRetentionValues = 32;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES) != null) {
-      groupCommitNumOfRetentionValues =
-          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES));
+    int groupCommitSlotCapacity = 32;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY) != null) {
+      groupCommitSlotCapacity =
+          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY));
     }
 
-    int groupCommitSizeFixExpirationInMillis = 200;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS) != null) {
-      groupCommitSizeFixExpirationInMillis =
+    int groupCommitGroupCloseTimeoutMillis = 200;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS) != null) {
+      groupCommitGroupCloseTimeoutMillis =
           Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS));
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS));
     }
 
-    int groupCommitTimeoutExpirationInMillis = 2000;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS) != null) {
-      groupCommitTimeoutExpirationInMillis =
+    int groupCommitDelayedSlotMoveTimeoutMillis = 2000;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS) != null) {
+      groupCommitDelayedSlotMoveTimeoutMillis =
           Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS));
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS));
     }
 
-    int groupCommitExpirationCheckIntervalInMillis = 20;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS)
-        != null) {
-      groupCommitExpirationCheckIntervalInMillis =
+    int groupCommitTimeoutCheckIntervalMillis = 20;
+    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS) != null) {
+      groupCommitTimeoutCheckIntervalMillis =
           Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS));
+              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS));
     }
 
     return Optional.of(
         new CoordinatorGroupCommitter(
             new GroupCommitConfig(
-                groupCommitSizeFixExpirationInMillis,
-                groupCommitTimeoutExpirationInMillis,
-                groupCommitNumOfRetentionValues,
-                groupCommitExpirationCheckIntervalInMillis)));
+                groupCommitGroupCloseTimeoutMillis,
+                groupCommitDelayedSlotMoveTimeoutMillis,
+                groupCommitSlotCapacity,
+                groupCommitTimeoutCheckIntervalMillis)));
   }
 }

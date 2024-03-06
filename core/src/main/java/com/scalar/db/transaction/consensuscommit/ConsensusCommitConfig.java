@@ -44,14 +44,14 @@ public class ConsensusCommitConfig {
   public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
   public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
       COORDINATOR_GROUP_COMMIT_PREFIX + "enabled";
-  public static final String COORDINATOR_GROUP_COMMIT_RETENTION_SLOTS_COUNT =
-      COORDINATOR_GROUP_COMMIT_PREFIX + "retention_slots_count";
-  public static final String COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_EXPIRATION_MILLIS =
-      COORDINATOR_GROUP_COMMIT_PREFIX + "group_close_expiration_millis";
-  public static final String COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_EXPIRATION_MILLIS =
-      COORDINATOR_GROUP_COMMIT_PREFIX + "delayed_slot_expiration_millis";
-  public static final String COORDINATOR_GROUP_COMMIT_CHECK_INTERVAL_MILLIS =
-      COORDINATOR_GROUP_COMMIT_PREFIX + "check_interval_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "slot_capacity";
+  public static final String COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "group_close_timeout_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "delayed_slot_move_timeout_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "timeout_check_interval_millis";
 
   private final Isolation isolation;
   private final SerializableStrategy strategy;
@@ -70,10 +70,10 @@ public class ConsensusCommitConfig {
   private final boolean parallelImplicitPreReadEnabled;
 
   private final boolean coordinatorGroupCommitEnabled;
-  private final int coordinatorGroupCommitRetentionSlotsCount;
-  private final int coordinatorGroupCommitGroupCloseExpirationInMillis;
-  private final int coordinatorGroupCommitDelayedSlotExpirationInMillis;
-  private final int coordinatorGroupCommitCheckIntervalInMillis;
+  private final int coordinatorGroupCommitSlotCapacity;
+  private final int coordinatorGroupCommitGroupCloseTimeoutMillis;
+  private final int coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
+  private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -145,20 +145,23 @@ public class ConsensusCommitConfig {
 
     coordinatorGroupCommitEnabled =
         getBoolean(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_ENABLED, false);
-    coordinatorGroupCommitRetentionSlotsCount =
-        getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_RETENTION_SLOTS_COUNT, 20);
-    coordinatorGroupCommitGroupCloseExpirationInMillis =
+    coordinatorGroupCommitSlotCapacity =
+        getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY, 20);
+    coordinatorGroupCommitGroupCloseTimeoutMillis =
         getInt(
             databaseConfig.getProperties(),
-            COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_EXPIRATION_MILLIS,
+            COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS,
             40);
-    coordinatorGroupCommitDelayedSlotExpirationInMillis =
+    coordinatorGroupCommitDelayedSlotMoveTimeoutMillis =
         getInt(
             databaseConfig.getProperties(),
-            COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_EXPIRATION_MILLIS,
+            COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS,
             1200);
-    coordinatorGroupCommitCheckIntervalInMillis =
-        getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_CHECK_INTERVAL_MILLIS, 20);
+    coordinatorGroupCommitTimeoutCheckIntervalMillis =
+        getInt(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS,
+            20);
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
@@ -217,20 +220,20 @@ public class ConsensusCommitConfig {
     return coordinatorGroupCommitEnabled;
   }
 
-  public int getCoordinatorGroupCommitRetentionSlotsCount() {
-    return coordinatorGroupCommitRetentionSlotsCount;
+  public int getCoordinatorGroupCommitSlotCapacity() {
+    return coordinatorGroupCommitSlotCapacity;
   }
 
-  public int getCoordinatorGroupCommitGroupCloseExpirationInMillis() {
-    return coordinatorGroupCommitGroupCloseExpirationInMillis;
+  public int getCoordinatorGroupCommitGroupCloseTimeoutMillis() {
+    return coordinatorGroupCommitGroupCloseTimeoutMillis;
   }
 
-  public int getCoordinatorGroupCommitDelayedSlotExpirationInMillis() {
-    return coordinatorGroupCommitDelayedSlotExpirationInMillis;
+  public int getCoordinatorGroupCommitDelayedSlotMoveTimeoutMillis() {
+    return coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
   }
 
-  public int getCoordinatorGroupCommitCheckIntervalInMillis() {
-    return coordinatorGroupCommitCheckIntervalInMillis;
+  public int getCoordinatorGroupCommitTimeoutCheckIntervalMillis() {
+    return coordinatorGroupCommitTimeoutCheckIntervalMillis;
   }
 
   private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {

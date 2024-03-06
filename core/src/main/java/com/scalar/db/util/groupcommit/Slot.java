@@ -87,14 +87,18 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return value.get();
   }
 
+  // Marks this slot as a success.
   void markAsSuccess() {
     completableFuture.complete(null);
   }
 
+  // Marks this slot as a failure.
   void markAsFail(Exception e) {
     completableFuture.completeExceptionally(e);
   }
 
+  // Delegates the emit task to the client. The client receiving this task needs to handle the emit
+  // task.
   void delegateTaskToWaiter(ThrowableRunnable task) {
     completableFuture.complete(task);
   }
