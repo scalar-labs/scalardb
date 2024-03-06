@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,8 +21,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SlotTest {
+  private Slot<String, String, String, String, Integer> slot;
   @Mock NormalGroup<String, String, String, String, Integer> parentGroup;
   @Mock DelayedGroup<String, String, String, String, Integer> newParentGroup;
+
+  @BeforeEach
+  void setUp() {
+    slot = new Slot<>("child-key", parentGroup);
+  }
 
   @Test
   void key_GivenArbitraryValue_ShouldReturnIt() {
@@ -36,7 +43,6 @@ class SlotTest {
   @Test
   void fullKey_GivenArbitraryParentGroup_ShouldReturnParentFullKey() {
     // Arrange
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
     doReturn("full-key").when(parentGroup).fullKey(eq("child-key"));
 
     // Act
@@ -45,9 +51,20 @@ class SlotTest {
   }
 
   @Test
+  void changeParentGroupToDelayedGroup_GivenArbitraryParentGroup_ShouldUseNewParentGroup() {
+    // Arrange
+    doReturn("new-full-key").when(newParentGroup).fullKey(eq("child-key"));
+
+    // Act
+    slot.changeParentGroupToDelayedGroup(newParentGroup);
+
+    // Assert
+    assertThat(slot.fullKey()).isEqualTo("new-full-key");
+  }
+
+  @Test
   void setValue_GivenArbitraryValue_ShouldReturnIt() {
     // Arrange
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
 
     // Act
     slot.setValue(42);
@@ -57,9 +74,27 @@ class SlotTest {
   }
 
   @Test
+  void isReady_GivenNoValueSet_ShouldReturnFalse() {
+    // Arrange
+
+    // Act
+    // Assert
+    assertThat(slot.isReady()).isFalse();
+  }
+
+  @Test
+  void isReady_GivenAnyValueSet_ShouldReturnTrue() {
+    // Arrange
+    slot.setValue(42);
+
+    // Act
+    // Assert
+    assertThat(slot.isReady()).isTrue();
+  }
+
+  @Test
   void waitUntilEmit_GivenNoCompletion_ShouldWait() {
     // Arrange
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     AtomicReference<Exception> exception = new AtomicReference<>();
 
@@ -84,6 +119,7 @@ class SlotTest {
     } catch (TimeoutException e) {
       // Expected
       assertThat(exception.get()).isNull();
+      assertThat(slot.isDone()).isFalse();
     } finally {
       slot.markAsSuccess();
     }
@@ -94,7 +130,6 @@ class SlotTest {
   void waitUntilEmit_GivenCallMarkAsSuccess_ShouldFinish()
       throws ExecutionException, InterruptedException {
     // Arrange
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     AtomicReference<Exception> exception = new AtomicReference<>();
 
@@ -115,6 +150,7 @@ class SlotTest {
     // Assert
     future.get();
     assertThat(exception.get()).isNull();
+    assertThat(slot.isDone()).isTrue();
   }
 
   @Timeout(1)
@@ -122,7 +158,6 @@ class SlotTest {
   void waitUntilEmit_GivenCallMarkAsFail_ShouldFinishAndThrowException()
       throws ExecutionException, InterruptedException {
     // Arrange
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     AtomicReference<Exception> exception = new AtomicReference<>();
 
@@ -146,6 +181,7 @@ class SlotTest {
     assertThat(exception.get().getCause())
         .isInstanceOf(RuntimeException.class)
         .hasMessage("Hello, world!");
+    assertThat(slot.isDone()).isTrue();
   }
 
   @Timeout(1)
@@ -153,7 +189,6 @@ class SlotTest {
   void waitUntilEmit_GivenCallDelegateTaskToWaiter_ShouldTakeOverTask()
       throws ExecutionException, InterruptedException {
     // Arrange
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     AtomicReference<Exception> exception = new AtomicReference<>();
     AtomicReference<Integer> result = new AtomicReference<>();
@@ -176,5 +211,6 @@ class SlotTest {
     future.get();
     assertThat(exception.get()).isNull();
     assertThat(result.get()).isEqualTo(42);
+    assertThat(slot.isDone()).isTrue();
   }
 }
