@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 class GroupCommitConfigTest {
   @Test
-  void slotCapacity_GivenArbitraryValue_ShouldReturnIt() {
+  void slotCapacity_GivenArbitraryValue_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
 
@@ -15,7 +15,7 @@ class GroupCommitConfigTest {
   }
 
   @Test
-  void groupCloseTimeoutMillis_GivenArbitraryValue_ShouldReturnIt() {
+  void groupCloseTimeoutMillis_GivenArbitraryValue_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
 
@@ -24,7 +24,7 @@ class GroupCommitConfigTest {
   }
 
   @Test
-  void delayedSlotMoveTimeoutMillis_GivenArbitraryValue_ShouldReturnIt() {
+  void delayedSlotMoveTimeoutMillis_GivenArbitraryValue_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
 
@@ -33,7 +33,7 @@ class GroupCommitConfigTest {
   }
 
   @Test
-  void timeoutCheckIntervalMillis_GivenArbitraryValue_ShouldReturnIt() {
+  void timeoutCheckIntervalMillis_GivenArbitraryValue_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
 

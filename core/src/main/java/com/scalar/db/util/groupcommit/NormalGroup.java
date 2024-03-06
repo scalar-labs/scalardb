@@ -2,10 +2,10 @@ package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -18,19 +18,19 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   private final PARENT_KEY parentKey;
   private final long delayedSlotMoveTimeoutMillis;
-  private final Instant groupClosedAt;
-  private final AtomicReference<Instant> delayedSlotMovedAt;
+  private final long groupClosedMillisAt;
+  private final AtomicLong delayedSlotMovedMillisAt = new AtomicLong();
 
   NormalGroup(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
       long groupCloseTimeoutMillis,
       long delayedSlotMoveTimeoutMillis,
-      int capacity) {
-    super(emitter, keyManipulator, capacity);
+      int capacity,
+      CurrentTime currentTime) {
+    super(emitter, keyManipulator, capacity, currentTime);
     this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
-    this.groupClosedAt = Instant.now().plusMillis(groupCloseTimeoutMillis);
-    this.delayedSlotMovedAt = new AtomicReference<>();
+    this.groupClosedMillisAt = currentTimeMillis() + groupCloseTimeoutMillis;
     updateDelayedSlotMovedAt();
     this.parentKey = keyManipulator.generateParentKey();
   }
@@ -136,15 +136,15 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   void updateDelayedSlotMovedAt() {
-    delayedSlotMovedAt.set(Instant.now().plusMillis(delayedSlotMoveTimeoutMillis));
+    delayedSlotMovedMillisAt.set(currentTimeMillis() + delayedSlotMoveTimeoutMillis);
   }
 
-  Instant groupClosedAt() {
-    return groupClosedAt;
+  long groupClosedMillisAt() {
+    return groupClosedMillisAt;
   }
 
-  Instant delayedSlotMovedAt() {
-    return delayedSlotMovedAt.get();
+  long delayedSlotMovedMillisAt() {
+    return delayedSlotMovedMillisAt.get();
   }
 
   @Override

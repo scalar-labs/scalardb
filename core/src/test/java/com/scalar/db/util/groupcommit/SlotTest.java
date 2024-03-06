@@ -31,7 +31,7 @@ class SlotTest {
   }
 
   @Test
-  void key_GivenArbitraryValue_ShouldReturnIt() {
+  void key_GivenArbitraryValue_ShouldReturnProperly() {
     // Arrange
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
 
@@ -41,7 +41,7 @@ class SlotTest {
   }
 
   @Test
-  void fullKey_GivenArbitraryParentGroup_ShouldReturnParentFullKey() {
+  void fullKey_GivenArbitraryParentGroup_ShouldReturnProperly() {
     // Arrange
     doReturn("full-key").when(parentGroup).fullKey(eq("child-key"));
 
@@ -51,7 +51,7 @@ class SlotTest {
   }
 
   @Test
-  void changeParentGroupToDelayedGroup_GivenArbitraryParentGroup_ShouldUseNewParentGroup() {
+  void changeParentGroupToDelayedGroup_GivenArbitraryParentGroup_ShouldUseIt() {
     // Arrange
     doReturn("new-full-key").when(newParentGroup).fullKey(eq("child-key"));
 
@@ -63,7 +63,7 @@ class SlotTest {
   }
 
   @Test
-  void setValue_GivenArbitraryValue_ShouldReturnIt() {
+  void setValue_GivenArbitraryValue_ShouldUseIt() {
     // Arrange
 
     // Act

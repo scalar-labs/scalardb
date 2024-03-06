@@ -47,6 +47,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   private final long groupCloseTimeoutMillis;
   private final long delayedSlotMoveTimeoutMillis;
   private final int slotCapacity;
+  private final CurrentTime currentTime = new CurrentTime();
 
   public GroupManager(
       String label,
@@ -90,7 +91,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
                 keyManipulator,
                 groupCloseTimeoutMillis,
                 delayedSlotMoveTimeoutMillis,
-                slotCapacity);
+                slotCapacity,
+                currentTime);
         groupCloseWorker.add(currentGroup);
         normalGroupMap.put(currentGroup.parentKey(), currentGroup);
       }
@@ -198,7 +200,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
         // Create a new DelayedGroup
         FULL_KEY fullKey = notReadySlot.fullKey();
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
-            new DelayedGroup<>(fullKey, emitter, keyManipulator);
+            new DelayedGroup<>(fullKey, emitter, keyManipulator, currentTime);
         notReadySlot.changeParentGroupToDelayedGroup(delayedGroup);
 
         // Register the new DelayedGroup to the map and cleanup queue.

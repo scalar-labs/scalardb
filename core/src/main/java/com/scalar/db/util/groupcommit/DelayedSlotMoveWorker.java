@@ -1,7 +1,5 @@
 package com.scalar.db.util.groupcommit;
 
-import java.time.Instant;
-
 // A worker manages NormalGroup instances to move delayed slots to a new DelayedGroup.
 // Ready NormalGroup is passed to GroupCleanupWorker.
 class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
@@ -30,7 +28,7 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       return true;
     }
 
-    if (Instant.now().isAfter(normalGroup.delayedSlotMovedAt())) {
+    if (normalGroup.delayedSlotMovedMillisAt() < System.currentTimeMillis()) {
       // Move delayed slots to a DelayedGroup so that the NormalGroup can be ready.
       boolean movedDelayedSlots = groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
 

@@ -1,7 +1,5 @@
 package com.scalar.db.util.groupcommit;
 
-import java.time.Instant;
-
 // A worker manages NormalGroup instances to close timed-out groups and pass them to
 // DelayedSlotMoveWorker.
 // Ready NormalGroup is passed to GroupCleanupWorker.
@@ -42,8 +40,8 @@ class GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       return true;
     }
 
-    Instant now = Instant.now();
-    if (now.isAfter(normalGroup.groupClosedAt())) {
+    long now = System.currentTimeMillis();
+    if (normalGroup.groupClosedMillisAt() < now) {
       // Expired. Fix the size (== close).
       normalGroup.close();
 
