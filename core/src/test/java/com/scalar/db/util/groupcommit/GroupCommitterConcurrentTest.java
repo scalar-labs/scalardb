@@ -20,7 +20,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
-class GroupCommitterTest {
+class GroupCommitterConcurrentTest {
   private static class ExpectedException extends RuntimeException {
     public ExpectedException(String message) {
       super(message);
