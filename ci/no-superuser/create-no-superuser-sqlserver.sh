@@ -67,9 +67,9 @@ docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S local
 echo "INFO: Add role db_datareader end"
 
 # Check the collation of test_db (for debugging purposes)
-echo "INFO: SELECT @@version start"
+echo "INFO: Check collation start"
 docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U no_superuser -P no_superuser_password -d test_db -Q "SELECT name, collation_name FROM sys.databases" -W
-echo "INFO: SELECT @@version end"
+echo "INFO: Check collation end"
 
 # Check if no_superuser can access SQL Server (for debugging purposes)
 echo "INFO: SELECT @@version start"
