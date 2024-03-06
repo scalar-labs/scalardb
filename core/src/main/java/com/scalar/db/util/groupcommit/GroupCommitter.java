@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A group committer which is responsible for the group and slot managements and emits ready groups.
+ * This class receives 4 generic types as keys. But it's likely only one or a few key types are
+ * enough. The reason to use the 4 keys is to detect wrong key usages at compile time.
  *
  * @param <PARENT_KEY> A key type to NormalGroup which contains multiple slots and is
  *     group-committed.
