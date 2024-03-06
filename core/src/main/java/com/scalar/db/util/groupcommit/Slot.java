@@ -18,9 +18,9 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final CompletableFuture<ThrowableRunnable> completableFuture = new CompletableFuture<>();
   // This value can be changed from null -> non-null, not vice versa.
   private final AtomicReference<V> value = new AtomicReference<>();
-  // Slot gets done once the client thread tries to obtain the result not when a value is set.
-  // In NormalGroup, any client thread can be delayed to obtain the result. the group should not
-  // move to State.DONE until all the client threads wait on the slot.
+  // The status of Slot becomes done once the client obtains the result not when a value is set.
+  // In NormalGroup, any client could potentially be delayed to obtain the result. A group should
+  // not move to State.DONE until all the clients get the result on their slots.
   private final AtomicBoolean isDone = new AtomicBoolean();
 
   Slot(CHILD_KEY key, NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
@@ -64,7 +64,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       }
       throw new GroupCommitException("Group commit failed", e);
     } finally {
-      // Slot gets done once the client thread captures the result.
+      // Slot gets done once the client obtains the result.
       isDone.set(true);
     }
   }

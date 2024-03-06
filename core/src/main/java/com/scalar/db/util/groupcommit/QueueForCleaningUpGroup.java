@@ -21,7 +21,7 @@ class QueueForCleaningUpGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   @Override
   boolean processItem(Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
     // Groups don't have chance to update the status from READY to DONE since the condition is
-    // satisfied after all the client threads get the result lazily. So, update the status here.
+    // satisfied after all the clients get the result lazily. Therefore, update the status here.
     group.updateStatus();
     if (group.isDone()) {
       if (!groupManager.removeGroupFromMap(group)) {

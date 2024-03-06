@@ -22,7 +22,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   enum Status {
     // Accepting new slot reservation since the number of slots isn't fixed yet.
     OPEN(false, false, false),
-    // Not accepting new slot reservation since the number of slots is already fixed.
+    // Not accepting new slot reservations since the number of slots is already fixed.
     // Waiting all the slots are set with values.
     CLOSED(true, false, false),
     // All the slots are set with values. Ready to commit.
@@ -201,9 +201,6 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   protected abstract void asyncEmit();
 
   synchronized void asyncEmitIfReady() {
-    // Must not return even if the group is done since all the client threads need to get the result
-    // from the slot.
-
     if (isDone()) {
       return;
     }
