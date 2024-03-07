@@ -16,6 +16,12 @@ ScalarDB requires each underlying database to provide at least the following cap
 - Durability of written database records.
 - Ability to store arbitrary data besides application data in each database record.
 
+#### Analytics
+{:.no_toc}
+ScalarDB requires each underlying database to provide the following capability to run analytics on the databases:
+
+- Ability to return only committed records.
+
 {% capture notice--info %}
 **Note**
 
@@ -23,12 +29,6 @@ You need to have database accounts that have enough privileges to access the dat
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
-
-#### Analytics
-{:.no_toc}
-ScalarDB requires each underlying database to provide the following capability to run analytics on the databases:
-
-- Ability to return only committed records.
 
 ### How to configure databases to achieve the general requirements
 
