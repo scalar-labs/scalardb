@@ -58,13 +58,17 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
     this.slotCapacity = config.slotCapacity();
     this.groupCleanupWorker =
-        new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), this);
+        new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), this, currentTime);
     this.delayedSlotMoveWorker =
         new DelayedSlotMoveWorker<>(
-            label, config.timeoutCheckIntervalMillis(), this, groupCleanupWorker);
+            label, config.timeoutCheckIntervalMillis(), this, groupCleanupWorker, currentTime);
     this.groupCloseWorker =
         new GroupCloseWorker<>(
-            label, config.timeoutCheckIntervalMillis(), delayedSlotMoveWorker, groupCleanupWorker);
+            label,
+            config.timeoutCheckIntervalMillis(),
+            delayedSlotMoveWorker,
+            groupCleanupWorker,
+            currentTime);
 
     // TODO: This should be replaced by other metrics mechanism.
     this.monitorExecutorService =

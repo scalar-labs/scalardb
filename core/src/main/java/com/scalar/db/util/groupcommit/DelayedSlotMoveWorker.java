@@ -11,11 +11,13 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       String label,
       long queueCheckIntervalInMillis,
       GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
-      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker,
+      CurrentTime currentTime) {
     super(
         label + "-group-commit-delayed-slot-move",
         queueCheckIntervalInMillis,
-        RetryMode.MOVE_TO_TAIL);
+        RetryMode.MOVE_TO_TAIL,
+        currentTime);
     this.groupManager = groupManager;
     this.groupCleanupWorker = groupCleanupWorker;
   }
@@ -28,7 +30,7 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       return true;
     }
 
-    if (normalGroup.delayedSlotMovedMillisAt() < System.currentTimeMillis()) {
+    if (normalGroup.delayedSlotMovedMillisAt() < currentTimeMillis()) {
       // Move delayed slots to a DelayedGroup so that the NormalGroup can be ready.
       boolean movedDelayedSlots = groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
 

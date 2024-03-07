@@ -12,9 +12,13 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   GroupCleanupWorker(
       String label,
       long queueCheckIntervalInMillis,
-      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager) {
+      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
+      CurrentTime currentTime) {
     super(
-        label + "-group-commit-group-cleanup", queueCheckIntervalInMillis, RetryMode.MOVE_TO_TAIL);
+        label + "-group-commit-group-cleanup",
+        queueCheckIntervalInMillis,
+        RetryMode.MOVE_TO_TAIL,
+        currentTime);
     this.groupManager = groupManager;
   }
 

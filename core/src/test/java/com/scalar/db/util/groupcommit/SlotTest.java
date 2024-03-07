@@ -22,8 +22,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SlotTest {
   private Slot<String, String, String, String, Integer> slot;
-  @Mock NormalGroup<String, String, String, String, Integer> parentGroup;
-  @Mock DelayedGroup<String, String, String, String, Integer> newParentGroup;
+  @Mock private NormalGroup<String, String, String, String, Integer> parentGroup;
+  @Mock private DelayedGroup<String, String, String, String, Integer> newParentGroup;
 
   @BeforeEach
   void setUp() {

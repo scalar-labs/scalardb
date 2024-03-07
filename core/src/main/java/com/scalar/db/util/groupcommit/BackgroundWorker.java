@@ -17,18 +17,24 @@ abstract class BackgroundWorker<T> implements Closeable {
   private final ExecutorService executorService;
   private final long timeoutCheckIntervalMillis;
   private final RetryMode retryMode;
+  private final CurrentTime currentTime;
 
   enum RetryMode {
     KEEP_AT_HEAD,
     MOVE_TO_TAIL
   }
 
-  BackgroundWorker(String threadName, long timeoutCheckIntervalMillis, RetryMode retryMode) {
+  BackgroundWorker(
+      String threadName,
+      long timeoutCheckIntervalMillis,
+      RetryMode retryMode,
+      CurrentTime currentTime) {
     this.executorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName + "-%d").build());
     this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
     this.retryMode = retryMode;
+    this.currentTime = currentTime;
     startExecutorService();
   }
 
@@ -106,5 +112,9 @@ abstract class BackgroundWorker<T> implements Closeable {
   @Override
   public void close() {
     MoreExecutors.shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);
+  }
+
+  long currentTimeMillis() {
+    return currentTime.currentTimeMillis();
   }
 }
