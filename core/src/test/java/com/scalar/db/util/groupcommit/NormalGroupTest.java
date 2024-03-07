@@ -125,7 +125,6 @@ class NormalGroupTest {
     for (Future<Void> future : futures) {
       future.get();
     }
-    // TODO: Maybe we can remove this.
     group.updateStatus();
     assertThat(group.isDone()).isTrue();
     assertThat(emitted.get()).isTrue();
@@ -188,7 +187,6 @@ class NormalGroupTest {
     for (Future<Void> future : futures) {
       future.get();
     }
-    // TODO: Maybe we can remove this.
     group.updateStatus();
     assertThat(group.isDone()).isTrue();
   }

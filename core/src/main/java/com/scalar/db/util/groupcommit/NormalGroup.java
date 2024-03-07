@@ -94,7 +94,6 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
     boolean isFirst = true;
     List<V> values = new ArrayList<>(slots.size());
-    // Avoid using java.util.Collection.stream since it's a bit slow.
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
       // Use the first slot as an emitter.
       if (isFirst) {
@@ -104,12 +103,12 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       values.add(slot.value());
     }
 
+    // This task is passed to only the first slot, so the slot will be resumed.
+    // Other slots will be blocked until `markAsXxxx()` is called.
     ThrowableRunnable taskForEmitterSlot =
         () -> {
           try {
             emitter.execute(keyManipulator.emitKeyFromParentKey(parentKey), values);
-
-            // TODO: Consider if it's okay to call the parent group's updateStatus() here?
 
             synchronized (this) {
               // Wake up the other waiting threads.
