@@ -3,6 +3,7 @@ package com.scalar.db.util.groupcommit;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import java.util.Collections;
+import javax.annotation.Nullable;
 
 // A group for a delayed slot. This group contains only a single slot.
 class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
@@ -33,14 +34,21 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
       // Pass `emitter` to ask the receiver's thread to emit the value
       slot.delegateTaskToWaiter(
-          () -> {
-            emitter.execute(
-                keyManipulator.emitKeyFromFullKey(fullKey),
-                Collections.singletonList(slot.value()));
-          });
+          () ->
+              emitter.execute(
+                  keyManipulator.emitKeyFromFullKey(fullKey),
+                  Collections.singletonList(slot.value())));
       // Return since the number of the slots is only 1.
       return;
     }
+  }
+
+  @Nullable
+  @Override
+  protected synchronized FULL_KEY reserveNewSlot(
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
+    slot.changeParentGroupToDelayedGroup(this);
+    return super.reserveNewSlot(slot);
   }
 
   @Override

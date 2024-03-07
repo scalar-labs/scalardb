@@ -201,9 +201,22 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   synchronized boolean removeSlot(CHILD_KEY childKey) {
-    boolean removed = false;
-    if (slots.remove(childKey) != null) {
-      removed = true;
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = slots.remove(childKey);
+    if (removed != null) {
+      if (removed.isReady()) {
+        if (removed.isDone()) {
+          logger.warn(
+              "The status of the slot being removed is already READY, so canceling would fail. Group:{}, Slot:{}",
+              this,
+              removed);
+        }
+        removed.markAsFail(
+            new IllegalStateException(
+                String.format(
+                    "The status of the slot being removed is already READY. Group:%s, Slot:%s",
+                    this, removed)));
+      }
+
       if (size.get() != null && size.get() > 0) {
         size.set(size.get() - 1);
       }
@@ -211,7 +224,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     }
     asyncEmitIfReady();
 
-    return removed;
+    return removed != null;
   }
 
   protected abstract void asyncEmit();

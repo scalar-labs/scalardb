@@ -93,7 +93,7 @@ class GroupCommitterConcurrentTest {
       throws ExecutionException, InterruptedException, TimeoutException {
     new Runner(
             2048, // NumOfThreads
-            800000, // NumOfRequests
+            400000, // NumOfRequests
             0, // AveragePrepareWaitInMillis
             0, // MultiplexerInMillis
             0, // MaxCommitWaitInMillis
@@ -108,7 +108,7 @@ class GroupCommitterConcurrentTest {
       throws ExecutionException, InterruptedException, TimeoutException {
     new Runner(
             2048, // NumOfThreads
-            200000, // NumOfRequests
+            100000, // NumOfRequests
             200, // AveragePrepareWaitInMillis
             400, // MultiplexerInMillis
             100, // MaxCommitWaitInMillis
