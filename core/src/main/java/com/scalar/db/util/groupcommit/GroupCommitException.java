@@ -1,7 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 /** An exception thrown related to group commit. */
-public class GroupCommitException extends Exception {
+public class GroupCommitException extends RuntimeException {
   public GroupCommitException(String message) {
     super(message);
   }

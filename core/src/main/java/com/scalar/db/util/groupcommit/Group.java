@@ -141,7 +141,8 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     asyncEmitIfReady();
   }
 
-  protected int size() {
+  @Nullable
+  protected Integer size() {
     return size.get();
   }
 

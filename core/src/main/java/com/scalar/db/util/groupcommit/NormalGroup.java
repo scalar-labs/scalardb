@@ -69,7 +69,10 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       }
     }
 
-    if (removed.size() >= size()) {
+    // The size must be already fixed since the group is already closed.
+    Integer size = size();
+    assert size != null;
+    if (removed.size() >= size) {
       logger.debug("No need to remove any slot since all the slots are not ready. group:{}", this);
       return null;
     }
@@ -105,6 +108,8 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
         () -> {
           try {
             emitter.execute(keyManipulator.emitKeyFromParentKey(parentKey), values);
+
+            // TODO: Consider if it's okay to call the parent group's updateStatus() here?
 
             synchronized (this) {
               // Wake up the other waiting threads.
