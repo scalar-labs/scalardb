@@ -12,577 +12,577 @@ on:
 env:
   TERM: dumb
 jobs:
-#  check:
-#    name: Gradle check
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'check' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: check
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_test_reports/core
-#          mkdir -p /tmp/gradle_test_reports/server
-#          mkdir -p /tmp/gradle_test_reports/schema-loader
-#          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
-#          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
-#          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: gradle_check_reports
-#          path: /tmp/gradle_test_reports
-#
-#      - name: Save SpotBugs reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_spotbugs_reports/core
-#          mkdir -p /tmp/gradle_spotbugs_reports/server
-#          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
-#          mkdir -p /tmp/gradle_spotbugs_reports/integration-test
-#          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-#          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
-#          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
-#          cp -a integration-test/build/reports/spotbugs /tmp/gradle_spotbugs_reports/integration-test/
-#
-#      - name: Upload Spotbugs reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: gradle_spotbugs_reports
-#          path: /tmp/gradle_spotbugs_reports
-#
-#  dockerfile-lint:
-#    name: Lint dockerfiles
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Dockerfile Lint for ScalarDB Server
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: ':server:dockerfileLint'
-#
-#      - name: Dockerfile Lint for ScalarDB Schema Loader
-#        if: always()
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: ':schema-loader:dockerfileLint'
-#
-#  integration-test-for-cassandra-3-0:
-#    name: Cassandra 3.0 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      cassandra:
-#        image: cassandra:3.0
-#        env:
-#          MAX_HEAP_SIZE: 2048m
-#          HEAP_NEWSIZE: 512m
-#        ports:
-#          - 9042:9042
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestCassandra' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestCassandra
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: cassandra_3.0_integration_test_reports
-#          path: core/build/reports/tests/integrationTestCassandra
-#
-#  integration-test-for-cassandra-3-11:
-#    name: Cassandra 3.11 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      cassandra:
-#        image: cassandra:3.11
-#        env:
-#          MAX_HEAP_SIZE: 2048m
-#          HEAP_NEWSIZE: 512m
-#        ports:
-#          - 9042:9042
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestCassandra' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestCassandra
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: cassandra_3.11_integration_test_reports
-#          path: core/build/reports/tests/integrationTestCassandra
-#
-#  integration-test-for-cosmos:
-#    name: Cosmos DB integration test
-#    runs-on: self-hosted
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Generate unique prefix using the epoch
-#        run: |
-#          echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
-#
-#      - name: Setup and execute Gradle 'integrationTestCosmos' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
-#
-#      - name : Delete gradle daemon log files
-#        if: always()
-##       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
-##       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
-#        run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: cosmos_integration_test_reports
-#          path: core/build/reports/tests/integrationTestCosmos
-#
-#  integration-test-for-dynamo:
-#    name: DynamoDB integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      dynamodb:
-#        image: amazon/dynamodb-local:1.17.0
-#        ports:
-#          - 8000:8000
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestDynamo' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestDynamo
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: dynamo_integration_test_reports
-#          path: core/build/reports/tests/integrationTestDynamo
-#
-#  integration-test-for-jdbc-mysql-5-7:
-#    name: MySQL 5.7 integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Run MySQL 5.7
-#        run: |
-#          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: mysql_5.7_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-mysql-8-0:
-#    name: MySQL 8.0 integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Run MySQL 8.0
-#        run: |
-#          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: mysql_8.0_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-mysql-8-1:
-#    name: MySQL 8.1 integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Run MySQL 8.1
-#        run: |
-#          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.1 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: mysql_8.1_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-postgresql-12:
-#    name: PostgreSQL 12 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:12-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: postgresql_12_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-postgresql-13:
-#    name: PostgreSQL 13 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:13-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: postgresql_13_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-postgresql-14:
-#    name: PostgreSQL 14 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:14-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: postgresql_14_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-postgresql-15:
-#    name: PostgreSQL 15 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:15-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: postgresql_15_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-oracle-18:
-#    name: Oracle 18 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      oracle:
-#        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18
-#        credentials:
-#          username: ${{ github.repository_owner }}
-#          password: ${{ secrets.CR_PAT }}
-#        env:
-#          ORACLE_PWD: Oracle
-#        ports:
-#          - 1521:1521
-#        options: >-
-#          --health-cmd "/opt/oracle/checkDBStatus.sh"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 120
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: oracle_18_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-oracle-21:
-#    name: Oracle 21 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      oracle:
-#        image: ghcr.io/scalar-labs/oracle/db-prebuilt:21
-#        credentials:
-#          username: ${{ github.repository_owner }}
-#          password: ${{ secrets.CR_PAT }}
-#        env:
-#          ORACLE_PWD: Oracle
-#        ports:
-#          - 1521:1521
-#        options: >-
-#          --health-cmd "/opt/oracle/checkDBStatus.sh"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 120
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: oracle_21_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-oracle-23:
-#    name: Oracle 23 integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Free up ~14GB of disk space by removing the Android SDK
-#        run: |
-#          echo "Storage available before deletion"
-#          df -h /
-#          echo
-#          sudo rm -r /usr/local/lib/android
-#          echo "Storage available after deletion"
-#          df -h /
-#
-#      - name: Login to GitHub Container Registry
-#        uses: docker/login-action@v3
-#        with:
-#          registry: ghcr.io
-#          username: ${{ github.repository_owner }}
-#          password: ${{ secrets.CR_PAT }}
-#
-#      - name: Start Oracle 23 container
-#        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23
-#
-#      - name: Wait for the container to be ready
-#        timeout-minutes: 5
-#        run : |
-#          while [ "`docker inspect -f {{.State.Health.Status}} oracle-23`" != "healthy" ]
-#          do
-#            sleep 10
-#            echo "Container is not yet ready"
-#          done
-#          echo "Container is ready"
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
-#
-#      - name: Stop Oracle 23 container
-#        if: always()
-#        run: docker stop oracle-23 | xargs docker rm
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: oracle_23_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
+  check:
+    name: Gradle check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'check' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: check
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_test_reports/core
+          mkdir -p /tmp/gradle_test_reports/server
+          mkdir -p /tmp/gradle_test_reports/schema-loader
+          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
+          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
+          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle_check_reports
+          path: /tmp/gradle_test_reports
+
+      - name: Save SpotBugs reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_spotbugs_reports/core
+          mkdir -p /tmp/gradle_spotbugs_reports/server
+          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
+          mkdir -p /tmp/gradle_spotbugs_reports/integration-test
+          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
+          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
+          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+          cp -a integration-test/build/reports/spotbugs /tmp/gradle_spotbugs_reports/integration-test/
+
+      - name: Upload Spotbugs reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle_spotbugs_reports
+          path: /tmp/gradle_spotbugs_reports
+
+  dockerfile-lint:
+    name: Lint dockerfiles
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Dockerfile Lint for ScalarDB Server
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: ':server:dockerfileLint'
+
+      - name: Dockerfile Lint for ScalarDB Schema Loader
+        if: always()
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: ':schema-loader:dockerfileLint'
+
+  integration-test-for-cassandra-3-0:
+    name: Cassandra 3.0 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:3.0
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestCassandra' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestCassandra
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cassandra_3.0_integration_test_reports
+          path: core/build/reports/tests/integrationTestCassandra
+
+  integration-test-for-cassandra-3-11:
+    name: Cassandra 3.11 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:3.11
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestCassandra' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestCassandra
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cassandra_3.11_integration_test_reports
+          path: core/build/reports/tests/integrationTestCassandra
+
+  integration-test-for-cosmos:
+    name: Cosmos DB integration test
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Generate unique prefix using the epoch
+        run: |
+          echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
+
+      - name: Setup and execute Gradle 'integrationTestCosmos' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
+
+      - name : Delete gradle daemon log files
+        if: always()
+#       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
+#       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
+        run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosmos_integration_test_reports
+          path: core/build/reports/tests/integrationTestCosmos
+
+  integration-test-for-dynamo:
+    name: DynamoDB integration test
+    runs-on: ubuntu-latest
+
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:1.17.0
+        ports:
+          - 8000:8000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestDynamo' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestDynamo
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dynamo_integration_test_reports
+          path: core/build/reports/tests/integrationTestDynamo
+
+  integration-test-for-jdbc-mysql-5-7:
+    name: MySQL 5.7 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MySQL 5.7
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql_5.7_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-mysql-8-0:
+    name: MySQL 8.0 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MySQL 8.0
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql_8.0_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-mysql-8-1:
+    name: MySQL 8.1 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MySQL 8.1
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.1 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql_8.1_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-postgresql-12:
+    name: PostgreSQL 12 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql_12_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-postgresql-13:
+    name: PostgreSQL 13 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql_13_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-postgresql-14:
+    name: PostgreSQL 14 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql_14_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-postgresql-15:
+    name: PostgreSQL 15 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql_15_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-oracle-18:
+    name: Oracle 18 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      oracle:
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18
+        credentials:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+        env:
+          ORACLE_PWD: Oracle
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd "/opt/oracle/checkDBStatus.sh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle_18_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-oracle-21:
+    name: Oracle 21 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      oracle:
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:21
+        credentials:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+        env:
+          ORACLE_PWD: Oracle
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd "/opt/oracle/checkDBStatus.sh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle_21_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-oracle-23:
+    name: Oracle 23 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Free up ~14GB of disk space by removing the Android SDK
+        run: |
+          echo "Storage available before deletion"
+          df -h /
+          echo
+          sudo rm -r /usr/local/lib/android
+          echo "Storage available after deletion"
+          df -h /
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Start Oracle 23 container
+        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 5
+        run : |
+          while [ "`docker inspect -f {{.State.Health.Status}} oracle-23`" != "healthy" ]
+          do
+            sleep 10
+            echo "Container is not yet ready"
+          done
+          echo "Container is ready"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Stop Oracle 23 container
+        if: always()
+        run: docker stop oracle-23 | xargs docker rm
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle_23_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test
@@ -704,126 +704,126 @@ jobs:
           name: sqlserver_2022_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 
-#  integration-test-for-jdbc-sqlite-3:
-#    name: SQLite 3 integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Set up SQLite3
-#        run: sudo apt-get install -y sqlite3
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: sqlite_3_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-jdbc-mariadb-10:
-#    name: MariaDB 10 integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Run MariaDB 10.11
-#        run: |
-#          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestJdbc
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: mariadb_10_integration_test_reports
-#          path: core/build/reports/tests/integrationTestJdbc
-#
-#  integration-test-for-multi-storage:
-#    name: Multi-storage integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      cassandra:
-#        image: cassandra:3.11
-#        env:
-#          MAX_HEAP_SIZE: 2048m
-#          HEAP_NEWSIZE: 512m
-#        ports:
-#          - 9042:9042
-#
-#    steps:
-#      - name: Run MySQL 8
-#        run: |
-#          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestMultiStorage' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestMultiStorage
-#
-#      - name: Upload Gradle test reports
-#        uses: actions/upload-artifact@v4
-#        if : always()
-#        with:
-#          name: multi_storage_integration_test_reports
-#          path: core/build/reports/tests/integrationTestMultiStorage
-#
-#  integration-test-for-scalardb-server:
-#    name: ScalarDB Server integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Run MySQL 8
-#        run: |
-#          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK 8
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: '8'
-#          distribution: 'temurin'
-#
-#      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestScalarDbServer
-#
-#      - name: Upload Gradle test reports
-#        uses: actions/upload-artifact@v4
-#        if : always()
-#        with:
-#          name: scalardb_server_integration_test_reports
-#          path: server/build/reports/tests/integrationTestScalarDbServer
+  integration-test-for-jdbc-sqlite-3:
+    name: SQLite 3 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Set up SQLite3
+        run: sudo apt-get install -y sqlite3
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sqlite_3_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-mariadb-10:
+    name: MariaDB 10 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MariaDB 10.11
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb_10_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-multi-storage:
+    name: Multi-storage integration test
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:3.11
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+
+    steps:
+      - name: Run MySQL 8
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestMultiStorage' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestMultiStorage
+
+      - name: Upload Gradle test reports
+        uses: actions/upload-artifact@v4
+        if : always()
+        with:
+          name: multi_storage_integration_test_reports
+          path: core/build/reports/tests/integrationTestMultiStorage
+
+  integration-test-for-scalardb-server:
+    name: ScalarDB Server integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MySQL 8
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestScalarDbServer
+
+      - name: Upload Gradle test reports
+        uses: actions/upload-artifact@v4
+        if : always()
+        with:
+          name: scalardb_server_integration_test_reports
+          path: server/build/reports/tests/integrationTestScalarDbServer
