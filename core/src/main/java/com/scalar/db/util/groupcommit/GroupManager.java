@@ -47,12 +47,13 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   private final long groupCloseTimeoutMillis;
   private final long delayedSlotMoveTimeoutMillis;
   private final int slotCapacity;
-  private final CurrentTime currentTime = new CurrentTime();
+  private final CurrentTime currentTime;
 
   public GroupManager(
       String label,
       GroupCommitConfig config,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
+      CurrentTime currentTime) {
     this.keyManipulator = keyManipulator;
     this.groupCloseTimeoutMillis = config.groupCloseTimeoutMillis();
     this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
@@ -69,6 +70,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
             delayedSlotMoveWorker,
             groupCleanupWorker,
             currentTime);
+    this.currentTime = currentTime;
 
     // TODO: This should be replaced by other metrics mechanism.
     this.monitorExecutorService =
