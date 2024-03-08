@@ -193,6 +193,9 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
     long stamp = lock.writeLock();
     try {
+      // TODO: NormalGroup.removeNotReadySlots() calls updateStatus() potentially resulting in
+      //       asyncEmit(). Maybe it should be called outside the lock.
+
       // Remove delayed tasks from the NormalGroup so that it can be ready.
       List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> notReadySlots =
           normalGroup.removeNotReadySlots();

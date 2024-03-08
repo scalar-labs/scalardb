@@ -6,13 +6,23 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class GroupManagerTest {
   private CurrentTime currentTime;
   private TestableKeyManipulator keyManipulator;
+  @Mock private Emittable<String, Integer> emittable;
 
   @BeforeEach
   void setUp() {
@@ -27,6 +37,7 @@ class GroupManagerTest {
   void reserveNewSlot_GivenMoreSlotsThanCapacity_ShouldCreateNewNormalGroup() {
     // Arrange
     doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+    // TODO: Close GroupManager
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
@@ -186,7 +197,129 @@ class GroupManagerTest {
   }
 
   @Test
-  void moveDelayedSlotToDelayedGroup() {
-    // TODO
+  void moveDelayedSlotToDelayedGroup_GivenOpenGroup_ShouldKeepThem() {
+    // Arrange
+    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+    GroupManager<String, String, String, String, Integer> groupManager =
+        new GroupManager<>(
+            "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
+
+    Keys<String, String, String> keys1 =
+        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // These groups are supposed to exist at this moment.
+    // - NormalGroup("0000", slots:[Slot("child-key-1")])
+
+    NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
+        (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
+
+    // Act
+    boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
+
+    // Assert
+    assertThat(moved).isFalse();
+    assertThat(normalGroupForKey1.slots.size()).isEqualTo(1);
+    assertThat(normalGroupForKey1.isClosed()).isFalse();
+  }
+
+  @Test
+  void moveDelayedSlotToDelayedGroup_GivenOpenGroupWithReadySlot_ShouldKeepThem()
+      throws InterruptedException {
+    // Arrange
+    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+    GroupManager<String, String, String, String, Integer> groupManager =
+        new GroupManager<>(
+            "test", new GroupCommitConfig(3, 100, 1000, 10), keyManipulator, currentTime);
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+    Keys<String, String, String> keys1 =
+        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    Keys<String, String, String> keys2 =
+        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+    NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
+        (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
+    executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
+    TimeUnit.MILLISECONDS.sleep(200);
+
+    // These groups are supposed to exist at this moment.
+    // - NormalGroup("0000", slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+
+    // Act
+    boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
+
+    // Assert
+    assertThat(moved).isFalse();
+    assertThat(normalGroupForKey1.slots.size()).isEqualTo(2);
+    assertThat(normalGroupForKey1.isClosed()).isFalse();
+  }
+
+  @Test
+  void moveDelayedSlotToDelayedGroup_GivenClosedGroupWithAllNotReadySlots_ShouldKeepThem() {
+    // Arrange
+    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+    GroupManager<String, String, String, String, Integer> groupManager =
+        new GroupManager<>(
+            "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
+
+    Keys<String, String, String> keys1 =
+        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    Keys<String, String, String> keys2 =
+        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+    // These groups are supposed to exist at this moment.
+    // - NormalGroup("0000", slots:[Slot("child-key-1"), Slot("child-key-2")])
+
+    NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
+        (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
+
+    // Act
+    boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
+
+    // Assert
+    assertThat(moved).isFalse();
+    assertThat(normalGroupForKey1.slots.size()).isEqualTo(2);
+    assertThat(normalGroupForKey1.isClosed()).isTrue();
+  }
+
+  @Test
+  void moveDelayedSlotToDelayedGroup_GivenClosedGroupWithReadySlot_ShouldRemoveNotReadySlot()
+      throws InterruptedException, ExecutionException {
+    // Arrange
+    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+    GroupManager<String, String, String, String, Integer> groupManager =
+        new GroupManager<>(
+            "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
+    groupManager.setEmitter(emittable);
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+    Keys<String, String, String> keys1 =
+        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    Keys<String, String, String> keys2 =
+        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+    NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
+        (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
+    Future<Boolean> future =
+        executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
+    TimeUnit.MILLISECONDS.sleep(200);
+    // These groups are supposed to exist at this moment.
+    // - NormalGroup("0000", slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+
+    // Act
+    boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
+    // These groups are supposed to exist at this moment.
+    // - NormalGroup("0000", slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+    // - DelayedGroup("0000:child-key-2", slots:[Slot("child-key-2")])
+
+    // Assert
+    assertThat(future.get()).isTrue();
+    // TODO: Look into why this sleep is needed.
+    TimeUnit.MILLISECONDS.sleep(200);
+
+    assertThat(moved).isTrue();
+    assertThat(normalGroupForKey1.slots.size()).isEqualTo(1);
+    assertThat(normalGroupForKey1.isDone()).isTrue();
+
+    DelayedGroup<String, String, String, String, Integer> delayedGroupForKey2 =
+        (DelayedGroup<String, String, String, String, Integer>) groupManager.getGroup(keys2);
+    assertThat(delayedGroupForKey2.isClosed()).isTrue();
+    assertThat(delayedGroupForKey2.isReady()).isFalse();
   }
 }
