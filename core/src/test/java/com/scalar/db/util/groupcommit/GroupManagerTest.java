@@ -43,10 +43,14 @@ class GroupManagerTest {
             "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
 
     // Act
+
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // Add slot-2.
     Keys<String, String, String> keys2 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+    // Add slot-3.
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
@@ -73,10 +77,13 @@ class GroupManagerTest {
         new GroupManager<>(
             "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
 
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // Add slot-2.
     Keys<String, String, String> keys2 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+    // Add slot-3.
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
@@ -126,8 +133,12 @@ class GroupManagerTest {
         new GroupManager<>(
             "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
 
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // Add slot-2.
+    groupManager.reserveNewSlot("child-key-2");
+    // Add slot-3.
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
@@ -155,10 +166,13 @@ class GroupManagerTest {
         new GroupManager<>(
             "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
 
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // Add slot-2.
     Keys<String, String, String> keys2 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+    // Add slot-3.
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
@@ -202,6 +216,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
 
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
     // These groups are supposed to exist at this moment.
@@ -229,20 +244,23 @@ class GroupManagerTest {
             "test", new GroupCommitConfig(3, 100, 1000, 10), keyManipulator, currentTime);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // Add slot-2.
+    groupManager.reserveNewSlot("child-key-2");
     NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
         (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
+    // TODO: Update this test case to check the future.
     executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
     TimeUnit.MILLISECONDS.sleep(200);
-
     // These groups are supposed to exist at this moment.
     // - NormalGroup("0000", slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
     // Act
-    boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
-
     // Assert
+
+    boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
     assertThat(moved).isFalse();
     assertThat(normalGroupForKey1.slots.size()).isEqualTo(2);
     assertThat(normalGroupForKey1.isClosed()).isFalse();
@@ -256,8 +274,11 @@ class GroupManagerTest {
         new GroupManager<>(
             "test", new GroupCommitConfig(2, 100, 1000, 10), keyManipulator, currentTime);
 
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // Add slot-2.
+    groupManager.reserveNewSlot("child-key-2");
     // These groups are supposed to exist at this moment.
     // - NormalGroup("0000", slots:[Slot("child-key-1"), Slot("child-key-2")])
 
@@ -284,8 +305,10 @@ class GroupManagerTest {
     groupManager.setEmitter(emittable);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    // Add slot-1.
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
+    // Add slot-2.
     Keys<String, String, String> keys2 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
     NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
