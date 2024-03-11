@@ -310,8 +310,6 @@ class GroupManagerTest {
 
     // Assert
     assertThat(future.get()).isTrue();
-    // TODO: Look into why this sleep is needed.
-    TimeUnit.MILLISECONDS.sleep(200);
 
     assertThat(moved).isTrue();
     assertThat(normalGroupForKey1.slots.size()).isEqualTo(1);

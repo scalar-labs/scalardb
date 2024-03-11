@@ -66,6 +66,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     } finally {
       // Slot gets done once the client obtains the result.
       isDone.set(true);
+      parentGroup.get().updateStatus();
     }
   }
 

@@ -162,20 +162,12 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
           delayedGroupMap.get(keys.fullKey);
       if (delayedGroup != null) {
         removed = delayedGroup.removeSlot(keys.childKey);
-        // TODO: Ask the cleanup queue for this deletion from the map?
-        if (delayedGroup.slots.isEmpty()) {
-          delayedGroupMap.remove(keys.fullKey);
-        }
       }
 
       NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup =
           normalGroupMap.get(keys.parentKey);
       if (normalGroup != null) {
         removed = normalGroup.removeSlot(keys.childKey) || removed;
-        if (normalGroup.slots.isEmpty()) {
-          // TODO: Ask the cleanup queue for this deletion from the map?
-          normalGroupMap.remove(keys.parentKey);
-        }
       }
 
       return removed;

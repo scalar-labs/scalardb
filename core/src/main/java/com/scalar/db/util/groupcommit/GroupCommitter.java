@@ -84,7 +84,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       if (group.putValueToSlotAndWait(keys.childKey, value)) {
         return;
       }
-      logger.info(
+      logger.debug(
           "The state of the group has been changed. Retrying. Group:{}, Keys:{}", group, keys);
     }
   }

@@ -260,7 +260,7 @@ class GroupCommitterConcurrentTest {
         throws ExecutionException, TimeoutException, InterruptedException {
       for (KeyAndFuture kf : futures) {
         try {
-          System.err.println("Getting the future of " + kf.key);
+          // System.err.println("Getting the future of " + kf.key);
           kf.future.get(10, TimeUnit.SECONDS);
         } catch (ExecutionException e) {
           if (e.getCause() instanceof ExpectedException

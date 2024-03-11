@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 // An abstract class that has logics and implementations to manage slots and trigger to emit it.
 abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
-  private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);
+  private static final Logger logger = LoggerFactory.getLogger(Group.class);
 
   protected final Emittable<EMIT_KEY, V> emitter;
   protected final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
@@ -101,7 +101,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       CHILD_KEY childKey, V value) {
     if (isReady()) {
       logger.info(
-          "This group is already ready, but trying to put a value to the slot. Group:{}, ChildKey:{}",
+          "This group is already ready, but trying to put a value to the slot. Retrying... Group:{}, ChildKey:{}",
           this,
           childKey);
       return null;
@@ -206,7 +206,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       if (removed.isReady()) {
         if (removed.isDone()) {
           logger.warn(
-              "The status of the slot being removed is already READY, so canceling would fail. Group:{}, Slot:{}",
+              "The status of the slot being removed is already DONE, so canceling would fail. Group:{}, Slot:{}",
               this,
               removed);
         }
