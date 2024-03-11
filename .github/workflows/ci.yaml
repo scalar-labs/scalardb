@@ -595,7 +595,6 @@ jobs:
           MSSQL_PID: "Express"
           SA_PASSWORD: "SqlServer17"
           ACCEPT_EULA: "Y"
-          MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
         options: --name sqlserver17
@@ -610,7 +609,8 @@ jobs:
           distribution: 'temurin'
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3
+        timeout-minutes: 1
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
@@ -635,7 +635,6 @@ jobs:
           MSSQL_PID: "Express"
           SA_PASSWORD: "SqlServer19"
           ACCEPT_EULA: "Y"
-          MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
         options: --name sqlserver19
@@ -650,7 +649,8 @@ jobs:
           distribution: 'temurin'
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19 10 3
+        timeout-minutes: 1
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
@@ -675,7 +675,6 @@ jobs:
           MSSQL_PID: "Express"
           SA_PASSWORD: "SqlServer22"
           ACCEPT_EULA: "Y"
-          MSSQL_COLLATION: "Japanese_BIN2"
         ports:
           - 1433:1433
         options: --name sqlserver22
@@ -690,7 +689,8 @@ jobs:
           distribution: 'temurin'
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22 10 3
+        timeout-minutes: 1
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
