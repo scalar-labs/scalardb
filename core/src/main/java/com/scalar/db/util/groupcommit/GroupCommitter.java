@@ -97,7 +97,9 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   public void remove(FULL_KEY fullKey) {
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
     if (!groupManager.removeSlotFromGroup(keys)) {
-      logger.warn("The slot wasn't found. FullKey:{}", fullKey);
+      logger.debug(
+          "Failed to remove the slot. Slots in a group that is already done can be automatically removed. FullKey:{}",
+          fullKey);
     }
   }
 

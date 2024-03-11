@@ -100,8 +100,8 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private synchronized Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> putValueToSlot(
       CHILD_KEY childKey, V value) {
     if (isReady()) {
-      logger.info(
-          "This group is already ready, but trying to put a value to the slot. Retrying... Group:{}, ChildKey:{}",
+      logger.debug(
+          "This group is already ready, but trying to put a value to the slot. Probably the slot is moved to a DelayedGroup. Retrying... Group:{}, ChildKey:{}",
           this,
           childKey);
       return null;
@@ -204,9 +204,9 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = slots.remove(childKey);
     if (removed != null) {
       if (removed.isReady()) {
-        if (removed.isDone()) {
+        if (removed.isDoneSuccessfully()) {
           logger.warn(
-              "The status of the slot being removed is already DONE, so canceling would fail. Group:{}, Slot:{}",
+              "The status of the slot being removed already finished successfully, so canceling would fail. Group:{}, Slot:{}",
               this,
               removed);
         }

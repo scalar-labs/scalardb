@@ -243,7 +243,7 @@ class GroupCommitterConcurrentTest {
           checkFutures(futures);
 
           // Print the summary.
-          int tps = printSummary(startInMillis);
+          printSummary(startInMillis);
 
           // Check the results.
           checkResults();
@@ -279,13 +279,12 @@ class GroupCommitterConcurrentTest {
       }
     }
 
-    private int printSummary(long startInMillis) {
+    private void printSummary(long startInMillis) {
       long duration = System.currentTimeMillis() - startInMillis;
       int tps = (int) ((double) numOfRequests / (duration / 1000.0));
       System.err.println("Duration(ms): " + duration);
       System.err.println("TPS:          " + tps);
       System.err.println("Retry:        " + retry.get());
-      return tps;
     }
 
     private void checkResults() {

@@ -105,7 +105,6 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     } finally {
       lock.unlockWrite(stamp);
     }
-
     return currentGroup.reserveNewSlot(childKey);
   }
 

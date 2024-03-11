@@ -128,8 +128,6 @@ class GroupManagerTest {
 
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
-    Keys<String, String, String> keys2 =
-        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
@@ -233,8 +231,6 @@ class GroupManagerTest {
 
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
-    Keys<String, String, String> keys2 =
-        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
     NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
         (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
     executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
@@ -262,8 +258,6 @@ class GroupManagerTest {
 
     Keys<String, String, String> keys1 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
-    Keys<String, String, String> keys2 =
-        keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
     // These groups are supposed to exist at this moment.
     // - NormalGroup("0000", slots:[Slot("child-key-1"), Slot("child-key-2")])
 
