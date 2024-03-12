@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -46,13 +47,13 @@ class DelayedSlotMoveWorkerTest {
   }
 
   @Test
-  void add_GivenReadyGroup_ShouldPassItToGroupCleanupWorker() throws InterruptedException {
+  void add_GivenReadyGroup_ShouldPassItToGroupCleanupWorker() {
     // Arrange
     doReturn(true).when(normalGroup1).isReady();
 
     // Act
     worker.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     assertThat(worker.size()).isEqualTo(0);
@@ -61,7 +62,7 @@ class DelayedSlotMoveWorkerTest {
   }
 
   @Test
-  void add_GivenNotReadyGroupNotTimedOut_ShouldKeepItWithWait() throws InterruptedException {
+  void add_GivenNotReadyGroupNotTimedOut_ShouldKeepItWithWait() {
     // Arrange
     long now = System.currentTimeMillis();
     doReturn(now).when(currentTime).currentTimeMillis();
@@ -71,7 +72,7 @@ class DelayedSlotMoveWorkerTest {
 
     // Act
     workerWithWait.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(LONG_WAIT_MILLIS * 2);
+    Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS * 2, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(workerWithWait, atMost(2)).processItem(any());
@@ -81,8 +82,7 @@ class DelayedSlotMoveWorkerTest {
   }
 
   @Test
-  void add_GivenNotReadyGroupTimedOut_ShouldMoveDelayedSlotsToDelayedGroup()
-      throws InterruptedException {
+  void add_GivenNotReadyGroupTimedOut_ShouldMoveDelayedSlotsToDelayedGroup() {
     // Arrange
     long now = System.currentTimeMillis();
     doReturn(now).when(currentTime).currentTimeMillis();
@@ -94,7 +94,7 @@ class DelayedSlotMoveWorkerTest {
 
     // Act
     worker.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     assertThat(worker.size()).isEqualTo(0);
@@ -103,8 +103,7 @@ class DelayedSlotMoveWorkerTest {
   }
 
   @Test
-  void add_GivenMultipleNotReadyGroupsTimedOut_ShouldMoveDelayedSlotsToDelayedGroupWithoutWait()
-      throws InterruptedException {
+  void add_GivenMultipleNotReadyGroupsTimedOut_ShouldMoveDelayedSlotsToDelayedGroupWithoutWait() {
     // Arrange
     long now = System.currentTimeMillis();
     doReturn(now).when(currentTime).currentTimeMillis();
@@ -120,7 +119,7 @@ class DelayedSlotMoveWorkerTest {
     // Act
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
         .forEach(g -> workerWithWait.add(g));
-    TimeUnit.MILLISECONDS.sleep(LONG_WAIT_MILLIS * 2);
+    Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS * 2, TimeUnit.MILLISECONDS);
 
     // Assert
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)

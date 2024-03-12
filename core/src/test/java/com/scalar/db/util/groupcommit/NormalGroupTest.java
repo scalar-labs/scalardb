@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -114,8 +115,7 @@ class NormalGroupTest {
               return null;
             }));
     executorService.shutdown();
-
-    TimeUnit.MILLISECONDS.sleep(500);
+    Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
     // The status is READY not DONE.
     assertThat(group.isReady()).isTrue();
     assertThat(group.isDone()).isFalse();
@@ -170,8 +170,7 @@ class NormalGroupTest {
               return null;
             }));
     executorService.shutdown();
-
-    TimeUnit.MILLISECONDS.sleep(500);
+    Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
     // The status isn't READY yet since slot3 isn't ready.
     assertThat(group.isReady()).isFalse();
 
@@ -242,7 +241,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void removeSlot_GivenReadySlots_ShouldRemoveSlotAndGetDone() throws InterruptedException {
+  void removeSlot_GivenReadySlots_ShouldRemoveSlotAndGetDone() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
@@ -263,9 +262,7 @@ class NormalGroupTest {
               return null;
             }));
     executorService.shutdown();
-
-    TimeUnit.MILLISECONDS.sleep(500);
-
+    Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
     // At the moment,
     // - slot1 is ready
     // - slot2 is not ready

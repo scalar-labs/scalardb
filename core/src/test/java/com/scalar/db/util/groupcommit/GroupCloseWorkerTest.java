@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -55,14 +56,14 @@ class GroupCloseWorkerTest {
   }
 
   @Test
-  void add_GivenClosedGroup_ShouldPassItToDelayedSlotMoveWorker() throws InterruptedException {
+  void add_GivenClosedGroup_ShouldPassItToDelayedSlotMoveWorker() {
     // Arrange
     doReturn(true).when(normalGroup1).isClosed();
     doReturn(false).when(normalGroup1).isReady();
 
     // Act
     worker.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(normalGroup1, never()).close();
@@ -72,14 +73,14 @@ class GroupCloseWorkerTest {
   }
 
   @Test
-  void add_GivenReadyGroup_ShouldPassItToGroupCleanupWorker() throws InterruptedException {
+  void add_GivenReadyGroup_ShouldPassItToGroupCleanupWorker() {
     // Arrange
     doReturn(true).when(normalGroup1).isClosed();
     doReturn(true).when(normalGroup1).isReady();
 
     // Act
     worker.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(normalGroup1, never()).close();
@@ -89,7 +90,7 @@ class GroupCloseWorkerTest {
   }
 
   @Test
-  void add_GivenOpenGroupNotTimedOut_ShouldKeepItWithWait() throws InterruptedException {
+  void add_GivenOpenGroupNotTimedOut_ShouldKeepItWithWait() {
     // Arrange
     long now = System.currentTimeMillis();
     doReturn(now).when(currentTime).currentTimeMillis();
@@ -99,7 +100,7 @@ class GroupCloseWorkerTest {
 
     // Act
     workerWithWait.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(LONG_WAIT_MILLIS * 2);
+    Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS * 2, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(workerWithWait, atMost(2)).processItem(any());
@@ -110,8 +111,7 @@ class GroupCloseWorkerTest {
   }
 
   @Test
-  void add_GivenOpenGroupTimedOut_ShouldCloseItAndPassItToDelayedSlotMoveWorker()
-      throws InterruptedException {
+  void add_GivenOpenGroupTimedOut_ShouldCloseItAndPassItToDelayedSlotMoveWorker() {
     // Arrange
     long now = System.currentTimeMillis();
     doReturn(now).when(currentTime).currentTimeMillis();
@@ -122,7 +122,7 @@ class GroupCloseWorkerTest {
 
     // Act
     worker.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(normalGroup1).close();
@@ -133,8 +133,7 @@ class GroupCloseWorkerTest {
 
   @Test
   void
-      add_GivenOpenGroupTimedOut_WhichWillBeReadyAfterClosed_ShouldCloseItAndPassItToGroupCleanupWorker()
-          throws InterruptedException {
+      add_GivenOpenGroupTimedOut_WhichWillBeReadyAfterClosed_ShouldCloseItAndPassItToGroupCleanupWorker() {
     // Arrange
     long now = System.currentTimeMillis();
     doReturn(now).when(currentTime).currentTimeMillis();
@@ -145,7 +144,7 @@ class GroupCloseWorkerTest {
 
     // Act
     worker.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(normalGroup1).close();
@@ -156,8 +155,7 @@ class GroupCloseWorkerTest {
 
   @Test
   void
-      add_GivenMultipleOpenGroupsTimedOut_ShouldCloseThemAndPassThemToDelayedSlotMoveWorkerWithoutWait()
-          throws InterruptedException {
+      add_GivenMultipleOpenGroupsTimedOut_ShouldCloseThemAndPassThemToDelayedSlotMoveWorkerWithoutWait() {
     // Arrange
     long now = System.currentTimeMillis();
     doReturn(now).when(currentTime).currentTimeMillis();
@@ -173,7 +171,7 @@ class GroupCloseWorkerTest {
     // Act
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
         .forEach(g -> workerWithWait.add(g));
-    TimeUnit.MILLISECONDS.sleep(LONG_WAIT_MILLIS * 2);
+    Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS * 2, TimeUnit.MILLISECONDS);
 
     // Assert
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)

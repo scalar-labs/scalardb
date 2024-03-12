@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -43,14 +44,14 @@ class GroupCleanupWorkerTest {
   }
 
   @Test
-  void add_GivenDoneNormalGroup_ShouldRemoveItFromGroupManager() throws InterruptedException {
+  void add_GivenDoneNormalGroup_ShouldRemoveItFromGroupManager() {
     // Arrange
     doReturn(true).when(normalGroup1).isDone();
     doReturn(true).when(groupManager).removeGroupFromMap(normalGroup1);
 
     // Act
     worker.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     assertThat(worker.size()).isEqualTo(0);
@@ -58,13 +59,13 @@ class GroupCleanupWorkerTest {
   }
 
   @Test
-  void add_GivenNotDoneNormalGroup_ShouldKeepItWithWait() throws InterruptedException {
+  void add_GivenNotDoneNormalGroup_ShouldKeepItWithWait() {
     // Arrange
     doReturn(false).when(normalGroup1).isDone();
 
     // Act
     workerWithWait.add(normalGroup1);
-    TimeUnit.MILLISECONDS.sleep(LONG_WAIT_MILLIS * 2);
+    Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS * 2, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(workerWithWait, atMost(2)).processItem(any());
@@ -73,14 +74,14 @@ class GroupCleanupWorkerTest {
   }
 
   @Test
-  void add_GivenDoneDelayedGroup_ShouldRemoveItFromGroupManager() throws InterruptedException {
+  void add_GivenDoneDelayedGroup_ShouldRemoveItFromGroupManager() {
     // Arrange
     doReturn(true).when(delayedGroup1).isDone();
     doReturn(true).when(groupManager).removeGroupFromMap(delayedGroup1);
 
     // Act
     worker.add(delayedGroup1);
-    TimeUnit.MILLISECONDS.sleep(200);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
     assertThat(worker.size()).isEqualTo(0);
@@ -88,13 +89,13 @@ class GroupCleanupWorkerTest {
   }
 
   @Test
-  void add_GivenNotDoneDelayedGroup_ShouldKeepItWithWait() throws InterruptedException {
+  void add_GivenNotDoneDelayedGroup_ShouldKeepItWithWait() {
     // Arrange
     doReturn(false).when(delayedGroup1).isDone();
 
     // Act
     workerWithWait.add(delayedGroup1);
-    TimeUnit.MILLISECONDS.sleep(LONG_WAIT_MILLIS);
+    Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(workerWithWait, atMost(2)).processItem(any());
@@ -103,7 +104,7 @@ class GroupCleanupWorkerTest {
   }
 
   @Test
-  void add_GivenMultipleDoneGroups_ShouldRemoveThemFromGroupManager() throws InterruptedException {
+  void add_GivenMultipleDoneGroups_ShouldRemoveThemFromGroupManager() {
     // Arrange
     Arrays.asList(normalGroup1, normalGroup2, delayedGroup1, delayedGroup2)
         .forEach(
@@ -115,7 +116,7 @@ class GroupCleanupWorkerTest {
     // Act
     Arrays.asList(normalGroup1, normalGroup2, delayedGroup1, delayedGroup2)
         .forEach(g -> workerWithWait.add(g));
-    TimeUnit.MILLISECONDS.sleep(LONG_WAIT_MILLIS * 2);
+    Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS * 2, TimeUnit.MILLISECONDS);
 
     // Assert
     Arrays.asList(normalGroup1, normalGroup2, delayedGroup1, delayedGroup2)

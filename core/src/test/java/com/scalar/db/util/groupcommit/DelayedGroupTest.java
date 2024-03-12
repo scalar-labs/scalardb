@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -92,8 +93,8 @@ class DelayedGroupTest {
               return null;
             }));
     executorService.shutdown();
+    Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
 
-    TimeUnit.MILLISECONDS.sleep(500);
     // The status is READY not DONE.
     assertThat(group.isReady()).isTrue();
     assertThat(group.isDone()).isFalse();
@@ -163,7 +164,7 @@ class DelayedGroupTest {
             }));
     executorService.shutdown();
 
-    TimeUnit.MILLISECONDS.sleep(500);
+    Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
 
     // At the moment,
     // - slot is ready, but not done since it's blocked
