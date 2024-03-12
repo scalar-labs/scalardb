@@ -108,6 +108,10 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     ThrowableRunnable taskForEmitterSlot =
         () -> {
           try {
+            if (isDone()) {
+              logger.info("This group is already done, but trying to emit. Group:{}", this);
+              return;
+            }
             emitter.execute(keyManipulator.emitKeyFromParentKey(parentKey), values);
 
             synchronized (this) {

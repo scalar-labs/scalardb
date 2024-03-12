@@ -19,6 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+// TODO: Add emit failure cases
+// TODO: Add more comments
+// TODO: Be consist with GroupCommitterTest
+
 @ExtendWith(MockitoExtension.class)
 class GroupManagerTest {
   private CurrentTime currentTime;
@@ -182,7 +186,7 @@ class GroupManagerTest {
             currentTime)) {
       groupManager.setEmitter(emittable);
 
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
+      ExecutorService executorService = Executors.newCachedThreadPool();
 
       // Add slot-1.
       Keys<String, String, String> keys1 =
@@ -264,7 +268,7 @@ class GroupManagerTest {
             currentTime)) {
       groupManager.setEmitter(emittable);
 
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
+      ExecutorService executorService = Executors.newCachedThreadPool();
 
       // Add slot-1.
       Keys<String, String, String> keys1 =
@@ -371,7 +375,7 @@ class GroupManagerTest {
             currentTime)) {
       groupManager.setEmitter(emittable);
 
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
+      ExecutorService executorService = Executors.newCachedThreadPool();
 
       // Add slot-1.
       Keys<String, String, String> keys1 =
@@ -469,7 +473,7 @@ class GroupManagerTest {
             currentTime)) {
       groupManager.setEmitter(emittable);
 
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
+      ExecutorService executorService = Executors.newCachedThreadPool();
 
       // Add slot-1.
       Keys<String, String, String> keys1 =
@@ -494,6 +498,9 @@ class GroupManagerTest {
       assertThat(normalGroupForKey1.isClosed()).isFalse();
 
       // Move current time forward and wait to let GroupCloseWorker work.
+      // TODO: This sometimes failed due to
+      //       org.mockito.exceptions.misusing.UnnecessaryStubbingException:
+      //       Unnecessary stubbings detected.
       doReturn(System.currentTimeMillis() + groupCloseTimeoutMillis)
           .when(currentTime)
           .currentTimeMillis();
@@ -559,7 +566,7 @@ class GroupManagerTest {
             currentTime)) {
       groupManager.setEmitter(emittable);
 
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
+      ExecutorService executorService = Executors.newCachedThreadPool();
 
       // Add slot-1.
       Keys<String, String, String> keys1 =

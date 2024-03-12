@@ -196,35 +196,34 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         newStatus = Status.DONE;
       }
     }
-
     status.set(newStatus);
   }
 
   synchronized boolean removeSlot(CHILD_KEY childKey) {
-    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = slots.remove(childKey);
-    if (removed != null) {
-      if (removed.isReady()) {
-        if (removed.isDoneSuccessfully()) {
-          logger.warn(
-              "The status of the slot being removed already finished successfully, so canceling would fail. Group:{}, Slot:{}",
-              this,
-              removed);
-        }
-        removed.markAsFail(
-            new IllegalStateException(
-                String.format(
-                    "The status of the slot being removed is already READY. Group:%s, Slot:%s",
-                    this, removed)));
-      }
-
-      if (size.get() != null && size.get() > 0) {
-        size.set(size.get() - 1);
-      }
-      updateStatus();
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = slots.get(childKey);
+    if (slot == null) {
+      return false;
     }
+
+    // TODO: Should add `isRemoved` or something and set it using CAS to avoid race conditions?
+    if (slot.isReady()) {
+      logger.debug(
+          "Attempted to remove this slot, but it will not be removed because it is already ready. Group:{}, Slot:{}",
+          this,
+          slot);
+      return false;
+    }
+
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> removed = slots.remove(childKey);
+    assert removed != null;
+
+    if (size.get() != null && size.get() > 0) {
+      size.set(size.get() - 1);
+    }
+    updateStatus();
     asyncEmitIfReady();
 
-    return removed != null;
+    return true;
   }
 
   protected abstract void asyncEmit();

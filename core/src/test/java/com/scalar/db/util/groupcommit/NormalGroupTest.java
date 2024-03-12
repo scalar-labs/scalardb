@@ -1,7 +1,6 @@
 package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
@@ -241,7 +240,8 @@ class NormalGroupTest {
   }
 
   @Test
-  void removeSlot_GivenReadySlots_ShouldRemoveSlotAndGetDone() {
+  void removeSlot_GivenReadySlots_ShouldDoNothing()
+      throws ExecutionException, InterruptedException {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
@@ -270,20 +270,16 @@ class NormalGroupTest {
     // Act
     // Assert
 
-    assertThat(group.removeSlot("child-key-1")).isTrue();
+    assertThat(group.removeSlot("child-key-1")).isFalse();
     assertThat(group.isClosed()).isTrue();
     assertThat(group.isReady()).isFalse();
-    assertThat(group.removeSlot("child-key-1")).isFalse();
     assertThat(group.removeSlot("child-key-2")).isTrue();
+    Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
     assertThat(group.isDone()).isTrue();
-    assertThat(group.size()).isEqualTo(0);
+    assertThat(group.size()).isEqualTo(1);
 
     assertThat(futures.size()).isEqualTo(1);
-    ExecutionException thrown = assertThrows(ExecutionException.class, () -> futures.get(0).get());
-    assertThat(thrown.getCause())
-        .isInstanceOf(GroupCommitException.class)
-        .cause()
-        .isInstanceOf(IllegalStateException.class);
+    futures.get(0).get();
   }
 
   @Test

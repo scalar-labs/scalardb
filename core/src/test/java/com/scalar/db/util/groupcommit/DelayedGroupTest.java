@@ -134,7 +134,7 @@ class DelayedGroupTest {
   }
 
   @Test
-  void removeSlot_GivenReadySlots_ShouldRemoveSlotAndGetDone()
+  void removeSlot_GivenReadySlots_ShouldDoNothing()
       throws InterruptedException, ExecutionException {
     // Arrange
     AtomicBoolean emitted = new AtomicBoolean();
@@ -172,18 +172,15 @@ class DelayedGroupTest {
     // Act
     // Assert
 
-    assertThat(group.removeSlot("child-key")).isTrue();
-    assertThat(group.isClosed()).isTrue();
-    assertThat(group.isReady()).isTrue();
-    assertThat(group.isDone()).isTrue();
     assertThat(group.removeSlot("child-key")).isFalse();
-    assertThat(group.size()).isEqualTo(0);
+    assertThat(group.isReady()).isTrue();
 
     // This wait is needed to prevent the DelayedGroup from immediately getting done.
     wait.countDown();
 
     assertThat(futures.size()).isEqualTo(1);
     futures.get(0).get();
+    assertThat(group.isDone()).isTrue();
     assertThat(emitted.get()).isTrue();
   }
 }

@@ -1,5 +1,6 @@
 package com.scalar.db.util.groupcommit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import org.slf4j.Logger;
@@ -37,7 +38,12 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     logger.info("Staring GroupCommitter. Label:{}, Config:{}", label, config);
     this.keyManipulator = keyManipulator;
-    this.groupManager = new GroupManager<>(label, config, keyManipulator, new CurrentTime());
+    this.groupManager = new GroupManager<>(label, config, keyManipulator, createCurrentTime());
+  }
+
+  @VisibleForTesting
+  CurrentTime createCurrentTime() {
+    return new CurrentTime();
   }
 
   /**
