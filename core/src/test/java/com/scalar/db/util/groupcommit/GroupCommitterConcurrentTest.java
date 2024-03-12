@@ -293,8 +293,8 @@ class GroupCommitterConcurrentTest {
       }
     }
 
-    private void checkGarbage(GroupCommitter<String, String, String, String, Value> groupCommitter)
-        throws InterruptedException {
+    private void checkGarbage(
+        GroupCommitter<String, String, String, String, Value> groupCommitter) {
       boolean noGarbage = false;
       Metrics metrics = null;
       for (int i = 0; i < 10; i++) {
