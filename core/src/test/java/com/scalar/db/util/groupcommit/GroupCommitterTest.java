@@ -11,8 +11,10 @@ import static org.mockito.Mockito.verify;
 import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -25,7 +27,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 // TODO:
-//   Add failing emit task cases.
 //   Reconsider if CurrentTime can be removed.
 
 @ExtendWith(MockitoExtension.class)
@@ -80,7 +81,8 @@ class GroupCommitterTest {
   }
 
   @Test
-  void ready_GivenTwoValuesForTwoSlots_ShouldEmitThem() throws Exception {
+  void ready_GivenTwoValuesForTwoSlotsInNormalGroupWithSuccessfulEmitTask_ShouldEmitThem()
+      throws Exception {
     // Arrange
 
     int groupCloseTimeoutMillis = 100;
@@ -126,7 +128,66 @@ class GroupCommitterTest {
   }
 
   @Test
-  void ready_GivenOnlyOneValueForTwoSlots_ShouldJustWait() throws Exception {
+  void ready_GivenTwoValuesForTwoSlotsInNormalGroupWithFailingEmitTask_ShouldFail()
+      throws Exception {
+    // Arrange
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
+    Emittable<String, Integer> failingEmitter =
+        spy(
+            // This should be an anonymous class since `spy()` can't handle a lambda.
+            new Emittable<String, Integer>() {
+              @Override
+              public void execute(String key, List<Integer> values) {
+                throw new RuntimeException("Something is wrong");
+              }
+            });
+
+    try (TestableGroupCommitter groupCommitter =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+      groupCommitter.setEmitter(failingEmitter);
+      ExecutorService executorService = Executors.newCachedThreadPool();
+
+      // Reserve 3 slots.
+      String fullKey1 = groupCommitter.reserve("child-key-1");
+      String fullKey2 = groupCommitter.reserve("child-key-2");
+      groupCommitter.reserve("child-key-3");
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
+
+      // Act
+
+      List<Future<?>> futures = new ArrayList<>();
+      // Mark the 2 slots in the first group as ready by putting values.
+      futures.add(executorService.submit(() -> groupCommitter.ready(fullKey1, 11)));
+      futures.add(executorService.submit(() -> groupCommitter.ready(fullKey2, 22)));
+      executorService.shutdown();
+      // Wait until they're done.
+      for (Future<?> future : futures) {
+        // All `ready()` method calls must throw an exception.
+        Throwable cause = assertThrows(ExecutionException.class, future::get).getCause();
+        assertThat(cause).isInstanceOf(GroupCommitException.class);
+      }
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", DONE, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
+
+      // Assert
+      verify(failingEmitter).execute("0000", Arrays.asList(11, 22));
+      verify(failingEmitter, never()).execute(eq("0001"), any());
+    }
+  }
+
+  @Test
+  void ready_GivenOnlyOneValueForTwoSlotsInNormalGroup_ShouldJustWait() throws Exception {
     // Arrange
 
     int groupCloseTimeoutMillis = 100;
@@ -167,6 +228,124 @@ class GroupCommitterTest {
       // So, this timeout must happen.
       assertThrows(TimeoutException.class, () -> future.get(1000, TimeUnit.MILLISECONDS));
       verify(emitter, never()).execute(any(), any());
+    }
+  }
+
+  @Test
+  void ready_GivenDelayedGroupWithSuccessfulEmitTask_ShouldEmitThem() throws Exception {
+    // Arrange
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
+    try (TestableGroupCommitter groupCommitter =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+      groupCommitter.setEmitter(emitter);
+      ExecutorService executorService = Executors.newCachedThreadPool();
+
+      // Reserve 2 slots.
+      String fullKey1 = groupCommitter.reserve("child-key-1");
+      String fullKey2 = groupCommitter.reserve("child-key-2");
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+
+      // Prepare a DelayedGroup.
+      List<Future<?>> futures = new ArrayList<>();
+      // Mark the first slot in the first group as ready by putting a value.
+      futures.add(executorService.submit(() -> groupCommitter.ready(fullKey1, 11)));
+      // Wait for the move of the delayed second slot to a DelayedGroup.
+      Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
+      // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+      verify(emitter).execute("0000", Collections.singletonList(11));
+      verify(emitter, never()).execute(eq("0000:child-key-2"), any());
+
+      // Act
+
+      // Mark the second slot in the second group as ready by putting values.
+      futures.add(executorService.submit(() -> groupCommitter.ready(fullKey2, 22)));
+      executorService.shutdown();
+      // Wait until they're done.
+      for (Future<?> future : futures) {
+        future.get();
+      }
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
+      // - DelayedGroup("0000:child-key-2", DONE, slots:[Slot("child-key-2")])
+
+      // Assert
+      verify(emitter).execute("0000:child-key-2", Collections.singletonList(22));
+    }
+  }
+
+  @Test
+  void ready_GivenDelayedGroupWithFailingEmitTask_ShouldFail() throws Exception {
+    // Arrange
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
+    Emittable<String, Integer> failingEmitter =
+        spy(
+            // This should be an anonymous class since `spy()` can't handle a lambda.
+            new Emittable<String, Integer>() {
+              @Override
+              public void execute(String key, List<Integer> values) {
+                throw new RuntimeException("Something is wrong");
+              }
+            });
+
+    try (TestableGroupCommitter groupCommitter =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+      groupCommitter.setEmitter(failingEmitter);
+      ExecutorService executorService = Executors.newCachedThreadPool();
+
+      // Reserve 3 slots.
+      String fullKey1 = groupCommitter.reserve("child-key-1");
+      String fullKey2 = groupCommitter.reserve("child-key-2");
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+
+      // Prepare a DelayedGroup.
+      List<Future<?>> futures = new ArrayList<>();
+      // Mark the first slot in the first group as ready by putting a value.
+      futures.add(executorService.submit(() -> groupCommitter.ready(fullKey1, 11)));
+      // Wait for the move of the delayed second slot to a DelayedGroup.
+      Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
+      // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+      verify(failingEmitter).execute("0000", Collections.singletonList(11));
+      verify(failingEmitter, never()).execute(eq("0000:child-key-2"), any());
+
+      // Act
+
+      // Mark the second slot in the second group as ready by putting values.
+      futures.add(executorService.submit(() -> groupCommitter.ready(fullKey2, 22)));
+      executorService.shutdown();
+      // Wait until they're done.
+      for (Future<?> future : futures) {
+        // All `ready()` method calls must throw an exception.
+        Throwable cause = assertThrows(ExecutionException.class, future::get).getCause();
+        assertThat(cause).isInstanceOf(GroupCommitException.class);
+      }
+      // There should be the following groups at this moment.
+      // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
+      // - DelayedGroup("0000:child-key-2", DONE, slots:[Slot("child-key-2")])
+
+      // Assert
+      verify(failingEmitter).execute("0000:child-key-2", Collections.singletonList(22));
     }
   }
 
