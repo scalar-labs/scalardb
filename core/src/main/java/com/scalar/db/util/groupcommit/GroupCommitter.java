@@ -1,8 +1,14 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
+import java.time.Instant;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +28,15 @@ import org.slf4j.LoggerFactory;
 public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
 
+  // Background workers
+  private final GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker;
+  private final DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+      delayedSlotMoveWorker;
+  private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
+
+  // Executors
+  private final ExecutorService monitorExecutorService;
+
   // This contains logics of how to treat keys.
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
 
@@ -37,8 +52,67 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     logger.info("Staring GroupCommitter. Label:{}, Config:{}", label, config);
+    CurrentTime currentTime = createCurrentTime();
     this.keyManipulator = keyManipulator;
     this.groupManager = new GroupManager<>(label, config, keyManipulator, createCurrentTime());
+    this.groupCleanupWorker =
+        new GroupCleanupWorker<>(
+            label, config.timeoutCheckIntervalMillis(), groupManager, currentTime);
+    this.delayedSlotMoveWorker =
+        new DelayedSlotMoveWorker<>(
+            label,
+            config.timeoutCheckIntervalMillis(),
+            groupManager,
+            groupCleanupWorker,
+            currentTime);
+    this.groupCloseWorker =
+        new GroupCloseWorker<>(
+            label,
+            config.timeoutCheckIntervalMillis(),
+            delayedSlotMoveWorker,
+            groupCleanupWorker,
+            currentTime);
+    this.groupManager.setGroupCloseWorker(groupCloseWorker);
+    this.groupManager.setGroupCleanupWorker(groupCleanupWorker);
+
+    // TODO: This should be replaced by other metrics mechanism.
+    this.monitorExecutorService =
+        Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat(label + "-group-commit-monitor-%d")
+                .build());
+    startMonitorExecutorService();
+  }
+
+  Metrics getMetrics() {
+    return new Metrics(
+        groupCloseWorker.size(),
+        delayedSlotMoveWorker.size(),
+        groupCleanupWorker.size(),
+        groupManager.sizeOfNormalGroupMap(),
+        groupManager.sizeOfDelayedGroupMap());
+  }
+
+  // TODO: This should be replaced by other metrics mechanism.
+  private void startMonitorExecutorService() {
+    Runnable print =
+        () -> logger.info("[MONITOR] Timestamp={}, Metrics={}", Instant.now(), getMetrics());
+
+    monitorExecutorService.execute(
+        () -> {
+          while (!monitorExecutorService.isShutdown()) {
+            try {
+              print.run();
+              TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              logger.warn("Interrupted", e);
+              break;
+            }
+          }
+          print.run();
+        });
   }
 
   @VisibleForTesting
@@ -110,15 +184,16 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   }
 
   /**
-   * Closes the resources. The ExecutorServices used in GroupManager are created as daemon, so
-   * calling this method isn't needed. But for testing, this should be called for resources.
+   * Closes the resources. The ExecutorServices are created as daemon, so calling this method isn't
+   * needed. But for testing, this should be called for resources.
    */
   @Override
   public void close() {
-    groupManager.close();
-  }
-
-  Metrics getMetrics() {
-    return groupManager.getMetrics();
+    if (monitorExecutorService != null) {
+      MoreExecutors.shutdownAndAwaitTermination(monitorExecutorService, 5, TimeUnit.SECONDS);
+    }
+    delayedSlotMoveWorker.close();
+    groupCloseWorker.close();
+    groupCleanupWorker.close();
   }
 }

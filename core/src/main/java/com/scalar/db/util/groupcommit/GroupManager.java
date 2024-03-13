@@ -2,34 +2,18 @@ package com.scalar.db.util.groupcommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
-import java.io.Closeable;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
-
-  // Background workers
-  private final GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker;
-  private final DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-      delayedSlotMoveWorker;
-  private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
-
-  // Executors
-  private final ExecutorService monitorExecutorService;
+class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
+  private static final Logger logger = LoggerFactory.getLogger(GroupManager.class);
 
   // Groups
   @Nullable private NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> currentGroup;
@@ -38,7 +22,15 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
       normalGroupMap = new HashMap<>();
   private final Map<FULL_KEY, DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
       delayedGroupMap = new HashMap<>();
+  // Only this class uses this type of lock since the class can be heavy hotspot and StampedLock has
+  // basically better performance than `synchronized` keyword.
   private final StampedLock lock = new StampedLock();
+
+  // Background workers
+  @LazyInit private GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker;
+
+  @LazyInit
+  private GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
 
   // Custom operations injected by the client
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
@@ -49,7 +41,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
   private final int slotCapacity;
   private final CurrentTime currentTime;
 
-  public GroupManager(
+  GroupManager(
       String label,
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
@@ -58,28 +50,17 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     this.groupCloseTimeoutMillis = config.groupCloseTimeoutMillis();
     this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
     this.slotCapacity = config.slotCapacity();
-    this.groupCleanupWorker =
-        new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), this, currentTime);
-    this.delayedSlotMoveWorker =
-        new DelayedSlotMoveWorker<>(
-            label, config.timeoutCheckIntervalMillis(), this, groupCleanupWorker, currentTime);
-    this.groupCloseWorker =
-        new GroupCloseWorker<>(
-            label,
-            config.timeoutCheckIntervalMillis(),
-            delayedSlotMoveWorker,
-            groupCleanupWorker,
-            currentTime);
     this.currentTime = currentTime;
+  }
 
-    // TODO: This should be replaced by other metrics mechanism.
-    this.monitorExecutorService =
-        Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(label + "-group-commit-monitor-%d")
-                .build());
-    startMonitorExecutorService();
+  void setGroupCloseWorker(
+      GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker) {
+    this.groupCloseWorker = groupCloseWorker;
+  }
+
+  void setGroupCleanupWorker(
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
+    this.groupCleanupWorker = groupCleanupWorker;
   }
 
   // Reserves a new slot in the current NormalGroup. A new NormalGroup will be created and
@@ -221,51 +202,15 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Clos
     return true;
   }
 
-  Metrics getMetrics() {
-    return new Metrics(
-        groupCloseWorker.size(),
-        delayedSlotMoveWorker.size(),
-        groupCleanupWorker.size(),
-        normalGroupMap.size(),
-        delayedGroupMap.size());
-  }
-
-  // TODO: This should be replaced by other metrics mechanism.
-  private void startMonitorExecutorService() {
-    Runnable print =
-        () -> logger.info("[MONITOR] Timestamp={}, Metrics={}", Instant.now(), getMetrics());
-
-    monitorExecutorService.execute(
-        () -> {
-          while (!monitorExecutorService.isShutdown()) {
-            try {
-              print.run();
-              TimeUnit.SECONDS.sleep(1);
-            } catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-              logger.warn("Interrupted", e);
-              break;
-            }
-          }
-          print.run();
-        });
-  }
-
   void setEmitter(Emittable<EMIT_KEY, V> emitter) {
     this.emitter = emitter;
   }
 
-  /**
-   * Closes the resources. The ExecutorServices are created as daemon, so calling this method isn't
-   * needed. But for testing, this should be called for resources.
-   */
-  @Override
-  public void close() {
-    if (monitorExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(monitorExecutorService, 5, TimeUnit.SECONDS);
-    }
-    delayedSlotMoveWorker.close();
-    groupCloseWorker.close();
-    groupCleanupWorker.close();
+  int sizeOfNormalGroupMap() {
+    return normalGroupMap.size();
+  }
+
+  int sizeOfDelayedGroupMap() {
+    return delayedGroupMap.size();
   }
 }
