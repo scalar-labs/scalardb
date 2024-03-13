@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class GroupManagerTest {
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
-  private CurrentTime currentTime;
   private TestableKeyManipulator keyManipulator;
   @Mock private Emittable<String, Integer> emittable;
   @Mock private GroupCloseWorker<String, String, String, String, Integer> groupCloseWorker;
@@ -28,7 +27,6 @@ class GroupManagerTest {
 
   @BeforeEach
   void setUp() {
-    currentTime = new CurrentTime();
     keyManipulator = new TestableKeyManipulator();
   }
 
@@ -43,8 +41,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -69,8 +66,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -99,8 +95,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -135,8 +130,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -189,8 +183,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -246,8 +239,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -281,8 +273,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -344,8 +335,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -394,8 +384,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -454,8 +443,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -487,8 +475,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(3, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -544,8 +531,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
@@ -579,8 +565,7 @@ class GroupManagerTest {
         new GroupManager<>(
             "test",
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
-            keyManipulator,
-            currentTime);
+            keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupCloseWorker(groupCloseWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);

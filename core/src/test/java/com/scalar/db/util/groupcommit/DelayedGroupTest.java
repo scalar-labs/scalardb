@@ -32,7 +32,7 @@ class DelayedGroupTest {
   void fullKey_GivenFullKeyViaConstructor_ShouldReturnProperly() {
     // Arrange
     DelayedGroup<String, String, String, String, Integer> group =
-        new DelayedGroup<>("0000:full-key", emitter, keyManipulator, new CurrentTime());
+        new DelayedGroup<>("0000:full-key", emitter, keyManipulator);
 
     // Act
     // Assert
@@ -43,10 +43,10 @@ class DelayedGroupTest {
   void reserveNewSlot_GivenArbitrarySlot_ShouldStoreIt() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> oldGroup =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
     DelayedGroup<String, String, String, String, Integer> group =
-        new DelayedGroup<>("0000:full-key", emitter, keyManipulator, new CurrentTime());
+        new DelayedGroup<>("0000:full-key", emitter, keyManipulator);
 
     assertThat(group.size()).isNull();
     assertThat(group.isClosed()).isFalse();
@@ -72,10 +72,10 @@ class DelayedGroupTest {
           emitted.set(true);
         };
     NormalGroup<String, String, String, String, Integer> oldGroup =
-        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
     DelayedGroup<String, String, String, String, Integer> group =
-        new DelayedGroup<>("0000:full-key", waitableEmitter, keyManipulator, new CurrentTime());
+        new DelayedGroup<>("0000:full-key", waitableEmitter, keyManipulator);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot);
@@ -121,10 +121,10 @@ class DelayedGroupTest {
           throw new RuntimeException("Something is wrong");
         };
     NormalGroup<String, String, String, String, Integer> oldGroup =
-        new NormalGroup<>(failingEmitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(failingEmitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
     DelayedGroup<String, String, String, String, Integer> group =
-        new DelayedGroup<>("0000:full-key", failingEmitter, keyManipulator, new CurrentTime());
+        new DelayedGroup<>("0000:full-key", failingEmitter, keyManipulator);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot);
@@ -162,10 +162,10 @@ class DelayedGroupTest {
   void removeSlot_GivenNoReadySlots_ShouldRemoveSlotAndGetDone() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> oldGroup =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
     DelayedGroup<String, String, String, String, Integer> group =
-        new DelayedGroup<>("0000:full-key", emitter, keyManipulator, new CurrentTime());
+        new DelayedGroup<>("0000:full-key", emitter, keyManipulator);
 
     group.reserveNewSlot(slot);
     assertThat(group.isClosed()).isTrue();
@@ -193,10 +193,10 @@ class DelayedGroupTest {
           emitted.set(true);
         };
     NormalGroup<String, String, String, String, Integer> oldGroup =
-        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
     DelayedGroup<String, String, String, String, Integer> group =
-        new DelayedGroup<>("0000:full-key", waitableEmitter, keyManipulator, new CurrentTime());
+        new DelayedGroup<>("0000:full-key", waitableEmitter, keyManipulator);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot);

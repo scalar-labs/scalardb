@@ -13,13 +13,11 @@ class GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       String label,
       long queueCheckIntervalInMillis,
       DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedSlotMoveWorker,
-      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker,
-      CurrentTime currentTime) {
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
     super(
         label + "-group-commit-normal-group-close",
         queueCheckIntervalInMillis,
-        RetryMode.KEEP_AT_HEAD,
-        currentTime);
+        RetryMode.KEEP_AT_HEAD);
     this.delayedSlotMoveWorker = delayedSlotMoveWorker;
     this.groupCleanupWorker = groupCleanupWorker;
   }
@@ -42,7 +40,7 @@ class GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       return true;
     }
 
-    long now = currentTimeMillis();
+    long now = System.currentTimeMillis();
     if (normalGroup.groupClosedMillisAt() < now) {
       // Expired. Fix the size (== close).
       normalGroup.close();

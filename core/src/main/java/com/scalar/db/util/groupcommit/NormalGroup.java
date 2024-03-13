@@ -26,11 +26,10 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
       long groupCloseTimeoutMillis,
       long delayedSlotMoveTimeoutMillis,
-      int capacity,
-      CurrentTime currentTime) {
-    super(emitter, keyManipulator, capacity, currentTime);
+      int capacity) {
+    super(emitter, keyManipulator, capacity);
     this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
-    this.groupClosedMillisAt = currentTimeMillis() + groupCloseTimeoutMillis;
+    this.groupClosedMillisAt = System.currentTimeMillis() + groupCloseTimeoutMillis;
     updateDelayedSlotMovedAt();
     this.parentKey = keyManipulator.generateParentKey();
   }
@@ -144,7 +143,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   void updateDelayedSlotMovedAt() {
-    delayedSlotMovedMillisAt.set(currentTimeMillis() + delayedSlotMoveTimeoutMillis);
+    delayedSlotMovedMillisAt.set(System.currentTimeMillis() + delayedSlotMoveTimeoutMillis);
   }
 
   long groupClosedMillisAt() {

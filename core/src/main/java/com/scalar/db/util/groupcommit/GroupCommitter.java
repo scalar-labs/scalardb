@@ -1,6 +1,5 @@
 package com.scalar.db.util.groupcommit;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
@@ -52,26 +51,16 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     logger.info("Staring GroupCommitter. Label:{}, Config:{}", label, config);
-    CurrentTime currentTime = createCurrentTime();
     this.keyManipulator = keyManipulator;
-    this.groupManager = new GroupManager<>(label, config, keyManipulator, createCurrentTime());
+    this.groupManager = new GroupManager<>(label, config, keyManipulator);
     this.groupCleanupWorker =
-        new GroupCleanupWorker<>(
-            label, config.timeoutCheckIntervalMillis(), groupManager, currentTime);
+        new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), groupManager);
     this.delayedSlotMoveWorker =
         new DelayedSlotMoveWorker<>(
-            label,
-            config.timeoutCheckIntervalMillis(),
-            groupManager,
-            groupCleanupWorker,
-            currentTime);
+            label, config.timeoutCheckIntervalMillis(), groupManager, groupCleanupWorker);
     this.groupCloseWorker =
         new GroupCloseWorker<>(
-            label,
-            config.timeoutCheckIntervalMillis(),
-            delayedSlotMoveWorker,
-            groupCleanupWorker,
-            currentTime);
+            label, config.timeoutCheckIntervalMillis(), delayedSlotMoveWorker, groupCleanupWorker);
     this.groupManager.setGroupCloseWorker(groupCloseWorker);
     this.groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
@@ -113,11 +102,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
           }
           print.run();
         });
-  }
-
-  @VisibleForTesting
-  CurrentTime createCurrentTime() {
-    return new CurrentTime();
   }
 
   /**

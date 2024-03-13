@@ -27,18 +27,16 @@ class DelayedSlotMoveWorkerTest {
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup3;
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup4;
   @Mock private GroupManager<String, String, String, String, Integer> groupManager;
-  private CurrentTime currentTime;
   private DelayedSlotMoveWorker<String, String, String, String, Integer> worker;
   private DelayedSlotMoveWorker<String, String, String, String, Integer> workerWithWait;
 
   @BeforeEach
   void setUp() {
-    currentTime = spy(new CurrentTime());
-    worker = new DelayedSlotMoveWorker<>("test", 10, groupManager, groupCleanupWorker, currentTime);
+    worker = new DelayedSlotMoveWorker<>("test", 10, groupManager, groupCleanupWorker);
     workerWithWait =
         spy(
             new DelayedSlotMoveWorker<>(
-                "long-wait-test", LONG_WAIT_MILLIS, groupManager, groupCleanupWorker, currentTime));
+                "long-wait-test", LONG_WAIT_MILLIS, groupManager, groupCleanupWorker));
   }
 
   @AfterEach
@@ -64,11 +62,10 @@ class DelayedSlotMoveWorkerTest {
   @Test
   void add_GivenNotReadyGroupNotTimedOut_ShouldKeepItWithWait() {
     // Arrange
-    long now = System.currentTimeMillis();
-    doReturn(now).when(currentTime).currentTimeMillis();
-
     doReturn(false).when(normalGroup1).isReady();
-    doReturn(now + 5).when(normalGroup1).delayedSlotMovedMillisAt();
+    doReturn(System.currentTimeMillis() + LONG_WAIT_MILLIS * 10)
+        .when(normalGroup1)
+        .delayedSlotMovedMillisAt();
 
     // Act
     workerWithWait.add(normalGroup1);
@@ -84,12 +81,10 @@ class DelayedSlotMoveWorkerTest {
   @Test
   void add_GivenNotReadyGroupTimedOut_ShouldMoveDelayedSlotsToDelayedGroup() {
     // Arrange
-    long now = System.currentTimeMillis();
-    doReturn(now).when(currentTime).currentTimeMillis();
 
     // The group is supposed to be ready after removing delayed slots.
     doReturn(false, true).when(normalGroup1).isReady();
-    doReturn(now - 5).when(normalGroup1).delayedSlotMovedMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).delayedSlotMovedMillisAt();
     doReturn(true).when(groupManager).moveDelayedSlotToDelayedGroup(normalGroup1);
 
     // Act
@@ -105,14 +100,11 @@ class DelayedSlotMoveWorkerTest {
   @Test
   void add_GivenMultipleNotReadyGroupsTimedOut_ShouldMoveDelayedSlotsToDelayedGroupWithoutWait() {
     // Arrange
-    long now = System.currentTimeMillis();
-    doReturn(now).when(currentTime).currentTimeMillis();
-
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
         .forEach(
             g -> {
               doReturn(false, true).when(g).isReady();
-              doReturn(now - 5).when(g).delayedSlotMovedMillisAt();
+              doReturn(System.currentTimeMillis() - 5).when(g).delayedSlotMovedMillisAt();
               doReturn(true).when(groupManager).moveDelayedSlotToDelayedGroup(g);
             });
 

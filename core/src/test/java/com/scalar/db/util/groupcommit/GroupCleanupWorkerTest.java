@@ -31,11 +31,9 @@ class GroupCleanupWorkerTest {
 
   @BeforeEach
   void setUp() {
-    worker = new GroupCleanupWorker<>("test", 10, groupManager, new CurrentTime());
+    worker = new GroupCleanupWorker<>("test", 10, groupManager);
     workerWithWait =
-        spy(
-            new GroupCleanupWorker<>(
-                "long-wait-test", LONG_WAIT_MILLIS, groupManager, new CurrentTime()));
+        spy(new GroupCleanupWorker<>("long-wait-test", LONG_WAIT_MILLIS, groupManager));
   }
 
   @AfterEach

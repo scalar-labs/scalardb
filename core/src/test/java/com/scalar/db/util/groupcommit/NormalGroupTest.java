@@ -2,8 +2,6 @@ package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
@@ -34,7 +32,7 @@ class NormalGroupTest {
   void parentKey_GivenKeyManipulator_ShouldReturnProperly() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
 
     // Act
     // Assert
@@ -45,7 +43,7 @@ class NormalGroupTest {
   void fullKey_GivenKeyManipulator_ShouldReturnProperly() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
 
     // Act
     // Assert
@@ -56,7 +54,7 @@ class NormalGroupTest {
   void reserveNewSlot_GivenArbitrarySlot_ShouldStoreIt() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
     Slot<String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
 
@@ -87,7 +85,7 @@ class NormalGroupTest {
           emitted.set(true);
         };
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -136,7 +134,7 @@ class NormalGroupTest {
           emitted.set(true);
         };
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
     Slot<String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
     ExecutorService executorService = Executors.newCachedThreadPool();
@@ -190,10 +188,10 @@ class NormalGroupTest {
           throw new RuntimeException("Something is wrong");
         };
     NormalGroup<String, String, String, String, Integer> oldGroup =
-        new NormalGroup<>(failingEmitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(failingEmitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
     DelayedGroup<String, String, String, String, Integer> group =
-        new DelayedGroup<>("0000:full-key", failingEmitter, keyManipulator, new CurrentTime());
+        new DelayedGroup<>("0000:full-key", failingEmitter, keyManipulator);
 
     ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -241,7 +239,7 @@ class NormalGroupTest {
           emitted.set(true);
         };
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2 + 1, new CurrentTime());
+        new NormalGroup<>(waitableEmitter, keyManipulator, 100, 1000, 2 + 1);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
     Slot<String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
     Slot<String, String, String, String, Integer> slot3 = new Slot<>("child-key-3", group);
@@ -300,7 +298,7 @@ class NormalGroupTest {
   void removeNotReadySlots_GivenAllSlotsAreNotReady_ShouldRetainSlots() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
     Slot<String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
 
@@ -318,7 +316,7 @@ class NormalGroupTest {
   void removeSlot_GivenNoReadySlots_ShouldRemoveSlotAndGetDone() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
     Slot<String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
 
@@ -343,7 +341,7 @@ class NormalGroupTest {
       throws ExecutionException, InterruptedException {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
     Slot<String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
     ExecutorService executorService = Executors.newCachedThreadPool();
@@ -385,10 +383,8 @@ class NormalGroupTest {
   void groupClosedAt_GivenCurrentTime_ShouldReturnProperly() {
     // Arrange
     long startTimeMillis = System.currentTimeMillis();
-    CurrentTime currentTime = spy(new CurrentTime());
-    doReturn(startTimeMillis).when(currentTime).currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, currentTime);
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
 
     // Act
     // Assert
@@ -398,32 +394,32 @@ class NormalGroupTest {
   @Test
   void delayedSlotMovedAt_GivenCurrentTime_ShouldReturnProperly() {
     // Arrange
-    long startTimeMillis = System.currentTimeMillis();
-    CurrentTime currentTime = spy(new CurrentTime());
-    doReturn(startTimeMillis).when(currentTime).currentTimeMillis();
+    long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, currentTime);
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
+    long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
     // Act
     // Assert
-    assertThat(group.delayedSlotMovedMillisAt()).isEqualTo(startTimeMillis + 1000);
+    assertThat(group.delayedSlotMovedMillisAt())
+        .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 1000)
+        .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 1000);
   }
 
   @Test
   void updateDelayedSlotMovedAt_GivenCurrentTime_ShouldUpdateProperly() {
     // Arrange
-    long startTimeMillis = System.currentTimeMillis();
-    CurrentTime currentTime = spy(new CurrentTime());
-    doReturn(startTimeMillis).when(currentTime).currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
-        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2, currentTime);
+        new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
 
     // Act
-    long updateTimeMillis = startTimeMillis + 10;
-    doReturn(updateTimeMillis).when(currentTime).currentTimeMillis();
+    long minOfCurrentTimeMillis = System.currentTimeMillis();
     group.updateDelayedSlotMovedAt();
+    long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
     // Assert
-    assertThat(group.delayedSlotMovedMillisAt()).isEqualTo(updateTimeMillis + 1000);
+    assertThat(group.delayedSlotMovedMillisAt())
+        .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 1000)
+        .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 1000);
   }
 }

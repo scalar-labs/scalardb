@@ -18,7 +18,6 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   protected final Map<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> slots;
   // Whether to reject a new value slot.
   protected final AtomicReference<Status> status = new AtomicReference<>(Status.OPEN);
-  private final CurrentTime currentTime;
 
   // Status of the group.
   enum Status {
@@ -57,13 +56,11 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   Group(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      int capacity,
-      CurrentTime currentTime) {
+      int capacity) {
     this.emitter = emitter;
     this.keyManipulator = keyManipulator;
     this.capacity = capacity;
     this.slots = new HashMap<>(capacity);
-    this.currentTime = currentTime;
   }
 
   private boolean noMoreSlot() {
@@ -240,9 +237,5 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         updateStatus();
       }
     }
-  }
-
-  long currentTimeMillis() {
-    return currentTime.currentTimeMillis();
   }
 }

@@ -20,53 +20,34 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-// TODO:
-//   Reconsider if CurrentTime can be removed.
 
 @ExtendWith(MockitoExtension.class)
 class GroupCommitterTest {
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
 
   @Mock private Emittable<String, Integer> emitter;
-  private CurrentTime currentTime;
 
-  private class TestableGroupCommitter
-      extends GroupCommitter<String, String, String, String, Integer> {
-    TestableGroupCommitter(GroupCommitConfig config) {
-      super("test", config, new TestableKeyManipulator());
-    }
-
-    @Override
-    CurrentTime createCurrentTime() {
-      return currentTime;
-    }
-  }
-
-  @BeforeEach
-  void setUp() {
-    currentTime = new CurrentTime();
+  private GroupCommitter<String, String, String, String, Integer> createGroupCommitter(
+      int slotCapacity, int groupCloseTimeoutMillis, int delayedSlotMoveTimeoutMillis) {
+    return new GroupCommitter<>(
+        "test",
+        new GroupCommitConfig(
+            slotCapacity,
+            groupCloseTimeoutMillis,
+            delayedSlotMoveTimeoutMillis,
+            TIMEOUT_CHECK_INTERVAL_MILLIS),
+        new TestableKeyManipulator());
   }
 
   @Test
   void reserve_GivenArbitraryChildKey_ShouldReturnFullKeyProperly() throws Exception {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
 
       // Act
@@ -84,17 +65,8 @@ class GroupCommitterTest {
   void ready_GivenTwoValuesForTwoSlotsInNormalGroupWithSuccessfulEmitTask_ShouldEmitThem()
       throws Exception {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -131,10 +103,6 @@ class GroupCommitterTest {
   void ready_GivenTwoValuesForTwoSlotsInNormalGroupWithFailingEmitTask_ShouldFail()
       throws Exception {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     Emittable<String, Integer> failingEmitter =
         spy(
             // This should be an anonymous class since `spy()` can't handle a lambda.
@@ -145,13 +113,8 @@ class GroupCommitterTest {
               }
             });
 
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(failingEmitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -190,17 +153,9 @@ class GroupCommitterTest {
   void ready_GivenOnlyOneValueForTwoSlotsInNormalGroup_ShouldJustWait() throws Exception {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    // Enough long to wait `ready()`.
-    int delayedSlotMoveTimeoutMillis = 2000;
-
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    // `delayedSlotMoveTimeoutMillis` is enough long to wait `ready()`.
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 2000)) {
       groupCommitter.setEmitter(emitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -234,17 +189,8 @@ class GroupCommitterTest {
   @Test
   void ready_GivenDelayedGroupWithSuccessfulEmitTask_ShouldEmitThem() throws Exception {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -287,10 +233,6 @@ class GroupCommitterTest {
   @Test
   void ready_GivenDelayedGroupWithFailingEmitTask_ShouldFail() throws Exception {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     Emittable<String, Integer> failingEmitter =
         spy(
             // This should be an anonymous class since `spy()` can't handle a lambda.
@@ -301,13 +243,8 @@ class GroupCommitterTest {
               }
             });
 
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(failingEmitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -352,17 +289,9 @@ class GroupCommitterTest {
   @Test
   void remove_GivenOpenGroup_ShouldRemoveIt() throws Exception {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                3,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    // `slotCapacity` is 3 to prevent the group from being closed.
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(3, 100, 400)) {
       groupCommitter.setEmitter(emitter);
 
       // Reserve 2 slots.
@@ -389,17 +318,8 @@ class GroupCommitterTest {
   @Test
   void remove_GivenClosedGroup_ShouldRemoveIt() throws Exception {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
 
       // Reserve 2 slots.
@@ -437,16 +357,8 @@ class GroupCommitterTest {
               }
             });
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
-    try (TestableGroupCommitter groupCommitter =
-        new TestableGroupCommitter(
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS))) {
+    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(testableEmitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
 

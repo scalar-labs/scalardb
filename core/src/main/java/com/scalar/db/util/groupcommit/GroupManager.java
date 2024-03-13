@@ -39,18 +39,15 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final long groupCloseTimeoutMillis;
   private final long delayedSlotMoveTimeoutMillis;
   private final int slotCapacity;
-  private final CurrentTime currentTime;
 
   GroupManager(
       String label,
       GroupCommitConfig config,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      CurrentTime currentTime) {
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     this.keyManipulator = keyManipulator;
     this.groupCloseTimeoutMillis = config.groupCloseTimeoutMillis();
     this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
     this.slotCapacity = config.slotCapacity();
-    this.currentTime = currentTime;
   }
 
   void setGroupCloseWorker(
@@ -78,8 +75,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
                 keyManipulator,
                 groupCloseTimeoutMillis,
                 delayedSlotMoveTimeoutMillis,
-                slotCapacity,
-                currentTime);
+                slotCapacity);
         groupCloseWorker.add(currentGroup);
         normalGroupMap.put(currentGroup.parentKey(), currentGroup);
       }
@@ -181,7 +177,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         // Create a new DelayedGroup
         FULL_KEY fullKey = notReadySlot.fullKey();
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
-            new DelayedGroup<>(fullKey, emitter, keyManipulator, currentTime);
+            new DelayedGroup<>(fullKey, emitter, keyManipulator);
 
         // Register the new DelayedGroup to the map and cleanup queue.
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =

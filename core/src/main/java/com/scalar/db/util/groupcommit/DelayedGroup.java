@@ -13,9 +13,8 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   DelayedGroup(
       FULL_KEY fullKey,
       Emittable<EMIT_KEY, V> emitter,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      CurrentTime currentTime) {
-    super(emitter, keyManipulator, 1, currentTime);
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+    super(emitter, keyManipulator, 1);
     this.fullKey = fullKey;
   }
 

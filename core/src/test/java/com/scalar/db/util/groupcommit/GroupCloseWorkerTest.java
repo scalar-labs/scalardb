@@ -30,23 +30,16 @@ class GroupCloseWorkerTest {
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup2;
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup3;
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup4;
-  private CurrentTime currentTime;
   private GroupCloseWorker<String, String, String, String, Integer> worker;
   private GroupCloseWorker<String, String, String, String, Integer> workerWithWait;
 
   @BeforeEach
   void setUp() {
-    currentTime = spy(new CurrentTime());
-    worker =
-        new GroupCloseWorker<>("test", 10, delayedSlotMoveWorker, groupCleanupWorker, currentTime);
+    worker = new GroupCloseWorker<>("test", 10, delayedSlotMoveWorker, groupCleanupWorker);
     workerWithWait =
         spy(
             new GroupCloseWorker<>(
-                "long-wait-test",
-                LONG_WAIT_MILLIS,
-                delayedSlotMoveWorker,
-                groupCleanupWorker,
-                currentTime));
+                "long-wait-test", LONG_WAIT_MILLIS, delayedSlotMoveWorker, groupCleanupWorker));
   }
 
   @AfterEach
@@ -92,11 +85,10 @@ class GroupCloseWorkerTest {
   @Test
   void add_GivenOpenGroupNotTimedOut_ShouldKeepItWithWait() {
     // Arrange
-    long now = System.currentTimeMillis();
-    doReturn(now).when(currentTime).currentTimeMillis();
-
     doReturn(false).when(normalGroup1).isClosed();
-    doReturn(now + 5).when(normalGroup1).groupClosedMillisAt();
+    doReturn(System.currentTimeMillis() + LONG_WAIT_MILLIS * 10)
+        .when(normalGroup1)
+        .groupClosedMillisAt();
 
     // Act
     workerWithWait.add(normalGroup1);
@@ -113,12 +105,9 @@ class GroupCloseWorkerTest {
   @Test
   void add_GivenOpenGroupTimedOut_ShouldCloseItAndPassItToDelayedSlotMoveWorker() {
     // Arrange
-    long now = System.currentTimeMillis();
-    doReturn(now).when(currentTime).currentTimeMillis();
-
     doReturn(false).when(normalGroup1).isClosed();
     doReturn(false).when(normalGroup1).isReady();
-    doReturn(now - 5).when(normalGroup1).groupClosedMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupClosedMillisAt();
 
     // Act
     worker.add(normalGroup1);
@@ -135,12 +124,9 @@ class GroupCloseWorkerTest {
   void
       add_GivenOpenGroupTimedOut_WhichWillBeReadyAfterClosed_ShouldCloseItAndPassItToGroupCleanupWorker() {
     // Arrange
-    long now = System.currentTimeMillis();
-    doReturn(now).when(currentTime).currentTimeMillis();
-
     doReturn(false).when(normalGroup1).isClosed();
     doReturn(true).when(normalGroup1).isReady();
-    doReturn(now - 5).when(normalGroup1).groupClosedMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupClosedMillisAt();
 
     // Act
     worker.add(normalGroup1);
@@ -157,15 +143,12 @@ class GroupCloseWorkerTest {
   void
       add_GivenMultipleOpenGroupsTimedOut_ShouldCloseThemAndPassThemToDelayedSlotMoveWorkerWithoutWait() {
     // Arrange
-    long now = System.currentTimeMillis();
-    doReturn(now).when(currentTime).currentTimeMillis();
-
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
         .forEach(
             g -> {
               doReturn(false).when(g).isClosed();
               doReturn(false).when(g).isReady();
-              doReturn(now - 5).when(g).groupClosedMillisAt();
+              doReturn(System.currentTimeMillis() - 5).when(g).groupClosedMillisAt();
             });
 
     // Act
