@@ -24,6 +24,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+// TODO:
+//   Add failing emit task cases.
+//   Reconsider if CurrentTime can be removed.
+
 @ExtendWith(MockitoExtension.class)
 class GroupCommitterTest {
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;

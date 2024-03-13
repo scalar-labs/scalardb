@@ -1,6 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
@@ -60,7 +61,7 @@ class DelayedGroupTest {
   }
 
   @Test
-  void putValueToSlotAndWait_GivenValuesIntoSlots_ShouldExecuteEmitTaskProperly()
+  void putValueToSlotAndWait_GivenSuccessfulEmitTask_ShouldExecuteTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
     AtomicBoolean emitted = new AtomicBoolean();
@@ -108,6 +109,53 @@ class DelayedGroupTest {
     group.updateStatus();
     assertThat(group.isDone()).isTrue();
     assertThat(emitted.get()).isTrue();
+  }
+
+  @Test
+  void putValueToSlotAndWait_GivenFailingEmitTask_ShouldFail() {
+    // Arrange
+    CountDownLatch wait = new CountDownLatch(1);
+    Emittable<String, Integer> failingEmitter =
+        (s, values) -> {
+          wait.await();
+          throw new RuntimeException("Something is wrong");
+        };
+    NormalGroup<String, String, String, String, Integer> oldGroup =
+        new NormalGroup<>(failingEmitter, keyManipulator, 100, 1000, 2, new CurrentTime());
+    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
+    DelayedGroup<String, String, String, String, Integer> group =
+        new DelayedGroup<>("0000:full-key", failingEmitter, keyManipulator, new CurrentTime());
+    ExecutorService executorService = Executors.newCachedThreadPool();
+
+    group.reserveNewSlot(slot);
+
+    // Act
+    // Assert
+
+    // Put value to the slots.
+    // Using different threads since calling putValueToSlotAndWait() will block the client thread
+    // until emitting.
+    List<Future<Void>> futures = new ArrayList<>();
+    futures.add(
+        executorService.submit(
+            () -> {
+              group.putValueToSlotAndWait(slot.key(), 42);
+              return null;
+            }));
+    executorService.shutdown();
+    Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
+    // The status is READY not DONE.
+    assertThat(group.isReady()).isTrue();
+    assertThat(group.isDone()).isFalse();
+
+    // Resume the blocked emit task to move forward to DONE.
+    wait.countDown();
+    for (Future<Void> future : futures) {
+      Throwable cause = assertThrows(ExecutionException.class, future::get).getCause();
+      assertThat(cause).isInstanceOf(GroupCommitException.class);
+    }
+    group.updateStatus();
+    assertThat(group.isDone()).isTrue();
   }
 
   @Test

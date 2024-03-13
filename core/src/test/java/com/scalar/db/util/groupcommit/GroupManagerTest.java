@@ -17,8 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// TODO: Add emit failure cases
-
 @ExtendWith(MockitoExtension.class)
 class GroupManagerTest {
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
@@ -41,17 +39,10 @@ class GroupManagerTest {
   void reserveNewSlot_GivenNoCurrentGroup_ShouldCreateNewGroupAndReserveSlotInIt() {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -74,17 +65,10 @@ class GroupManagerTest {
   void reserveNewSlot_GivenMoreSlotsThanCapacity_ShouldReserveSlotInCurrentGroup() {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -111,17 +95,10 @@ class GroupManagerTest {
   void reserveNewSlot_GivenCurrentGroupIsClosed_ShouldCreateNewGroupAndReserveSlotInIt() {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -154,17 +131,10 @@ class GroupManagerTest {
   void getGroup_GivenNormalGroups_ShouldReturnProperly() {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -215,17 +185,10 @@ class GroupManagerTest {
       throws ExecutionException, InterruptedException {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -279,17 +242,10 @@ class GroupManagerTest {
   void removeGroupFromMap_GivenNormalGroups_ShouldRemoveThemProperly() {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -321,17 +277,10 @@ class GroupManagerTest {
       throws ExecutionException, InterruptedException {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -391,17 +340,10 @@ class GroupManagerTest {
   void removeSlotFromGroup_GivenNormalGroups_ShouldRemoveSlotFromThemProperly() {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -448,17 +390,10 @@ class GroupManagerTest {
       throws ExecutionException, InterruptedException {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -515,17 +450,10 @@ class GroupManagerTest {
   void moveDelayedSlotToDelayedGroup_GivenOpenGroup_ShouldKeepThem() {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -555,17 +483,10 @@ class GroupManagerTest {
       throws ExecutionException, InterruptedException {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                3,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(3, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -619,18 +540,10 @@ class GroupManagerTest {
   @Test
   void moveDelayedSlotToDelayedGroup_GivenClosedGroupWithAllNotReadySlots_ShouldKeepThem() {
     // Arrange
-
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
@@ -662,17 +575,10 @@ class GroupManagerTest {
       throws InterruptedException, ExecutionException {
     // Arrange
 
-    int groupCloseTimeoutMillis = 100;
-    int delayedSlotMoveTimeoutMillis = 400;
-
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(
-                2,
-                groupCloseTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime);
     groupManager.setEmitter(emittable);
