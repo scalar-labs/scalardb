@@ -2,8 +2,6 @@ package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
@@ -20,8 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 // TODO: Add emit failure cases
-// TODO: Add more comments
-// TODO: Be consist with GroupCommitterTest
 
 @ExtendWith(MockitoExtension.class)
 class GroupManagerTest {
@@ -32,30 +28,28 @@ class GroupManagerTest {
 
   @BeforeEach
   void setUp() {
-    currentTime = spy(new CurrentTime());
+    currentTime = new CurrentTime();
     keyManipulator = new TestableKeyManipulator();
   }
 
   @AfterEach
   void tearDown() {}
 
-  private void waitUntilWorkersProcess() {
-    Uninterruptibles.sleepUninterruptibly(
-        TIMEOUT_CHECK_INTERVAL_MILLIS * 10, TimeUnit.MILLISECONDS);
-  }
-
-  private void waitUntilBackgroundThreadPutValueToSlot() {
-    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
-  }
-
   @Test
   void reserveNewSlot_GivenMoreSlotsThanCapacity_ShouldCreateNewNormalGroup() {
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -89,12 +83,16 @@ class GroupManagerTest {
 
     // GroupClose occurs immediately
     int groupCloseTimeoutMillis = 0;
+    int delayedSlotMoveTimeoutMillis = 400;
 
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, groupCloseTimeoutMillis, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -104,9 +102,9 @@ class GroupManagerTest {
       // Add slot-1 whose group-close-timeout is set to current-time + `groupCloseTimeoutMillis`.
       Keys<String, String, String> keys1 =
           keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
-      // Move current time forward and wait to let GroupCloseWorker work.
-      doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
-      waitUntilWorkersProcess();
+
+      // Wait until the thread waits on the slot.
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
 
       // Add slot-2.
       Keys<String, String, String> keys2 =
@@ -125,11 +123,18 @@ class GroupManagerTest {
   @Test
   void getGroup_GivenNormalGroups_ShouldReturnProperly() {
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -178,10 +183,18 @@ class GroupManagerTest {
   void getGroup_GivenDelayedGroups_ShouldReturnProperly()
       throws ExecutionException, InterruptedException {
     // Arrange
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -194,12 +207,19 @@ class GroupManagerTest {
       // Add slot-2.
       Keys<String, String, String> keys2 =
           keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+      // These groups are supposed to exist at this moment.
+      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+
       NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
           (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
+
+      // Put a value to the slot to mark it as ready.
       Future<Boolean> future =
           executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
       executorService.shutdown();
-      waitUntilBackgroundThreadPutValueToSlot();
+      // Wait until the thread waits on the slot.
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
+
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
@@ -226,11 +246,18 @@ class GroupManagerTest {
   @Test
   void removeGroupFromMap_GivenNormalGroups_ShouldRemoveThemProperly() {
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -260,10 +287,18 @@ class GroupManagerTest {
   void removeGroupFromMap_GivenDelayedGroups_ShouldRemoveThemProperly()
       throws ExecutionException, InterruptedException {
     // Arrange
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -276,12 +311,19 @@ class GroupManagerTest {
       // Add slot-2.
       Keys<String, String, String> keys2 =
           keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
+      // These groups are supposed to exist at this moment.
+      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+
       NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
           (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
+
+      // Put a value to the slot to mark the slot as ready.
       Future<Boolean> future =
           executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
       executorService.shutdown();
-      waitUntilBackgroundThreadPutValueToSlot();
+
+      // Wait until the thread waits on the slot.
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
@@ -289,6 +331,7 @@ class GroupManagerTest {
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", READY, slots:[Slot(READY, "child-key-1")])
       // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+
       Group<String, String, String, String, Integer> groupForKey2 = groupManager.getGroup(keys2);
       assertThat(groupForKey2).isInstanceOf(DelayedGroup.class);
       assertThat(groupForKey2.isClosed()).isTrue();
@@ -301,7 +344,8 @@ class GroupManagerTest {
       assertThat(groupManager.removeGroupFromMap(groupForKey2)).isTrue();
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", READY, slots:[Slot(READY, "child-key-1")])
-      waitUntilWorkersProcess();
+
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
       // No groups are supposed to exist at this moment.
 
       assertThat(future.get()).isTrue();
@@ -314,11 +358,18 @@ class GroupManagerTest {
   @Test
   void removeSlotFromGroup_GivenNormalGroups_ShouldRemoveSlotFromThemProperly() {
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -362,15 +413,20 @@ class GroupManagerTest {
   @Test
   void removeSlotFromGroup_GivenDelayedGroups_ShouldRemoveSlotFromThemProperly()
       throws ExecutionException, InterruptedException {
-    // GroupCleanup timeout parameter.
-    int groupCleanupTimeoutMillis = 100;
-
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    // Enough short to
+    int delayedSlotMoveTimeoutMillis = 100;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, groupCleanupTimeoutMillis, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -388,7 +444,7 @@ class GroupManagerTest {
       Future<Boolean> future =
           executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
       executorService.shutdown();
-      waitUntilBackgroundThreadPutValueToSlot();
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
@@ -415,7 +471,7 @@ class GroupManagerTest {
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", READY, slots:[Slot(READY, "child-key-1")])
       // - DelayedGroup("0000:child-key-2", DONE, slots:[])
-      waitUntilWorkersProcess();
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
 
@@ -428,11 +484,18 @@ class GroupManagerTest {
   @Test
   void moveDelayedSlotToDelayedGroup_GivenOpenGroup_ShouldKeepThem() {
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -461,16 +524,21 @@ class GroupManagerTest {
       throws ExecutionException, InterruptedException {
     // Arrange
 
-    // GroupClose timeout parameter.
     int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
 
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+    TestableCurrentTime testableCurrentTime = new TestableCurrentTime();
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(3, groupCloseTimeoutMillis, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                3,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
-            currentTime)) {
+            testableCurrentTime)) {
       groupManager.setEmitter(emittable);
 
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -480,12 +548,15 @@ class GroupManagerTest {
           keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-1"));
       // Add slot-2.
       groupManager.reserveNewSlot("child-key-2");
+      // These groups are supposed to exist at this moment.
+      // - NormalGroup("0000", OPEN, slots:[Slot("child-key-1"), Slot("child-key-2")])
+
       NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
           (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
       Future<Boolean> future =
           executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
       executorService.shutdown();
-      waitUntilBackgroundThreadPutValueToSlot();
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", OPEN, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
@@ -498,13 +569,9 @@ class GroupManagerTest {
       assertThat(normalGroupForKey1.isClosed()).isFalse();
 
       // Move current time forward and wait to let GroupCloseWorker work.
-      // TODO: This sometimes failed due to
-      //       org.mockito.exceptions.misusing.UnnecessaryStubbingException:
-      //       Unnecessary stubbings detected.
-      doReturn(System.currentTimeMillis() + groupCloseTimeoutMillis)
-          .when(currentTime)
-          .currentTimeMillis();
-      waitUntilWorkersProcess();
+      testableCurrentTime.incrementCurrentTimeMillis(200);
+      // Wait for a while to let GroupCloseWorker process
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
       assertThat(normalGroupForKey1.isClosed()).isTrue();
@@ -523,11 +590,18 @@ class GroupManagerTest {
   @Test
   void moveDelayedSlotToDelayedGroup_GivenClosedGroupWithAllNotReadySlots_ShouldKeepThem() {
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -557,11 +631,18 @@ class GroupManagerTest {
   void moveDelayedSlotToDelayedGroup_GivenClosedGroupWithReadySlot_ShouldRemoveNotReadySlot()
       throws InterruptedException, ExecutionException {
     // Arrange
-    doReturn(System.currentTimeMillis()).when(currentTime).currentTimeMillis();
+
+    int groupCloseTimeoutMillis = 100;
+    int delayedSlotMoveTimeoutMillis = 400;
+
     try (GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 1000, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(
+                2,
+                groupCloseTimeoutMillis,
+                delayedSlotMoveTimeoutMillis,
+                TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator,
             currentTime)) {
       groupManager.setEmitter(emittable);
@@ -579,7 +660,7 @@ class GroupManagerTest {
       Future<Boolean> future =
           executorService.submit(() -> normalGroupForKey1.putValueToSlotAndWait("child-key-1", 42));
       executorService.shutdown();
-      waitUntilBackgroundThreadPutValueToSlot();
+      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
       // These groups are supposed to exist at this moment.
       // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
