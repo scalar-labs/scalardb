@@ -128,7 +128,9 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       if (fullKey != null) {
         return fullKey;
       }
-      logger.debug("Failed to reserve a new value slot. Retrying. key:{}", childKey);
+      logger.debug(
+          "Failed to reserve a new value slot since the group was already closed. Retrying. key:{}",
+          childKey);
     }
   }
 
@@ -143,11 +145,21 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   public void ready(FULL_KEY fullKey, V value) throws GroupCommitException {
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
+    boolean failed = false;
     while (true) {
       Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
       if (group.putValueToSlotAndWait(keys.childKey, value)) {
         return;
       }
+      // Failing to put a value to the slot can happen only when the slot is moved from the original
+      // NormalGroup to a new DelayedGroup. So, only a single retry must be enough.
+      if (failed) {
+        throw new IllegalStateException(
+            String.format(
+                "Failed to put a value to the slot unexpectedly. Group:%s, FullKey:%s, Value:%s",
+                group, fullKey, value));
+      }
+      failed = true;
       logger.debug(
           "The state of the group has been changed. Retrying. Group:{}, Keys:{}", group, keys);
     }
