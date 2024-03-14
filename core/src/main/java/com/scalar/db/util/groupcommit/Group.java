@@ -202,8 +202,9 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       return false;
     }
 
-    // TODO: Should add `isRemoved` or something and set it using CAS to avoid race conditions?
     if (slot.isReady()) {
+      // Actually, the ready slot can be removed from the group since the client thread is waiting
+      // on the slot already. But removing it might cause more complicated state, so leave it as-is.
       logger.debug(
           "Attempted to remove this slot, but it will not be removed because it is already ready. Group:{}, Slot:{}",
           this,
