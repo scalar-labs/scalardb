@@ -15,6 +15,8 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     super(
         label + "-group-commit-delayed-slot-move",
         queueCheckIntervalInMillis,
+        // Enqueued items of this worker can be out of order since `delayedSlotMoveTimeoutAt` would
+        // be updated.
         RetryMode.MOVE_TO_TAIL);
     this.groupManager = groupManager;
     this.groupCleanupWorker = groupCleanupWorker;

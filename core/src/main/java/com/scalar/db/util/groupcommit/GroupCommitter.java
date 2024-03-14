@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import java.time.Instant;
@@ -91,14 +92,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     monitorExecutorService.execute(
         () -> {
           while (!monitorExecutorService.isShutdown()) {
-            try {
-              print.run();
-              TimeUnit.SECONDS.sleep(1);
-            } catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-              logger.warn("Interrupted", e);
-              break;
-            }
+            print.run();
+            Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
           }
           print.run();
         });
@@ -154,7 +149,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       // Failing to put a value to the slot can happen only when the slot is moved from the original
       // NormalGroup to a new DelayedGroup. So, only a single retry must be enough.
       if (failed) {
-        throw new IllegalStateException(
+        throw new GroupCommitException(
             String.format(
                 "Failed to put a value to the slot unexpectedly. Group:%s, FullKey:%s, Value:%s",
                 group, fullKey, value));

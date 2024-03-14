@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -154,7 +155,7 @@ class GroupCommitterBench {
         results.put(groupCommitConfig, result);
         System.gc();
         System.out.println("FINISH: " + groupCommitConfig);
-        TimeUnit.SECONDS.sleep(10);
+        Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
       }
       System.out.println("RESULT: " + results);
     }
@@ -193,23 +194,21 @@ class GroupCommitterBench {
     // Returns a lambda that will be executed once the group is ready to group-commit.
     private Emittable<String, Value> emitter() {
       return (parentKey, values) -> {
-        try {
-          if (maxEmitDurationInMillis > 0) {
-            int waitInMillis = rand.nextInt(maxEmitDurationInMillis);
-            TimeUnit.MILLISECONDS.sleep(waitInMillis);
-          }
-          if (errorAfterReadyPercentage > rand.nextInt(100)) {
-            for (Value v : values) {
-              // Remember the value as a failure.
-              if (failedKeys.put(v.v, true) != null) {
-                throw new RuntimeException(v + " is already set");
-              }
-            }
-            throw new ExpectedException("Error after READY");
-          }
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
+        if (maxEmitDurationInMillis > 0) {
+          int waitInMillis = rand.nextInt(maxEmitDurationInMillis);
+          Uninterruptibles.sleepUninterruptibly(waitInMillis, TimeUnit.MILLISECONDS);
         }
+
+        if (errorAfterReadyPercentage > rand.nextInt(100)) {
+          for (Value v : values) {
+            // Remember the value as a failure.
+            if (failedKeys.put(v.v, true) != null) {
+              throw new RuntimeException(v + " is already set");
+            }
+          }
+          throw new ExpectedException("Error after READY");
+        }
+
         for (Value v : values) {
           // Remember the value as a success.
           if (emittedKeys.put(v.v, true) != null) {
@@ -235,7 +234,7 @@ class GroupCommitterBench {
                   (averageDurationBeforeReadyInMillis + rand.nextGaussian() * multiplexerInMillis);
           waitInMillis = Math.max(waitInMillis, averageDurationBeforeReadyInMillis);
           if (waitInMillis > 0) {
-            TimeUnit.MILLISECONDS.sleep(waitInMillis);
+            Uninterruptibles.sleepUninterruptibly(waitInMillis, TimeUnit.MILLISECONDS);
           }
 
           // Fail at a certain rate.
@@ -355,7 +354,7 @@ class GroupCommitterBench {
           noGarbage = true;
           break;
         }
-        TimeUnit.SECONDS.sleep(1);
+        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
       }
       if (!noGarbage) {
         System.out.println("Some garbage remains in GroupCommitter. " + metrics);

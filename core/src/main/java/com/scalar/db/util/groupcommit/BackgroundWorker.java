@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.io.Closeable;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -44,8 +45,17 @@ abstract class BackgroundWorker<T> implements Closeable {
     executorService.execute(
         () -> {
           while (!executorService.isShutdown()) {
-            if (!process()) {
-              break;
+            try {
+              process();
+            } catch (Exception e) {
+              if (Thread.currentThread().isInterrupted()) {
+                logger.warn("Interrupted");
+                return;
+              }
+
+              logger.warn("Unexpected exception occurred. Retrying...", e);
+              Uninterruptibles.sleepUninterruptibly(
+                  timeoutCheckIntervalMillis, TimeUnit.MILLISECONDS);
             }
           }
         });
@@ -53,7 +63,7 @@ abstract class BackgroundWorker<T> implements Closeable {
 
   abstract boolean processItem(T item);
 
-  private boolean process() {
+  private void process() {
     T item = queue.peek();
 
     if (item != null) {
@@ -72,35 +82,30 @@ abstract class BackgroundWorker<T> implements Closeable {
             queue.add(removed);
           }
         }
-        // No retry is needed.
-        return true;
-      } else {
+        // No wait is needed.
+        return;
+      }
+
+      // Keep the dequeued item.
+
+      if (retryMode == RetryMode.MOVE_TO_TAIL) {
         // Move the item to the tail if configured.
-        if (retryMode == RetryMode.MOVE_TO_TAIL) {
-          T removed = queue.poll();
-          // Check if the removed slot is expected just in case.
-          if (removed == null || !removed.equals(item)) {
-            logger.error(
-                "The fetched item isn't same as the item checked before. expected:{}, actual:{}",
-                item,
-                removed);
-          }
-          // Re-enqueue the fetched.
-          if (removed != null) {
-            queue.add(removed);
-          }
+        T removed = queue.poll();
+        // Check if the removed slot is expected just in case.
+        if (removed == null || !removed.equals(item)) {
+          logger.error(
+              "The fetched item isn't same as the item checked before. expected:{}, actual:{}",
+              item,
+              removed);
+        }
+        // Re-enqueue the fetched.
+        if (removed != null) {
+          queue.add(removed);
         }
       }
     }
 
-    try {
-      TimeUnit.MILLISECONDS.sleep(timeoutCheckIntervalMillis);
-      return true;
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      logger.warn("Interrupted", e);
-      return false;
-    }
+    Uninterruptibles.sleepUninterruptibly(timeoutCheckIntervalMillis, TimeUnit.MILLISECONDS);
   }
 
   @Override

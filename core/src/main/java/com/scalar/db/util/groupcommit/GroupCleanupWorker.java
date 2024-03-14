@@ -14,7 +14,10 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       long queueCheckIntervalInMillis,
       GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager) {
     super(
-        label + "-group-commit-group-cleanup", queueCheckIntervalInMillis, RetryMode.MOVE_TO_TAIL);
+        label + "-group-commit-group-cleanup",
+        queueCheckIntervalInMillis,
+        // It's likely an item at the head stays not-done for a long time.
+        RetryMode.MOVE_TO_TAIL);
     this.groupManager = groupManager;
   }
 
