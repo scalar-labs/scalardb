@@ -52,6 +52,8 @@ public class ConsensusCommitConfig {
       COORDINATOR_GROUP_COMMIT_PREFIX + "delayed_slot_move_timeout_millis";
   public static final String COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
       COORDINATOR_GROUP_COMMIT_PREFIX + "timeout_check_interval_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_console_reporter_enabled";
 
   private final Isolation isolation;
   private final SerializableStrategy strategy;
@@ -74,6 +76,7 @@ public class ConsensusCommitConfig {
   private final int coordinatorGroupCommitGroupCloseTimeoutMillis;
   private final int coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
   private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
+  private final boolean coordinatorGroupCommitMetricsConsoleReporterEnabled;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -162,6 +165,11 @@ public class ConsensusCommitConfig {
             databaseConfig.getProperties(),
             COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS,
             20);
+    coordinatorGroupCommitMetricsConsoleReporterEnabled =
+        getBoolean(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED,
+            false);
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
@@ -234,6 +242,10 @@ public class ConsensusCommitConfig {
 
   public int getCoordinatorGroupCommitTimeoutCheckIntervalMillis() {
     return coordinatorGroupCommitTimeoutCheckIntervalMillis;
+  }
+
+  public boolean isCoordinatorGroupCommitMetricsConsoleReporterEnabled() {
+    return coordinatorGroupCommitMetricsConsoleReporterEnabled;
   }
 
   private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {
