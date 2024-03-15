@@ -101,7 +101,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 20, 200, 20));
+        .exec(new GroupCommitConfig(40, 20, 200, 20, true));
   }
 
   @Test
@@ -116,7 +116,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 40, 200, 20));
+        .exec(new GroupCommitConfig(40, 40, 200, 20, true));
   }
 
   private static class Runner {
@@ -296,7 +296,7 @@ class GroupCommitterConcurrentTest {
     private void checkGarbage(
         GroupCommitter<String, String, String, String, Value> groupCommitter) {
       boolean noGarbage = false;
-      Metrics metrics = null;
+      GroupCommitMetrics metrics = null;
       for (int i = 0; i < 10; i++) {
         metrics = groupCommitter.getMetrics();
         if (metrics.sizeOfNormalGroupMap == 0
