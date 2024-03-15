@@ -32,6 +32,8 @@ import org.mockito.MockitoAnnotations;
 
 public class CoordinatorTest {
   private static final String ANY_ID_1 = "anyid1";
+  // TODO: Test with IDs for the group commit as well.
+  private static final String EMPTY_CHILD_IDS = "";
   private static final long ANY_TIME_1 = 1;
 
   @Mock private DistributedStorage storage;
@@ -51,6 +53,8 @@ public class CoordinatorTest {
     Result result = mock(Result.class);
     when(result.getValue(Attribute.ID))
         .thenReturn(Optional.of(new TextValue(Attribute.ID, ANY_ID_1)));
+    when(result.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
     when(result.getValue(Attribute.STATE))
         .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
     when(result.getValue(Attribute.CREATED_AT))
@@ -62,6 +66,8 @@ public class CoordinatorTest {
 
     // Assert
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
+    // FIXME: Should be empty.
+    assertThat(state.get().getChildIds()).isEqualTo(new String[] {""});
     Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
   }
@@ -143,6 +149,8 @@ public class CoordinatorTest {
     Result result = mock(Result.class);
     when(result.getValue(Attribute.ID))
         .thenReturn(Optional.of(new TextValue(Attribute.ID, ANY_ID_1)));
+    when(result.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
     when(result.getValue(Attribute.STATE))
         .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
     when(result.getValue(Attribute.CREATED_AT))
@@ -159,6 +167,8 @@ public class CoordinatorTest {
     assertThat(captor.getValue().forTable().get()).isEqualTo(Coordinator.TABLE);
 
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
+    // FIXME: Should be empty.
+    assertThat(state.get().getChildIds()).isEqualTo(new String[] {""});
     Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
   }
