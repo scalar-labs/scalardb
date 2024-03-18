@@ -52,7 +52,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = ConsensusCommitUtils.createGroupCommitter(config).orElse(null);
+    groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
@@ -73,7 +73,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    groupCommitter = ConsensusCommitUtils.createGroupCommitter(config).orElse(null);
+    groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     commit =
         new CommitHandler(
             storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);

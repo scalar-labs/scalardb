@@ -7,7 +7,6 @@ import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -232,14 +231,5 @@ public final class ConsensusCommitUtils {
       return false;
     }
     return !isBeforeImageColumn(columnName, tableMetadata);
-  }
-
-  public static Optional<CoordinatorGroupCommitter> createGroupCommitter(
-      ConsensusCommitConfig config) {
-    if (config.isCoordinatorGroupCommitEnabled()) {
-      return Optional.of(new CoordinatorGroupCommitter(config));
-    } else {
-      return Optional.empty();
-    }
   }
 }

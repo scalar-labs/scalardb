@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import com.scalar.db.util.groupcommit.GroupCommitter;
 import com.scalar.db.util.groupcommit.KeyManipulator;
+import java.util.Optional;
 import java.util.Random;
 
 public class CoordinatorGroupCommitter
@@ -19,6 +20,14 @@ public class CoordinatorGroupCommitter
             config.getCoordinatorGroupCommitDelayedSlotMoveTimeoutMillis(),
             config.getCoordinatorGroupCommitTimeoutCheckIntervalMillis(),
             config.isCoordinatorGroupCommitMetricsConsoleReporterEnabled()));
+  }
+
+  public static Optional<CoordinatorGroupCommitter> from(ConsensusCommitConfig config) {
+    if (config.isCoordinatorGroupCommitEnabled()) {
+      return Optional.of(new CoordinatorGroupCommitter(config));
+    } else {
+      return Optional.empty();
+    }
   }
 
   static class CoordinatorGroupCommitKeyManipulator

@@ -138,7 +138,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    groupCommitter = ConsensusCommitUtils.createGroupCommitter(consensusCommitConfig).orElse(null);
+    groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CommitHandler commit =
         spy(
             new CommitHandler(
