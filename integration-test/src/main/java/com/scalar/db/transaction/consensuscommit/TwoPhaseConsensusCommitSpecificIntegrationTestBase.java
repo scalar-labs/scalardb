@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_ENABLED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,6 +42,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
@@ -2059,6 +2061,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   // FIXME: This test doesn't work with the group commit since it puts an ABORTED transaction
   //        without any parent ID.
+  @DisabledIf("isGroupCommitEnabled")
   @Test
   public void
       commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
@@ -3056,6 +3059,15 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();
+  }
+
+  private boolean isGroupCommitEnabled() {
+    return getProperties1(TEST_NAME)
+            .getProperty(COORDINATOR_GROUP_COMMIT_ENABLED, "false")
+            .equals("true")
+        || getProperties2(TEST_NAME)
+            .getProperty(COORDINATOR_GROUP_COMMIT_ENABLED, "false")
+            .equals("true");
   }
 
   private enum SelectionType {
