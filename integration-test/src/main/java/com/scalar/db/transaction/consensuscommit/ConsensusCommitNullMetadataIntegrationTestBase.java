@@ -40,6 +40,7 @@ import java.util.Properties;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,6 +75,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   private DistributedStorage storage;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
+  private CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -136,9 +138,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    // For PoC
-    CoordinatorGroupCommitter groupCommitter =
-        ConsensusCommitUtils.prepareGroupCommitterFromEnvVar().orElse(null);
+    groupCommitter = ConsensusCommitUtils.createGroupCommitter(consensusCommitConfig).orElse(null);
     CommitHandler commit =
         spy(
             new CommitHandler(
@@ -154,6 +154,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             recovery,
             commit,
             groupCommitter);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (groupCommitter != null) {
+      groupCommitter.close();
+    }
   }
 
   private void truncateTables() throws ExecutionException {

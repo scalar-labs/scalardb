@@ -1,11 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
-import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -243,62 +241,5 @@ public final class ConsensusCommitUtils {
     } else {
       return Optional.empty();
     }
-  }
-
-  ////////////// For group commit >>>>>>>>>>>>>>>>>
-  // TODO: Remove these ones
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_ENABLED";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_NUM_OF_RETENTION_VALUES";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_SIZEFIX_EXPIRATION_IN_MILLIS";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_TIMEOUT_EXPIRATION_IN_MILLIS";
-  private static final String ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
-      "LOG_RECORDER_COORDINATOR_GROUP_COMMIT_EXPIRATION_CHECK_INTERVAL_IN_MILLIS";
-
-  @VisibleForTesting
-  public static Optional<CoordinatorGroupCommitter> prepareGroupCommitterFromEnvVar() {
-    // TODO: Make this configurable
-    // TODO: Take care of lazy recovery
-    if (!"true".equalsIgnoreCase(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_ENABLED))) {
-      return Optional.empty();
-    }
-
-    int groupCommitSlotCapacity = 32;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY) != null) {
-      groupCommitSlotCapacity =
-          Integer.parseInt(System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY));
-    }
-
-    int groupCommitGroupCloseTimeoutMillis = 200;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS) != null) {
-      groupCommitGroupCloseTimeoutMillis =
-          Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS));
-    }
-
-    int groupCommitDelayedSlotMoveTimeoutMillis = 2000;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS) != null) {
-      groupCommitDelayedSlotMoveTimeoutMillis =
-          Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS));
-    }
-
-    int groupCommitTimeoutCheckIntervalMillis = 20;
-    if (System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS) != null) {
-      groupCommitTimeoutCheckIntervalMillis =
-          Integer.parseInt(
-              System.getenv(ENV_VAR_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS));
-    }
-
-    return Optional.of(
-        new CoordinatorGroupCommitter(
-            new GroupCommitConfig(
-                groupCommitGroupCloseTimeoutMillis,
-                groupCommitDelayedSlotMoveTimeoutMillis,
-                groupCommitSlotCapacity,
-                groupCommitTimeoutCheckIntervalMillis)));
   }
 }

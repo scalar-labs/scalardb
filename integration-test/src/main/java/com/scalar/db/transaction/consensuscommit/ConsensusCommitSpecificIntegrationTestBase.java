@@ -153,8 +153,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    // For PoC
-    groupCommitter = ConsensusCommitUtils.prepareGroupCommitterFromEnvVar().orElse(null);
+    groupCommitter = ConsensusCommitUtils.createGroupCommitter(consensusCommitConfig).orElse(null);
     commit =
         spy(
             new CommitHandler(
@@ -172,10 +171,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             groupCommitter);
   }
 
-  // For PoC
   @AfterEach
   public void tearDown() {
-    groupCommitter.close();
+    if (groupCommitter != null) {
+      groupCommitter.close();
+    }
   }
 
   private void truncateTables() throws ExecutionException {
