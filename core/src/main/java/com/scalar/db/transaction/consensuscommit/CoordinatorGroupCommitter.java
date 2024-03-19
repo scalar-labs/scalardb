@@ -143,7 +143,7 @@ public class CoordinatorGroupCommitter
     @Override
     public Keys<String, String, String> keysFromFullKey(String fullKey) {
       if (!isFullKey(fullKey)) {
-        throw new IllegalArgumentException("Invalid full key. key:" + fullKey);
+        throw new IllegalArgumentException("Invalid full key. Key:" + fullKey);
       }
 
       return new Keys<>(

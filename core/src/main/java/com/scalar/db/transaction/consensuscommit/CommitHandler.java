@@ -18,6 +18,7 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
+import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -121,18 +122,29 @@ public class CommitHandler {
     }
   }
 
-  public void commitStateViaGroupCommit(Snapshot snapshot)
+  private void commitStateViaGroupCommit(Snapshot snapshot)
       throws CommitConflictException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
       assert groupCommitter != null;
-      // Group commit the state
+      // Group commit the state by internally calling `groupCommitState()` via the emitter.
       groupCommitter.ready(id, snapshot);
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
-    } catch (Exception e) {
+    } catch (GroupCommitException e) {
       cancelGroupCommitIfNeeded(id);
-      checkStateAndAbortIfNeeded(snapshot, e);
+      Throwable cause = e.getCause();
+      if (cause instanceof CoordinatorConflictException) {
+        // Throw a proper exception from this method if needed.
+        checkStateAndAbortIfNeeded(snapshot, (CoordinatorConflictException) cause);
+      } else if (cause instanceof CoordinatorException) {
+        throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
+      } else {
+        throw new IllegalStateException(
+            "Group commit unexpectedly failed. TransactionID:" + id, cause);
+      }
+    } catch (Exception e) {
+      throw new IllegalStateException("Group commit unexpectedly failed. TransactionID:" + id, e);
     }
   }
 
@@ -229,7 +241,7 @@ public class CommitHandler {
   }
 
   private void groupCommitState(String parentId, List<Snapshot> snapshots)
-      throws CommitException, UnknownTransactionStatusException {
+      throws CoordinatorException {
     if (snapshots.isEmpty()) {
       // This means all buffered transactions failed in the prepare phase.
       // Each call of prepare() puts ABORT state for the *full* id.
@@ -238,20 +250,12 @@ public class CommitHandler {
 
     List<String> transactionIds =
         snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
-    try {
-      coordinator.putStateForGroupCommit(
-          parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
 
-      logger.debug(
-          "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
-    } catch (CoordinatorConflictException e) {
-      // TODO: Execute this operation in parallel.
-      for (Snapshot snapshot : snapshots) {
-        checkStateAndAbortIfNeeded(snapshot, e);
-      }
-    } catch (CoordinatorException e) {
-      throw new UnknownTransactionStatusException("Coordinator status is unknown", e, parentId);
-    }
+    coordinator.putStateForGroupCommit(
+        parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
+
+    logger.debug(
+        "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
   }
 
   public void commitRecords(Snapshot snapshot) {
