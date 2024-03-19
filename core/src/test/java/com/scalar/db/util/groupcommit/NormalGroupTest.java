@@ -29,7 +29,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void parentKey_GivenKeyManipulator_ShouldReturnProperly() {
+  void parentKey_WithKeyManipulator_ShouldReturnProperly() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
@@ -40,7 +40,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void fullKey_GivenKeyManipulator_ShouldReturnProperly() {
+  void fullKey_WithKeyManipulator_ShouldReturnProperly() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
@@ -74,7 +74,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void putValueToSlotAndWait_GivenSuccessfulEmitTaskWithSingleSlot_ShouldExecuteTaskProperly()
+  void putValueToSlotAndWait_WithSuccessfulEmitTaskWithSingleSlot_ShouldExecuteTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
     AtomicBoolean emitted = new AtomicBoolean();
@@ -123,7 +123,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void putValueToSlotAndWait_GivenSuccessfulEmitTask_ShouldExecuteTaskProperly()
+  void putValueToSlotAndWait_WithSuccessfulEmitTask_ShouldExecuteTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
     AtomicBoolean emitted = new AtomicBoolean();
@@ -179,7 +179,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void putValueToSlotAndWait_GivenFailingEmitTask_ShouldFail() {
+  void putValueToSlotAndWait_WithFailingEmitTask_ShouldFail() {
     // Arrange
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> failingEmitter =
@@ -228,7 +228,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void removeNotReadySlots_GivenBothReadyAndNonReadySlots_ShouldExecuteEmitTaskProperly()
+  void removeNotReadySlots_WhenBothReadyAndNonReadySlotsExist_ShouldExecuteEmitTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
     AtomicBoolean emitted = new AtomicBoolean();
@@ -295,7 +295,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void removeNotReadySlots_GivenAllSlotsAreNotReady_ShouldRetainSlots() {
+  void removeNotReadySlots_WhenAllSlotsAreNotReady_ShouldRetainSlots() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
@@ -313,7 +313,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void removeSlot_GivenNoReadySlots_ShouldRemoveSlotAndGetDone() {
+  void removeSlot_GivenNotReadySlot_ShouldRemoveSlotAndGetDone() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
@@ -337,8 +337,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void removeSlot_GivenReadySlots_ShouldDoNothing()
-      throws ExecutionException, InterruptedException {
+  void removeSlot_GivenReadySlot_ShouldDoNothing() throws ExecutionException, InterruptedException {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
@@ -380,19 +379,22 @@ class NormalGroupTest {
   }
 
   @Test
-  void groupClosedAt_GivenCurrentTime_ShouldReturnProperly() {
+  void groupClosedAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
-    long startTimeMillis = System.currentTimeMillis();
+    long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
+    long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
     // Act
     // Assert
-    assertThat(group.groupClosedMillisAt()).isEqualTo(startTimeMillis + 100);
+    assertThat(group.groupClosedMillisAt())
+        .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 100)
+        .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 100);
   }
 
   @Test
-  void delayedSlotMovedAt_GivenCurrentTime_ShouldReturnProperly() {
+  void delayedSlotMovedAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
     long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
@@ -407,7 +409,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void updateDelayedSlotMovedAt_GivenCurrentTime_ShouldUpdateProperly() {
+  void updateDelayedSlotMovedAt_GivenArbitraryTimeoutValue_ShouldUpdateProperly() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);

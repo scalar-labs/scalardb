@@ -62,7 +62,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void ready_GivenTwoValuesForTwoSlotsInNormalGroupWithSuccessfulEmitTask_ShouldEmitThem()
+  void ready_WhenTwoSlotsAreReadyInNormalGroup_WithSuccessfulEmitTask_ShouldEmitThem()
       throws Exception {
     // Arrange
     try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
@@ -100,8 +100,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void ready_GivenTwoValuesForTwoSlotsInNormalGroupWithFailingEmitTask_ShouldFail()
-      throws Exception {
+  void ready_WhenTwoSlotsAreReadyInNormalGroup_WithFailingEmitTask_ShouldFail() throws Exception {
     // Arrange
     Emittable<String, Integer> failingEmitter =
         spy(
@@ -150,7 +149,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void ready_GivenOnlyOneValueForTwoSlotsInNormalGroup_ShouldJustWait() throws Exception {
+  void ready_WhenOnlyOneOfTwoSlotsIsReadyInNormalGroup_ShouldJustWait() throws Exception {
     // Arrange
 
     // `delayedSlotMoveTimeoutMillis` is enough long to wait `ready()`.
@@ -187,7 +186,8 @@ class GroupCommitterTest {
   }
 
   @Test
-  void ready_GivenDelayedGroupWithSuccessfulEmitTask_ShouldEmitThem() throws Exception {
+  void ready_WhenSlotIsReadyInDelayedGroup_WithSuccessfulEmitTask_ShouldEmitThem()
+      throws Exception {
     // Arrange
     try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
@@ -231,7 +231,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void ready_GivenDelayedGroupWithFailingEmitTask_ShouldFail() throws Exception {
+  void ready_WhenSlotIsReadyInDelayedGroup_WithFailingEmitTask_ShouldFail() throws Exception {
     // Arrange
     Emittable<String, Integer> failingEmitter =
         spy(
@@ -287,7 +287,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void remove_GivenOpenGroup_ShouldRemoveIt() throws Exception {
+  void remove_GivenKeyForOpenGroup_ShouldRemoveIt() throws Exception {
     // Arrange
     // `slotCapacity` is 3 to prevent the group from being closed.
     try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
@@ -316,7 +316,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void remove_GivenClosedGroup_ShouldRemoveIt() throws Exception {
+  void remove_GivenKeyForClosedGroup_ShouldRemoveIt() throws Exception {
     // Arrange
     try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
@@ -344,7 +344,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void remove_GivenReadyGroup_ShouldFail() throws Exception {
+  void remove_GivenKeyForReadyGroup_ShouldFail() throws Exception {
     // Arrange
     CountDownLatch countDownLatch = new CountDownLatch(1);
     Emittable<String, Integer> testableEmitter =

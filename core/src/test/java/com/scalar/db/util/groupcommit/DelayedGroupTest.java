@@ -61,7 +61,7 @@ class DelayedGroupTest {
   }
 
   @Test
-  void putValueToSlotAndWait_GivenSuccessfulEmitTask_ShouldExecuteTaskProperly()
+  void putValueToSlotAndWait_WithSuccessfulEmitTask_ShouldExecuteTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
     AtomicBoolean emitted = new AtomicBoolean();
@@ -112,7 +112,7 @@ class DelayedGroupTest {
   }
 
   @Test
-  void putValueToSlotAndWait_GivenFailingEmitTask_ShouldFail() {
+  void putValueToSlotAndWait_WithFailingEmitTask_ShouldFail() {
     // Arrange
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> failingEmitter =
@@ -159,7 +159,7 @@ class DelayedGroupTest {
   }
 
   @Test
-  void removeSlot_GivenNoReadySlots_ShouldRemoveSlotAndGetDone() {
+  void removeSlot_GivenNoReadySlot_ShouldRemoveSlotAndGetDone() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> oldGroup =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
@@ -182,8 +182,7 @@ class DelayedGroupTest {
   }
 
   @Test
-  void removeSlot_GivenReadySlots_ShouldDoNothing()
-      throws InterruptedException, ExecutionException {
+  void removeSlot_GivenReadySlot_ShouldDoNothing() throws InterruptedException, ExecutionException {
     // Arrange
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);

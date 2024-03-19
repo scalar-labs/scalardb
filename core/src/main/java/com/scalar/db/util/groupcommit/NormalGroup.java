@@ -129,7 +129,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
             synchronized (this) {
               for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
                 if (slot != emitterSlot.get()) {
-                  slot.markAsFail(exception);
+                  slot.markAsFailed(exception);
                 }
               }
             }
