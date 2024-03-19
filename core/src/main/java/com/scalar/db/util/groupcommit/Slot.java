@@ -98,7 +98,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   // Marks this slot as a failure.
-  void markAsFail(Exception e) {
+  void markAsFailed(Exception e) {
     completableFuture.completeExceptionally(e);
     isDoneSuccessfully.set(false);
   }

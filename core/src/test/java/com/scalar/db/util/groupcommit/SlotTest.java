@@ -31,7 +31,7 @@ class SlotTest {
   }
 
   @Test
-  void key_GivenArbitraryValue_ShouldReturnProperly() {
+  void key_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
 
@@ -41,7 +41,7 @@ class SlotTest {
   }
 
   @Test
-  void fullKey_GivenArbitraryParentGroup_ShouldReturnProperly() {
+  void fullKey_WithArbitraryParentGroup_ShouldReturnProperly() {
     // Arrange
     doReturn("full-key").when(parentGroup).fullKey(eq("child-key"));
 
@@ -74,7 +74,7 @@ class SlotTest {
   }
 
   @Test
-  void isReady_GivenNoValueSet_ShouldReturnFalse() {
+  void isReady_WithNoValue_ShouldReturnFalse() {
     // Arrange
 
     // Act
@@ -83,7 +83,7 @@ class SlotTest {
   }
 
   @Test
-  void isReady_GivenAnyValueSet_ShouldReturnTrue() {
+  void isReady_WithAnyValue_ShouldReturnTrue() {
     // Arrange
     slot.setValue(42);
 
@@ -93,7 +93,7 @@ class SlotTest {
   }
 
   @Test
-  void waitUntilEmit_GivenNoCompletion_ShouldWait() {
+  void waitUntilEmit_WhenEmitTaskIsSuspended_ShouldWait() {
     // Arrange
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     AtomicReference<Exception> exception = new AtomicReference<>();
@@ -127,7 +127,7 @@ class SlotTest {
 
   @Timeout(1)
   @Test
-  void waitUntilEmit_GivenCallMarkAsSuccess_ShouldFinish()
+  void waitUntilEmit_WhenEmitTaskIsMarkedAsSuccess_ShouldFinish()
       throws ExecutionException, InterruptedException {
     // Arrange
     ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -155,7 +155,7 @@ class SlotTest {
 
   @Timeout(1)
   @Test
-  void waitUntilEmit_GivenCallMarkAsFail_ShouldFinishAndThrowException()
+  void waitUntilEmit_WhenEmitTaskIsMarkedAsFailed_ShouldFinishAndThrowException()
       throws ExecutionException, InterruptedException {
     // Arrange
     ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -173,7 +173,7 @@ class SlotTest {
             });
     executorService.shutdown();
 
-    slot.markAsFail(new RuntimeException("Hello, world!"));
+    slot.markAsFailed(new RuntimeException("Hello, world!"));
 
     // Assert
     future.get();
@@ -186,7 +186,7 @@ class SlotTest {
 
   @Timeout(1)
   @Test
-  void waitUntilEmit_GivenCallDelegateTaskToWaiter_ShouldTakeOverTask()
+  void waitUntilEmit_WhenEmitTaskIsDelegatedToWaiter_ShouldTakeOverTask()
       throws ExecutionException, InterruptedException {
     // Arrange
     ExecutorService executorService = Executors.newSingleThreadExecutor();

@@ -34,7 +34,7 @@ class GroupManagerTest {
   void tearDown() {}
 
   @Test
-  void reserveNewSlot_GivenNoCurrentGroup_ShouldCreateNewGroupAndReserveSlotInIt() {
+  void reserveNewSlot_WhenCurrentGroupDoesNotExist_ShouldCreateNewGroupAndReserveSlotInIt() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -59,7 +59,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void reserveNewSlot_GivenMoreSlotsThanCapacity_ShouldReserveSlotInCurrentGroup() {
+  void reserveNewSlot_WhenAvailableSlotsExistInCurrentGroup_ShouldReserveSlotInCurrentGroup() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -88,7 +88,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void reserveNewSlot_GivenCurrentGroupIsClosed_ShouldCreateNewGroupAndReserveSlotInIt() {
+  void reserveNewSlot_WhenCurrentGroupIsClosed_ShouldCreateNewGroupAndReserveSlotInIt() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -123,7 +123,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void getGroup_GivenNormalGroups_ShouldReturnProperly() {
+  void getGroup_GivenKeyForNormalGroup_ShouldReturnProperly() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -175,7 +175,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void getGroup_GivenDelayedGroups_ShouldReturnProperly()
+  void getGroup_GivenKeyForDelayedGroup_ShouldReturnProperly()
       throws ExecutionException, InterruptedException {
     // Arrange
 
@@ -232,7 +232,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void removeGroupFromMap_GivenNormalGroups_ShouldRemoveThemProperly() {
+  void removeGroupFromMap_GivenKeyForNormalGroup_ShouldRemoveThemProperly() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -265,7 +265,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void removeGroupFromMap_GivenDelayedGroups_ShouldRemoveThemProperly()
+  void removeGroupFromMap_GivenKeyForDelayedGroup_ShouldRemoveThemProperly()
       throws ExecutionException, InterruptedException {
     // Arrange
 
@@ -328,7 +328,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void removeSlotFromGroup_GivenNormalGroups_ShouldRemoveSlotFromThemProperly() {
+  void removeSlotFromGroup_GivenKeyForSlotInNormalGroup_ShouldRemoveSlotFromThemProperly() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -376,7 +376,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void removeSlotFromGroup_GivenDelayedGroups_ShouldRemoveSlotFromThemProperly()
+  void removeSlotFromGroup_GivenKeyForSlotInDelayedGroup_ShouldRemoveSlotFromThemProperly()
       throws ExecutionException, InterruptedException {
     // Arrange
 
@@ -436,7 +436,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void moveDelayedSlotToDelayedGroup_GivenOpenGroup_ShouldKeepThem() {
+  void moveDelayedSlotToDelayedGroup_GivenKeyForOpenGroup_ShouldKeepThem() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -467,7 +467,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void moveDelayedSlotToDelayedGroup_GivenOpenGroupWithReadySlot_ShouldKeepThem()
+  void moveDelayedSlotToDelayedGroup_GivenKeyForOpenGroupWithReadySlot_ShouldKeepThem()
       throws ExecutionException, InterruptedException {
     // Arrange
 
@@ -525,7 +525,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void moveDelayedSlotToDelayedGroup_GivenClosedGroupWithAllNotReadySlots_ShouldKeepThem() {
+  void moveDelayedSlotToDelayedGroup_GivenKeyForClosedGroupWithAllNotReadySlots_ShouldKeepThem() {
     // Arrange
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
@@ -557,7 +557,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void moveDelayedSlotToDelayedGroup_GivenClosedGroupWithReadySlot_ShouldRemoveNotReadySlot()
+  void moveDelayedSlotToDelayedGroup_GivenKeyForClosedGroupWithReadySlot_ShouldRemoveNotReadySlot()
       throws InterruptedException, ExecutionException {
     // Arrange
 
