@@ -4,9 +4,7 @@ import static org.mockito.Mockito.spy;
 
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 
-@Nested
 class CommitHandlerWithoutGroupCommitTest extends CommitHandlerTestBase {
   private static final String ANY_ID = "id";
 

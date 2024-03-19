@@ -8,9 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 
-@Nested
 class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
