@@ -37,7 +37,7 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   @Override
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 
-  @Disabled
+  @Disabled("JDBC transaction doesn't support implicit pre-read")
   @Override
   public void
       putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowCommitConflictException() {}

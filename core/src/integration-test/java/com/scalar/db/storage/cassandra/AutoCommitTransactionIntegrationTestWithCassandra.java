@@ -1,15 +1,17 @@
 package com.scalar.db.storage.cassandra;
 
-import com.scalar.db.api.DistributedStorageIntegrationTestBase;
+import com.scalar.db.transaction.autocommit.AutoCommitTransactionIntegrationTestBase;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-public class CassandraIntegrationTest extends DistributedStorageIntegrationTestBase {
+public class AutoCommitTransactionIntegrationTestWithCassandra
+    extends AutoCommitTransactionIntegrationTestBase {
+
   @Override
-  protected Properties getProperties(String testName) {
+  protected Properties getProps(String testName) {
     return CassandraEnv.getProperties(testName);
   }
 
@@ -23,5 +25,6 @@ public class CassandraIntegrationTest extends DistributedStorageIntegrationTestB
           + "the condition is considered satisfied. This behavior differs from that of other adapters")
   @Override
   @Test
-  public void put_withPutIfIsNullWhenRecordDoesNotExist_shouldThrowNoMutationException() {}
+  public void
+      put_withPutIfIsNullWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException() {}
 }

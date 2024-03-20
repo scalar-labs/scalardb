@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.jdbc;
+package com.scalar.db.transaction.autocommit;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -6,28 +6,28 @@ import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcConfig;
 
-public class JdbcTransactionProvider implements DistributedTransactionProvider {
+public class AutoCommitTransactionProvider implements DistributedTransactionProvider {
+
   @Override
   public String getName() {
-    return JdbcConfig.TRANSACTION_MANAGER_NAME;
+    return AutoCommitTransactionConfig.TRANSACTION_MANAGER_NAME;
   }
 
   @Override
   public DistributedTransactionManager createDistributedTransactionManager(DatabaseConfig config) {
-    return new JdbcTransactionManager(config);
+    return new AutoCommitTransactionManager(config);
   }
 
   @Override
   public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
-    return new JdbcTransactionAdmin(config);
+    return new AutoCommitTransactionAdmin(config);
   }
 
   @Override
   public TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
       DatabaseConfig config) {
     throw new UnsupportedOperationException(
-        CoreError.JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
+        CoreError.AUTO_COMMIT_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
   }
 }
