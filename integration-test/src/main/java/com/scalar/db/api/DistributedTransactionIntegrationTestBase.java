@@ -455,22 +455,22 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void scan_ScanAllGivenWithLimit_ShouldReturnLimitedAmountOfRecords()
       throws TransactionException {
     // Arrange
-    DistributedTransaction putTransaction = manager.start();
-    putTransaction.put(
-        Arrays.asList(
-            new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 1))
-                .forNamespace(namespace)
-                .forTable(TABLE),
-            new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 2))
-                .forNamespace(namespace)
-                .forTable(TABLE),
-            new Put(Key.ofInt(ACCOUNT_ID, 2), Key.ofInt(ACCOUNT_TYPE, 1))
-                .forNamespace(namespace)
-                .forTable(TABLE),
-            new Put(Key.ofInt(ACCOUNT_ID, 3), Key.ofInt(ACCOUNT_TYPE, 0))
-                .forNamespace(namespace)
-                .forTable(TABLE)));
-    putTransaction.commit();
+    put(
+        new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 1))
+            .forNamespace(namespace)
+            .forTable(TABLE));
+    put(
+        new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 2))
+            .forNamespace(namespace)
+            .forTable(TABLE));
+    put(
+        new Put(Key.ofInt(ACCOUNT_ID, 2), Key.ofInt(ACCOUNT_TYPE, 1))
+            .forNamespace(namespace)
+            .forTable(TABLE));
+    put(
+        new Put(Key.ofInt(ACCOUNT_ID, 3), Key.ofInt(ACCOUNT_TYPE, 0))
+            .forNamespace(namespace)
+            .forTable(TABLE));
 
     DistributedTransaction scanAllTransaction = manager.start();
     ScanAll scanAll = prepareScanAll().withLimit(2);
@@ -1022,7 +1022,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+  public void get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
     try (DistributedTransactionManager managerWithDefaultNamespace =
@@ -1035,7 +1035,47 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.get(get);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void scan_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Scan scan = Scan.newBuilder().table(TABLE).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.scan(scan);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void put_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Put put =
           Put.newBuilder()
               .table(TABLE)
@@ -1044,6 +1084,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .intValue(BALANCE, 300)
               .enableImplicitPreRead()
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.put(put);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void insert_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Insert insert =
           Insert.newBuilder()
               .table(TABLE)
@@ -1051,6 +1111,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.insert(insert);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void upsert_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Upsert upsert =
           Upsert.newBuilder()
               .table(TABLE)
@@ -1058,6 +1138,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.upsert(upsert);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void update_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Update update =
           Update.newBuilder()
               .table(TABLE)
@@ -1065,12 +1165,52 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.update(update);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void delete_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Delete delete =
           Delete.newBuilder()
               .table(TABLE)
               .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.delete(delete);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void mutate_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Mutation putAsMutation1 =
           Put.newBuilder()
               .table(TABLE)
@@ -1090,13 +1230,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
       Assertions.assertThatCode(
               () -> {
                 DistributedTransaction tx = managerWithDefaultNamespace.start();
-                tx.get(get);
-                tx.scan(scan);
-                tx.put(put);
-                tx.insert(insert);
-                tx.upsert(upsert);
-                tx.update(update);
-                tx.delete(delete);
                 tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
                 tx.commit();
               })
@@ -1941,8 +2074,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void manager_operation_DefaultNamespaceGiven_ShouldWorkProperly()
-      throws TransactionException {
+  public void manager_get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
     try (DistributedTransactionManager managerWithDefaultNamespace =
@@ -1955,7 +2087,37 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.get(get))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_scan_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Scan scan = Scan.newBuilder().table(TABLE).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.scan(scan))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_put_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Put put =
           Put.newBuilder()
               .table(TABLE)
@@ -1964,12 +2126,22 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .intValue(BALANCE, 300)
               .enableImplicitPreRead()
               .build();
-      Delete delete =
-          Delete.newBuilder()
-              .table(TABLE)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.put(put))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_insert_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Insert insert =
           Insert.newBuilder()
               .table(TABLE)
@@ -1977,6 +2149,22 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.insert(insert))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_upsert_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Upsert upsert =
           Upsert.newBuilder()
               .table(TABLE)
@@ -1984,6 +2172,22 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.upsert(upsert))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_update_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Update update =
           Update.newBuilder()
               .table(TABLE)
@@ -1991,6 +2195,44 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.update(update))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_delete_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.delete(delete))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_mutate_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
       Mutation putAsMutation1 =
           Put.newBuilder()
               .table(TABLE)
@@ -2007,20 +2249,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .build();
 
       // Act Assert
-      Assertions.assertThatCode(() -> managerWithDefaultNamespace.get(get))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> managerWithDefaultNamespace.scan(scan))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> managerWithDefaultNamespace.put(put))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> managerWithDefaultNamespace.insert(insert))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> managerWithDefaultNamespace.upsert(upsert))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> managerWithDefaultNamespace.update(update))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> managerWithDefaultNamespace.delete(delete))
-          .doesNotThrowAnyException();
       Assertions.assertThatCode(
               () ->
                   managerWithDefaultNamespace.mutate(
