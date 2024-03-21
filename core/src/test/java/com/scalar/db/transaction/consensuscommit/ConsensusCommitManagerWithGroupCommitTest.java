@@ -1,40 +1,23 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.mockito.Mockito.spy;
-
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.Optional;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 
-class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
+public class ConsensusCommitManagerWithGroupCommitTest extends ConsensusCommitManagerTestBase {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   private String parentKey;
   private String childKey;
   private CoordinatorGroupCommitter groupCommitter;
 
-  @BeforeEach
-  void setUp() throws Exception {
+  @Override
+  void initialize() {
     groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 10));
-    handler =
-        spy(
-            new CommitHandler(
-                storage,
-                coordinator,
-                tableMetadataManager,
-                new ParallelExecutor(config),
-                groupCommitter));
     childKey = UUID.randomUUID().toString();
     String fullKey = groupCommitter.reserve(childKey);
     parentKey = keyManipulator.keysFromFullKey(fullKey).parentKey;
-  }
-
-  @AfterEach
-  void tearDown() {
-    groupCommitter.close();
   }
 
   @Override
@@ -43,12 +26,17 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   }
 
   @Override
-  String anyId() {
+  String anyTxIdGivenByClient() {
+    return childKey;
+  }
+
+  @Override
+  String anyTxIdAlreadyStarted() {
     return keyManipulator.fullKey(parentKey, childKey);
   }
 
   @Override
-  String anyGroupCommitParentId() {
-    return parentKey;
+  boolean isGroupCommitEnabled() {
+    return true;
   }
 }

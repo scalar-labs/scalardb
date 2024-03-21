@@ -60,9 +60,7 @@ public abstract class CommitHandlerTestBase {
 
   abstract String anyId();
 
-  abstract String groupCommitParentId();
-
-  abstract String groupCommitChildId();
+  abstract String anyGroupCommitParentId();
 
   private Put preparePut1() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
@@ -595,7 +593,8 @@ public abstract class CommitHandlerTestBase {
     if (groupCommitter().isPresent()) {
       doThrow(exceptionClass)
           .when(coordinator)
-          .putStateForGroupCommit(eq(groupCommitParentId()), anyList(), eq(targetState), anyLong());
+          .putStateForGroupCommit(
+              eq(anyGroupCommitParentId()), anyList(), eq(targetState), anyLong());
     } else {
       doThrow(exceptionClass)
           .when(coordinator)
@@ -620,7 +619,7 @@ public abstract class CommitHandlerTestBase {
     if (groupCommitter().isPresent()) {
       verify(coordinator)
           .putStateForGroupCommit(
-              eq(groupCommitParentId()),
+              eq(anyGroupCommitParentId()),
               groupCommitFullIdsArgumentCaptor.capture(),
               eq(expectedTransactionState),
               anyLong());

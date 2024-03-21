@@ -27,12 +27,7 @@ class CommitHandlerWithoutGroupCommitTest extends CommitHandlerTestBase {
   }
 
   @Override
-  String groupCommitParentId() {
-    throw new AssertionError("Shouldn't reach here");
-  }
-
-  @Override
-  String groupCommitChildId() {
+  String anyGroupCommitParentId() {
     throw new AssertionError("Shouldn't reach here");
   }
 }
