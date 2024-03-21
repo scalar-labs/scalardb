@@ -30,6 +30,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     this.parentGroup.set(parentGroup);
   }
 
+  // This is called only once when being moved from NormalGroup to DelayedGroup.
   void changeParentGroupToDelayedGroup(
       DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
     this.parentGroup.set(parentGroup);
@@ -107,6 +108,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // task.
   void delegateTaskToWaiter(ThrowableRunnable task) {
     completableFuture.complete(task);
+    // `isDoneSuccessfully` is set by the client thread which takes over the emit task.
   }
 
   boolean isReady() {
@@ -115,9 +117,5 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   boolean isDone() {
     return isDoneSuccessfully.get() != null;
-  }
-
-  boolean isDoneSuccessfully() {
-    return isDoneSuccessfully.get() != null && isDoneSuccessfully.get();
   }
 }
