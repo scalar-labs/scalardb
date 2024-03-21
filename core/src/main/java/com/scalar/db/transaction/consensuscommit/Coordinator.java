@@ -72,17 +72,21 @@ public class Coordinator {
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
     if (coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
-      // TODO: Revise this comment.
-      // In group commit mode, checking the two transaction ID formats is executed in non-atomic.
-      // So, it's possible the insertion of transaction ID occurs between the two read operations.
-      // But, it occurs only if the two transactions of checking transaction IDs and inserting the
-      // transaction ID are overlapped, and it doesn't violate the linearizability.
-      Get get = createGetWith(id);
-      Optional<State> state = get(get);
+      // When dealing with transaction IDs for group commit, the process of checking two transaction
+      // ID formats is executed non-atomically.
+      // Consequently, there is a possibility of transaction ID insertion occurring between the two
+      // read operations.
+      // However, this scenario arises only when the checking of the two transaction ID formats
+      // and the insertion of the transaction ID overlap with different transactions, ensuring it
+      // does not violate linearizability.
+
+      // Scan with the parent ID for group committed record.
+      Optional<State> state = getStateForGroupCommit(id);
       if (state.isPresent()) {
         return state;
       }
-      return getStateForGroupCommit(id);
+      // Scan with the full ID for single transaction record.
+      return get(createGetWith(id));
     }
 
     Get get = createGetWith(id);
@@ -103,21 +107,10 @@ public class Coordinator {
     Optional<State> state = get(get);
     return state.flatMap(
         s -> {
-          if (!s.getState().equals(TransactionState.COMMITTED)) {
+          if (s.getChildIds().contains(childId)) {
             return state;
           }
-
-          boolean isTheChildIdContained = s.getChildIds().contains(childId);
-          if (isTheChildIdContained) {
-            return state;
-          } else {
-            State partiallyCommittedState = state.get();
-            return Optional.of(
-                new State(
-                    partiallyCommittedState.getId(),
-                    TransactionState.ABORTED,
-                    partiallyCommittedState.getCreatedAt()));
-          }
+          return Optional.empty();
         });
   }
 

@@ -3,11 +3,9 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +32,8 @@ import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -203,43 +203,12 @@ public class CoordinatorTest {
 
   // For group commit
 
-  @Test
-  public void getState_TransactionIdForGroupCommitGivenAndFullIdMatches_ShouldReturnState()
-      throws ExecutionException, CoordinatorException {
-    // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
-    String parentId = keyManipulator.generateParentKey();
-    String childId = UUID.randomUUID().toString();
-    String fullId = keyManipulator.fullKey(parentId, childId);
-    List<String> childIds = Collections.emptyList();
-    Result result = mock(Result.class);
-    when(result.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, fullId)));
-    when(result.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
-    when(result.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
-    when(result.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
-
-    // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
-
-    // Assert
-    assertThat(state.get().getId()).isEqualTo(fullId);
-    assertThat(state.get().getChildIds()).isEqualTo(childIds);
-    Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
-    verify(spiedCoordinator, never()).getStateForGroupCommit(anyString());
-  }
-
-  @Test
-  public void
-      getState_TransactionIdForGroupCommitGivenAndParentIdAndChildIdMatch_ShouldReturnState()
-          throws ExecutionException, CoordinatorException {
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void getState_TransactionIdForGroupCommitGivenAndParentIdAndChildIdMatch_ShouldReturnState(
+      TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
     Coordinator spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -250,27 +219,27 @@ public class CoordinatorTest {
     String childId2 = UUID.randomUUID().toString();
     String fullId2 = keyManipulator.fullKey(parentId, childId2);
     List<String> childIds = Arrays.asList(childId1, childId2);
-    Result result = mock(Result.class);
-    when(result.getValue(Attribute.ID))
+
+    Result resultForGroupCommitState = mock(Result.class);
+    when(resultForGroupCommitState.getValue(Attribute.ID))
         .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
-    when(result.getValue(Attribute.CHILD_IDS))
+    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
         .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
-    when(result.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
-    when(result.getValue(Attribute.CREATED_AT))
+    when(resultForGroupCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
         .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
-    when(storage.get(any(Get.class)))
-        .thenReturn(
-            // For the fullId1,
-            //   The first get with the full ID should fail (== not found).
-            Optional.empty(),
-            //   The second get with the parent ID should succeed.
-            Optional.of(result),
-            // For the fullId2,
-            //   The first get with the full ID should fail (== not found).
-            Optional.empty(),
-            //   The second get with the parent ID should succeed.
-            Optional.of(result));
+
+    // Assuming these states exist:
+    //
+    //      id   |      child_ids       |  state
+    // ----------+----------------------+----------
+    //  parentId | [childId1, childId2] | COMMITTED
+    //
+    // The IDs used to find the state are:
+    // - parentId:childId1
+    // - parentId:childId2
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(resultForGroupCommitState));
 
     // Act
     Optional<Coordinator.State> state1 = spiedCoordinator.getState(fullId1);
@@ -280,19 +249,218 @@ public class CoordinatorTest {
     assertThat(state1).isEqualTo(state2);
     assertThat(state1.get().getId()).isEqualTo(parentId);
     assertThat(state1.get().getChildIds()).isEqualTo(childIds);
-    Assertions.assertThat(state1.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    Assertions.assertThat(state1.get().getState()).isEqualTo(transactionState);
     assertThat(state1.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId2);
   }
 
-  /*
-  // TODO: Not found case
-  @Test
-  public void getState_TransactionIdForGroupCommitGivenAndParentIdAndChildIdMatch_ShouldReturnState() {
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void getState_TransactionIdForSingleCommitGivenAndFullIdMatches_ShouldReturnState(
+      TransactionState transactionState) throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+    List<String> childIds = Collections.emptyList();
 
+    Result resultForSingleCommitState = mock(Result.class);
+    when(resultForSingleCommitState.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, fullId)));
+    when(resultForSingleCommitState.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
+    when(resultForSingleCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForSingleCommitState.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+
+    // Assuming these states exist:
+    //
+    //         id        | child_ids |  state
+    // ------------------+-----------+----------
+    //  parentId:childId |    []     | COMMITTED
+    //
+    // The IDs used to find the state are:
+    // - parentId:childId
+    when(storage.get(any(Get.class)))
+        .thenReturn(
+            // The first get with the parent ID shouldn't find a state.
+            Optional.empty(),
+            // The second get with the full ID should return the state.
+            Optional.of(resultForSingleCommitState));
+
+    // Act
+    Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
+
+    // Assert
+    assertThat(state.get().getId()).isEqualTo(fullId);
+    assertThat(state.get().getChildIds()).isEqualTo(childIds);
+    Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
+    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
+    verify(spiedCoordinator).getStateForGroupCommit(fullId);
   }
-   */
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void getState_TransactionIdForGroupCommitGivenAndOnlyParentIdMatches_ShouldReturnEmpty(
+      TransactionState transactionState) throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    List<String> childIds =
+        Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+
+    Result resultForGroupCommitState = mock(Result.class);
+    when(resultForGroupCommitState.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
+    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
+    when(resultForGroupCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+
+    // Look up with the same parent ID and a wrong child ID.
+    String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
+
+    // Assuming these states exist:
+    //
+    //      id   |      child_ids       |  state
+    // ----------+----------------------+----------
+    //  parentId | [childId1, childId2] | COMMITTED
+    //
+    // The IDs used to find the state are:
+    // - parentId:childIdX
+    when(storage.get(any(Get.class)))
+        .thenReturn(
+            // The first get with the parent ID should return a state, but it doesn't contain the
+            // child ID.
+            Optional.of(resultForGroupCommitState),
+            // The second get with the full ID should return empty.
+            Optional.empty());
+
+    // Act
+    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+
+    // Assert
+    assertThat(state).isEmpty();
+    verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void
+      getState_TransactionIdForSingleCommitGivenAndOnlyParentIdMatchesButFullIdMatches_ShouldReturnState(
+          TransactionState transactionState) throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    List<String> childIds =
+        Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+
+    Result resultForGroupCommitState = mock(Result.class);
+    when(resultForGroupCommitState.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
+    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
+    when(resultForGroupCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+
+    // Look up with the same parent ID and a wrong child ID.
+    // But the full ID matches the single committed state.
+    String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
+
+    Result resultForSingleCommitState = mock(Result.class);
+    when(resultForSingleCommitState.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, targetFullId)));
+    when(resultForSingleCommitState.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
+    when(resultForSingleCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForSingleCommitState.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+
+    // Assuming these states exist:
+    //
+    //          id        |      child_ids       |  state
+    // -------------------+----------------------+----------
+    //  parentId          | [childId1, childId2] | COMMITTED
+    //  parentId:childIdX | []                   | COMMITTED
+    //
+    // The IDs used to find the state are:
+    // - parentId:childIdX
+    when(storage.get(any(Get.class)))
+        .thenReturn(
+            // The first get with the parent ID should return a state, but it doesn't contain the
+            // child ID.
+            Optional.of(resultForGroupCommitState),
+            // The second get with the full ID should return the state.
+            Optional.of(resultForSingleCommitState));
+
+    // Act
+    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+
+    // Assert
+    assertThat(state.get().getId()).isEqualTo(targetFullId);
+    assertThat(state.get().getChildIds()).isEmpty();
+    Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
+    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
+    verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void getState_TransactionIdGivenButNoIdMatches_ShouldReturnEmpty(
+      TransactionState transactionState) throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    List<String> childIds =
+        Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+
+    Result resultForGroupCommitState = mock(Result.class);
+    when(resultForGroupCommitState.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
+    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
+    when(resultForGroupCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+
+    // Look up with the same parent ID and a wrong child ID.
+    // Also, the full ID doesn't match any single committed state.
+    String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
+
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+
+    // Act
+    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+
+    // Assert
+    assertThat(state).isEmpty();
+    verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
+  }
 
   @Test
   public void
@@ -312,7 +480,7 @@ public class CoordinatorTest {
     // Act Assert
     assertThatThrownBy(() -> spiedCoordinator.getState(fullId))
         .isInstanceOf(CoordinatorException.class);
-    verify(spiedCoordinator, never()).getStateForGroupCommit(anyString());
+    verify(spiedCoordinator).getStateForGroupCommit(fullId);
   }
 
   @Test
@@ -340,9 +508,12 @@ public class CoordinatorTest {
     verify(spiedCoordinator).getStateForGroupCommit(fullId);
   }
 
-  @Test
-  public void putStateForGroupCommit_StateGiven_ShouldPutWithCorrectValues()
-      throws ExecutionException, CoordinatorException {
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void putStateForGroupCommit_StateGiven_ShouldPutWithCorrectValues(
+      TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
     Coordinator spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -353,21 +524,23 @@ public class CoordinatorTest {
             keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
             keyManipulator.fullKey(parentId, UUID.randomUUID().toString()));
     long current = System.currentTimeMillis();
-    Coordinator.State state =
-        new Coordinator.State(parentId, fullIds, TransactionState.COMMITTED, current);
     doNothing().when(storage).put(any(Put.class));
 
     // Act
-    spiedCoordinator.putStateForGroupCommit(parentId, fullIds, TransactionState.COMMITTED, current);
+    spiedCoordinator.putStateForGroupCommit(parentId, fullIds, transactionState, current);
 
     // Assert
-    verify(spiedCoordinator).createPutWith(state);
+    verify(spiedCoordinator)
+        .createPutWith(new Coordinator.State(parentId, fullIds, transactionState, current));
   }
 
-  @Test
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
   public void
-      putStateForGroupCommit_StateGivenAndExceptionThrownInPut_ShouldThrowCoordinatorException()
-          throws ExecutionException {
+      putStateForGroupCommit_StateGivenAndExceptionThrownInPut_ShouldThrowCoordinatorException(
+          TransactionState transactionState) throws ExecutionException {
     // Arrange
     Coordinator spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -378,15 +551,17 @@ public class CoordinatorTest {
             keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
             keyManipulator.fullKey(parentId, UUID.randomUUID().toString()));
     long current = System.currentTimeMillis();
-    Coordinator.State state =
-        new Coordinator.State(parentId, fullIds, TransactionState.COMMITTED, current);
     ExecutionException toThrow = mock(ExecutionException.class);
     doThrow(toThrow).when(storage).put(any(Put.class));
 
     // Act
     // Assert
-    assertThatThrownBy(() -> spiedCoordinator.putState(state))
+    assertThatThrownBy(
+            () ->
+                spiedCoordinator.putStateForGroupCommit(
+                    parentId, fullIds, transactionState, current))
         .isInstanceOf(CoordinatorException.class);
-    verify(spiedCoordinator).createPutWith(state);
+    verify(spiedCoordinator)
+        .createPutWith(new Coordinator.State(parentId, fullIds, transactionState, current));
   }
 }
