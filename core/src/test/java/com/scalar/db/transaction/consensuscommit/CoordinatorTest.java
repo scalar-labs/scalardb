@@ -66,8 +66,7 @@ public class CoordinatorTest {
 
     // Assert
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
-    // FIXME: Should be empty.
-    assertThat(state.get().getChildIds()).isEqualTo(new String[] {""});
+    assertThat(state.get().getChildIds()).isEmpty();
     Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
   }
@@ -167,8 +166,7 @@ public class CoordinatorTest {
     assertThat(captor.getValue().forTable().get()).isEqualTo(Coordinator.TABLE);
 
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
-    // FIXME: Should be empty.
-    assertThat(state.get().getChildIds()).isEqualTo(new String[] {""});
+    assertThat(state.get().getChildIds()).isEmpty();
     Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
   }

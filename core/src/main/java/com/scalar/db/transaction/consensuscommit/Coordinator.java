@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
@@ -19,8 +20,9 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -105,7 +107,7 @@ public class Coordinator {
             return state;
           }
 
-          boolean isTheChildIdContained = Arrays.asList(s.getChildIds()).contains(childId);
+          boolean isTheChildIdContained = s.getChildIds().contains(childId);
           if (isTheChildIdContained) {
             return state;
           } else {
@@ -220,10 +222,11 @@ public class Coordinator {
 
   @ThreadSafe
   public static class State {
+    private static final List<String> EMPTY_CHILD_IDS = Collections.emptyList();
     private final String id;
     private final TransactionState state;
     private final long createdAt;
-    private final String[] childIds;
+    private final List<String> childIds;
 
     public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
@@ -231,7 +234,10 @@ public class Coordinator {
       state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
       createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
       Optional<String> childIdsOpt = result.getValue(Attribute.CHILD_IDS).get().getAsString();
-      childIds = childIdsOpt.map(s -> s.split(",")).orElse(null);
+      childIds =
+          childIdsOpt
+              .map(s -> Splitter.on(',').omitEmptyStrings().splitToList(s))
+              .orElse(EMPTY_CHILD_IDS);
     }
 
     public State(String id, TransactionState state) {
@@ -247,7 +253,7 @@ public class Coordinator {
       this.id = checkNotNull(id);
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
-      this.childIds = new String[] {};
+      this.childIds = EMPTY_CHILD_IDS;
     }
 
     @Nonnull
@@ -264,7 +270,7 @@ public class Coordinator {
       return createdAt;
     }
 
-    public String[] getChildIds() {
+    public List<String> getChildIds() {
       return childIds;
     }
 
@@ -280,13 +286,13 @@ public class Coordinator {
       // NOTICE: createdAt is not taken into account
       return Objects.equals(id, other.id)
           && state == other.state
-          && Arrays.equals(childIds, other.childIds);
+          && Objects.equals(childIds, other.childIds);
     }
 
     @Override
     public int hashCode() {
       // NOTICE: createdAt is not taken into account
-      return Objects.hash(id, state, Arrays.hashCode(childIds));
+      return Objects.hash(id, state, childIds);
     }
 
     private void checkNotMissingRequired(Result result) throws CoordinatorException {
