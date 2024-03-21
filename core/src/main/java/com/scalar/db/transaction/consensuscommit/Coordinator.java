@@ -120,9 +120,17 @@ public class Coordinator {
   }
 
   void putStateForGroupCommit(
-      String parentId, List<String> fullIds, TransactionState transactionState, long createdAt)
+      String id, List<String> fullIds, TransactionState transactionState, long createdAt)
       throws CoordinatorException {
-    Put put = createPutWith(new State(parentId, fullIds, transactionState, createdAt));
+    State state;
+    if (coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
+      // In this case, this is same as normal commit and child_ids isn't needed.
+      state = new State(id, Collections.emptyList(), transactionState, createdAt);
+    } else {
+      // Group commit with child_ids.
+      state = new State(id, fullIds, transactionState, createdAt);
+    }
+    Put put = createPutWith(state);
     put(put);
   }
 

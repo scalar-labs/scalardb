@@ -512,7 +512,7 @@ public class CoordinatorTest {
   @EnumSource(
       value = TransactionState.class,
       names = {"COMMITTED", "ABORTED"})
-  public void putStateForGroupCommit_StateGiven_ShouldPutWithCorrectValues(
+  public void putStateForGroupCommit_ParentIdGiven_ShouldPutWithCorrectValues(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
     Coordinator spiedCoordinator = spy(coordinator);
@@ -532,6 +532,35 @@ public class CoordinatorTest {
     // Assert
     verify(spiedCoordinator)
         .createPutWith(new Coordinator.State(parentId, fullIds, transactionState, current));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void putStateForGroupCommit_FullIdGiven_ShouldPutWithCorrectValuesWithEmptyChildIds(
+      TransactionState transactionState) throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+    List<String> fullIds = Collections.singletonList(fullId);
+    long current = System.currentTimeMillis();
+    doNothing().when(storage).put(any(Put.class));
+
+    // Act
+    spiedCoordinator.putStateForGroupCommit(fullId, fullIds, transactionState, current);
+
+    // Assert
+
+    // With a full ID as `tx_id`, it's basically same as normal commits and `tx_child_ids` value can
+    // be empty.
+    verify(spiedCoordinator)
+        .createPutWith(
+            new Coordinator.State(fullId, Collections.emptyList(), transactionState, current));
   }
 
   @ParameterizedTest
