@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Consistency;
@@ -20,7 +21,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -89,8 +89,8 @@ public class Coordinator {
     return get(get);
   }
 
-  private Optional<Coordinator.State> getStateForGroupCommit(String id)
-      throws CoordinatorException {
+  @VisibleForTesting
+  Optional<Coordinator.State> getStateForGroupCommit(String id) throws CoordinatorException {
     if (!coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
       throw new IllegalArgumentException("This id format isn't for group commit. Id:" + id);
     }
@@ -126,36 +126,10 @@ public class Coordinator {
     put(put);
   }
 
-  @VisibleForTesting
   void putStateForGroupCommit(
-      String parentId,
-      Collection<String> fullIds,
-      TransactionState transactionState,
-      long createdAt)
+      String parentId, List<String> fullIds, TransactionState transactionState, long createdAt)
       throws CoordinatorException {
-    boolean isFirst = true;
-    StringBuilder sb = new StringBuilder();
-    for (String id : fullIds) {
-      Keys<String, String, String> idForGroupCommit =
-          coordinatorGroupCommitKeyManipulator.keysFromFullKey(id);
-      // TODO: Verify the parentId
-      if (isFirst) {
-        isFirst = false;
-      } else {
-        sb.append(",");
-      }
-      sb.append(idForGroupCommit.childKey);
-    }
-
-    Put put =
-        new Put(new Key(Attribute.toIdValue(parentId)))
-            .withValue(Attribute.toChildIdsValue(sb.toString()))
-            .withValue(Attribute.toStateValue(transactionState))
-            .withValue(Attribute.toCreatedAtValue(createdAt))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .withCondition(new PutIfNotExists())
-            .forNamespace(coordinatorNamespace)
-            .forTable(TABLE);
+    Put put = createPutWith(new State(parentId, fullIds, transactionState, createdAt));
     put(put);
   }
 
@@ -189,6 +163,7 @@ public class Coordinator {
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
     return new Put(new Key(Attribute.toIdValue(state.getId())))
+        .withValue(Attribute.toChildIdsValue(Joiner.on(',').join(state.getChildIds())))
         .withValue(Attribute.toStateValue(state.getState()))
         .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
         .withConsistency(Consistency.LINEARIZABLE)
@@ -249,11 +224,16 @@ public class Coordinator {
     protected final void finalize() {}
 
     @VisibleForTesting
-    State(String id, TransactionState state, long createdAt) {
+    State(String id, List<String> childIds, TransactionState state, long createdAt) {
       this.id = checkNotNull(id);
+      this.childIds = childIds;
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
-      this.childIds = EMPTY_CHILD_IDS;
+    }
+
+    @VisibleForTesting
+    State(String id, TransactionState state, long createdAt) {
+      this(id, EMPTY_CHILD_IDS, state, createdAt);
     }
 
     @Nonnull

@@ -3,13 +3,16 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Joiner;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -21,8 +24,13 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.ScalarDbUtils;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +40,6 @@ import org.mockito.MockitoAnnotations;
 
 public class CoordinatorTest {
   private static final String ANY_ID_1 = "anyid1";
-  // TODO: Test with IDs for the group commit as well.
   private static final String EMPTY_CHILD_IDS = "";
   private static final long ANY_TIME_1 = 1;
 
@@ -192,5 +199,194 @@ public class CoordinatorTest {
     verify(storage).put(captor.capture());
     assertThat(captor.getValue().forNamespace().get()).isEqualTo("changed_coordinator");
     assertThat(captor.getValue().forTable().get()).isEqualTo(Coordinator.TABLE);
+  }
+
+  // For group commit
+
+  @Test
+  public void getState_TransactionIdForGroupCommitGivenAndFullIdMatches_ShouldReturnState()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+    List<String> childIds = Collections.emptyList();
+    Result result = mock(Result.class);
+    when(result.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, fullId)));
+    when(result.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
+    when(result.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
+    when(result.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
+
+    // Assert
+    assertThat(state.get().getId()).isEqualTo(fullId);
+    assertThat(state.get().getChildIds()).isEqualTo(childIds);
+    Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
+    verify(spiedCoordinator, never()).getStateForGroupCommit(anyString());
+  }
+
+  @Test
+  public void
+      getState_TransactionIdForGroupCommitGivenAndParentIdAndChildIdMatch_ShouldReturnState()
+          throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId1 = UUID.randomUUID().toString();
+    String fullId1 = keyManipulator.fullKey(parentId, childId1);
+    String childId2 = UUID.randomUUID().toString();
+    String fullId2 = keyManipulator.fullKey(parentId, childId2);
+    List<String> childIds = Arrays.asList(childId1, childId2);
+    Result result = mock(Result.class);
+    when(result.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
+    when(result.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
+    when(result.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
+    when(result.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(storage.get(any(Get.class)))
+        .thenReturn(
+            // For the fullId1,
+            //   The first get with the full ID should fail (== not found).
+            Optional.empty(),
+            //   The second get with the parent ID should succeed.
+            Optional.of(result),
+            // For the fullId2,
+            //   The first get with the full ID should fail (== not found).
+            Optional.empty(),
+            //   The second get with the parent ID should succeed.
+            Optional.of(result));
+
+    // Act
+    Optional<Coordinator.State> state1 = spiedCoordinator.getState(fullId1);
+    Optional<Coordinator.State> state2 = spiedCoordinator.getState(fullId2);
+
+    // Assert
+    assertThat(state1).isEqualTo(state2);
+    assertThat(state1.get().getId()).isEqualTo(parentId);
+    assertThat(state1.get().getChildIds()).isEqualTo(childIds);
+    Assertions.assertThat(state1.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(state1.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
+    verify(spiedCoordinator).getStateForGroupCommit(fullId1);
+    verify(spiedCoordinator).getStateForGroupCommit(fullId2);
+  }
+
+  /*
+  // TODO: Not found case
+  @Test
+  public void getState_TransactionIdForGroupCommitGivenAndParentIdAndChildIdMatch_ShouldReturnState() {
+
+  }
+   */
+
+  @Test
+  public void
+      getState_TransactionIdForGroupCommitGivenAndFullIdMatchesAndExceptionThrownInGet_ShouldThrowCoordinatorException()
+          throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+
+    ExecutionException toThrow = mock(ExecutionException.class);
+    when(storage.get(any(Get.class))).thenThrow(toThrow);
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedCoordinator.getState(fullId))
+        .isInstanceOf(CoordinatorException.class);
+    verify(spiedCoordinator, never()).getStateForGroupCommit(anyString());
+  }
+
+  @Test
+  public void
+      getState_TransactionIdForGroupCommitGivenAndParentIdMatchesAndExceptionThrownInGet_ShouldThrowCoordinatorException()
+          throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+
+    ExecutionException toThrow = mock(ExecutionException.class);
+    when(storage.get(any(Get.class)))
+        //   The first get with the full ID should fail (== not found).
+        .thenReturn(Optional.empty())
+        //   The second (and later) gets with the parent ID should throw the exception.
+        .thenThrow(toThrow);
+
+    // Act Assert
+    assertThatThrownBy(() -> spiedCoordinator.getState(fullId))
+        .isInstanceOf(CoordinatorException.class);
+    verify(spiedCoordinator).getStateForGroupCommit(fullId);
+  }
+
+  @Test
+  public void putStateForGroupCommit_StateGiven_ShouldPutWithCorrectValues()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    List<String> fullIds =
+        Arrays.asList(
+            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
+            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()));
+    long current = System.currentTimeMillis();
+    Coordinator.State state =
+        new Coordinator.State(parentId, fullIds, TransactionState.COMMITTED, current);
+    doNothing().when(storage).put(any(Put.class));
+
+    // Act
+    spiedCoordinator.putStateForGroupCommit(parentId, fullIds, TransactionState.COMMITTED, current);
+
+    // Assert
+    verify(spiedCoordinator).createPutWith(state);
+  }
+
+  @Test
+  public void
+      putStateForGroupCommit_StateGivenAndExceptionThrownInPut_ShouldThrowCoordinatorException()
+          throws ExecutionException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    List<String> fullIds =
+        Arrays.asList(
+            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
+            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()));
+    long current = System.currentTimeMillis();
+    Coordinator.State state =
+        new Coordinator.State(parentId, fullIds, TransactionState.COMMITTED, current);
+    ExecutionException toThrow = mock(ExecutionException.class);
+    doThrow(toThrow).when(storage).put(any(Put.class));
+
+    // Act
+    // Assert
+    assertThatThrownBy(() -> spiedCoordinator.putState(state))
+        .isInstanceOf(CoordinatorException.class);
+    verify(spiedCoordinator).createPutWith(state);
   }
 }

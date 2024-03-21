@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -1173,8 +1172,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // For PoC
     if (isGroupCommitEnabled()) {
       verify(coordinator)
-          .putStateForGroupCommit(
-              anyString(), anyCollection(), any(TransactionState.class), anyLong());
+          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
       return;
     }
     verify(coordinator).putState(any(Coordinator.State.class));
@@ -1201,8 +1199,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // For PoC
     if (isGroupCommitEnabled()) {
       verify(coordinator)
-          .putStateForGroupCommit(
-              anyString(), anyCollection(), any(TransactionState.class), anyLong());
+          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
       return;
     }
     verify(coordinator).putState(any(Coordinator.State.class));
