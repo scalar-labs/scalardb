@@ -1,8 +1,11 @@
 package com.scalar.db.util.groupcommit;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 // A worker manages NormalGroup instances to close timed-out groups and pass them to
 // DelayedSlotMoveWorker.
 // Ready NormalGroup is passed to GroupCleanupWorker.
+@ThreadSafe
 class GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     extends BackgroundWorker<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
   private final DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>

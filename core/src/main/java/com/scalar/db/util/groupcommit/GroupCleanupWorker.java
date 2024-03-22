@@ -1,9 +1,11 @@
 package com.scalar.db.util.groupcommit;
 
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // A worker manages Group instances to removes completed ones.
+@ThreadSafe
 class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     extends BackgroundWorker<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
   private static final Logger logger = LoggerFactory.getLogger(GroupCleanupWorker.class);

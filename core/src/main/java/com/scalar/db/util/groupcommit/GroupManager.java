@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ThreadSafe
 class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private static final Logger logger = LoggerFactory.getLogger(GroupManager.class);
 
