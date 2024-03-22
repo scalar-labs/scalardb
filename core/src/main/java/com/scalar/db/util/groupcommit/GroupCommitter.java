@@ -150,7 +150,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   }
 
   /**
-   * Removes the slot from the group.
+   * Removes the slot from the group. This method needs to be called if the group commit for the key
+   * is canceled and {@link GroupCommitter#ready} won't be called for it.
    *
    * @param fullKey A full key to specify the slot.
    */
