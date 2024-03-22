@@ -86,7 +86,8 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private void reserveSlot(Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
     Slot<?, ?, ?, ?, ?> oldSlot = slots.put(slot.key(), slot);
     if (oldSlot != null) {
-      logger.warn("An old slot exist unexpectedly. {}", oldSlot.fullKey());
+      throw new AssertionError(
+          String.format("An old slot exist unexpectedly. Slot:%s, OldSlot:%s", slot, oldSlot));
     }
     updateStatus();
   }
