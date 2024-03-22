@@ -4,9 +4,9 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcConfig;
+import javax.annotation.Nullable;
 
 public class JdbcTransactionProvider implements DistributedTransactionProvider {
   @Override
@@ -24,10 +24,10 @@ public class JdbcTransactionProvider implements DistributedTransactionProvider {
     return new JdbcTransactionAdmin(config);
   }
 
+  @Nullable
   @Override
   public TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
       DatabaseConfig config) {
-    throw new UnsupportedOperationException(
-        CoreError.JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
+    return null;
   }
 }
