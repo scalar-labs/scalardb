@@ -87,7 +87,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   // TODO: This should be replaced by other metrics mechanism.
   private void startMonitorExecutorService() {
     Runnable print =
-        () -> logger.info("[MONITOR] Timestamp={}, Metrics={}", Instant.now(), getMetrics());
+        () -> logger.debug("[MONITOR] Timestamp={}, Metrics={}", Instant.now(), getMetrics());
 
     monitorExecutorService.execute(
         () -> {
