@@ -180,6 +180,10 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
             new DelayedGroup<>(fullKey, emitter, keyManipulator);
 
+        // Set the slot stored in the NormalGroup into the new DelayedGroup.
+        // Internally delegate the emit-task to the client thread.
+        checkNotNull(delayedGroup.reserveNewSlot(notReadySlot));
+
         // Register the new DelayedGroup to the map and cleanup queue.
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
             delayedGroupMap.put(fullKey, delayedGroup);
@@ -193,10 +197,6 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         // This must be after reserving a slot since GroupCleanupWorker might call `updateState()`
         // on the newly created DelayedGroup and let it size-fixed.
         groupCleanupWorker.add(delayedGroup);
-
-        // Set the slot stored in the NormalGroup into the new DelayedGroup.
-        // Internally delegate the emit-task to the client thread.
-        checkNotNull(delayedGroup.reserveNewSlot(notReadySlot));
       }
     } finally {
       lock.unlockWrite(stamp);
