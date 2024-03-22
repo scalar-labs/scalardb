@@ -15,9 +15,9 @@ rPrepare(r) == /\ rState[r] = "initialized"
                /\ rState' = [rState EXCEPT ![r] = "prepared"]
                /\ cState' = cState
 
-\* A record may abort as long as the coordinator has not committed
+\* A record may abort as long as the coordinator has aborted
 rAbort(r) == /\ rState[r] \in {"initialized", "prepared"}
-             /\ cState # "committed"
+             /\ cState = "aborted"
              /\ rState' = [rState EXCEPT ![r] = "aborted"]
              /\ cState' = cState
 
@@ -34,8 +34,7 @@ cCommit == /\ \A r \in R : rState[r] = "prepared"
            /\ rState' = rState
 
 \* Coordinator can abort if no record has committed
-cAbort == /\ \A r \in R : rState[r] # "committed"
-          /\ cState = "initialized"
+cAbort == /\ cState = "initialized"
           /\ cState' = "aborted"
           /\ rState' = rState
 
@@ -46,7 +45,7 @@ Next == \/ \E r \in R : rPrepare(r) \/ rAbort(r) \/ rCommit(r)
 
 Consistent == ~(\/ \E r \in R : rState[r] \in {"initialized", "aborted"} /\ cState = "committed"
                 \/ \E r \in R : rState[r] = "committed" /\ cState = "aborted")
-               
+
 Spec == Init /\ [][Next]_<<rState, cState>>
 
 THEOREM Spec => [](TypeOK /\ Consistent)
