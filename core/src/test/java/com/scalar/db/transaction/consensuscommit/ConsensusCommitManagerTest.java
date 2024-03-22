@@ -3,8 +3,11 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
@@ -19,17 +22,15 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
-import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.util.Optional;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public abstract class ConsensusCommitManagerTestBase {
+public class ConsensusCommitManagerTest {
+  private static final String ANY_TX_ID = "any_id";
+
   @Mock private DistributedStorage storage;
   @Mock private DistributedStorageAdmin admin;
   @Mock private DatabaseConfig databaseConfig;
@@ -40,18 +41,6 @@ public abstract class ConsensusCommitManagerTestBase {
   @Mock private CommitHandler commit;
 
   private ConsensusCommitManager manager;
-
-  void extraInitialize() {}
-
-  void extraCleanup() {}
-
-  abstract String anyTxIdGivenByClient();
-
-  abstract String anyTxIdAlreadyStarted();
-
-  abstract boolean isGroupCommitEnabled();
-
-  abstract Optional<CoordinatorGroupCommitter> groupCommitter();
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -67,18 +56,11 @@ public abstract class ConsensusCommitManagerTestBase {
             parallelExecutor,
             recovery,
             commit,
-            groupCommitter().orElse(null));
+            null);
 
     when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(consensusCommitConfig.getSerializableStrategy())
         .thenReturn(SerializableStrategy.EXTRA_READ);
-
-    extraInitialize();
-  }
-
-  @AfterEach
-  void tearDown() {
-    extraCleanup();
   }
 
   @Test
@@ -97,7 +79,6 @@ public abstract class ConsensusCommitManagerTestBase {
         .isEqualTo(Isolation.SNAPSHOT);
   }
 
-  @DisabledIf("isGroupCommitEnabled")
   @Test
   public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
       throws TransactionException {
@@ -106,34 +87,49 @@ public abstract class ConsensusCommitManagerTestBase {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin(anyTxIdGivenByClient()))
-                .getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId())
-        .isEqualTo(anyTxIdGivenByClient());
+    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
   }
 
-  @EnabledIf("isGroupCommitEnabled")
   @Test
-  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdPlusParentIdAndSnapshotIsolation()
-      throws TransactionException {
+  public void
+      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation()
+          throws TransactionException {
     // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    String parentKey = keyManipulator.generateParentKey();
+    String fullKey = keyManipulator.fullKey(parentKey, ANY_TX_ID);
+    doReturn(fullKey).when(groupCommitter).reserve(anyString());
+    ConsensusCommitManager managerWithGroupCommit =
+        new ConsensusCommitManager(
+            storage,
+            admin,
+            consensusCommitConfig,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recovery,
+            commit,
+            groupCommitter);
 
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin(anyTxIdGivenByClient()))
+            ((DecoratedDistributedTransaction) managerWithGroupCommit.begin(ANY_TX_ID))
                 .getOriginalTransaction();
 
     // Assert
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
+    assertThat(transaction.getId()).isEqualTo(fullKey);
     Snapshot snapshot = transaction.getCrudHandler().getSnapshot();
-    Keys<String, String, String> groupCommitKeys = keyManipulator.keysFromFullKey(snapshot.getId());
-    assertThat(groupCommitKeys.childKey).isEqualTo(anyTxIdGivenByClient());
+    assertThat(snapshot.getId()).isEqualTo(fullKey);
+    assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
+    verify(groupCommitter).reserve(ANY_TX_ID);
     assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
   }
 
@@ -162,16 +158,14 @@ public abstract class ConsensusCommitManagerTestBase {
         .isEqualTo(recovery);
   }
 
-  @DisabledIf("isGroupCommitEnabled")
   @Test
   public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
 
     // Act Assert
-    manager.begin(anyTxIdGivenByClient());
-    assertThatThrownBy(() -> manager.begin(anyTxIdGivenByClient()))
-        .isInstanceOf(TransactionException.class);
+    manager.begin(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(TransactionException.class);
   }
 
   @Test
@@ -190,7 +184,6 @@ public abstract class ConsensusCommitManagerTestBase {
         .isEqualTo(Isolation.SNAPSHOT);
   }
 
-  @DisabledIf("isGroupCommitEnabled")
   @Test
   public void start_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
       throws TransactionException {
@@ -199,35 +192,12 @@ public abstract class ConsensusCommitManagerTestBase {
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.start(anyTxIdGivenByClient()))
-                .getOriginalTransaction();
+            ((DecoratedDistributedTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId())
-        .isEqualTo(anyTxIdGivenByClient());
+    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
-  }
-
-  @EnabledIf("isGroupCommitEnabled")
-  @Test
-  public void start_TxIdGiven_ReturnWithSpecifiedTxIdPlusParentIdAndSnapshotIsolation()
-      throws TransactionException {
-    // Arrange
-
-    // Act
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.start(anyTxIdGivenByClient()))
-                .getOriginalTransaction();
-
-    // Assert
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
-    Snapshot snapshot = transaction.getCrudHandler().getSnapshot();
-    Keys<String, String, String> groupCommitKeys = keyManipulator.keysFromFullKey(snapshot.getId());
-    assertThat(groupCommitKeys.childKey).isEqualTo(anyTxIdGivenByClient());
-    assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
   }
 
   @Test
@@ -282,25 +252,23 @@ public abstract class ConsensusCommitManagerTestBase {
         .isEqualTo(recovery);
   }
 
-  @DisabledIf("isGroupCommitEnabled")
   @Test
   public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
 
     // Act Assert
-    manager.start(anyTxIdGivenByClient());
-    assertThatThrownBy(() -> manager.start(anyTxIdGivenByClient()))
-        .isInstanceOf(TransactionException.class);
+    manager.start(ANY_TX_ID);
+    assertThatThrownBy(() -> manager.start(ANY_TX_ID)).isInstanceOf(TransactionException.class);
   }
 
   @Test
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
-    DistributedTransaction transaction1 = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
     // Act
-    DistributedTransaction transaction2 = manager.resume(transaction1.getId());
+    DistributedTransaction transaction2 = manager.resume(ANY_TX_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -311,7 +279,7 @@ public abstract class ConsensusCommitManagerTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(anyTxIdGivenByClient()))
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
@@ -319,11 +287,11 @@ public abstract class ConsensusCommitManagerTestBase {
   public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(transaction.getId()))
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
@@ -333,7 +301,7 @@ public abstract class ConsensusCommitManagerTestBase {
     // Arrange
     doThrow(CommitException.class).when(commit).commit(any());
 
-    DistributedTransaction transaction1 = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
       transaction1.commit();
     } catch (CommitException ignored) {
@@ -341,7 +309,7 @@ public abstract class ConsensusCommitManagerTestBase {
     }
 
     // Act
-    DistributedTransaction transaction2 = manager.resume(transaction1.getId());
+    DistributedTransaction transaction2 = manager.resume(ANY_TX_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -351,21 +319,21 @@ public abstract class ConsensusCommitManagerTestBase {
   public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.resume(transaction.getId()))
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
   public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
-    DistributedTransaction transaction1 = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
     // Act
-    DistributedTransaction transaction2 = manager.join(transaction1.getId());
+    DistributedTransaction transaction2 = manager.join(ANY_TX_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -376,7 +344,7 @@ public abstract class ConsensusCommitManagerTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.join(anyTxIdGivenByClient()))
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
@@ -384,11 +352,11 @@ public abstract class ConsensusCommitManagerTestBase {
   public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.join(transaction.getId()))
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
@@ -398,7 +366,7 @@ public abstract class ConsensusCommitManagerTestBase {
     // Arrange
     doThrow(CommitException.class).when(commit).commit(any());
 
-    DistributedTransaction transaction1 = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
       transaction1.commit();
     } catch (CommitException ignored) {
@@ -406,7 +374,7 @@ public abstract class ConsensusCommitManagerTestBase {
     }
 
     // Act
-    DistributedTransaction transaction2 = manager.join(transaction1.getId());
+    DistributedTransaction transaction2 = manager.join(ANY_TX_ID);
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
@@ -416,11 +384,11 @@ public abstract class ConsensusCommitManagerTestBase {
   public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.begin(anyTxIdGivenByClient());
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
 
     // Act Assert
-    assertThatThrownBy(() -> manager.join(transaction.getId()))
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
@@ -428,11 +396,10 @@ public abstract class ConsensusCommitManagerTestBase {
   public void check_StateReturned_ReturnTheState() throws CoordinatorException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(coordinator.getState(anyTxIdAlreadyStarted()))
-        .thenReturn(Optional.of(new State(anyTxIdAlreadyStarted(), expected)));
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(new State(ANY_TX_ID, expected)));
 
     // Act
-    TransactionState actual = manager.getState(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.getState(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
@@ -441,10 +408,10 @@ public abstract class ConsensusCommitManagerTestBase {
   @Test
   public void check_StateIsEmpty_ReturnUnknown() throws CoordinatorException {
     // Arrange
-    when(coordinator.getState(anyTxIdAlreadyStarted())).thenReturn(Optional.empty());
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
 
     // Act
-    TransactionState actual = manager.getState(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.getState(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
@@ -454,10 +421,10 @@ public abstract class ConsensusCommitManagerTestBase {
   public void check_CoordinatorExceptionThrown_ReturnUnknown() throws CoordinatorException {
     // Arrange
     CoordinatorException toThrow = mock(CoordinatorException.class);
-    when(coordinator.getState(anyTxIdAlreadyStarted())).thenThrow(toThrow);
+    when(coordinator.getState(ANY_TX_ID)).thenThrow(toThrow);
 
     // Act
-    TransactionState actual = manager.getState(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.getState(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
@@ -468,10 +435,10 @@ public abstract class ConsensusCommitManagerTestBase {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortState(anyTxIdAlreadyStarted())).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
-    TransactionState actual = manager.rollback(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.rollback(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
@@ -482,10 +449,10 @@ public abstract class ConsensusCommitManagerTestBase {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortState(anyTxIdAlreadyStarted())).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
-    TransactionState actual = manager.rollback(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.rollback(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
@@ -495,11 +462,10 @@ public abstract class ConsensusCommitManagerTestBase {
   public void rollback_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortState(anyTxIdAlreadyStarted()))
-        .thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act
-    TransactionState actual = manager.rollback(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.rollback(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
@@ -509,10 +475,10 @@ public abstract class ConsensusCommitManagerTestBase {
   public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState() throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortState(anyTxIdAlreadyStarted())).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
-    TransactionState actual = manager.abort(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.abort(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
@@ -523,10 +489,10 @@ public abstract class ConsensusCommitManagerTestBase {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortState(anyTxIdAlreadyStarted())).thenReturn(expected);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
-    TransactionState actual = manager.abort(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.abort(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
@@ -536,11 +502,10 @@ public abstract class ConsensusCommitManagerTestBase {
   public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortState(anyTxIdAlreadyStarted()))
-        .thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act
-    TransactionState actual = manager.abort(anyTxIdAlreadyStarted());
+    TransactionState actual = manager.abort(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
