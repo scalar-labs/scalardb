@@ -123,7 +123,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    *
    * @param fullKey A full key associated with the slot already reserved with {@link
    *     GroupCommitter#reserve}.
-   * @param value A value to be set to the slot.
+   * @param value A value to be set to the slot. It will be committed with other values contained in
+   *     slots of the same group.
    * @throws GroupCommitException when group commit fails
    */
   public void ready(FULL_KEY fullKey, V value) throws GroupCommitException {
