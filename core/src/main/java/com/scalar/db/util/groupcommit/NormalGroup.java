@@ -8,10 +8,12 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // A group for multiple slots that will be group-committed at once.
+@ThreadSafe
 class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);

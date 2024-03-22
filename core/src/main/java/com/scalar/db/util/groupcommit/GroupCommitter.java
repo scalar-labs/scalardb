@@ -6,6 +6,7 @@ import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
  * @param <EMIT_KEY> A key type that Emitter can interpret.
  * @param <V> A value type to be set to a slot.
  */
+@ThreadSafe
 public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
 
