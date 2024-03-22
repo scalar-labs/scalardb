@@ -572,6 +572,18 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0124", "Columns must be specified. Table: %s", "", ""),
   SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE(
       Category.USER_ERROR, "0125", "Invalid column type. Table: %s; Column: %s; Type: %s", "", ""),
+  AUTO_COMMIT_TRANSACTION_GETTING_TRANSACTION_STATE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0126",
+      "Getting a transaction state is not supported in auto-commit transactions",
+      "",
+      ""),
+  AUTO_COMMIT_TRANSACTION_ROLLING_BACK_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0127",
+      "Rolling back a transaction is not supported in auto-commit transactions",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

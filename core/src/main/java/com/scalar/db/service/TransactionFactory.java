@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Properties;
+import javax.annotation.Nullable;
 
 /**
  * A factory class to instantiate {@link DistributedTransactionManager} and {@link
@@ -50,8 +51,10 @@ public class TransactionFactory {
   /**
    * Returns a {@link TwoPhaseCommitTransactionManager} instance
    *
-   * @return a {@link TwoPhaseCommitTransactionManager} instance
+   * @return a {@link TwoPhaseCommitTransactionManager} instance. If the transaction manager does
+   *     not support the two-phase commit interface, returns {@code null}.
    */
+  @Nullable
   public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
     return ProviderManager.createTwoPhaseCommitTransactionManager(config);
   }

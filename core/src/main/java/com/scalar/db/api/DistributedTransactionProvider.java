@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.config.DatabaseConfig;
+import javax.annotation.Nullable;
 
 /**
  * A class that creates {@link DistributedTransactionManager}, {@link DistributedTransactionAdmin},
@@ -39,7 +40,10 @@ public interface DistributedTransactionProvider {
    * Creates an instance of {@link TwoPhaseCommitTransactionManager} for the transaction manager.
    *
    * @param config a database config
-   * @return an instance of {@link TwoPhaseCommitTransactionManager} for the transaction manager
+   * @return an instance of {@link TwoPhaseCommitTransactionManager} for the transaction manager. If
+   *     the transaction manager does not support the two-phase commit interface, returns {@code
+   *     null}.
    */
+  @Nullable
   TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(DatabaseConfig config);
 }

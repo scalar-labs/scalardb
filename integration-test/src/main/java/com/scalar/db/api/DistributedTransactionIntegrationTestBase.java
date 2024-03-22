@@ -1238,7 +1238,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void put_withPutIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
+  public void put_withPutIfIsNullWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
       throws TransactionException {
     // Arrange
     Put putIf =

@@ -13,6 +13,7 @@ import com.scalar.db.config.DatabaseConfig;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ServiceLoader;
+import javax.annotation.Nullable;
 
 /**
  * This class loads {@link DistributedStorageProvider} and {@link DistributedTransactionProvider}
@@ -113,8 +114,10 @@ final class ProviderManager {
    * Returns an instance of {@link TwoPhaseCommitTransactionManager}.
    *
    * @param config a database config
-   * @return an instance of {@link TwoPhaseCommitTransactionManager}
+   * @return an instance of {@link TwoPhaseCommitTransactionManager}. If the transaction manager
+   *     does not support the two-phase commit interface, returns {@code null}.
    */
+  @Nullable
   public static TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
       DatabaseConfig config) {
     return getDistributedTransactionProvider(config.getTransactionManager())
