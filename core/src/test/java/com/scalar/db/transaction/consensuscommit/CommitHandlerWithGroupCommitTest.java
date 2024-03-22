@@ -1,13 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.mockito.Mockito.spy;
-
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.Optional;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 
 class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -16,29 +12,20 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   private String childKey;
   private CoordinatorGroupCommitter groupCommitter;
 
-  @BeforeEach
-  void setUp() throws Exception {
-    groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 10));
-    handler =
-        spy(
-            new CommitHandler(
-                storage,
-                coordinator,
-                tableMetadataManager,
-                new ParallelExecutor(config),
-                groupCommitter));
+  @Override
+  void extraInitialize() {
+    // `groupCommitter` is instantiated separately since the timing of the instantiation and calling
+    // GroupCommitter.reserve() would be different.
     childKey = UUID.randomUUID().toString();
     String fullKey = groupCommitter.reserve(childKey);
     parentKey = keyManipulator.keysFromFullKey(fullKey).parentKey;
   }
 
-  @AfterEach
-  void tearDown() {
-    groupCommitter.close();
-  }
-
   @Override
   Optional<CoordinatorGroupCommitter> groupCommitter() {
+    if (groupCommitter == null) {
+      groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 10));
+    }
     return Optional.of(groupCommitter);
   }
 
@@ -50,5 +37,10 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   @Override
   String anyGroupCommitParentId() {
     return parentKey;
+  }
+
+  @Override
+  void extraCleanup() {
+    groupCommitter.close();
   }
 }

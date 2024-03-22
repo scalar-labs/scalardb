@@ -21,6 +21,7 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -40,7 +41,9 @@ public abstract class ConsensusCommitManagerTestBase {
 
   private ConsensusCommitManager manager;
 
-  void initialize() {}
+  void extraInitialize() {}
+
+  void extraCleanup() {}
 
   abstract String anyTxIdGivenByClient();
 
@@ -53,8 +56,6 @@ public abstract class ConsensusCommitManagerTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-
-    initialize();
 
     manager =
         new ConsensusCommitManager(
@@ -71,6 +72,13 @@ public abstract class ConsensusCommitManagerTestBase {
     when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(consensusCommitConfig.getSerializableStrategy())
         .thenReturn(SerializableStrategy.EXTRA_READ);
+
+    extraInitialize();
+  }
+
+  @AfterEach
+  void tearDown() {
+    extraCleanup();
   }
 
   @Test

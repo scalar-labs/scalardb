@@ -28,6 +28,8 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -49,18 +51,45 @@ public abstract class CommitHandlerTestBase {
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
 
-  @Mock protected DistributedStorage storage;
-  @Mock protected Coordinator coordinator;
-  @Mock protected TransactionTableMetadataManager tableMetadataManager;
-  @Mock protected ConsensusCommitConfig config;
+  @Mock private DistributedStorage storage;
+  @Mock private Coordinator coordinator;
+  @Mock private TransactionTableMetadataManager tableMetadataManager;
+  @Mock private ConsensusCommitConfig config;
 
-  protected CommitHandler handler;
+  private CommitHandler handler;
+  private ParallelExecutor parallelExecutor;
+
+  void extraInitialize() {}
+
+  void extraCleanup() {}
 
   abstract Optional<CoordinatorGroupCommitter> groupCommitter();
 
   abstract String anyId();
 
   abstract String anyGroupCommitParentId();
+
+  @BeforeEach
+  void setUp() throws Exception {
+    parallelExecutor = new ParallelExecutor(config);
+    handler =
+        spy(
+            new CommitHandler(
+                storage,
+                coordinator,
+                tableMetadataManager,
+                parallelExecutor,
+                groupCommitter().orElse(null)));
+
+    extraInitialize();
+  }
+
+  @AfterEach
+  void tearDown() {
+    extraCleanup();
+
+    parallelExecutor.close();
+  }
 
   private Put preparePut1() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);

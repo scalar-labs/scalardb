@@ -13,8 +13,9 @@ public class ConsensusCommitManagerWithGroupCommitTest extends ConsensusCommitMa
   private CoordinatorGroupCommitter groupCommitter;
 
   @Override
-  void initialize() {
-    groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 10));
+  void extraInitialize() {
+    // `groupCommitter` is instantiated separately since the timing of the instantiation and calling
+    // GroupCommitter.reserve() would be different.
     childKey = UUID.randomUUID().toString();
     String fullKey = groupCommitter.reserve(childKey);
     parentKey = keyManipulator.keysFromFullKey(fullKey).parentKey;
@@ -22,6 +23,9 @@ public class ConsensusCommitManagerWithGroupCommitTest extends ConsensusCommitMa
 
   @Override
   Optional<CoordinatorGroupCommitter> groupCommitter() {
+    if (groupCommitter == null) {
+      groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 10));
+    }
     return Optional.of(groupCommitter);
   }
 
@@ -38,5 +42,12 @@ public class ConsensusCommitManagerWithGroupCommitTest extends ConsensusCommitMa
   @Override
   boolean isGroupCommitEnabled() {
     return true;
+  }
+
+  @Override
+  void extraCleanup() {
+    if (groupCommitter != null) {
+      groupCommitter.close();
+    }
   }
 }
