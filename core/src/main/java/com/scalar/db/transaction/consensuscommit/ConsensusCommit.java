@@ -55,7 +55,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       CommitHandler commit,
       RecoveryHandler recovery,
       ConsensusCommitMutationOperationChecker mutationOperationChecker,
-      CoordinatorGroupCommitter groupCommitter) {
+      @Nullable CoordinatorGroupCommitter groupCommitter) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);
