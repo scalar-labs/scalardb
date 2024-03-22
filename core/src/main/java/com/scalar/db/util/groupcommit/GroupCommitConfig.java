@@ -10,6 +10,7 @@ public class GroupCommitConfig {
   private final int groupCloseTimeoutMillis;
   private final int delayedSlotMoveTimeoutMillis;
   private final int timeoutCheckIntervalMillis;
+  private final boolean metricsConsoleReporterEnabled;
 
   /**
    * A configuration of group commit.
@@ -19,16 +20,33 @@ public class GroupCommitConfig {
    * @param delayedSlotMoveTimeoutMillis A timeout to move a delayed slot from {@link NormalGroup}
    *     to {@link DelayedGroup}.
    * @param timeoutCheckIntervalMillis An interval to check the queues.
+   * @param metricsConsoleReporterEnabled Whether to enable the console reporter for metrics.
    */
   public GroupCommitConfig(
       int slotCapacity,
       int groupCloseTimeoutMillis,
       int delayedSlotMoveTimeoutMillis,
-      int timeoutCheckIntervalMillis) {
+      int timeoutCheckIntervalMillis,
+      boolean metricsConsoleReporterEnabled) {
     this.slotCapacity = slotCapacity;
     this.groupCloseTimeoutMillis = groupCloseTimeoutMillis;
     this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
     this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
+    this.metricsConsoleReporterEnabled = metricsConsoleReporterEnabled;
+  }
+
+  // Mainly only for testing.
+  public GroupCommitConfig(
+      int slotCapacity,
+      int groupCloseTimeoutMillis,
+      int delayedSlotMoveTimeoutMillis,
+      int timeoutCheckIntervalMillis) {
+    this(
+        slotCapacity,
+        groupCloseTimeoutMillis,
+        delayedSlotMoveTimeoutMillis,
+        timeoutCheckIntervalMillis,
+        false);
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
@@ -51,6 +69,10 @@ public class GroupCommitConfig {
     return timeoutCheckIntervalMillis;
   }
 
+  public boolean metricsConsoleReporterEnabled() {
+    return metricsConsoleReporterEnabled;
+  }
+
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
@@ -58,6 +80,7 @@ public class GroupCommitConfig {
         .add("groupCloseTimeoutMillis", groupCloseTimeoutMillis)
         .add("delayedSlotMoveTimeoutMillis", delayedSlotMoveTimeoutMillis)
         .add("timeoutCheckIntervalMillis", timeoutCheckIntervalMillis)
+        .add("metricsConsoleReporterEnabled", metricsConsoleReporterEnabled)
         .toString();
   }
 }
