@@ -35,6 +35,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -47,6 +48,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
@@ -57,6 +61,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ConsensusCommitSpecificIntegrationTestBase {
@@ -1169,7 +1174,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     // one for prepare, one for commit
     verify(storage, times(2)).mutate(anyList());
-    // For PoC
     if (isGroupCommitEnabled()) {
       verify(coordinator)
           .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
@@ -1196,7 +1200,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     // twice for prepare, twice for commit
     verify(storage, times(4)).mutate(anyList());
-    // For PoC
     if (isGroupCommitEnabled()) {
       verify(coordinator)
           .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
@@ -2019,7 +2022,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   private boolean isGroupCommitEnabled() {
-    return manager.isGroupCommitEnabled();
+    return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
   }
 
   @Test
@@ -2700,19 +2703,32 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         scanAll);
   }
 
-  // For PoC >>>>
   @Test
-  public void groupCommit_WithSlowTxn() throws Exception {
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenOneOfTransactionsIsDelayed_ShouldBeCommittedWithoutBlocked() throws Exception {
+    // Arrange
+    ExecutorService executorService = Executors.newCachedThreadPool();
+
+    // Act
     DistributedTransaction slowTxn = manager.begin();
     DistributedTransaction fastTxn = manager.begin();
     fastTxn.put(preparePut(0, 0, namespace1, TABLE_1));
-    fastTxn.commit();
+    Future<?> future =
+        executorService.submit(
+            () -> {
+              try {
+                fastTxn.commit();
+              } catch (CommitException | UnknownTransactionStatusException e) {
+                throw new RuntimeException(e);
+              }
+            });
+    executorService.shutdown();
+    future.get(10, TimeUnit.SECONDS);
 
-    TimeUnit.SECONDS.sleep(2);
     slowTxn.put(preparePut(1, 0, namespace1, TABLE_1));
     slowTxn.commit();
 
-    TimeUnit.SECONDS.sleep(2);
+    // Assert
     DistributedTransaction validationTxn = manager.begin();
     assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isPresent();
     assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
@@ -2725,7 +2741,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void groupCommit_WithOneAbortTxn() throws Exception {
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenTheOtherTransactionAbortDueToConflict_ShouldBeCommittedWithoutBlocked()
+      throws Exception {
+    // Arrange
+    ExecutorService executorService = Executors.newCachedThreadPool();
+
+    // Act
     DistributedTransaction failedTxn =
         manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     DistributedTransaction successTxn =
@@ -2733,10 +2755,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     failedTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
     failedTxn.put(preparePut(0, 0, namespace1, TABLE_1));
     successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
-    successTxn.commit();
+    Future<?> future =
+        executorService.submit(
+            () -> {
+              try {
+                successTxn.commit();
+              } catch (CommitException | UnknownTransactionStatusException e) {
+                throw new RuntimeException(e);
+              }
+            });
+    executorService.shutdown();
     assertThat(catchThrowable(failedTxn::commit)).isInstanceOf(CommitConflictException.class);
+    future.get(10, TimeUnit.SECONDS);
 
-    TimeUnit.SECONDS.sleep(2);
+    // Assert
     DistributedTransaction validationTxn = manager.begin();
     assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
     assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
@@ -2749,7 +2781,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void groupCommit_WithAllAbortTxns() throws Exception {
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenAllTransactionsAbort_ShouldBeAbortedProperly() throws Exception {
+    // Act
     DistributedTransaction failedTxn1 =
         manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     DistributedTransaction failedTxn2 =
@@ -2767,7 +2801,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       reset(commit);
     }
 
-    TimeUnit.SECONDS.sleep(2);
+    // Assert
     DistributedTransaction validationTxn = manager.begin();
     assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
     assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isEmpty();
@@ -2778,7 +2812,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(coordinator.getState(failedTxn2.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
   }
-  // <<<< For PoC
 
   private DistributedTransaction prepareTransfer(
       int fromId,

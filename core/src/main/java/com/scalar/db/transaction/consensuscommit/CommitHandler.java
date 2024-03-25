@@ -140,8 +140,8 @@ public class CommitHandler {
       } else if (cause instanceof CoordinatorException) {
         throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
       } else {
-        throw new IllegalStateException(
-            "Group commit unexpectedly failed. TransactionID:" + id, cause);
+        throw new CommitConflictException(
+            "Group commit failed. Probably it's already done.", cause, id);
       }
     } catch (Exception e) {
       throw new IllegalStateException("Group commit unexpectedly failed. TransactionID:" + id, e);

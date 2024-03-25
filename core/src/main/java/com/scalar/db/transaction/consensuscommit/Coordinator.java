@@ -21,6 +21,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -49,7 +50,7 @@ public class Coordinator {
   private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
   private final DistributedStorage storage;
   private final String coordinatorNamespace;
-  private final CoordinatorGroupCommitKeyManipulator coordinatorGroupCommitKeyManipulator;
+  private final CoordinatorGroupCommitKeyManipulator keyManipulator;
 
   /**
    * @param storage a storage
@@ -60,18 +61,18 @@ public class Coordinator {
   public Coordinator(DistributedStorage storage) {
     this.storage = storage;
     coordinatorNamespace = NAMESPACE;
-    coordinatorGroupCommitKeyManipulator = new CoordinatorGroupCommitKeyManipulator();
+    keyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
-    coordinatorGroupCommitKeyManipulator = new CoordinatorGroupCommitKeyManipulator();
+    keyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
-    if (coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
+    if (keyManipulator.isFullKey(id)) {
       // When dealing with transaction IDs for group commit, the process of checking two transaction
       // ID formats is executed non-atomically.
       // Consequently, there is a possibility of transaction ID insertion occurring between the two
@@ -95,11 +96,10 @@ public class Coordinator {
 
   @VisibleForTesting
   Optional<Coordinator.State> getStateForGroupCommit(String id) throws CoordinatorException {
-    if (!coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
+    if (!keyManipulator.isFullKey(id)) {
       throw new IllegalArgumentException("This id format isn't for group commit. Id:" + id);
     }
-    Keys<String, String, String> idForGroupCommit =
-        coordinatorGroupCommitKeyManipulator.keysFromFullKey(id);
+    Keys<String, String, String> idForGroupCommit = keyManipulator.keysFromFullKey(id);
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
@@ -123,12 +123,23 @@ public class Coordinator {
       String id, List<String> fullIds, TransactionState transactionState, long createdAt)
       throws CoordinatorException {
     State state;
-    if (coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
+    if (keyManipulator.isFullKey(id)) {
       // In this case, this is same as normal commit and child_ids isn't needed.
       state = new State(id, transactionState, createdAt);
     } else {
       // Group commit with child_ids.
-      state = new State(id, fullIds, transactionState, createdAt);
+      List<String> childIds = new ArrayList<>(fullIds.size());
+      for (String fullId : fullIds) {
+        if (!keyManipulator.isFullKey(fullId)) {
+          throw new IllegalStateException(
+              String.format(
+                  "The full transaction ID for group commit is invalid format. ID:%s, FullIds:%s, State:%s, CreatedAt:%s",
+                  id, fullId, transactionState, createdAt));
+        }
+        Keys<String, String, String> keys = keyManipulator.keysFromFullKey(fullId);
+        childIds.add(keys.childKey);
+      }
+      state = new State(id, childIds, transactionState, createdAt);
     }
     Put put = createPutWith(state);
     put(put);

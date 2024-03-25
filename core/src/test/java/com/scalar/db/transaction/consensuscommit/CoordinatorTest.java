@@ -23,6 +23,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -47,6 +49,7 @@ public class CoordinatorTest {
   @Mock private DistributedStorage storage;
   @Mock private ConsensusCommitConfig config;
   private Coordinator coordinator;
+  @Captor private ArgumentCaptor<State> stateArgumentCaptor;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -523,10 +526,11 @@ public class CoordinatorTest {
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
+    String childId1 = UUID.randomUUID().toString();
+    String childId2 = UUID.randomUUID().toString();
     List<String> fullIds =
         Arrays.asList(
-            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
-            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()));
+            keyManipulator.fullKey(parentId, childId1), keyManipulator.fullKey(parentId, childId2));
     long current = System.currentTimeMillis();
     doNothing().when(storage).put(any(Put.class));
 
@@ -534,8 +538,14 @@ public class CoordinatorTest {
     spiedCoordinator.putStateForGroupCommit(parentId, fullIds, transactionState, current);
 
     // Assert
-    verify(spiedCoordinator)
-        .createPutWith(new Coordinator.State(parentId, fullIds, transactionState, current));
+    verify(spiedCoordinator).createPutWith(stateArgumentCaptor.capture());
+    State state = stateArgumentCaptor.getValue();
+    assertThat(state.getId()).isEqualTo(parentId);
+    assertThat(state.getChildIds()).hasSize(2);
+    assertThat(state.getChildIds().get(0)).isEqualTo(childId1);
+    assertThat(state.getChildIds().get(1)).isEqualTo(childId2);
+    assertThat(state.getState()).isEqualTo(transactionState);
+    assertThat(state.getCreatedAt()).isEqualTo(current);
   }
 
   @ParameterizedTest
@@ -579,10 +589,11 @@ public class CoordinatorTest {
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
+    String childId1 = UUID.randomUUID().toString();
+    String childId2 = UUID.randomUUID().toString();
     List<String> fullIds =
         Arrays.asList(
-            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
-            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()));
+            keyManipulator.fullKey(parentId, childId1), keyManipulator.fullKey(parentId, childId2));
     long current = System.currentTimeMillis();
     ExecutionException toThrow = mock(ExecutionException.class);
     doThrow(toThrow).when(storage).put(any(Put.class));
@@ -594,8 +605,15 @@ public class CoordinatorTest {
                 spiedCoordinator.putStateForGroupCommit(
                     parentId, fullIds, transactionState, current))
         .isInstanceOf(CoordinatorException.class);
-    verify(spiedCoordinator)
-        .createPutWith(new Coordinator.State(parentId, fullIds, transactionState, current));
+    verify(spiedCoordinator).createPutWith(stateArgumentCaptor.capture());
+
+    State state = stateArgumentCaptor.getValue();
+    assertThat(state.getId()).isEqualTo(parentId);
+    assertThat(state.getChildIds()).hasSize(2);
+    assertThat(state.getChildIds().get(0)).isEqualTo(childId1);
+    assertThat(state.getChildIds().get(1)).isEqualTo(childId2);
+    assertThat(state.getState()).isEqualTo(transactionState);
+    assertThat(state.getCreatedAt()).isEqualTo(current);
   }
 
   @ParameterizedTest
