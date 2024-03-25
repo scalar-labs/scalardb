@@ -593,4 +593,33 @@ public class CoordinatorTest {
     verify(spiedCoordinator)
         .createPutWith(new Coordinator.State(parentId, fullIds, transactionState, current));
   }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  public void
+      putStateForGroupCommit_StateWithChildIdsContainingDelimiterGiven_ShouldThrowIllegalArgumentException(
+          TransactionState transactionState) throws ExecutionException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    List<String> fullIds =
+        Arrays.asList(
+            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
+            keyManipulator.fullKey(parentId, UUID.randomUUID().toString().replaceFirst("-", ",")));
+    long current = System.currentTimeMillis();
+    ExecutionException toThrow = mock(ExecutionException.class);
+    doThrow(toThrow).when(storage).put(any(Put.class));
+
+    // Act
+    // Assert
+    assertThatThrownBy(
+            () ->
+                spiedCoordinator.putStateForGroupCommit(
+                    parentId, fullIds, transactionState, current))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

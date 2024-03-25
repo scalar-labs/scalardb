@@ -125,7 +125,7 @@ public class Coordinator {
     State state;
     if (coordinatorGroupCommitKeyManipulator.isFullKey(id)) {
       // In this case, this is same as normal commit and child_ids isn't needed.
-      state = new State(id, Collections.emptyList(), transactionState, createdAt);
+      state = new State(id, transactionState, createdAt);
     } else {
       // Group commit with child_ids.
       state = new State(id, fullIds, transactionState, createdAt);
@@ -199,6 +199,7 @@ public class Coordinator {
   @ThreadSafe
   public static class State {
     private static final List<String> EMPTY_CHILD_IDS = Collections.emptyList();
+    private static final String CHILD_IDS_DELIMITER = ",";
     private final String id;
     private final TransactionState state;
     private final long createdAt;
@@ -212,7 +213,7 @@ public class Coordinator {
       Optional<String> childIdsOpt = result.getValue(Attribute.CHILD_IDS).get().getAsString();
       childIds =
           childIdsOpt
-              .map(s -> Splitter.on(',').omitEmptyStrings().splitToList(s))
+              .map(s -> Splitter.on(CHILD_IDS_DELIMITER).omitEmptyStrings().splitToList(s))
               .orElse(EMPTY_CHILD_IDS);
     }
 
@@ -227,6 +228,14 @@ public class Coordinator {
     @VisibleForTesting
     State(String id, List<String> childIds, TransactionState state, long createdAt) {
       this.id = checkNotNull(id);
+      for (String childId : childIds) {
+        if (childId.contains(CHILD_IDS_DELIMITER)) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "This child transaction ID itself contains the delimiter. ChildTransactionID: %s, Delimiter: %s",
+                  childId, CHILD_IDS_DELIMITER));
+        }
+      }
       this.childIds = childIds;
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
