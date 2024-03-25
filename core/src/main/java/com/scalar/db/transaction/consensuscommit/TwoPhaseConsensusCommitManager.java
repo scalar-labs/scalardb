@@ -136,9 +136,8 @@ public class TwoPhaseConsensusCommitManager
   }
 
   // The group commit feature must not be used in a participant even if it's enabled in order to
-  // avoid
-  // writing different coordinator record images for the same transaction, which depends on group
-  // commit timing and the progresses of other transactions in the same group.
+  // avoid writing different coordinator record images for the same transaction, which depends on
+  // group commit timing and the progresses of other transactions in the same group.
   @Override
   public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
@@ -166,11 +165,10 @@ public class TwoPhaseConsensusCommitManager
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
 
     // If the group commit feature is enabled, only the coordinator service must manage the
-    // coordinator table
-    // state of a transaction since how a transaction is expressed in the coordinator table depends
-    // on whether the group commit is enabled or disabled.
-    // Therefore, TwoPhaseConsensusCommit must not commit or abort states if it's a participant with
-    // the group commit enabled.
+    // coordinator table state of a transaction since how a transaction is expressed in the
+    // coordinator table depends on whether the group commit is enabled or disabled. Therefore,
+    // TwoPhaseConsensusCommit must not commit or abort states if it's a participant with the group
+    // commit enabled.
     boolean shouldManageState = isCoordinator || !isGroupCommitEnabled();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(
