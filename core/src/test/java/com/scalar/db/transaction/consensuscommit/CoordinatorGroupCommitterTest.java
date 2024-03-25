@@ -13,12 +13,15 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -247,6 +250,81 @@ class CoordinatorGroupCommitterTest {
 
       // Assert
       verify(emitter, never()).execute(anyString(), anyList());
+    }
+  }
+
+  @Nested
+  static class CoordinatorGroupCommitKeyManipulatorTest {
+    private final CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+
+    @Test
+    void isFullKey_GivenValidFullKey_ShouldReturnTrue() {
+      // Arrange
+      String childTxId = UUID.randomUUID().toString();
+
+      // Act
+      // Assert
+      assertThat(keyManipulator.isFullKey("012345678901234567890123:" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("abcdefghijklmnopqrstuvwx:" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("cdefghijklmnopqrstuvwxyz:" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("ABCDEFGHIJKLMNOPQRSTUVWX:" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("CDEFGHIJKLMNOPQRSTUVWXYZ:" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("0123456789abcdefghijWXYZ:" + childTxId)).isTrue();
+    }
+
+    @Test
+    void isFullKey_GivenInvalidFullKey_ShouldReturnFalse() {
+      // Arrange
+      String childTxId = UUID.randomUUID().toString();
+
+      // Act
+      // Assert
+      assertThat(keyManipulator.isFullKey("01234567890123456789012:" + childTxId)).isFalse();
+      assertThat(keyManipulator.isFullKey("0123456789012345678901234:" + childTxId)).isFalse();
+      assertThat(keyManipulator.isFullKey("012345678901234567890123" + childTxId)).isFalse();
+      assertThat(keyManipulator.isFullKey("0123456789012345678901234" + childTxId)).isFalse();
+    }
+
+    @Test
+    void generateParentKey_ShouldReturnProperValue() {
+      // Arrange
+      int n = 10000;
+
+      // Act
+      // Assert
+      for (int i = 0; i < n; i++) {
+        String parentKey = keyManipulator.generateParentKey();
+        assertThat(parentKey).hasSize(24);
+        for (char c : parentKey.toCharArray()) {
+          assertThat(c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z').isTrue();
+        }
+      }
+    }
+
+    @Test
+    void generateParentKey_EvenWhenExecutingManyTime_ShouldNotReturnSameValue() {
+      // Arrange
+      int n = 10000;
+      Set<String> parentKeys = new HashSet<>();
+
+      // Act
+      // Assert
+      for (int i = 0; i < n; i++) {
+        assertThat(parentKeys.add(keyManipulator.generateParentKey())).isTrue();
+      }
+      assertThat(parentKeys).hasSize(n);
+    }
+
+    @Test
+    void fullKey_GivenArbitraryParentKeyAndChildKey_ShouldReturnProperValue() {
+      // Arrange
+      String parentKey = keyManipulator.generateParentKey();
+      String childKey = UUID.randomUUID().toString();
+
+      // Act
+      // Assert
+      assertThat(keyManipulator.fullKey(parentKey, childKey)).isEqualTo(parentKey + ":" + childKey);
     }
   }
 }
