@@ -76,8 +76,10 @@ public class CommitHandler {
         throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (Exception e) {
+      cancelGroupCommitIfNeeded(snapshot.getId());
+      throw e;
     }
-    // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
     try {
       validate(snapshot);
@@ -88,14 +90,16 @@ public class CommitHandler {
         throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (Exception e) {
+      cancelGroupCommitIfNeeded(snapshot.getId());
+      throw e;
     }
-    // TODO: Consider if group-commit should be always canceled when other exception is thrown
 
     commitState(snapshot);
     commitRecords(snapshot);
   }
 
-  private void checkStateAndAbortIfNeeded(Snapshot snapshot, Exception cause)
+  private void handleCommitConflict(Snapshot snapshot, Exception cause)
       throws CommitConflictException, UnknownTransactionStatusException {
     try {
       Optional<State> s = coordinator.getState(snapshot.getId());
@@ -136,7 +140,7 @@ public class CommitHandler {
       Throwable cause = e.getCause();
       if (cause instanceof CoordinatorConflictException) {
         // Throw a proper exception from this method if needed.
-        checkStateAndAbortIfNeeded(snapshot, (CoordinatorConflictException) cause);
+        handleCommitConflict(snapshot, (CoordinatorConflictException) cause);
       } else if (cause instanceof CoordinatorException) {
         throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
       } else {
@@ -144,6 +148,7 @@ public class CommitHandler {
             "Group commit failed. Probably it's already done.", cause, id);
       }
     } catch (Exception e) {
+      cancelGroupCommitIfNeeded(id);
       throw new IllegalStateException("Group commit unexpectedly failed. TransactionID:" + id, e);
     }
   }
@@ -210,30 +215,7 @@ public class CommitHandler {
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (CoordinatorConflictException e) {
-      // TODO: The following code can be replaced with rollbackRecordsAccordingToState()?
-      try {
-        Optional<Coordinator.State> s = coordinator.getState(id);
-        if (s.isPresent()) {
-          TransactionState state = s.get().getState();
-          if (state.equals(TransactionState.ABORTED)) {
-            rollbackRecords(snapshot);
-            throw new CommitConflictException(
-                CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(),
-                e,
-                id);
-          }
-        } else {
-          throw new UnknownTransactionStatusException(
-              CoreError
-                  .CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
-                  .buildMessage(),
-              e,
-              id);
-        }
-      } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException(
-            CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), e1, id);
-      }
+      handleCommitConflict(snapshot, e);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(), e, id);
@@ -243,8 +225,7 @@ public class CommitHandler {
   private void groupCommitState(String parentId, List<Snapshot> snapshots)
       throws CoordinatorException {
     if (snapshots.isEmpty()) {
-      // This means all buffered transactions failed in the prepare phase.
-      // Each call of prepare() puts ABORT state for the *full* id.
+      // This means all buffered transactions were manually rolled back. Nothing to do.
       return;
     }
 

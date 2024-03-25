@@ -2059,8 +2059,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction2.commit();
   }
 
-  // FIXME: This test doesn't work with the group commit since it puts an ABORTED transaction
-  //        without any parent ID.
+  // This test doesn't work with the group commit since it puts an ABORTED transaction without any
+  // parent ID.
   @DisabledIf("isGroupCommitEnabled")
   @Test
   public void
