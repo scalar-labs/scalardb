@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -288,12 +289,13 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childId
-    when(storage.get(any(Get.class)))
-        .thenReturn(
+    doReturn(
             // The first get with the parent ID shouldn't find a state.
             Optional.empty(),
             // The second get with the full ID should return the state.
-            Optional.of(resultForSingleCommitState));
+            Optional.of(resultForSingleCommitState))
+        .when(storage)
+        .get(any(Get.class));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
@@ -341,13 +343,14 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childIdX
-    when(storage.get(any(Get.class)))
-        .thenReturn(
+    doReturn(
             // The first get with the parent ID should return a state, but it doesn't contain the
             // child ID.
             Optional.of(resultForGroupCommitState),
             // The second get with the full ID should return empty.
-            Optional.empty());
+            Optional.empty())
+        .when(storage)
+        .get(any(Get.class));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
@@ -405,13 +408,14 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childIdX
-    when(storage.get(any(Get.class)))
-        .thenReturn(
+    doReturn(
             // The first get with the parent ID should return a state, but it doesn't contain the
             // child ID.
             Optional.of(resultForGroupCommitState),
             // The second get with the full ID should return the state.
-            Optional.of(resultForSingleCommitState));
+            Optional.of(resultForSingleCommitState))
+        .when(storage)
+        .get(any(Get.class));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
