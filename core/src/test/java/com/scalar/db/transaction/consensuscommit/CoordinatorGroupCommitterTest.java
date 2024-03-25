@@ -296,8 +296,10 @@ class CoordinatorGroupCommitterTest {
       for (int i = 0; i < n; i++) {
         String parentKey = keyManipulator.generateParentKey();
         assertThat(parentKey).hasSize(24);
-        for (char c : parentKey.toCharArray()) {
-          assertThat(c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z').isTrue();
+        for (int j = 0; j < parentKey.length(); j++) {
+          char c = parentKey.charAt(i);
+          assertThat((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+              .isTrue();
         }
       }
     }

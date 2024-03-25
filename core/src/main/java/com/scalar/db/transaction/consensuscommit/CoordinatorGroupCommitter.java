@@ -37,72 +37,29 @@ public class CoordinatorGroupCommitter
     private static final int MAX_FULL_KEY_SIZE = 64;
     private static final int MAX_CHILD_KEY_SIZE =
         MAX_FULL_KEY_SIZE - PRIMARY_KEY_SIZE - 1 /* delimiter */;
-    private static final char[] CHARS_FOR_PRIMARY_KEY = {
-      // 10 + 26 + 26 = 62
-      '0',
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-      '7',
-      '8',
-      '9',
-      'A',
-      'B',
-      'C',
-      'D',
-      'E',
-      'F',
-      'G',
-      'H',
-      'I',
-      'J',
-      'K',
-      'L',
-      'M',
-      'N',
-      'O',
-      'P',
-      'Q',
-      'R',
-      'S',
-      'T',
-      'U',
-      'V',
-      'W',
-      'X',
-      'Y',
-      'Z',
-      'a',
-      'b',
-      'c',
-      'd',
-      'e',
-      'f',
-      'g',
-      'h',
-      'i',
-      'j',
-      'k',
-      'l',
-      'm',
-      'n',
-      'o',
-      'p',
-      'q',
-      'r',
-      's',
-      't',
-      'u',
-      'v',
-      'w',
-      'x',
-      'y',
-      'z'
-    };
-    private static final int CHARS_FOR_PRIMARY_KEY_SIZE = CHARS_FOR_PRIMARY_KEY.length;
+    private static final char[] CHARS_FOR_PRIMARY_KEY;
+    private static final int CHARS_FOR_PRIMARY_KEY_SIZE;
+
+    static {
+      int digitsLen = '9' - '0' + 1;
+      int upperCasesLen = 'Z' - 'A' + 1;
+      int lowerCasesLen = 'z' - 'a' + 1;
+      CHARS_FOR_PRIMARY_KEY = new char[digitsLen + upperCasesLen + lowerCasesLen];
+
+      int index = 0;
+      for (char c = '0'; c <= '9'; c++) {
+        CHARS_FOR_PRIMARY_KEY[index++] = c;
+      }
+      for (char c = 'A'; c <= 'Z'; c++) {
+        CHARS_FOR_PRIMARY_KEY[index++] = c;
+      }
+      for (char c = 'a'; c <= 'z'; c++) {
+        CHARS_FOR_PRIMARY_KEY[index++] = c;
+      }
+
+      CHARS_FOR_PRIMARY_KEY_SIZE = CHARS_FOR_PRIMARY_KEY.length;
+    }
+
     // Use Random instead of ThreadLocalRandom in favor of global randomness.
     private final Random random = new Random();
 
