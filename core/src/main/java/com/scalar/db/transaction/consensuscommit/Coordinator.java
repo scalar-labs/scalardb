@@ -73,21 +73,20 @@ public class Coordinator {
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
     if (keyManipulator.isFullKey(id)) {
-      // When dealing with transaction IDs for group commit, the process of checking two transaction
-      // ID formats is executed non-atomically.
-      // Consequently, there is a possibility of transaction ID insertion occurring between the two
-      // read operations.
-      // However, this scenario arises only when the checking of the two transaction ID formats
-      // and the insertion of the transaction ID overlap with different transactions, ensuring it
-      // does not violate linearizability.
+      // The following read operation order is important. It's likely getting a coordinator state
+      // occurs for lazy recovery. The possibility of lazy recovery would increase if a transaction
+      // scanned by another transaction executing lazy recovery is delayed. In the group commit,
+      // delayed transactions are specified with a full transaction ID. So, looking up with full
+      // transaction ID should be tried first.
 
-      // Scan with the parent ID for group committed record.
-      Optional<State> state = getStateForGroupCommit(id);
+      // Scan with the full ID for single transaction record.
+      Optional<State> state = get(createGetWith(id));
       if (state.isPresent()) {
         return state;
       }
-      // Scan with the full ID for single transaction record.
-      return get(createGetWith(id));
+
+      // Scan with the parent ID for group committed record.
+      return getStateForGroupCommit(id);
     }
 
     Get get = createGetWith(id);

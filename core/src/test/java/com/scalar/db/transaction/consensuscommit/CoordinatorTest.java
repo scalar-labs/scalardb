@@ -7,7 +7,9 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -243,7 +245,19 @@ public class CoordinatorTest {
     // The IDs used to find the state are:
     // - parentId:childId1
     // - parentId:childId2
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(resultForGroupCommitState));
+    doReturn(
+            // For the first call,
+            // - The first get with the full ID shouldn't find a state.
+            Optional.empty(),
+            // - The second get with the parent ID should return the state.
+            Optional.of(resultForGroupCommitState),
+            // For the second call,
+            // - The first get with the full ID shouldn't find a state.
+            Optional.empty(),
+            // - The second get with the parent ID should return the state.
+            Optional.of(resultForGroupCommitState))
+        .when(storage)
+        .get(any(Get.class));
 
     // Act
     Optional<Coordinator.State> state1 = spiedCoordinator.getState(fullId1);
@@ -257,6 +271,7 @@ public class CoordinatorTest {
     assertThat(state1.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId2);
+    verify(storage, times(4)).get(any(Get.class));
   }
 
   @ParameterizedTest
@@ -292,13 +307,7 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childId
-    doReturn(
-            // The first get with the parent ID shouldn't find a state.
-            Optional.empty(),
-            // The second get with the full ID should return the state.
-            Optional.of(resultForSingleCommitState))
-        .when(storage)
-        .get(any(Get.class));
+    doReturn(Optional.of(resultForSingleCommitState)).when(storage).get(any(Get.class));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
@@ -308,7 +317,8 @@ public class CoordinatorTest {
     assertThat(state.get().getChildIds()).isEqualTo(childIds);
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
-    verify(spiedCoordinator).getStateForGroupCommit(fullId);
+    verify(spiedCoordinator, never()).getStateForGroupCommit(fullId);
+    verify(storage, times(1)).get(any(Get.class));
   }
 
   @ParameterizedTest
@@ -347,11 +357,11 @@ public class CoordinatorTest {
     // The IDs used to find the state are:
     // - parentId:childIdX
     doReturn(
-            // The first get with the parent ID should return a state, but it doesn't contain the
+            // The first get with the full ID should return empty.
+            Optional.empty(),
+            // The second get with the parent ID should return a state, but it doesn't contain the
             // child ID.
-            Optional.of(resultForGroupCommitState),
-            // The second get with the full ID should return empty.
-            Optional.empty())
+            Optional.of(resultForGroupCommitState))
         .when(storage)
         .get(any(Get.class));
 
@@ -361,6 +371,7 @@ public class CoordinatorTest {
     // Assert
     assertThat(state).isEmpty();
     verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
+    verify(storage, times(2)).get(any(Get.class));
   }
 
   @ParameterizedTest
@@ -375,18 +386,6 @@ public class CoordinatorTest {
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
-    List<String> childIds =
-        Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-
-    Result resultForGroupCommitState = mock(Result.class);
-    when(resultForGroupCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
-    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
-    when(resultForGroupCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
 
     // Look up with the same parent ID and a wrong child ID.
     // But the full ID matches the single committed state.
@@ -411,14 +410,7 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childIdX
-    doReturn(
-            // The first get with the parent ID should return a state, but it doesn't contain the
-            // child ID.
-            Optional.of(resultForGroupCommitState),
-            // The second get with the full ID should return the state.
-            Optional.of(resultForSingleCommitState))
-        .when(storage)
-        .get(any(Get.class));
+    doReturn(Optional.of(resultForSingleCommitState)).when(storage).get(any(Get.class));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
@@ -428,7 +420,8 @@ public class CoordinatorTest {
     assertThat(state.get().getChildIds()).isEmpty();
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
-    verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
+    verify(spiedCoordinator, never()).getStateForGroupCommit(targetFullId);
+    verify(storage, times(1)).get(any(Get.class));
   }
 
   @ParameterizedTest
@@ -459,6 +452,15 @@ public class CoordinatorTest {
     // Also, the full ID doesn't match any single committed state.
     String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
 
+    // Assuming these states exist:
+    //
+    //          id        |      child_ids       |  state
+    // -------------------+----------------------+----------
+    //  parentId          | [childId1, childId2] | COMMITTED
+    //  parentId:childIdX | []                   | COMMITTED
+    //
+    // The IDs used to find the state are:
+    // - parentId:childIdY
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
 
     // Act
@@ -467,6 +469,7 @@ public class CoordinatorTest {
     // Assert
     assertThat(state).isEmpty();
     verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
+    verify(storage, times(2)).get(any(Get.class));
   }
 
   @Test
@@ -487,7 +490,7 @@ public class CoordinatorTest {
     // Act Assert
     assertThatThrownBy(() -> spiedCoordinator.getState(fullId))
         .isInstanceOf(CoordinatorException.class);
-    verify(spiedCoordinator).getStateForGroupCommit(fullId);
+    verify(spiedCoordinator, never()).getStateForGroupCommit(fullId);
   }
 
   @Test
