@@ -189,7 +189,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
             delayedGroupMap.put(fullKey, delayedGroup);
         if (old != null) {
-          throw new IllegalStateException(
+          throw new AssertionError(
               String.format(
                   "The slow group value map already has the same key group. Old group: %s, Group: %s",
                   old, normalGroup));
