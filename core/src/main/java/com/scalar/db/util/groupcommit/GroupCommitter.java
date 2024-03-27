@@ -53,7 +53,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       String label,
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
-    logger.info("Staring GroupCommitter. Label:{}, Config:{}", label, config);
+    logger.info("Staring GroupCommitter. Label: {}, Config: {}", label, config);
     this.keyManipulator = keyManipulator;
     this.groupManager = new GroupManager<>(label, config, keyManipulator);
     this.groupCleanupWorker =
@@ -126,7 +126,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         return fullKey;
       }
       logger.debug(
-          "Failed to reserve a new value slot since the group was already closed. Retrying. key:{}",
+          "Failed to reserve a new value slot since the group was already closed. Retrying. Key: {}",
           childKey);
     }
   }
@@ -154,12 +154,12 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       if (failed) {
         throw new GroupCommitException(
             String.format(
-                "Failed to put a value to the slot unexpectedly. Group:%s, FullKey:%s, Value:%s",
+                "Failed to put a value to the slot unexpectedly. Group: %s, Full key: %s, Value: %s",
                 group, fullKey, value));
       }
       failed = true;
       logger.debug(
-          "The state of the group has been changed. Retrying. Group:{}, Keys:{}", group, keys);
+          "The state of the group has been changed. Retrying. Group: {}, Keys: {}", group, keys);
     }
   }
 
@@ -173,7 +173,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
     if (!groupManager.removeSlotFromGroup(keys)) {
       logger.debug(
-          "Failed to remove the slot. Slots in a group that is already done can be automatically removed. FullKey:{}",
+          "Failed to remove the slot. Slots in a group that is already done can be automatically removed. Full key: {}",
           fullKey);
     }
   }

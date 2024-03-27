@@ -89,7 +89,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     Slot<?, ?, ?, ?, ?> oldSlot = slots.put(slot.key(), slot);
     if (oldSlot != null) {
       throw new AssertionError(
-          String.format("An old slot exist unexpectedly. Slot:%s, OldSlot:%s", slot, oldSlot));
+          String.format("An old slot exist unexpectedly. Slot: %s, Old slot: %s", slot, oldSlot));
     }
     updateStatus();
   }
@@ -101,7 +101,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       CHILD_KEY childKey, V value) {
     if (isReady()) {
       logger.debug(
-          "This group is already ready, but trying to put a value to the slot. Probably the slot is moved to a DelayedGroup. Retrying... Group:{}, ChildKey:{}",
+          "This group is already ready, but trying to put a value to the slot. Probably the slot is moved to a DelayedGroup. Retrying... Group: {}, Child key: {}",
           this,
           childKey);
       return null;
@@ -209,7 +209,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       // Actually, the ready slot can be removed from the group since the client thread is waiting
       // on the slot already. But removing it might cause more complicated state, so leave it as-is.
       logger.debug(
-          "Attempted to remove this slot, but it will not be removed because it is already ready. Group:{}, Slot:{}",
+          "Attempted to remove this slot, but it will not be removed because it is already ready. Group: {}, Slot: {}",
           this,
           slot);
       return false;

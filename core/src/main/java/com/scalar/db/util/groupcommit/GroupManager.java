@@ -172,7 +172,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       if (notReadySlots == null) {
         normalGroup.updateDelayedSlotMovedAt();
         logger.debug(
-            "This group isn't needed to remove slots. Updated the timeout. group:{}", normalGroup);
+            "This group isn't needed to remove slots. Updated the timeout. Group: {}", normalGroup);
         return false;
       }
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> notReadySlot : notReadySlots) {
@@ -189,7 +189,10 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> old =
             delayedGroupMap.put(fullKey, delayedGroup);
         if (old != null) {
-          logger.warn("The slow group value map already has the same key group. {}", old);
+          throw new IllegalStateException(
+              String.format(
+                  "The slow group value map already has the same key group. Old group: %s, Group: %s",
+                  old, normalGroup));
         }
 
         // This must be after reserving a slot since GroupCleanupWorker might call `updateState()`
