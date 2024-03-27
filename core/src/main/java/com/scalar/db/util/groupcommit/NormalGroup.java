@@ -53,7 +53,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   synchronized List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> removeNotReadySlots() {
     if (!isClosed()) {
       logger.info(
-          "No need to remove any slot since the size isn't fixed yet. Too early. group:{}", this);
+          "No need to remove any slot since the size isn't fixed yet. Too early. Group: {}", this);
       return null;
     }
 
@@ -72,14 +72,14 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     Integer size = size();
     assert size != null;
     if (removed.size() >= size) {
-      logger.debug("No need to remove any slot since all the slots are not ready. group:{}", this);
+      logger.debug("No need to remove any slot since all the slots are not ready. Group: {}", this);
       return null;
     }
 
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : removed) {
       removeSlot(slot.key());
       logger.debug(
-          "Removed a value slot from group to move it to delayed group. group:{}, slot:{}",
+          "Removed a value slot from group to move it to delayed group. Group: {}, Slot: {}",
           this,
           slot);
     }
@@ -108,7 +108,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
         () -> {
           try {
             if (isDone()) {
-              logger.info("This group is already done, but trying to emit. Group:{}", this);
+              logger.info("This group is already done, but trying to emit. Group: {}", this);
               return;
             }
             emitter.execute(keyManipulator.emitKeyFromParentKey(parentKey), values);
@@ -123,7 +123,8 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
               }
             }
           } catch (Exception e) {
-            GroupCommitException exception = new GroupCommitException("Group commit failed", e);
+            GroupCommitException exception =
+                new GroupCommitException(String.format("Group commit failed. Group: %s", this), e);
 
             // Let other threads know the exception.
             synchronized (this) {

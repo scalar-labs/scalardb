@@ -55,18 +55,21 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new GroupCommitException("Group commit was interrupted", e);
+      throw new GroupCommitException(
+          String.format("Group commit was interrupted, Group: %s", parentGroup.get()), e);
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       if (cause instanceof GroupCommitException) {
         throw (GroupCommitException) cause;
       }
-      throw new GroupCommitException("Group commit failed", cause);
+      throw new GroupCommitException(
+          String.format("Group commit failed. Group: %s", parentGroup.get()), cause);
     } catch (Exception e) {
       if (e instanceof GroupCommitException) {
         throw (GroupCommitException) e;
       }
-      throw new GroupCommitException("Group commit failed", e);
+      throw new GroupCommitException(
+          String.format("Group commit failed. Group: %s", parentGroup.get()), e);
     } finally {
       // Slot gets done once the client obtains the result.
       isDoneSuccessfully.compareAndSet(null, false);
