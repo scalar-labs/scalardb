@@ -3,8 +3,11 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
@@ -20,6 +23,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +61,8 @@ public class TwoPhaseConsensusCommitManagerTest {
             coordinator,
             parallelExecutor,
             recovery,
-            commit);
+            commit,
+            null);
   }
 
   @Test
@@ -91,6 +96,44 @@ public class TwoPhaseConsensusCommitManagerTest {
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void
+      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation()
+          throws TransactionException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    String parentKey = keyManipulator.generateParentKey();
+    String fullKey = keyManipulator.fullKey(parentKey, ANY_TX_ID);
+    doReturn(fullKey).when(groupCommitter).reserve(anyString());
+    TwoPhaseConsensusCommitManager managerWithGroupCommit =
+        new TwoPhaseConsensusCommitManager(
+            storage,
+            admin,
+            config,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recovery,
+            commit,
+            groupCommitter);
+
+    // Act
+    TwoPhaseConsensusCommit transaction =
+        (TwoPhaseConsensusCommit)
+            ((DecoratedTwoPhaseCommitTransaction) managerWithGroupCommit.begin(ANY_TX_ID))
+                .getOriginalTransaction();
+
+    // Assert
+    assertThat(transaction.getId()).isEqualTo(fullKey);
+    Snapshot snapshot = transaction.getCrudHandler().getSnapshot();
+    assertThat(snapshot.getId()).isEqualTo(fullKey);
+    assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
+    verify(groupCommitter).reserve(ANY_TX_ID);
+    assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
   }
 
   @Test

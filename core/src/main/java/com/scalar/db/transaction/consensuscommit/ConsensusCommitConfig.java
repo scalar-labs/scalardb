@@ -41,6 +41,20 @@ public class ConsensusCommitConfig {
 
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
 
+  public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
+  public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "enabled";
+  public static final String COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "slot_capacity";
+  public static final String COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "group_close_timeout_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "delayed_slot_move_timeout_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "timeout_check_interval_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_console_reporter_enabled";
+
   private final Isolation isolation;
   private final SerializableStrategy strategy;
   @Nullable private final String coordinatorNamespace;
@@ -56,6 +70,13 @@ public class ConsensusCommitConfig {
   private final boolean isIncludeMetadataEnabled;
 
   private final boolean parallelImplicitPreReadEnabled;
+
+  private final boolean coordinatorGroupCommitEnabled;
+  private final int coordinatorGroupCommitSlotCapacity;
+  private final int coordinatorGroupCommitGroupCloseTimeoutMillis;
+  private final int coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
+  private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
+  private final boolean coordinatorGroupCommitMetricsConsoleReporterEnabled;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -124,6 +145,31 @@ public class ConsensusCommitConfig {
 
     parallelImplicitPreReadEnabled =
         getBoolean(databaseConfig.getProperties(), PARALLEL_IMPLICIT_PRE_READ, true);
+
+    coordinatorGroupCommitEnabled =
+        getBoolean(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_ENABLED, false);
+    coordinatorGroupCommitSlotCapacity =
+        getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY, 20);
+    coordinatorGroupCommitGroupCloseTimeoutMillis =
+        getInt(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS,
+            40);
+    coordinatorGroupCommitDelayedSlotMoveTimeoutMillis =
+        getInt(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS,
+            1200);
+    coordinatorGroupCommitTimeoutCheckIntervalMillis =
+        getInt(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS,
+            20);
+    coordinatorGroupCommitMetricsConsoleReporterEnabled =
+        getBoolean(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED,
+            false);
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
@@ -176,6 +222,30 @@ public class ConsensusCommitConfig {
 
   public boolean isParallelImplicitPreReadEnabled() {
     return parallelImplicitPreReadEnabled;
+  }
+
+  public boolean isCoordinatorGroupCommitEnabled() {
+    return coordinatorGroupCommitEnabled;
+  }
+
+  public int getCoordinatorGroupCommitSlotCapacity() {
+    return coordinatorGroupCommitSlotCapacity;
+  }
+
+  public int getCoordinatorGroupCommitGroupCloseTimeoutMillis() {
+    return coordinatorGroupCommitGroupCloseTimeoutMillis;
+  }
+
+  public int getCoordinatorGroupCommitDelayedSlotMoveTimeoutMillis() {
+    return coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
+  }
+
+  public int getCoordinatorGroupCommitTimeoutCheckIntervalMillis() {
+    return coordinatorGroupCommitTimeoutCheckIntervalMillis;
+  }
+
+  public boolean isCoordinatorGroupCommitMetricsConsoleReporterEnabled() {
+    return coordinatorGroupCommitMetricsConsoleReporterEnabled;
   }
 
   private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {
