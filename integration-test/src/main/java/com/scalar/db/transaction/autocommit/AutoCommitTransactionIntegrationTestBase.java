@@ -24,40 +24,40 @@ public abstract class AutoCommitTransactionIntegrationTestBase
 
   protected abstract Properties getProps(String testName);
 
-  @Disabled("auto-commit transaction doesn't support getState()")
+  @Disabled("Auto-commit transactions don't support getState()")
   @Override
   public void getState_forSuccessfulTransaction_ShouldReturnCommittedState() {}
 
-  @Disabled("auto-commit transaction doesn't support getState()")
+  @Disabled("Auto-commit transactions don't support getState()")
   @Override
   public void getState_forFailedTransaction_ShouldReturnAbortedState() {}
 
-  @Disabled("auto-commit transaction doesn't support abort()")
+  @Disabled("Auto-commit transactions don't support abort()")
   @Override
   public void abort_forOngoingTransaction_ShouldAbortCorrectly() {}
 
-  @Disabled("auto-commit transaction doesn't support rollback()")
+  @Disabled("Auto-commit transactions don't support rollback()")
   @Override
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 
-  @Disabled("auto-commit transaction doesn't support implicit pre-read")
+  @Disabled("Auto-commit transactions don't support implicit pre-read")
   @Override
   public void
       putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowCommitConflictException() {}
 
-  @Disabled("auto-commit transaction doesn't support transaction abort")
+  @Disabled("Auto-commit transactions don't support aborting transactions")
   @Override
   public void putAndAbort_ShouldNotCreateRecord() {}
 
-  @Disabled("auto-commit transaction doesn't support transaction rollback")
+  @Disabled("Auto-commit transactions don't support rolling back transactions")
   @Override
   public void putAndRollback_ShouldNotCreateRecord() {}
 
-  @Disabled("auto-commit transaction doesn't support transaction abort")
+  @Disabled("Auto-commit transactions don't support aborting transactions")
   @Override
   public void deleteAndAbort_ShouldNotDeleteRecord() {}
 
-  @Disabled("auto-commit transaction doesn't support transaction rollback")
+  @Disabled("Auto-commit transactions don't support rolling back transactions")
   @Override
   public void deleteAndRollback_ShouldNotDeleteRecord() {}
 }

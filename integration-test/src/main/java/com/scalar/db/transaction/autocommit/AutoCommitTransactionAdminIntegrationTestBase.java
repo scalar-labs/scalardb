@@ -24,7 +24,7 @@ public abstract class AutoCommitTransactionAdminIntegrationTestBase
 
   // Disable several tests for the coordinator tables since auto-commit transaction doesn't have
   // coordinator tables
-  @Disabled("auto-commit transaction doesn't have coordinator tables")
+  @Disabled("Auto-commit transactions don't have Coordinator tables")
   @Test
   @Override
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
@@ -32,7 +32,7 @@ public abstract class AutoCommitTransactionAdminIntegrationTestBase
     super.createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly();
   }
 
-  @Disabled("auto-commit transaction doesn't have coordinator tables")
+  @Disabled("Auto-commit transactions don't have Coordinator tables")
   @Test
   @Override
   public void
@@ -41,7 +41,7 @@ public abstract class AutoCommitTransactionAdminIntegrationTestBase
         .createCoordinatorTables_CoordinatorTablesAlreadyExist_ShouldThrowIllegalArgumentException();
   }
 
-  @Disabled("auto-commit transaction doesn't have coordinator tables")
+  @Disabled("Auto-commit transactions don't have Coordinator tables")
   @Test
   @Override
   public void
@@ -50,7 +50,7 @@ public abstract class AutoCommitTransactionAdminIntegrationTestBase
         .createCoordinatorTables_IfNotExist_CoordinatorTablesAlreadyExist_ShouldNotThrowAnyException();
   }
 
-  @Disabled("auto-commit transaction doesn't have coordinator tables")
+  @Disabled("Auto-commit transactions don't have Coordinator tables")
   @Test
   @Override
   public void dropCoordinatorTables_ShouldDropCoordinatorTablesCorrectly()
@@ -58,7 +58,7 @@ public abstract class AutoCommitTransactionAdminIntegrationTestBase
     super.dropCoordinatorTables_ShouldDropCoordinatorTablesCorrectly();
   }
 
-  @Disabled("auto-commit transaction doesn't have coordinator tables")
+  @Disabled("Auto-commit transactions don't have Coordinator tables")
   @Test
   @Override
   public void
@@ -67,7 +67,7 @@ public abstract class AutoCommitTransactionAdminIntegrationTestBase
     super.dropCoordinatorTables_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException();
   }
 
-  @Disabled("auto-commit transaction doesn't have coordinator tables")
+  @Disabled("Auto-commit transactions don't have Coordinator tables")
   @Test
   @Override
   public void dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException()
@@ -76,7 +76,7 @@ public abstract class AutoCommitTransactionAdminIntegrationTestBase
   }
 
   @Test
-  @Disabled("We don't test this case for auto-commit transaction")
+  @Disabled("This case is not tested for auto-commit transactions")
   @Override
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
