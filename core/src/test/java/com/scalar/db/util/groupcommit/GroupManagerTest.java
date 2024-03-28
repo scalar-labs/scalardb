@@ -22,7 +22,7 @@ class GroupManagerTest {
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
   private TestableKeyManipulator keyManipulator;
   @Mock private Emittable<String, Integer> emittable;
-  @Mock private GroupCloseWorker<String, String, String, String, Integer> groupCloseWorker;
+  @Mock private GroupSizeFixWorker<String, String, String, String, Integer> groupSizeFixWorker;
   @Mock private GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
 
   @BeforeEach
@@ -43,7 +43,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Act
@@ -68,7 +68,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Act
@@ -80,7 +80,7 @@ class GroupManagerTest {
     Keys<String, String, String> keys2 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
     // Assert
     assertThat(keys1.parentKey).isEqualTo("0000");
@@ -88,7 +88,7 @@ class GroupManagerTest {
   }
 
   @Test
-  void reserveNewSlot_WhenCurrentGroupIsClosed_ShouldCreateNewGroupAndReserveSlotInIt() {
+  void reserveNewSlot_WhenCurrentGroupIsSizeFixed_ShouldCreateNewGroupAndReserveSlotInIt() {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -97,7 +97,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Act
@@ -112,7 +112,7 @@ class GroupManagerTest {
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
     // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
     // Assert
@@ -132,7 +132,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Add slot-1.
@@ -145,7 +145,7 @@ class GroupManagerTest {
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
     // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
     // Act
@@ -168,10 +168,10 @@ class GroupManagerTest {
     assertThat(normalGroupForKey1).isNotEqualTo(normalGroupForKey3);
 
     assertThat(normalGroupForKey1.parentKey()).isEqualTo("0000");
-    assertThat(normalGroupForKey1.isClosed()).isTrue();
+    assertThat(normalGroupForKey1.isSizeFixed()).isTrue();
     assertThat(normalGroupForKey1.isReady()).isFalse();
     assertThat(normalGroupForKey3.parentKey()).isEqualTo("0001");
-    assertThat(normalGroupForKey3.isClosed()).isFalse();
+    assertThat(normalGroupForKey3.isSizeFixed()).isFalse();
   }
 
   @Test
@@ -185,7 +185,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     ExecutorService executorService = Executors.newCachedThreadPool();
@@ -197,7 +197,7 @@ class GroupManagerTest {
     Keys<String, String, String> keys2 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
     NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
         (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
@@ -210,12 +210,12 @@ class GroupManagerTest {
     Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
 
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
     assertThat(groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1)).isTrue();
     // These groups are supposed to exist at this moment.
     // - NormalGroup("0000", READY, slots:[Slot(READY, "child-key-1")])
-    // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+    // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
 
     // Act
 
@@ -227,7 +227,7 @@ class GroupManagerTest {
 
     DelayedGroup<String, String, String, String, Integer> delayedGroupForKey2 =
         (DelayedGroup<String, String, String, String, Integer>) groupManager.getGroup(keys2);
-    assertThat(delayedGroupForKey2.isClosed()).isTrue();
+    assertThat(delayedGroupForKey2.isSizeFixed()).isTrue();
     assertThat(delayedGroupForKey2.isReady()).isFalse();
   }
 
@@ -241,7 +241,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Add slot-1.
@@ -253,7 +253,7 @@ class GroupManagerTest {
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
     // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
     // Act
@@ -275,7 +275,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     ExecutorService executorService = Executors.newCachedThreadPool();
@@ -287,7 +287,7 @@ class GroupManagerTest {
     Keys<String, String, String> keys2 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-2"));
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
     NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
         (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
@@ -299,16 +299,16 @@ class GroupManagerTest {
     // Wait until the thread waits on the slot.
     Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
     assertThat(groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1)).isTrue();
     // These groups are supposed to exist at this moment.
     // - NormalGroup("0000", READY, slots:[Slot(READY, "child-key-1")])
-    // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+    // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
 
     Group<String, String, String, String, Integer> groupForKey2 = groupManager.getGroup(keys2);
     assertThat(groupForKey2).isInstanceOf(DelayedGroup.class);
-    assertThat(groupForKey2.isClosed()).isTrue();
+    assertThat(groupForKey2.isSizeFixed()).isTrue();
     assertThat(groupForKey2.isReady()).isFalse();
     assertThat(groupForKey2.slots.size()).isEqualTo(1);
     assertThat(groupForKey2.slots.get("child-key-2")).isNotNull();
@@ -337,7 +337,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Add slot-1.
@@ -350,7 +350,7 @@ class GroupManagerTest {
     Keys<String, String, String> keys3 =
         keyManipulator.keysFromFullKey(groupManager.reserveNewSlot("child-key-3"));
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
     // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
     Group<String, String, String, String, Integer> groupForKeys1 = groupManager.getGroup(keys1);
@@ -359,7 +359,7 @@ class GroupManagerTest {
     // Act
     // Assert
     assertThat(groupManager.removeSlotFromGroup(keys1)).isTrue();
-    assertThat(groupForKeys1.isClosed()).isTrue();
+    assertThat(groupForKeys1.isSizeFixed()).isTrue();
     assertThat(groupForKeys1.isReady()).isFalse();
     assertThat(groupForKeys1.size()).isEqualTo(1);
     assertThat(groupManager.removeSlotFromGroup(keys1)).isFalse();
@@ -386,7 +386,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     ExecutorService executorService = Executors.newCachedThreadPool();
@@ -405,7 +405,7 @@ class GroupManagerTest {
     // Wait until the thread waits on the slot.
     Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
     assertThat(groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1)).isTrue();
     assertThat(normalGroupForKey1.slots.size()).isEqualTo(1);
@@ -413,10 +413,10 @@ class GroupManagerTest {
     assertThat(normalGroupForKey1.slots.get("child-key-2")).isNull();
     // These groups are supposed to exist at this moment.
     // - NormalGroup("0000", READY, slots:[Slot(READY, "child-key-1")])
-    // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+    // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
     Group<String, String, String, String, Integer> groupForKey2 = groupManager.getGroup(keys2);
     assertThat(groupForKey2).isInstanceOf(DelayedGroup.class);
-    assertThat(groupForKey2.isClosed()).isTrue();
+    assertThat(groupForKey2.isSizeFixed()).isTrue();
     assertThat(groupForKey2.isReady()).isFalse();
     assertThat(groupForKey2.slots.size()).isEqualTo(1);
     assertThat(groupForKey2.slots.get("child-key-2")).isNotNull();
@@ -445,7 +445,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Add slot-1.
@@ -463,7 +463,7 @@ class GroupManagerTest {
     // Assert
     assertThat(moved).isFalse();
     assertThat(normalGroupForKey1.slots.size()).isEqualTo(1);
-    assertThat(normalGroupForKey1.isClosed()).isFalse();
+    assertThat(normalGroupForKey1.isSizeFixed()).isFalse();
   }
 
   @Test
@@ -477,7 +477,7 @@ class GroupManagerTest {
             new GroupCommitConfig(3, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     ExecutorService executorService = Executors.newCachedThreadPool();
@@ -506,18 +506,18 @@ class GroupManagerTest {
     boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
     assertThat(moved).isFalse();
     assertThat(normalGroupForKey1.slots.size()).isEqualTo(2);
-    assertThat(normalGroupForKey1.isClosed()).isFalse();
+    assertThat(normalGroupForKey1.isSizeFixed()).isFalse();
 
-    // Close the first group.
-    normalGroupForKey1.close();
+    // Size-fix the first group.
+    normalGroupForKey1.fixSize();
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
-    assertThat(normalGroupForKey1.isClosed()).isTrue();
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+    assertThat(normalGroupForKey1.isSizeFixed()).isTrue();
 
     moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
     // These groups are supposed to exist at this moment.
     // - NormalGroup("0000", READY, slots:[Slot(READY, "child-key-1")])
-    // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+    // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
     assertThat(moved).isTrue();
     assertThat(normalGroupForKey1.slots.size()).isEqualTo(1);
     assertThat(normalGroupForKey1.isReady()).isTrue();
@@ -525,7 +525,8 @@ class GroupManagerTest {
   }
 
   @Test
-  void moveDelayedSlotToDelayedGroup_GivenKeyForClosedGroupWithAllNotReadySlots_ShouldKeepThem() {
+  void
+      moveDelayedSlotToDelayedGroup_GivenKeyForSizeFixedGroupWithAllNotReadySlots_ShouldKeepThem() {
     // Arrange
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
@@ -533,7 +534,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     // Add slot-1.
@@ -542,7 +543,7 @@ class GroupManagerTest {
     // Add slot-2.
     groupManager.reserveNewSlot("child-key-2");
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
     NormalGroup<String, String, String, String, Integer> normalGroupForKey1 =
         (NormalGroup<String, String, String, String, Integer>) groupManager.getGroup(keys1);
@@ -553,12 +554,13 @@ class GroupManagerTest {
     // Assert
     assertThat(moved).isFalse();
     assertThat(normalGroupForKey1.slots.size()).isEqualTo(2);
-    assertThat(normalGroupForKey1.isClosed()).isTrue();
+    assertThat(normalGroupForKey1.isSizeFixed()).isTrue();
   }
 
   @Test
-  void moveDelayedSlotToDelayedGroup_GivenKeyForClosedGroupWithReadySlot_ShouldRemoveNotReadySlot()
-      throws InterruptedException, ExecutionException {
+  void
+      moveDelayedSlotToDelayedGroup_GivenKeyForSizeFixedGroupWithReadySlot_ShouldRemoveNotReadySlot()
+          throws InterruptedException, ExecutionException {
     // Arrange
 
     GroupManager<String, String, String, String, Integer> groupManager =
@@ -567,7 +569,7 @@ class GroupManagerTest {
             new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
-    groupManager.setGroupCloseWorker(groupCloseWorker);
+    groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     ExecutorService executorService = Executors.newCachedThreadPool();
@@ -586,12 +588,12 @@ class GroupManagerTest {
     // Wait until the thread waits on the slot.
     Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
 
     // Act
     boolean moved = groupManager.moveDelayedSlotToDelayedGroup(normalGroupForKey1);
     // These groups are supposed to exist at this moment.
-    // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1")])
+    // - NormalGroup("0000", SIZE-FIXED, slots:[Slot(READY, "child-key-1")])
     // - DelayedGroup("0000:child-key-2", slots:[Slot("child-key-2")])
 
     // Assert
@@ -603,7 +605,7 @@ class GroupManagerTest {
 
     DelayedGroup<String, String, String, String, Integer> delayedGroupForKey2 =
         (DelayedGroup<String, String, String, String, Integer>) groupManager.getGroup(keys2);
-    assertThat(delayedGroupForKey2.isClosed()).isTrue();
+    assertThat(delayedGroupForKey2.isSizeFixed()).isTrue();
     assertThat(delayedGroupForKey2.isReady()).isFalse();
   }
 }

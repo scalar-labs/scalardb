@@ -30,7 +30,7 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       return true;
     }
 
-    if (normalGroup.delayedSlotMovedMillisAt() < System.currentTimeMillis()) {
+    if (normalGroup.delayedSlotMoveTimeoutMillisAt() < System.currentTimeMillis()) {
       // Move delayed slots to a DelayedGroup so that the NormalGroup can be ready.
       boolean movedDelayedSlots = groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
       // The status of the group may have changed

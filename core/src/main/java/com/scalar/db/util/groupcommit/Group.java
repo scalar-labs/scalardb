@@ -29,25 +29,25 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     // Not accepting new slot reservations since the number of slots is already fixed.
     // Waiting all the slots are set with values.
     //
-    // Groups with OPEN status can move to CLOSED.
-    CLOSED(true, false, false),
+    // Groups with OPEN status can move to SIZE_FIXED.
+    SIZE_FIXED(true, false, false),
 
     // All the slots are set with values. Ready to commit.
     //
-    // Groups with OPEN or CLOSED status can move to READY.
+    // Groups with OPEN or SIZE_FIXED status can move to READY.
     READY(true, true, false),
 
     // Group commit is done and all the clients have get the results.
     //
-    // Groups with OPEN, CLOSED or READY status can move to DONE.
+    // Groups with OPEN, SIZE_FIXED or READY status can move to DONE.
     DONE(true, true, true);
 
-    final boolean isClosed;
+    final boolean isSizeFixed;
     final boolean isReady;
     final boolean isDone;
 
-    Status(boolean isClosed, boolean isReady, boolean isDone) {
-      this.isClosed = isClosed;
+    Status(boolean isSizeFixed, boolean isReady, boolean isDone) {
+      this.isSizeFixed = isSizeFixed;
       this.isReady = isReady;
       this.isDone = isDone;
     }
@@ -69,16 +69,16 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   abstract FULL_KEY fullKey(CHILD_KEY childKey);
 
-  // If it returns null, the Group is already closed and a retry is needed.
+  // If it returns null, the Group is already size-fixed and a retry is needed.
   @Nullable
   protected synchronized FULL_KEY reserveNewSlot(
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
-    if (isClosed()) {
+    if (isSizeFixed()) {
       return null;
     }
     reserveSlot(slot);
     if (noMoreSlot()) {
-      close();
+      fixSize();
     }
     return slot.fullKey();
   }
@@ -129,12 +129,12 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return true;
   }
 
-  private synchronized void fixSize() {
+  private synchronized void updateSlotsSize() {
     size.set(slots.size());
   }
 
-  synchronized void close() {
-    fixSize();
+  synchronized void fixSize() {
+    updateSlotsSize();
     updateStatus();
     asyncEmitIfReady();
   }
@@ -144,8 +144,8 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return size.get();
   }
 
-  boolean isClosed() {
-    return status.get().isClosed;
+  boolean isSizeFixed() {
+    return status.get().isSizeFixed;
   }
 
   boolean isReady() {
@@ -158,7 +158,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   synchronized void updateStatus() {
     if (slots.isEmpty()) {
-      fixSize();
+      updateSlotsSize();
       status.set(Status.DONE);
       return;
     }
@@ -167,11 +167,11 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
     if (newStatus == Status.OPEN) {
       if (size.get() != null) {
-        newStatus = Status.CLOSED;
+        newStatus = Status.SIZE_FIXED;
       }
     }
 
-    if (newStatus == Status.CLOSED) {
+    if (newStatus == Status.SIZE_FIXED) {
       int readySlotCount = 0;
       for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
         if (slot.isReady()) {

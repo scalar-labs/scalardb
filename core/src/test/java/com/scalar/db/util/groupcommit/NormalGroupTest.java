@@ -59,17 +59,17 @@ class NormalGroupTest {
     Slot<String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
 
     assertThat(group.size()).isNull();
-    assertThat(group.isClosed()).isFalse();
+    assertThat(group.isSizeFixed()).isFalse();
 
     // Act
     // Assert
     group.reserveNewSlot(slot1);
     assertThat(group.size()).isNull();
-    assertThat(group.isClosed()).isFalse();
+    assertThat(group.isSizeFixed()).isFalse();
 
     group.reserveNewSlot(slot2);
     assertThat(group.size()).isEqualTo(2);
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
   }
 
@@ -90,7 +90,7 @@ class NormalGroupTest {
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot1);
-    group.close();
+    group.fixSize();
 
     // Act
     // Assert
@@ -322,14 +322,14 @@ class NormalGroupTest {
 
     group.reserveNewSlot(slot1);
     group.reserveNewSlot(slot2);
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
 
     // Act
     // Assert
 
     assertThat(group.removeSlot("child-key-1")).isTrue();
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
     assertThat(group.removeSlot("child-key-1")).isFalse();
     assertThat(group.removeSlot("child-key-2")).isTrue();
@@ -347,7 +347,7 @@ class NormalGroupTest {
 
     group.reserveNewSlot(slot1);
     group.reserveNewSlot(slot2);
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
 
     List<Future<Void>> futures = new ArrayList<>();
@@ -367,7 +367,7 @@ class NormalGroupTest {
     // Assert
 
     assertThat(group.removeSlot("child-key-1")).isFalse();
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
     assertThat(group.removeSlot("child-key-2")).isTrue();
     Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
@@ -379,7 +379,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void groupClosedAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
+  void groupSizeFixTimeoutMillisAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
     long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
@@ -388,13 +388,13 @@ class NormalGroupTest {
 
     // Act
     // Assert
-    assertThat(group.groupClosedMillisAt())
+    assertThat(group.groupSizeFixTimeoutMillisAt())
         .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 100)
         .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 100);
   }
 
   @Test
-  void delayedSlotMovedAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
+  void delayedSlotMoveTimeoutMillisAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
     long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
@@ -403,24 +403,24 @@ class NormalGroupTest {
 
     // Act
     // Assert
-    assertThat(group.delayedSlotMovedMillisAt())
+    assertThat(group.delayedSlotMoveTimeoutMillisAt())
         .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 1000)
         .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 1000);
   }
 
   @Test
-  void updateDelayedSlotMovedAt_GivenArbitraryTimeoutValue_ShouldUpdateProperly() {
+  void updateDelayedSlotMoveTimeoutMillisAt_GivenArbitraryTimeoutValue_ShouldUpdateProperly() {
     // Arrange
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(emitter, keyManipulator, 100, 1000, 2);
 
     // Act
     long minOfCurrentTimeMillis = System.currentTimeMillis();
-    group.updateDelayedSlotMovedAt();
+    group.updateDelayedSlotMoveTimeoutMillisAt();
     long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
     // Assert
-    assertThat(group.delayedSlotMovedMillisAt())
+    assertThat(group.delayedSlotMoveTimeoutMillisAt())
         .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 1000)
         .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 1000);
   }

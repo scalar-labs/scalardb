@@ -19,7 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class GroupCloseWorkerTest {
+class GroupSizeFixWorkerTest {
   private static final int LONG_WAIT_MILLIS = 500;
 
   @Mock
@@ -30,15 +30,15 @@ class GroupCloseWorkerTest {
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup2;
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup3;
   @Mock private NormalGroup<String, String, String, String, Integer> normalGroup4;
-  private GroupCloseWorker<String, String, String, String, Integer> worker;
-  private GroupCloseWorker<String, String, String, String, Integer> workerWithWait;
+  private GroupSizeFixWorker<String, String, String, String, Integer> worker;
+  private GroupSizeFixWorker<String, String, String, String, Integer> workerWithWait;
 
   @BeforeEach
   void setUp() {
-    worker = new GroupCloseWorker<>("test", 10, delayedSlotMoveWorker, groupCleanupWorker);
+    worker = new GroupSizeFixWorker<>("test", 10, delayedSlotMoveWorker, groupCleanupWorker);
     workerWithWait =
         spy(
-            new GroupCloseWorker<>(
+            new GroupSizeFixWorker<>(
                 "long-wait-test", LONG_WAIT_MILLIS, delayedSlotMoveWorker, groupCleanupWorker));
   }
 
@@ -49,9 +49,9 @@ class GroupCloseWorkerTest {
   }
 
   @Test
-  void add_GivenClosedGroup_ShouldPassItToDelayedSlotMoveWorker() {
+  void add_GivenSizeFixedGroup_ShouldPassItToDelayedSlotMoveWorker() {
     // Arrange
-    doReturn(true).when(normalGroup1).isClosed();
+    doReturn(true).when(normalGroup1).isSizeFixed();
     doReturn(false).when(normalGroup1).isReady();
 
     // Act
@@ -59,7 +59,7 @@ class GroupCloseWorkerTest {
     Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
-    verify(normalGroup1, never()).close();
+    verify(normalGroup1, never()).fixSize();
     assertThat(worker.size()).isEqualTo(0);
     verify(delayedSlotMoveWorker).add(normalGroup1);
     verify(groupCleanupWorker, never()).add(normalGroup1);
@@ -68,7 +68,7 @@ class GroupCloseWorkerTest {
   @Test
   void add_GivenReadyGroup_ShouldPassItToGroupCleanupWorker() {
     // Arrange
-    doReturn(true).when(normalGroup1).isClosed();
+    doReturn(true).when(normalGroup1).isSizeFixed();
     doReturn(true).when(normalGroup1).isReady();
 
     // Act
@@ -76,7 +76,7 @@ class GroupCloseWorkerTest {
     Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
-    verify(normalGroup1, never()).close();
+    verify(normalGroup1, never()).fixSize();
     assertThat(worker.size()).isEqualTo(0);
     verify(delayedSlotMoveWorker, never()).add(normalGroup1);
     verify(groupCleanupWorker).add(normalGroup1);
@@ -85,10 +85,10 @@ class GroupCloseWorkerTest {
   @Test
   void add_GivenOpenGroupNotTimedOut_ShouldKeepItWithWait() {
     // Arrange
-    doReturn(false).when(normalGroup1).isClosed();
+    doReturn(false).when(normalGroup1).isSizeFixed();
     doReturn(System.currentTimeMillis() + LONG_WAIT_MILLIS * 10)
         .when(normalGroup1)
-        .groupClosedMillisAt();
+        .groupSizeFixTimeoutMillisAt();
 
     // Act
     workerWithWait.add(normalGroup1);
@@ -96,25 +96,25 @@ class GroupCloseWorkerTest {
 
     // Assert
     verify(workerWithWait, atMost(2)).processItem(any());
-    verify(normalGroup1, never()).close();
+    verify(normalGroup1, never()).fixSize();
     assertThat(workerWithWait.size()).isEqualTo(1);
     verify(delayedSlotMoveWorker, never()).add(normalGroup1);
     verify(groupCleanupWorker, never()).add(normalGroup1);
   }
 
   @Test
-  void add_GivenOpenGroupTimedOut_ShouldCloseItAndPassItToDelayedSlotMoveWorker() {
+  void add_GivenOpenGroupTimedOut_ShouldSizeFixItAndPassItToDelayedSlotMoveWorker() {
     // Arrange
-    doReturn(false).when(normalGroup1).isClosed();
+    doReturn(false).when(normalGroup1).isSizeFixed();
     doReturn(false).when(normalGroup1).isReady();
-    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupClosedMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupSizeFixTimeoutMillisAt();
 
     // Act
     worker.add(normalGroup1);
     Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
-    verify(normalGroup1).close();
+    verify(normalGroup1).fixSize();
     assertThat(worker.size()).isEqualTo(0);
     verify(delayedSlotMoveWorker).add(normalGroup1);
     verify(groupCleanupWorker, never()).add(normalGroup1);
@@ -122,18 +122,18 @@ class GroupCloseWorkerTest {
 
   @Test
   void
-      add_GivenOpenGroupTimedOut_WhichWillBeReadyAfterClosed_ShouldCloseItAndPassItToGroupCleanupWorker() {
+      add_GivenOpenGroupTimedOut_WhichWillBeReadyAfterSizeFixed_ShouldSizeFixItAndPassItToGroupCleanupWorker() {
     // Arrange
-    doReturn(false).when(normalGroup1).isClosed();
+    doReturn(false).when(normalGroup1).isSizeFixed();
     doReturn(true).when(normalGroup1).isReady();
-    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupClosedMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupSizeFixTimeoutMillisAt();
 
     // Act
     worker.add(normalGroup1);
     Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
 
     // Assert
-    verify(normalGroup1).close();
+    verify(normalGroup1).fixSize();
     assertThat(worker.size()).isEqualTo(0);
     verify(delayedSlotMoveWorker, never()).add(normalGroup1);
     verify(groupCleanupWorker).add(normalGroup1);
@@ -141,14 +141,14 @@ class GroupCloseWorkerTest {
 
   @Test
   void
-      add_GivenMultipleOpenGroupsTimedOut_ShouldCloseThemAndPassThemToDelayedSlotMoveWorkerWithoutWait() {
+      add_GivenMultipleOpenGroupsTimedOut_ShouldSizeFixThemAndPassThemToDelayedSlotMoveWorkerWithoutWait() {
     // Arrange
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
         .forEach(
             g -> {
-              doReturn(false).when(g).isClosed();
+              doReturn(false).when(g).isSizeFixed();
               doReturn(false).when(g).isReady();
-              doReturn(System.currentTimeMillis() - 5).when(g).groupClosedMillisAt();
+              doReturn(System.currentTimeMillis() - 5).when(g).groupSizeFixTimeoutMillisAt();
             });
 
     // Act
@@ -160,7 +160,7 @@ class GroupCloseWorkerTest {
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
         .forEach(
             g -> {
-              verify(g).close();
+              verify(g).fixSize();
               verify(delayedSlotMoveWorker).add(g);
             });
     assertThat(workerWithWait.size()).isEqualTo(0);

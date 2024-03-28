@@ -57,7 +57,7 @@ public class GroupCommitConfig {
     return slotCapacity;
   }
 
-  public int groupCloseTimeoutMillis() {
+  public int groupSizeFixTimeoutMillis() {
     return groupCloseTimeoutMillis;
   }
 

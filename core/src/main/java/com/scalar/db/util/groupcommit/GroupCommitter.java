@@ -26,7 +26,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
 
   // Background workers
-  private final GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker;
+  private final GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupSizeFixWorker;
   private final DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       delayedSlotMoveWorker;
   private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
@@ -56,10 +56,10 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     this.delayedSlotMoveWorker =
         new DelayedSlotMoveWorker<>(
             label, config.timeoutCheckIntervalMillis(), groupManager, groupCleanupWorker);
-    this.groupCloseWorker =
-        new GroupCloseWorker<>(
+    this.groupSizeFixWorker =
+        new GroupSizeFixWorker<>(
             label, config.timeoutCheckIntervalMillis(), delayedSlotMoveWorker, groupCleanupWorker);
-    this.groupManager.setGroupCloseWorker(groupCloseWorker);
+    this.groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
     this.groupManager.setGroupCleanupWorker(groupCleanupWorker);
 
     if (config.metricsConsoleReporterEnabled()) {
@@ -80,7 +80,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
 
   GroupCommitMetrics getMetrics() {
     return new GroupCommitMetrics(
-        groupCloseWorker.size(),
+        groupSizeFixWorker.size(),
         delayedSlotMoveWorker.size(),
         groupCleanupWorker.size(),
         groupManager.sizeOfNormalGroupMap(),
@@ -112,7 +112,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         return fullKey;
       }
       logger.debug(
-          "Failed to reserve a new value slot since the group was already closed. Retrying. Key: {}",
+          "Failed to reserve a new value slot since the group was already size-fixed. Retrying. Key: {}",
           childKey);
     }
   }
@@ -169,7 +169,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   @Override
   public void close() {
     delayedSlotMoveWorker.close();
-    groupCloseWorker.close();
+    groupSizeFixWorker.close();
     groupCleanupWorker.close();
     if (metricsConsoleReporter != null) {
       metricsConsoleReporter.stop();

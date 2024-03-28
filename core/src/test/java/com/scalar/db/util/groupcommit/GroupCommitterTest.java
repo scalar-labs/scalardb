@@ -32,12 +32,12 @@ class GroupCommitterTest {
   @Mock private Emittable<String, Integer> emitter;
 
   private GroupCommitter<String, String, String, String, Integer> createGroupCommitter(
-      int slotCapacity, int groupCloseTimeoutMillis, int delayedSlotMoveTimeoutMillis) {
+      int slotCapacity, int groupSizeFixTimeoutMillis, int delayedSlotMoveTimeoutMillis) {
     return new GroupCommitter<>(
         "test",
         new GroupCommitConfig(
             slotCapacity,
-            groupCloseTimeoutMillis,
+            groupSizeFixTimeoutMillis,
             delayedSlotMoveTimeoutMillis,
             TIMEOUT_CHECK_INTERVAL_MILLIS),
         new TestableKeyManipulator());
@@ -75,7 +75,7 @@ class GroupCommitterTest {
       String fullKey2 = groupCommitter.reserve("child-key-2");
       groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
       // Act
@@ -122,7 +122,7 @@ class GroupCommitterTest {
       String fullKey2 = groupCommitter.reserve("child-key-2");
       groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
       // Act
@@ -163,7 +163,7 @@ class GroupCommitterTest {
       groupCommitter.reserve("child-key-2");
       groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
       // Act
@@ -172,7 +172,7 @@ class GroupCommitterTest {
       Future<?> future = executorService.submit(() -> groupCommitter.ready(fullKey1, 11));
       executorService.shutdown();
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot(READY, "child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
       // Assert
@@ -198,7 +198,7 @@ class GroupCommitterTest {
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
       // Prepare a DelayedGroup.
       List<Future<?>> futures = new ArrayList<>();
@@ -208,7 +208,7 @@ class GroupCommitterTest {
       Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
       // There should be the following groups at this moment.
       // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
-      // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+      // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
       verify(emitter).execute("0000", Collections.singletonList(11));
       verify(emitter, never()).execute(eq("0000:child-key-2"), any());
 
@@ -252,7 +252,7 @@ class GroupCommitterTest {
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
       // Prepare a DelayedGroup.
       List<Future<?>> futures = new ArrayList<>();
@@ -262,7 +262,7 @@ class GroupCommitterTest {
       Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
       // There should be the following groups at this moment.
       // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
-      // - DelayedGroup("0000:child-key-2", CLOSED, slots:[Slot("child-key-2")])
+      // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
       verify(failingEmitter).execute("0000", Collections.singletonList(11));
       verify(failingEmitter, never()).execute(eq("0000:child-key-2"), any());
 
@@ -289,7 +289,7 @@ class GroupCommitterTest {
   @Test
   void remove_GivenKeyForOpenGroup_ShouldRemoveIt() throws Exception {
     // Arrange
-    // `slotCapacity` is 3 to prevent the group from being closed.
+    // `slotCapacity` is 3 to prevent the group from being size-fixed.
     try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(3, 100, 400)) {
       groupCommitter.setEmitter(emitter);
@@ -316,7 +316,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void remove_GivenKeyForClosedGroup_ShouldRemoveIt() throws Exception {
+  void remove_GivenKeyForSizeFixedGroup_ShouldRemoveIt() throws Exception {
     // Arrange
     try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
@@ -326,12 +326,12 @@ class GroupCommitterTest {
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
       // Act
       // Assert
 
-      // Remove the 2 slots from the closed group.
+      // Remove the 2 slots from the size-fixed group.
       groupCommitter.remove(fullKey1);
       groupCommitter.remove(fullKey2);
       // There should be no group at this moment.
@@ -366,7 +366,7 @@ class GroupCommitterTest {
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
       // There should be the following groups at this moment.
-      // - NormalGroup("0000", CLOSED, slots:[Slot("child-key-1"), Slot("child-key-2")])
+      // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
 
       // Mark the group as ready.
       List<Future<?>> futures = new ArrayList<>();
