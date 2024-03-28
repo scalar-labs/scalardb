@@ -20,19 +20,19 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   private final PARENT_KEY parentKey;
   private final long delayedSlotMoveTimeoutMillis;
-  private final long groupClosedMillisAt;
-  private final AtomicLong delayedSlotMovedMillisAt = new AtomicLong();
+  private final long groupSizeFixTimeoutMillisAt;
+  private final AtomicLong delayedSlotMoveTimeoutMillisAt = new AtomicLong();
 
   NormalGroup(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      long groupCloseTimeoutMillis,
+      long groupSizeFixTimeoutMillis,
       long delayedSlotMoveTimeoutMillis,
       int capacity) {
     super(emitter, keyManipulator, capacity);
     this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
-    this.groupClosedMillisAt = System.currentTimeMillis() + groupCloseTimeoutMillis;
-    updateDelayedSlotMovedAt();
+    this.groupSizeFixTimeoutMillisAt = System.currentTimeMillis() + groupSizeFixTimeoutMillis;
+    updateDelayedSlotMoveTimeoutMillisAt();
     this.parentKey = keyManipulator.generateParentKey();
   }
 
@@ -45,7 +45,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     return keyManipulator.fullKey(parentKey, childKey);
   }
 
-  // If it returns null, the Group is already closed and a retry is needed.
+  // If it returns null, the Group is already size-fixed and a retry is needed.
   @Nullable
   FULL_KEY reserveNewSlot(CHILD_KEY childKey) {
     return reserveNewSlot(new Slot<>(childKey, this));
@@ -53,7 +53,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Nullable
   synchronized List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> removeNotReadySlots() {
-    if (!isClosed()) {
+    if (!isSizeFixed()) {
       logger.info(
           "No need to remove any slot since the size isn't fixed yet. Too early. Group: {}", this);
       return null;
@@ -70,7 +70,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       }
     }
 
-    // The size must be already fixed since the group is already closed.
+    // The size must be already fixed since the group is already size-fixed.
     Integer size = size();
     assert size != null;
     if (removed.size() >= size) {
@@ -145,16 +145,16 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     emitterSlot.get().delegateTaskToWaiter(taskForEmitterSlot);
   }
 
-  void updateDelayedSlotMovedAt() {
-    delayedSlotMovedMillisAt.set(System.currentTimeMillis() + delayedSlotMoveTimeoutMillis);
+  void updateDelayedSlotMoveTimeoutMillisAt() {
+    delayedSlotMoveTimeoutMillisAt.set(System.currentTimeMillis() + delayedSlotMoveTimeoutMillis);
   }
 
-  long groupClosedMillisAt() {
-    return groupClosedMillisAt;
+  long groupSizeFixTimeoutMillisAt() {
+    return groupSizeFixTimeoutMillisAt;
   }
 
-  long delayedSlotMovedMillisAt() {
-    return delayedSlotMovedMillisAt.get();
+  long delayedSlotMoveTimeoutMillisAt() {
+    return delayedSlotMoveTimeoutMillisAt.get();
   }
 
   @Override

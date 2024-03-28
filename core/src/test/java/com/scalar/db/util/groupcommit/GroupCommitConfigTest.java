@@ -20,7 +20,7 @@ class GroupCommitConfigTest {
     GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
 
     // Act / Assert
-    assertThat(config.groupCloseTimeoutMillis()).isEqualTo(20);
+    assertThat(config.groupSizeFixTimeoutMillis()).isEqualTo(20);
   }
 
   @Test

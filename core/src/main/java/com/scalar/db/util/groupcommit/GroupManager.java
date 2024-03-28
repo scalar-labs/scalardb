@@ -29,7 +29,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final StampedLock lock = new StampedLock();
 
   // Background workers
-  @LazyInit private GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker;
+  @LazyInit
+  private GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupSizeFixWorker;
 
   @LazyInit
   private GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
@@ -38,7 +39,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
   @LazyInit private Emittable<EMIT_KEY, V> emitter;
 
-  private final long groupCloseTimeoutMillis;
+  private final long groupSizeFixTimeoutMillis;
   private final long delayedSlotMoveTimeoutMillis;
   private final int slotCapacity;
 
@@ -47,14 +48,14 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     this.keyManipulator = keyManipulator;
-    this.groupCloseTimeoutMillis = config.groupCloseTimeoutMillis();
+    this.groupSizeFixTimeoutMillis = config.groupSizeFixTimeoutMillis();
     this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
     this.slotCapacity = config.slotCapacity();
   }
 
-  void setGroupCloseWorker(
-      GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCloseWorker) {
-    this.groupCloseWorker = groupCloseWorker;
+  void setGroupSizeFixWorker(
+      GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupSizeFixWorker) {
+    this.groupSizeFixWorker = groupSizeFixWorker;
   }
 
   void setGroupCleanupWorker(
@@ -63,22 +64,22 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   // Reserves a new slot in the current NormalGroup. A new NormalGroup will be created and
-  // registered to `normalGroupMap` if the current NormalGroup is already closed.
+  // registered to `normalGroupMap` if the current NormalGroup is already size-fixed.
   //
-  // If it returns null, the Group is already closed and a retry is needed.
+  // If it returns null, the Group is already size-fixed and a retry is needed.
   @Nullable
   FULL_KEY reserveNewSlot(CHILD_KEY childKey) {
     long stamp = lock.writeLock();
     try {
-      if (currentGroup == null || currentGroup.isClosed()) {
+      if (currentGroup == null || currentGroup.isSizeFixed()) {
         currentGroup =
             new NormalGroup<>(
                 emitter,
                 keyManipulator,
-                groupCloseTimeoutMillis,
+                groupSizeFixTimeoutMillis,
                 delayedSlotMoveTimeoutMillis,
                 slotCapacity);
-        groupCloseWorker.add(currentGroup);
+        groupSizeFixWorker.add(currentGroup);
         normalGroupMap.put(currentGroup.parentKey(), currentGroup);
       }
     } finally {
@@ -170,7 +171,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> notReadySlots =
           normalGroup.removeNotReadySlots();
       if (notReadySlots == null) {
-        normalGroup.updateDelayedSlotMovedAt();
+        normalGroup.updateDelayedSlotMoveTimeoutMillisAt();
         logger.debug(
             "This group isn't needed to remove slots. Updated the timeout. Group: {}", normalGroup);
         return false;
@@ -196,7 +197,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         }
 
         // This must be after reserving a slot since GroupCleanupWorker might call `updateState()`
-        // on the newly created DelayedGroup and let it closed.
+        // on the newly created DelayedGroup and let it size-fixed.
         groupCleanupWorker.add(delayedGroup);
       }
     } finally {

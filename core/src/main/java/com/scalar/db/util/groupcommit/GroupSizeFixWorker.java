@@ -2,23 +2,23 @@ package com.scalar.db.util.groupcommit;
 
 import javax.annotation.concurrent.ThreadSafe;
 
-// A worker manages NormalGroup instances to close timed-out groups and pass them to
+// A worker manages NormalGroup instances to size-fix timed-out groups and pass them to
 // DelayedSlotMoveWorker.
 // Ready NormalGroup is passed to GroupCleanupWorker.
 @ThreadSafe
-class GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     extends BackgroundWorker<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
   private final DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       delayedSlotMoveWorker;
   private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
 
-  GroupCloseWorker(
+  GroupSizeFixWorker(
       String label,
       long queueCheckIntervalInMillis,
       DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedSlotMoveWorker,
       GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
     super(
-        label + "-group-commit-normal-group-close",
+        label + "-group-commit-normal-group-size-fix",
         queueCheckIntervalInMillis,
         RetryMode.KEEP_AT_HEAD);
     this.delayedSlotMoveWorker = delayedSlotMoveWorker;
@@ -36,17 +36,17 @@ class GroupCloseWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   boolean processItem(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
-    // Close the group if needed.
-    if (normalGroup.isClosed()) {
+    // Size-fix the group if needed.
+    if (normalGroup.isSizeFixed()) {
       enqueueItemToNextQueue(normalGroup);
-      // It's already closed. Should remove the item.
+      // It's already size-fixed. Should remove the item.
       return true;
     }
 
     long now = System.currentTimeMillis();
-    if (normalGroup.groupClosedMillisAt() < now) {
-      // Expired. Fix the size (== close).
-      normalGroup.close();
+    if (normalGroup.groupSizeFixTimeoutMillisAt() < now) {
+      // Expired. Fix the size.
+      normalGroup.fixSize();
 
       enqueueItemToNextQueue(normalGroup);
 

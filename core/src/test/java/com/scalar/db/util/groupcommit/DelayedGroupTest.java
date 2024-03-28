@@ -49,14 +49,14 @@ class DelayedGroupTest {
         new DelayedGroup<>("0000:full-key", emitter, keyManipulator);
 
     assertThat(group.size()).isNull();
-    assertThat(group.isClosed()).isFalse();
+    assertThat(group.isSizeFixed()).isFalse();
 
     // Act
     group.reserveNewSlot(slot);
 
     // Assert
     assertThat(group.size()).isEqualTo(1);
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
   }
 
@@ -168,14 +168,14 @@ class DelayedGroupTest {
         new DelayedGroup<>("0000:full-key", emitter, keyManipulator);
 
     group.reserveNewSlot(slot);
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
 
     // Act
     // Assert
 
     assertThat(group.removeSlot("child-key")).isTrue();
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isTrue();
     assertThat(group.isDone()).isTrue();
     assertThat(group.removeSlot("child-key")).isFalse();
@@ -199,7 +199,7 @@ class DelayedGroupTest {
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot);
-    assertThat(group.isClosed()).isTrue();
+    assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
 
     List<Future<Void>> futures = new ArrayList<>();
