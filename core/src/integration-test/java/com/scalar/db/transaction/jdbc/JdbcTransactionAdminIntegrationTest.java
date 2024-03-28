@@ -20,9 +20,7 @@ public class JdbcTransactionAdminIntegrationTest
     return properties;
   }
 
-  // Disable several tests for the coordinator tables since JDBC transaction doesn't have
-  // coordinator tables
-  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Disabled("JDBC transactions don't have Coordinator tables")
   @Test
   @Override
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
@@ -30,7 +28,7 @@ public class JdbcTransactionAdminIntegrationTest
     super.createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly();
   }
 
-  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Disabled("JDBC transactions don't have Coordinator tables")
   @Test
   @Override
   public void
@@ -39,7 +37,7 @@ public class JdbcTransactionAdminIntegrationTest
         .createCoordinatorTables_CoordinatorTablesAlreadyExist_ShouldThrowIllegalArgumentException();
   }
 
-  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Disabled("JDBC transactions don't have Coordinator tables")
   @Test
   @Override
   public void
@@ -48,7 +46,7 @@ public class JdbcTransactionAdminIntegrationTest
         .createCoordinatorTables_IfNotExist_CoordinatorTablesAlreadyExist_ShouldNotThrowAnyException();
   }
 
-  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Disabled("JDBC transactions don't have Coordinator tables")
   @Test
   @Override
   public void dropCoordinatorTables_ShouldDropCoordinatorTablesCorrectly()
@@ -56,7 +54,7 @@ public class JdbcTransactionAdminIntegrationTest
     super.dropCoordinatorTables_ShouldDropCoordinatorTablesCorrectly();
   }
 
-  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Disabled("JDBC transactions don't have Coordinator tables")
   @Test
   @Override
   public void
@@ -65,7 +63,7 @@ public class JdbcTransactionAdminIntegrationTest
     super.dropCoordinatorTables_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException();
   }
 
-  @Disabled("JDBC transaction doesn't have coordinator tables")
+  @Disabled("JDBC transactions don't have Coordinator tables")
   @Test
   @Override
   public void dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException()
@@ -73,8 +71,9 @@ public class JdbcTransactionAdminIntegrationTest
     super.dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException();
   }
 
+  // TODO: implement later
   @Test
-  @Disabled("JDBC Transaction Admin does not support upgrade()")
+  @Disabled("JDBC transactions don't support upgrade()")
   @Override
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}

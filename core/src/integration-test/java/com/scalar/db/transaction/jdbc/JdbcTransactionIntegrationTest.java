@@ -21,23 +21,23 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
     return properties;
   }
 
-  @Disabled("JDBC transaction doesn't support getState()")
+  @Disabled("JDBC transactions don't support getState()")
   @Override
   public void getState_forSuccessfulTransaction_ShouldReturnCommittedState() {}
 
-  @Disabled("JDBC transaction doesn't support getState()")
+  @Disabled("JDBC transactions don't support getState()")
   @Override
   public void getState_forFailedTransaction_ShouldReturnAbortedState() {}
 
-  @Disabled("JDBC transaction doesn't support abort()")
+  @Disabled("JDBC transactions don't support abort()")
   @Override
   public void abort_forOngoingTransaction_ShouldAbortCorrectly() {}
 
-  @Disabled("JDBC transaction doesn't support rollback()")
+  @Disabled("JDBC transactions don't support rollback()")
   @Override
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 
-  @Disabled("JDBC transaction doesn't support implicit pre-read")
+  @Disabled("JDBC transactions don't support implicit pre-read")
   @Override
   public void
       putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowCommitConflictException() {}
