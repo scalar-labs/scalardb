@@ -46,8 +46,8 @@ public class ConsensusCommitConfig {
       COORDINATOR_GROUP_COMMIT_PREFIX + "enabled";
   public static final String COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY =
       COORDINATOR_GROUP_COMMIT_PREFIX + "slot_capacity";
-  public static final String COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS =
-      COORDINATOR_GROUP_COMMIT_PREFIX + "group_close_timeout_millis";
+  public static final String COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "group_size_fix_timeout_millis";
   public static final String COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS =
       COORDINATOR_GROUP_COMMIT_PREFIX + "delayed_slot_move_timeout_millis";
   public static final String COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
@@ -73,7 +73,7 @@ public class ConsensusCommitConfig {
 
   private final boolean coordinatorGroupCommitEnabled;
   private final int coordinatorGroupCommitSlotCapacity;
-  private final int coordinatorGroupCommitGroupCloseTimeoutMillis;
+  private final int coordinatorGroupCommitGroupSizeFixTimeoutMillis;
   private final int coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
   private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
   private final boolean coordinatorGroupCommitMetricsConsoleReporterEnabled;
@@ -150,10 +150,10 @@ public class ConsensusCommitConfig {
         getBoolean(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_ENABLED, false);
     coordinatorGroupCommitSlotCapacity =
         getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY, 20);
-    coordinatorGroupCommitGroupCloseTimeoutMillis =
+    coordinatorGroupCommitGroupSizeFixTimeoutMillis =
         getInt(
             databaseConfig.getProperties(),
-            COORDINATOR_GROUP_COMMIT_GROUP_CLOSE_TIMEOUT_MILLIS,
+            COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS,
             40);
     coordinatorGroupCommitDelayedSlotMoveTimeoutMillis =
         getInt(
@@ -232,8 +232,8 @@ public class ConsensusCommitConfig {
     return coordinatorGroupCommitSlotCapacity;
   }
 
-  public int getCoordinatorGroupCommitGroupCloseTimeoutMillis() {
-    return coordinatorGroupCommitGroupCloseTimeoutMillis;
+  public int getCoordinatorGroupCommitGroupSizeFixTimeoutMillis() {
+    return coordinatorGroupCommitGroupSizeFixTimeoutMillis;
   }
 
   public int getCoordinatorGroupCommitDelayedSlotMoveTimeoutMillis() {

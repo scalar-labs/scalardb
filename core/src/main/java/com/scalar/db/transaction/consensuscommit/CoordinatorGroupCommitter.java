@@ -16,7 +16,7 @@ public class CoordinatorGroupCommitter
     this(
         new GroupCommitConfig(
             config.getCoordinatorGroupCommitSlotCapacity(),
-            config.getCoordinatorGroupCommitGroupCloseTimeoutMillis(),
+            config.getCoordinatorGroupCommitGroupSizeFixTimeoutMillis(),
             config.getCoordinatorGroupCommitDelayedSlotMoveTimeoutMillis(),
             config.getCoordinatorGroupCommitTimeoutCheckIntervalMillis(),
             config.isCoordinatorGroupCommitMetricsConsoleReporterEnabled()));
