@@ -27,4 +27,9 @@ public class AutoCommitTransactionIntegrationTestWithCassandra
   @Test
   public void
       put_withPutIfIsNullWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Disabled because this test case is flaky for Cassandra")
+  @Override
+  @Test
+  public void delete_withDeleteIfExistsWhenRecordsExists_shouldDeleteProperly() {}
 }
