@@ -8,7 +8,7 @@ class GroupCommitConfigTest {
   @Test
   void slotCapacity_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
     assertThat(config.slotCapacity()).isEqualTo(10);
@@ -17,7 +17,7 @@ class GroupCommitConfigTest {
   @Test
   void groupCloseTimeoutMillis_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
     assertThat(config.groupSizeFixTimeoutMillis()).isEqualTo(20);
@@ -26,18 +26,27 @@ class GroupCommitConfigTest {
   @Test
   void delayedSlotMoveTimeoutMillis_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
     assertThat(config.delayedSlotMoveTimeoutMillis()).isEqualTo(30);
   }
 
   @Test
-  void timeoutCheckIntervalMillis_WithArbitraryValue_ShouldReturnProperly() {
+  void oldGroupAbortTimeoutSeconds_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
-    assertThat(config.timeoutCheckIntervalMillis()).isEqualTo(40);
+    assertThat(config.oldGroupAbortTimeoutSeconds()).isEqualTo(40);
+  }
+
+  @Test
+  void timeoutCheckIntervalMillis_WithArbitraryValue_ShouldReturnProperly() {
+    // Arrange
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
+
+    // Act / Assert
+    assertThat(config.timeoutCheckIntervalMillis()).isEqualTo(50);
   }
 }

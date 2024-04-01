@@ -19,20 +19,19 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);
 
   private final PARENT_KEY parentKey;
-  private final long delayedSlotMoveTimeoutMillis;
-  private final long groupSizeFixTimeoutMillisAt;
-  private final AtomicLong delayedSlotMoveTimeoutMillisAt = new AtomicLong();
+  private final int delayedSlotMoveTimeoutMillis;
+  private final long groupSizeFixTimeoutAtMillis;
+  private final AtomicLong delayedSlotMoveTimeoutAtMillis = new AtomicLong();
 
   NormalGroup(
+      GroupCommitConfig config,
       Emittable<EMIT_KEY, V> emitter,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      long groupSizeFixTimeoutMillis,
-      long delayedSlotMoveTimeoutMillis,
-      int capacity) {
-    super(emitter, keyManipulator, capacity);
-    this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
-    this.groupSizeFixTimeoutMillisAt = System.currentTimeMillis() + groupSizeFixTimeoutMillis;
-    updateDelayedSlotMoveTimeoutMillisAt();
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+    super(emitter, keyManipulator, config.slotCapacity(), config.oldGroupAbortTimeoutSeconds());
+    this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
+    this.groupSizeFixTimeoutAtMillis =
+        System.currentTimeMillis() + config.groupSizeFixTimeoutMillis();
+    updateDelayedSlotMoveTimeoutAt();
     this.parentKey = keyManipulator.generateParentKey();
   }
 
@@ -145,16 +144,16 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     emitterSlot.get().delegateTaskToWaiter(taskForEmitterSlot);
   }
 
-  void updateDelayedSlotMoveTimeoutMillisAt() {
-    delayedSlotMoveTimeoutMillisAt.set(System.currentTimeMillis() + delayedSlotMoveTimeoutMillis);
+  void updateDelayedSlotMoveTimeoutAt() {
+    delayedSlotMoveTimeoutAtMillis.set(System.currentTimeMillis() + delayedSlotMoveTimeoutMillis);
   }
 
-  long groupSizeFixTimeoutMillisAt() {
-    return groupSizeFixTimeoutMillisAt;
+  long groupSizeFixTimeoutAtMillis() {
+    return groupSizeFixTimeoutAtMillis;
   }
 
-  long delayedSlotMoveTimeoutMillisAt() {
-    return delayedSlotMoveTimeoutMillisAt.get();
+  long delayedSlotMoveTimeoutAtMillis() {
+    return delayedSlotMoveTimeoutAtMillis.get();
   }
 
   @Override

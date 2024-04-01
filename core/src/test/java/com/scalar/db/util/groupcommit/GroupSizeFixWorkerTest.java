@@ -88,7 +88,7 @@ class GroupSizeFixWorkerTest {
     doReturn(false).when(normalGroup1).isSizeFixed();
     doReturn(System.currentTimeMillis() + LONG_WAIT_MILLIS * 10)
         .when(normalGroup1)
-        .groupSizeFixTimeoutMillisAt();
+        .groupSizeFixTimeoutAtMillis();
 
     // Act
     workerWithWait.add(normalGroup1);
@@ -107,7 +107,7 @@ class GroupSizeFixWorkerTest {
     // Arrange
     doReturn(false).when(normalGroup1).isSizeFixed();
     doReturn(false).when(normalGroup1).isReady();
-    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupSizeFixTimeoutMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupSizeFixTimeoutAtMillis();
 
     // Act
     worker.add(normalGroup1);
@@ -126,7 +126,7 @@ class GroupSizeFixWorkerTest {
     // Arrange
     doReturn(false).when(normalGroup1).isSizeFixed();
     doReturn(true).when(normalGroup1).isReady();
-    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupSizeFixTimeoutMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).groupSizeFixTimeoutAtMillis();
 
     // Act
     worker.add(normalGroup1);
@@ -148,7 +148,7 @@ class GroupSizeFixWorkerTest {
             g -> {
               doReturn(false).when(g).isSizeFixed();
               doReturn(false).when(g).isReady();
-              doReturn(System.currentTimeMillis() - 5).when(g).groupSizeFixTimeoutMillisAt();
+              doReturn(System.currentTimeMillis() - 5).when(g).groupSizeFixTimeoutAtMillis();
             });
 
     // Act

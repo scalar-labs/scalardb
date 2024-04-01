@@ -39,18 +39,14 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
   @LazyInit private Emittable<EMIT_KEY, V> emitter;
 
-  private final long groupSizeFixTimeoutMillis;
-  private final long delayedSlotMoveTimeoutMillis;
-  private final int slotCapacity;
+  private final GroupCommitConfig config;
 
   GroupManager(
       String label,
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     this.keyManipulator = keyManipulator;
-    this.groupSizeFixTimeoutMillis = config.groupSizeFixTimeoutMillis();
-    this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
-    this.slotCapacity = config.slotCapacity();
+    this.config = config;
   }
 
   void setGroupSizeFixWorker(
@@ -72,13 +68,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     long stamp = lock.writeLock();
     try {
       if (currentGroup == null || currentGroup.isSizeFixed()) {
-        currentGroup =
-            new NormalGroup<>(
-                emitter,
-                keyManipulator,
-                groupSizeFixTimeoutMillis,
-                delayedSlotMoveTimeoutMillis,
-                slotCapacity);
+        currentGroup = new NormalGroup<>(config, emitter, keyManipulator);
         groupSizeFixWorker.add(currentGroup);
         normalGroupMap.put(currentGroup.parentKey(), currentGroup);
       }
@@ -171,7 +161,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> notReadySlots =
           normalGroup.removeNotReadySlots();
       if (notReadySlots == null) {
-        normalGroup.updateDelayedSlotMoveTimeoutMillisAt();
+        normalGroup.updateDelayedSlotMoveTimeoutAt();
         logger.debug(
             "This group isn't needed to remove slots. Updated the timeout. Group: {}", normalGroup);
         return false;
@@ -180,7 +170,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         // Create a new DelayedGroup
         FULL_KEY fullKey = notReadySlot.fullKey();
         DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
-            new DelayedGroup<>(fullKey, emitter, keyManipulator);
+            new DelayedGroup<>(config, fullKey, emitter, keyManipulator);
 
         // Set the slot stored in the NormalGroup into the new DelayedGroup.
         // Internally delegate the emit-task to the client thread.

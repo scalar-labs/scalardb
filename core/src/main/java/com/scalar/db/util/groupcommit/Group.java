@@ -20,6 +20,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   protected final Map<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> slots;
   // Whether to reject a new value slot.
   protected final AtomicReference<Status> status = new AtomicReference<>(Status.OPEN);
+  private final long oldGroupAbortTimeoutAtMillis;
 
   // Status of the group.
   enum Status {
@@ -58,11 +59,14 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   Group(
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
-      int capacity) {
+      int capacity,
+      long oldGroupAbortTimeoutSeconds) {
     this.emitter = emitter;
     this.keyManipulator = keyManipulator;
     this.capacity = capacity;
     this.slots = new HashMap<>(capacity);
+    this.oldGroupAbortTimeoutAtMillis =
+        System.currentTimeMillis() + oldGroupAbortTimeoutSeconds * 1000;
   }
 
   private boolean noMoreSlot() {
@@ -227,6 +231,21 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return true;
   }
 
+  synchronized void abort() {
+    if (isReady()) {
+      // Nothing to do.
+      return;
+    }
+
+    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
+      slot.markAsFailed(
+          new GroupCommitException(
+              String.format(
+                  "The slot in the old group is timed out and aborted. Group:%s, Slot:%s",
+                  this, slot)));
+    }
+  }
+
   protected abstract void asyncEmit();
 
   synchronized void asyncEmitIfReady() {
@@ -241,5 +260,9 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
         updateStatus();
       }
     }
+  }
+
+  public long oldGroupAbortTimeoutAtMillis() {
+    return oldGroupAbortTimeoutAtMillis;
   }
 }

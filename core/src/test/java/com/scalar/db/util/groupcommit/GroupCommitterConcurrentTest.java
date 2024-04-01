@@ -101,7 +101,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 20, 200, 20));
+        .exec(new GroupCommitConfig(40, 20, 200, 60, 20));
   }
 
   @Test
@@ -116,7 +116,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 40, 200, 20));
+        .exec(new GroupCommitConfig(40, 40, 200, 60, 20));
   }
 
   private static class Runner {
