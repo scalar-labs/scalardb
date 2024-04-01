@@ -25,6 +25,13 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   boolean processItem(Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
+    if (group.oldGroupAbortTimeoutAtMillis() < System.currentTimeMillis()) {
+      groupManager.removeGroupFromMap(group);
+      group.abort();
+      // Should remove the item.
+      return true;
+    }
+
     // Groups don't have chance to update the status from READY to DONE since the condition is
     // satisfied after all the clients get the result lazily. Therefore, update the status here.
     group.updateStatus();

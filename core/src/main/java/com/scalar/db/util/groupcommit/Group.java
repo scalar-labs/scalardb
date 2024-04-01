@@ -232,12 +232,8 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   }
 
   synchronized void abort() {
-    if (isReady()) {
-      // Nothing to do.
-      return;
-    }
-
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
+      // Tell the clients that the slots are aborted.
       slot.markAsFailed(
           new GroupCommitException(
               String.format(
