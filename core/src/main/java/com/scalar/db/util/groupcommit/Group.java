@@ -135,8 +135,6 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     return true;
   }
 
-  void abortOldSlots() {}
-
   private synchronized void updateSlotsSize() {
     size.set(slots.size());
   }
