@@ -101,7 +101,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 20, 200, 60, 20, true));
+        .exec(new GroupCommitConfig(40, 20, 200, 20, 20, true));
   }
 
   @Test
@@ -116,7 +116,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 40, 200, 60, 20, true));
+        .exec(new GroupCommitConfig(40, 40, 200, 20, 20, true));
   }
 
   private static class Runner {
@@ -205,9 +205,9 @@ class GroupCommitterConcurrentTest {
           groupCommitter.ready(fullKey, value);
         } catch (Exception e) {
           if (fullKey != null) {
-            // This is needed since GroupCommitter can't remove the garbage when
-            // an exception is thrown before `ready()`.
-            groupCommitter.remove(fullKey);
+            // Basically, removing unused slots here is recommended. But, in this test, slots
+            // allocated for failed operations are left to see if the timeout mechanisms are working
+            // well.
           }
           throw e;
         }
@@ -258,7 +258,7 @@ class GroupCommitterConcurrentTest {
       for (KeyAndFuture kf : futures) {
         try {
           // System.err.println("Getting the future of " + kf.key);
-          kf.future.get(10, TimeUnit.SECONDS);
+          kf.future.get(40, TimeUnit.SECONDS);
         } catch (ExecutionException e) {
           if (e.getCause() instanceof ExpectedException
               || (e.getCause() instanceof GroupCommitException
@@ -297,7 +297,7 @@ class GroupCommitterConcurrentTest {
         GroupCommitter<String, String, String, String, Value> groupCommitter) {
       boolean noGarbage = false;
       GroupCommitMetrics metrics = null;
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < 60; i++) {
         metrics = groupCommitter.getMetrics();
         if (metrics.sizeOfNormalGroupMap == 0
             && metrics.sizeOfDelayedGroupMap == 0

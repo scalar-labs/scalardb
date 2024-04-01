@@ -36,9 +36,9 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     long currentTimeMillis = System.currentTimeMillis();
 
     if (normalGroup.oldGroupAbortTimeoutAtMillis() < currentTimeMillis) {
+      groupManager.removeGroupFromMap(normalGroup);
       normalGroup.abort();
-      groupCleanupWorker.add(normalGroup);
-      // Already ready. Should remove the item.
+      // Should remove the item.
       return true;
     }
 

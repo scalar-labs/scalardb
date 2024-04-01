@@ -41,9 +41,16 @@ class GroupCleanupWorkerTest {
     worker.close();
   }
 
+  private void doReturnOldGroupAbortTimeoutAtMillis(
+      Group<String, String, String, String, Integer> group) {
+    long oldGroupAbortMillis = System.currentTimeMillis() + 60 * 1000;
+    doReturn(oldGroupAbortMillis).when(group).oldGroupAbortTimeoutAtMillis();
+  }
+
   @Test
   void add_GivenDoneNormalGroup_ShouldRemoveItFromGroupManager() {
     // Arrange
+    doReturnOldGroupAbortTimeoutAtMillis(normalGroup1);
     doReturn(true).when(normalGroup1).isDone();
     doReturn(true).when(groupManager).removeGroupFromMap(normalGroup1);
 
@@ -59,6 +66,7 @@ class GroupCleanupWorkerTest {
   @Test
   void add_GivenNotDoneNormalGroup_ShouldKeepItWithWait() {
     // Arrange
+    doReturnOldGroupAbortTimeoutAtMillis(normalGroup1);
     doReturn(false).when(normalGroup1).isDone();
 
     // Act
@@ -74,6 +82,7 @@ class GroupCleanupWorkerTest {
   @Test
   void add_GivenDoneDelayedGroup_ShouldRemoveItFromGroupManager() {
     // Arrange
+    doReturnOldGroupAbortTimeoutAtMillis(delayedGroup1);
     doReturn(true).when(delayedGroup1).isDone();
     doReturn(true).when(groupManager).removeGroupFromMap(delayedGroup1);
 
@@ -89,6 +98,7 @@ class GroupCleanupWorkerTest {
   @Test
   void add_GivenNotDoneDelayedGroup_ShouldKeepItWithWait() {
     // Arrange
+    doReturnOldGroupAbortTimeoutAtMillis(delayedGroup1);
     doReturn(false).when(delayedGroup1).isDone();
 
     // Act
@@ -107,6 +117,7 @@ class GroupCleanupWorkerTest {
     Arrays.asList(normalGroup1, normalGroup2, delayedGroup1, delayedGroup2)
         .forEach(
             g -> {
+              doReturnOldGroupAbortTimeoutAtMillis(g);
               doReturn(true).when(g).isDone();
               doReturn(true).when(groupManager).removeGroupFromMap(g);
             });
