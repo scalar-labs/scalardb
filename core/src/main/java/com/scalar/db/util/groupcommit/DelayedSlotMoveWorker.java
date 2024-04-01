@@ -33,7 +33,16 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       return true;
     }
 
-    if (normalGroup.delayedSlotMoveTimeoutMillisAt() < System.currentTimeMillis()) {
+    long currentTimeMillis = System.currentTimeMillis();
+
+    if (normalGroup.oldGroupAbortTimeoutAtMillis() < currentTimeMillis) {
+      normalGroup.abort();
+      groupCleanupWorker.add(normalGroup);
+      // Already ready. Should remove the item.
+      return true;
+    }
+
+    if (normalGroup.delayedSlotMoveTimeoutAtMillis() < currentTimeMillis) {
       // Move delayed slots to a DelayedGroup so that the NormalGroup can be ready.
       boolean movedDelayedSlots = groupManager.moveDelayedSlotToDelayedGroup(normalGroup);
       // The status of the group may have changed

@@ -40,7 +40,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -65,7 +65,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -94,7 +94,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -129,7 +129,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -182,7 +182,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -238,7 +238,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -272,7 +272,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -334,7 +334,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -383,7 +383,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -442,7 +442,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -474,7 +474,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(3, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(3, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -531,7 +531,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
@@ -566,7 +566,7 @@ class GroupManagerTest {
     GroupManager<String, String, String, String, Integer> groupManager =
         new GroupManager<>(
             "test",
-            new GroupCommitConfig(2, 100, 400, TIMEOUT_CHECK_INTERVAL_MILLIS),
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS),
             keyManipulator);
     groupManager.setEmitter(emittable);
     groupManager.setGroupSizeFixWorker(groupSizeFixWorker);

@@ -44,6 +44,12 @@ class DelayedSlotMoveWorkerTest {
     worker.close();
   }
 
+  private void doReturnOldGroupAbortTimeoutAtMillis(
+      NormalGroup<String, String, String, String, Integer> normalGroup) {
+    long oldGroupAbortMillis = System.currentTimeMillis() + 60 * 1000;
+    doReturn(oldGroupAbortMillis).when(normalGroup).oldGroupAbortTimeoutAtMillis();
+  }
+
   @Test
   void add_GivenReadyGroup_ShouldPassItToGroupCleanupWorker() {
     // Arrange
@@ -62,10 +68,11 @@ class DelayedSlotMoveWorkerTest {
   @Test
   void add_GivenNotReadyGroupNotTimedOut_ShouldKeepItWithWait() {
     // Arrange
+    doReturnOldGroupAbortTimeoutAtMillis(normalGroup1);
     doReturn(false).when(normalGroup1).isReady();
     doReturn(System.currentTimeMillis() + LONG_WAIT_MILLIS * 10)
         .when(normalGroup1)
-        .delayedSlotMoveTimeoutMillisAt();
+        .delayedSlotMoveTimeoutAtMillis();
 
     // Act
     workerWithWait.add(normalGroup1);
@@ -81,10 +88,11 @@ class DelayedSlotMoveWorkerTest {
   @Test
   void add_GivenNotReadyGroupTimedOut_ShouldMoveDelayedSlotsToDelayedGroup() {
     // Arrange
+    doReturnOldGroupAbortTimeoutAtMillis(normalGroup1);
 
     // The group is supposed to be ready after removing delayed slots.
     doReturn(false, true).when(normalGroup1).isReady();
-    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).delayedSlotMoveTimeoutMillisAt();
+    doReturn(System.currentTimeMillis() - 5).when(normalGroup1).delayedSlotMoveTimeoutAtMillis();
     doReturn(true).when(groupManager).moveDelayedSlotToDelayedGroup(normalGroup1);
 
     // Act
@@ -103,8 +111,9 @@ class DelayedSlotMoveWorkerTest {
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
         .forEach(
             g -> {
+              doReturnOldGroupAbortTimeoutAtMillis(g);
               doReturn(false, true).when(g).isReady();
-              doReturn(System.currentTimeMillis() - 5).when(g).delayedSlotMoveTimeoutMillisAt();
+              doReturn(System.currentTimeMillis() - 5).when(g).delayedSlotMoveTimeoutAtMillis();
               doReturn(true).when(groupManager).moveDelayedSlotToDelayedGroup(g);
             });
 

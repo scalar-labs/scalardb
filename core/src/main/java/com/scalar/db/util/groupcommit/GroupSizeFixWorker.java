@@ -44,7 +44,7 @@ class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     }
 
     long now = System.currentTimeMillis();
-    if (normalGroup.groupSizeFixTimeoutMillisAt() < now) {
+    if (normalGroup.groupSizeFixTimeoutAtMillis() < now) {
       // Expired. Fix the size.
       normalGroup.fixSize();
 

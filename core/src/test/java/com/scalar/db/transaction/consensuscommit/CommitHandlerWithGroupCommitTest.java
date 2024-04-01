@@ -24,7 +24,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   @Override
   Optional<CoordinatorGroupCommitter> groupCommitter() {
     if (groupCommitter == null) {
-      groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 10));
+      groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 60, 10));
     }
     return Optional.of(groupCommitter);
   }

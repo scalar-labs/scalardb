@@ -13,10 +13,11 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   private final FULL_KEY fullKey;
 
   DelayedGroup(
+      GroupCommitConfig config,
       FULL_KEY fullKey,
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
-    super(emitter, keyManipulator, 1);
+    super(emitter, keyManipulator, 1, config.oldGroupAbortTimeoutSeconds());
     this.fullKey = fullKey;
   }
 

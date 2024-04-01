@@ -7,8 +7,9 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class GroupCommitConfig {
   private final int slotCapacity;
-  private final int groupCloseTimeoutMillis;
+  private final int groupSizeFixTimeoutMillis;
   private final int delayedSlotMoveTimeoutMillis;
+  private final int oldGroupAbortTimeoutSeconds;
   private final int timeoutCheckIntervalMillis;
   private final boolean metricsConsoleReporterEnabled;
 
@@ -16,21 +17,24 @@ public class GroupCommitConfig {
    * A configuration of group commit.
    *
    * @param slotCapacity How many slots can be stored in a {@link NormalGroup}.
-   * @param groupCloseTimeoutMillis A timeout to close (or size-fix) a {@link NormalGroup}.
+   * @param groupSizeFixTimeoutMillis A timeout to close (or size-fix) a {@link NormalGroup}.
    * @param delayedSlotMoveTimeoutMillis A timeout to move a delayed slot from {@link NormalGroup}
    *     to {@link DelayedGroup}.
+   * @param oldGroupAbortTimeoutSeconds A timeout to abort too old {@link Group}.
    * @param timeoutCheckIntervalMillis An interval to check the queues.
    * @param metricsConsoleReporterEnabled Whether to enable the console reporter for metrics.
    */
   public GroupCommitConfig(
       int slotCapacity,
-      int groupCloseTimeoutMillis,
+      int groupSizeFixTimeoutMillis,
       int delayedSlotMoveTimeoutMillis,
+      int oldGroupAbortTimeoutSeconds,
       int timeoutCheckIntervalMillis,
       boolean metricsConsoleReporterEnabled) {
     this.slotCapacity = slotCapacity;
-    this.groupCloseTimeoutMillis = groupCloseTimeoutMillis;
+    this.groupSizeFixTimeoutMillis = groupSizeFixTimeoutMillis;
     this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
+    this.oldGroupAbortTimeoutSeconds = oldGroupAbortTimeoutSeconds;
     this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
     this.metricsConsoleReporterEnabled = metricsConsoleReporterEnabled;
   }
@@ -38,13 +42,15 @@ public class GroupCommitConfig {
   // Mainly only for testing.
   public GroupCommitConfig(
       int slotCapacity,
-      int groupCloseTimeoutMillis,
+      int groupSizeFixTimeoutMillis,
       int delayedSlotMoveTimeoutMillis,
+      int oldGroupAbortTimeoutSeconds,
       int timeoutCheckIntervalMillis) {
     this(
         slotCapacity,
-        groupCloseTimeoutMillis,
+        groupSizeFixTimeoutMillis,
         delayedSlotMoveTimeoutMillis,
+        oldGroupAbortTimeoutSeconds,
         timeoutCheckIntervalMillis,
         false);
   }
@@ -58,11 +64,15 @@ public class GroupCommitConfig {
   }
 
   public int groupSizeFixTimeoutMillis() {
-    return groupCloseTimeoutMillis;
+    return groupSizeFixTimeoutMillis;
   }
 
   public int delayedSlotMoveTimeoutMillis() {
     return delayedSlotMoveTimeoutMillis;
+  }
+
+  public int oldGroupAbortTimeoutSeconds() {
+    return oldGroupAbortTimeoutSeconds;
   }
 
   public int timeoutCheckIntervalMillis() {
@@ -77,8 +87,9 @@ public class GroupCommitConfig {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("slotCapacity", slotCapacity)
-        .add("groupCloseTimeoutMillis", groupCloseTimeoutMillis)
+        .add("groupSizeFixTimeoutMillis", groupSizeFixTimeoutMillis)
         .add("delayedSlotMoveTimeoutMillis", delayedSlotMoveTimeoutMillis)
+        .add("oldGroupAbortTimeoutSeconds", oldGroupAbortTimeoutSeconds)
         .add("timeoutCheckIntervalMillis", timeoutCheckIntervalMillis)
         .add("metricsConsoleReporterEnabled", metricsConsoleReporterEnabled)
         .toString();

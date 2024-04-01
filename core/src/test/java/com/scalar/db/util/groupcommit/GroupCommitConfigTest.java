@@ -8,7 +8,7 @@ class GroupCommitConfigTest {
   @Test
   void slotCapacity_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
     assertThat(config.slotCapacity()).isEqualTo(10);
@@ -17,7 +17,7 @@ class GroupCommitConfigTest {
   @Test
   void groupCloseTimeoutMillis_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
     assertThat(config.groupSizeFixTimeoutMillis()).isEqualTo(20);
@@ -26,25 +26,34 @@ class GroupCommitConfigTest {
   @Test
   void delayedSlotMoveTimeoutMillis_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
     assertThat(config.delayedSlotMoveTimeoutMillis()).isEqualTo(30);
   }
 
   @Test
-  void timeoutCheckIntervalMillis_WithArbitraryValue_ShouldReturnProperly() {
+  void oldGroupAbortTimeoutSeconds_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
-    assertThat(config.timeoutCheckIntervalMillis()).isEqualTo(40);
+    assertThat(config.oldGroupAbortTimeoutSeconds()).isEqualTo(40);
+  }
+
+  @Test
+  void timeoutCheckIntervalMillis_WithArbitraryValue_ShouldReturnProperly() {
+    // Arrange
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
+
+    // Act / Assert
+    assertThat(config.timeoutCheckIntervalMillis()).isEqualTo(50);
   }
 
   @Test
   void metricsConsoleReporterEnabled_GivenTrue_ShouldReturnTrue() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, true);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50, true);
 
     // Act / Assert
     assertThat(config.metricsConsoleReporterEnabled()).isTrue();
@@ -53,7 +62,7 @@ class GroupCommitConfigTest {
   @Test
   void metricsConsoleReporterEnabled_GivenFalse_ShouldReturnFalse() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, false);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50, false);
 
     // Act / Assert
     assertThat(config.metricsConsoleReporterEnabled()).isFalse();
@@ -62,7 +71,7 @@ class GroupCommitConfigTest {
   @Test
   void metricsConsoleReporterEnabled_GivenNothing_ShouldReturnFalse() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40);
+    GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
     assertThat(config.metricsConsoleReporterEnabled()).isFalse();

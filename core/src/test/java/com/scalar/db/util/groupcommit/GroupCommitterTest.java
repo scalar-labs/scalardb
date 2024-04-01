@@ -27,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class GroupCommitterTest {
+  private static final int OLD_GROUP_ABORT_TIMEOUT_SECONDS = 60;
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
 
   @Mock private Emittable<String, Integer> emitter;
@@ -39,6 +40,7 @@ class GroupCommitterTest {
             slotCapacity,
             groupSizeFixTimeoutMillis,
             delayedSlotMoveTimeoutMillis,
+            OLD_GROUP_ABORT_TIMEOUT_SECONDS,
             TIMEOUT_CHECK_INTERVAL_MILLIS),
         new TestableKeyManipulator());
   }

@@ -39,7 +39,7 @@ class CoordinatorGroupCommitterTest {
   @Test
   void reserve_GivenArbitraryChildTxId_ShouldReturnFullTxId() throws Exception {
     try (CoordinatorGroupCommitter groupCommitter =
-        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 100, 400, 10))) {
+        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 100, 400, 60, 10))) {
       groupCommitter.setEmitter(emitter);
       // Arrange
       String childTxId1 = UUID.randomUUID().toString();
@@ -75,7 +75,7 @@ class CoordinatorGroupCommitterTest {
   @Test
   void ready_GivenArbitrarySnapshot_ShouldWaitUntilGroupCommitted() throws Exception {
     try (CoordinatorGroupCommitter groupCommitter =
-        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 1000, 1000, 10))) {
+        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 1000, 1000, 60, 10))) {
       groupCommitter.setEmitter(emitter);
       // Arrange
       String childTxId1 = UUID.randomUUID().toString();
@@ -144,7 +144,7 @@ class CoordinatorGroupCommitterTest {
   void ready_GivenArbitrarySnapshotWithSomeDelay_ShouldWaitUntilSeparatelyGroupCommitted()
       throws Exception {
     try (CoordinatorGroupCommitter groupCommitter =
-        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 500, 500, 10))) {
+        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 500, 500, 60, 10))) {
       groupCommitter.setEmitter(emitter);
       // Arrange
       String childTxId1 = UUID.randomUUID().toString();
@@ -193,7 +193,7 @@ class CoordinatorGroupCommitterTest {
   @Test
   void remove_GivenOneOfFullTxIds_ShouldRemoveItAndProceedTheOther() throws Exception {
     try (CoordinatorGroupCommitter groupCommitter =
-        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 4000, 4000, 10))) {
+        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 4000, 4000, 60, 10))) {
       groupCommitter.setEmitter(emitter);
       // Arrange
       String childTxId1 = UUID.randomUUID().toString();
@@ -234,7 +234,7 @@ class CoordinatorGroupCommitterTest {
   @Test
   void remove_GivenAllFullTxIds_ShouldRemoveAll() throws Exception {
     try (CoordinatorGroupCommitter groupCommitter =
-        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 500, 500, 10))) {
+        new CoordinatorGroupCommitter(new GroupCommitConfig(2, 500, 500, 60, 10))) {
       groupCommitter.setEmitter(emitter);
       // Arrange
       String childTxId1 = UUID.randomUUID().toString();
