@@ -1059,6 +1059,34 @@ public class SnapshotTest {
   }
 
   @Test
+  public void
+      toSerializableWithExtraRead_ScannedResultDeleted_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Scan scan = prepareScan();
+    TransactionResult result = prepareResult(ANY_ID);
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+    snapshot.put(key, Optional.of(result));
+    snapshot.put(scan, Collections.singletonList(key));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjections =
+        Scan.newBuilder(scan)
+            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
   public void put_DeleteGivenAfterPut_PutSupercedesDelete() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
