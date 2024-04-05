@@ -2,7 +2,7 @@
 
 ## What is ScalarDB?
 
-ScalarDB is an HTAP engine for diverse databases. It achieves ACID transactions and real-time analytics across databases to simplify the complexity of managing multiple databases.  Existing solutions are designed to run only transactions or analytical queries across heterogeneous databases or both on homogeneous databases.
+ScalarDB is an HTAP engine for diverse databases. It achieves ACID transactions and real-time analytics across databases to simplify the complexity of managing multiple databases. Existing solutions are designed to run only transactions or analytical queries across heterogeneous databases or both on homogeneous databases.
 
 ScalarDB is a versatile solution that currently supports a wide range of databases. This includes major relational databases such as Oracle Database, PostgreSQL, MariaDB, MySQL, Microsoft SQL Server, SQLite, and their compatible databases (e.g., Amazon Aurora, Google AlloyDB, TiDB, YugabyteDB), as well as NoSQL databases like Amazon DynamoDB, Azure Cosmos DB, and Apache Cassandra.
 For details on which databases ScalarDB supports, refer to the [Supported Databases](docs/scalardb-supported-databases.md).
