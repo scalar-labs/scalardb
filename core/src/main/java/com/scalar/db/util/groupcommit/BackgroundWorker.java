@@ -76,7 +76,7 @@ abstract class BackgroundWorker<T> implements Closeable {
         // Check if the removed group is expected just in case.
         if (removed == null || !removed.equals(item)) {
           logger.error(
-              "The fetched item isn't same as the item checked before. Expected: {}, Actual: {}",
+              "This removed item is unexpectedly different from the item checked before. This might be a bug. Retrying. Expected: {}, Actual: {}",
               item,
               removed);
           // Keep the unexpected fetched item by re-enqueuing it.
