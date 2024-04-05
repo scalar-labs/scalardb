@@ -55,7 +55,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     logger.info("Staring GroupCommitter. Label: {}, Config: {}", label, config);
     this.keyManipulator = keyManipulator;
-    this.groupManager = new GroupManager<>(label, config, keyManipulator);
+    this.groupManager = new GroupManager<>(config, keyManipulator);
     this.groupCleanupWorker =
         new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), groupManager);
     this.delayedSlotMoveWorker =
