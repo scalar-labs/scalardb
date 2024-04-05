@@ -129,7 +129,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       }
       updateStatus();
 
-      asyncEmitIfReady();
+      delegateEmitTaskToWaiterIfReady();
     }
     slot.waitUntilEmit();
     return true;
@@ -142,7 +142,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   synchronized void fixSize() {
     updateSlotsSize();
     updateStatus();
-    asyncEmitIfReady();
+    delegateEmitTaskToWaiterIfReady();
   }
 
   @Nullable
@@ -206,12 +206,15 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   synchronized boolean removeSlot(CHILD_KEY childKey) {
     Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = slots.get(childKey);
     if (slot == null) {
+      // Probably, the slot is already removed by the client or moved from NormalGroup to
+      // DelayedGroup.
       return false;
     }
 
     if (slot.isReady()) {
-      // Actually, the ready slot can be removed from the group since the client thread is waiting
-      // on the slot already. But removing it might cause more complicated state, so leave it as-is.
+      // Technically, it's possible to remove the ready slot from the group since the client thread
+      // is waiting on the slot already. But removing it might cause more complicated state,
+      // so leave it as-is.
       logger.debug(
           "Attempted to remove this slot, but it will not be removed because it is already ready. Group: {}, Slot: {}",
           this,
@@ -226,7 +229,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       size.set(size.get() - 1);
     }
     updateStatus();
-    asyncEmitIfReady();
+    delegateEmitTaskToWaiterIfReady();
 
     return true;
   }
@@ -242,16 +245,16 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     }
   }
 
-  protected abstract void asyncEmit();
+  protected abstract void delegateEmitTaskToWaiter();
 
-  synchronized void asyncEmitIfReady() {
+  synchronized void delegateEmitTaskToWaiterIfReady() {
     if (isDone()) {
       return;
     }
 
     if (isReady()) {
       try {
-        asyncEmit();
+        delegateEmitTaskToWaiter();
       } finally {
         updateStatus();
       }

@@ -154,7 +154,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       if (failed) {
         throw new GroupCommitException(
             String.format(
-                "Failed to put a value to the slot unexpectedly. Group: %s, Full key: %s, Value: %s",
+                "Failed to put a value to the slot. The slot might be already removed before this operation. Group: %s, Full key: %s, Value: %s",
                 group, fullKey, value));
       }
       failed = true;

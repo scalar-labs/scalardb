@@ -107,6 +107,10 @@ abstract class BackgroundWorker<T> implements Closeable {
       }
     }
 
+    // TODO: Current behavior to wait for a while if the first item isn't ready works well if
+    //       `retryMode` is KEEP_AT_HEAD. But in case of MOVE_TO_TAIL, it's likely the second item
+    //       and/or subsequent items are ready, and waiting when the first item isn't ready leads in
+    //       slowdown to scan all items. Some performance improvement is needed.
     Uninterruptibles.sleepUninterruptibly(timeoutCheckIntervalMillis, TimeUnit.MILLISECONDS);
   }
 
