@@ -1,6 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
+import com.scalar.db.util.ThrowableRunnable;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -65,7 +66,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       }
       throw new GroupCommitException(
           String.format("Group commit failed. Group: %s", parentGroup.get()), cause);
-    } catch (Exception e) {
+    } catch (Throwable e) {
       if (e instanceof GroupCommitException) {
         throw (GroupCommitException) e;
       }

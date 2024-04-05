@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.scalar.db.util.ThrowableRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
