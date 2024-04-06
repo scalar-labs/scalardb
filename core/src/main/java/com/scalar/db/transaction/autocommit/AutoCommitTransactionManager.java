@@ -12,7 +12,9 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.service.StorageFactory;
 import java.util.UUID;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class AutoCommitTransactionManager
     extends ActiveTransactionManagedDistributedTransactionManager {
 

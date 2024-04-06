@@ -22,7 +22,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class AutoCommitTransaction extends AbstractDistributedTransaction {
 
   private final String txId;

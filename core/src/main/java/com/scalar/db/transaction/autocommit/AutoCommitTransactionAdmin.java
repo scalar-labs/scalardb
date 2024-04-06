@@ -12,7 +12,9 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class AutoCommitTransactionAdmin implements DistributedTransactionAdmin {
 
   private final DistributedStorageAdmin distributedStorageAdmin;
