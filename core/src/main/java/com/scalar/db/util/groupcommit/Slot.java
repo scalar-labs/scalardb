@@ -1,6 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
+import com.scalar.db.util.ThrowableRunnable;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -17,7 +18,8 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final CHILD_KEY key;
   // If a result value is null, the value is already emitted.
   // Otherwise, the result lambda must be emitted by the receiver's thread.
-  private final CompletableFuture<ThrowableRunnable> completableFuture = new CompletableFuture<>();
+  private final CompletableFuture<ThrowableRunnable<Exception>> completableFuture =
+      new CompletableFuture<>();
   // This value can be changed from null -> non-null, not vice versa.
   private final AtomicReference<V> value = new AtomicReference<>();
   // The status of Slot becomes done once the client obtains the result not when a value is set.
@@ -49,8 +51,8 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   void waitUntilEmit() throws GroupCommitException {
     try {
       // If a result value is null, the value is already emitted.
-      // Otherwise, the result lambda must be emitted by the receiver's thread.
-      ThrowableRunnable taskToEmit = completableFuture.get();
+      // Otherwise, the result lambda must be emitted by the waiter's thread.
+      ThrowableRunnable<Exception> taskToEmit = completableFuture.get();
       if (taskToEmit != null) {
         taskToEmit.run();
       }
@@ -108,7 +110,7 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   // Delegates the emit task to the client. The client receiving this task needs to handle the emit
   // task.
-  void delegateTaskToWaiter(ThrowableRunnable task) {
+  void delegateTaskToWaiter(ThrowableRunnable<Exception> task) {
     completableFuture.complete(task);
   }
 

@@ -76,7 +76,7 @@ abstract class BackgroundWorker<T> implements Closeable {
         // Check if the removed group is expected just in case.
         if (removed == null || !removed.equals(item)) {
           logger.error(
-              "The fetched item isn't same as the item checked before. Expected: {}, Actual: {}",
+              "This removed item is unexpectedly different from the item checked before. This might be a bug. Retrying. Expected: {}, Actual: {}",
               item,
               removed);
           // Keep the unexpected fetched item by re-enqueuing it.
@@ -107,6 +107,10 @@ abstract class BackgroundWorker<T> implements Closeable {
       }
     }
 
+    // TODO: Current behavior to wait for a while if the first item isn't ready works well if
+    //       `retryMode` is KEEP_AT_HEAD. But in case of MOVE_TO_TAIL, it's likely the second item
+    //       and/or subsequent items are ready, and waiting when the first item isn't ready leads in
+    //       slowdown to scan all items. Some performance improvement is needed.
     Uninterruptibles.sleepUninterruptibly(timeoutCheckIntervalMillis, TimeUnit.MILLISECONDS);
   }
 

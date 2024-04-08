@@ -33,7 +33,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   @Override
   // Probably, this `synchronized` keyword could be removed since this class contains only a single
   // slot. But just in case.
-  protected synchronized void asyncEmit() {
+  protected synchronized void delegateEmitTaskToWaiter() {
     assert slots.size() == 1;
     for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
       // Pass `emitter` to ask the receiver's thread to emit the value

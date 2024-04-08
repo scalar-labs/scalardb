@@ -42,7 +42,6 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   private final GroupCommitConfig config;
 
   GroupManager(
-      String label,
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
     this.keyManipulator = keyManipulator;
@@ -83,6 +82,10 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys) throws GroupCommitException {
     long stamp = lock.writeLock();
     try {
+      // This order of checking `delayedGroupMap` and `normalGroupMap` is important since looking up
+      // with the parent key in `normalGroupMap` would return the NormalGroup even if the target
+      // slot is already moved from the NormalGroup to the DelayedGroup. So, checking
+      // `delayedGroupMap` first is necessary.
       DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedGroup =
           delayedGroupMap.get(keys.fullKey);
       if (delayedGroup != null) {
@@ -155,7 +158,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     long stamp = lock.writeLock();
     try {
       // TODO: NormalGroup.removeNotReadySlots() calls updateStatus() potentially resulting in
-      //       asyncEmit(). Maybe it should be called outside the lock.
+      //       delegateEmitTaskToWaiter(). Maybe it should be called outside the lock.
 
       // Remove delayed tasks from the NormalGroup so that it can be ready.
       List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> notReadySlots =

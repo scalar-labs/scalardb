@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+import com.scalar.db.util.ThrowableRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -88,7 +89,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Override
-  public synchronized void asyncEmit() {
+  public synchronized void delegateEmitTaskToWaiter() {
     final AtomicReference<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> emitterSlot =
         new AtomicReference<>();
 
@@ -105,7 +106,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
     // This task is passed to only the first slot, so the slot will be resumed.
     // Other slots will be blocked until `markAsXxxx()` is called.
-    ThrowableRunnable taskForEmitterSlot =
+    ThrowableRunnable<Exception> taskForEmitterSlot =
         () -> {
           try {
             if (isDone()) {
