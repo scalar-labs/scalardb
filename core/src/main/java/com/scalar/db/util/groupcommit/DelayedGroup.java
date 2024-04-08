@@ -51,9 +51,13 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   @Override
   protected synchronized FULL_KEY reserveNewSlot(
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
-    // FIXME
     slot.changeParentGroupToDelayedGroup(this);
-    return super.reserveNewSlot(slot);
+    FULL_KEY fullKey = super.reserveNewSlot(slot);
+    if (fullKey == null) {
+      throw new AssertionError(
+          String.format("This Group is unexpectedly size-fixed. Group:%s, Slot:%s", this, slot));
+    }
+    return fullKey;
   }
 
   @Override

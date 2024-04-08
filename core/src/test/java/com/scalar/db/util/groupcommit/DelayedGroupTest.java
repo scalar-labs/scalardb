@@ -49,7 +49,7 @@ class DelayedGroupTest {
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
     NormalGroup<String, String, String, String, Integer> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
+    Slot<String, String, String, String, Integer> slot = spy(new Slot<>("child-key", oldGroup));
     DelayedGroup<String, String, String, String, Integer> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
 
@@ -62,6 +62,24 @@ class DelayedGroupTest {
 
     assertThat(group.size()).isEqualTo(1);
     assertThat(group.isSizeFixed()).isTrue();
+    assertThat(group.isReady()).isFalse();
+    verify(slot).changeParentGroupToDelayedGroup(group);
+  }
+
+  @Test
+  void reserveNewSlot_GivenAlreadyReservedSlot_ShouldThrowException() {
+    // Arrange
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    NormalGroup<String, String, String, String, Integer> oldGroup =
+        new NormalGroup<>(config, emitter, keyManipulator);
+    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
+    DelayedGroup<String, String, String, String, Integer> group =
+        new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
+    group.reserveNewSlot(slot);
+
+    // Act
+    // Assert
+    assertThrows(AssertionError.class, () -> group.reserveNewSlot(slot));
     assertThat(group.isReady()).isFalse();
   }
 
