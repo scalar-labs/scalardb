@@ -106,7 +106,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
     // This task is passed to only the first slot, so the slot will be resumed.
     // Other slots will be blocked until `markAsXxxx()` is called.
-    ThrowableRunnable<GroupCommitException> taskForEmitterSlot =
+    ThrowableRunnable<Exception> taskForEmitterSlot =
         () -> {
           try {
             if (isDone()) {
