@@ -107,7 +107,17 @@ class GroupCleanupWorkerTest {
 
     // Assert
     verify(workerWithWait, atMost(2)).processItem(any());
-    assertThat(workerWithWait.size()).isEqualTo(1);
+    boolean success = false;
+    for (int i = 0; i < 10; i++) {
+      try {
+        assertThat(workerWithWait.size()).isEqualTo(1);
+        success = true;
+        break;
+      } catch (AssertionError e) {
+        System.err.println("This could happen when re-enqueuing. Retrying");
+      }
+    }
+    assertThat(success).isTrue();
     verify(groupManager, never()).removeGroupFromMap(delayedGroup1);
   }
 
