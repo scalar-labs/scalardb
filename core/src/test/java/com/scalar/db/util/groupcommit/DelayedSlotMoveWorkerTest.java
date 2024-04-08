@@ -53,6 +53,9 @@ class DelayedSlotMoveWorkerTest {
   @Test
   void add_GivenReadyGroup_ShouldPassItToGroupCleanupWorker() {
     // Arrange
+
+    // This won't be called.
+    // doReturnOldGroupAbortTimeoutAtMillis(normalGroup1);
     doReturn(true).when(normalGroup1).isReady();
 
     // Act
@@ -130,5 +133,23 @@ class DelayedSlotMoveWorkerTest {
               verify(groupCleanupWorker).add(g);
             });
     assertThat(workerWithWait.size()).isEqualTo(0);
+  }
+
+  @Test
+  void add_GivenTooOldGroup_ShouldAbortAndRemoveIt() {
+    // Arrange
+    doReturn(System.currentTimeMillis() - 10).when(normalGroup1).oldGroupAbortTimeoutAtMillis();
+    doReturn(false).when(normalGroup1).isReady();
+
+    // Act
+    worker.add(normalGroup1);
+    Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
+
+    // Assert
+    assertThat(worker.size()).isEqualTo(0);
+    verify(normalGroup1).abort();
+    verify(groupManager, never()).moveDelayedSlotToDelayedGroup(normalGroup1);
+    verify(groupManager).removeGroupFromMap(normalGroup1);
+    verify(groupCleanupWorker, never()).add(normalGroup1);
   }
 }

@@ -36,6 +36,16 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     long currentTimeMillis = System.currentTimeMillis();
 
     if (normalGroup.oldGroupAbortTimeoutAtMillis() < currentTimeMillis) {
+      // This garbage collection is needed considering the following case:
+      // - There are two slots S-1 and S-2 in Group-A
+      // - The both clients of the slots failed to remove the slots after failures
+      // - The garbage slots will remain forever
+      //
+      // The garbage collection is only needed in this worker since:
+      // - GroupSizeFixWorker manages only OPEN groups which will be eventually passed to
+      //   DelayedSlotMoveWorker
+      // - GroupCleanupWorker manages only READY groups whose client threads are already waiting
+      //   until the group is emitted
       groupManager.removeGroupFromMap(normalGroup);
       normalGroup.abort();
       // Should remove the item.

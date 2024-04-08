@@ -51,6 +51,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   @Override
   protected synchronized FULL_KEY reserveNewSlot(
       Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot) {
+    // FIXME
     slot.changeParentGroupToDelayedGroup(this);
     return super.reserveNewSlot(slot);
   }

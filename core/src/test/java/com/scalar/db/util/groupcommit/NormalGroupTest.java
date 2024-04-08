@@ -2,6 +2,9 @@ package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
@@ -15,10 +18,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 class NormalGroupTest {
   private Emittable<String, Integer> emitter;
   private TestableKeyManipulator keyManipulator;
+  @Mock private Slot<String, String, String, String, Integer> slot1;
+  @Mock private Slot<String, String, String, String, Integer> slot2;
 
   @BeforeEach
   void setUp() {
@@ -389,7 +395,42 @@ class NormalGroupTest {
   }
 
   @Test
-  void groupSizeFixTimeoutMillisAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
+  void abort_ShouldAbortSlot() {
+    // Arrange
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    NormalGroup<String, String, String, String, Integer> group =
+        new NormalGroup<>(config, emitter, keyManipulator);
+    Slot<String, String, String, String, Integer> slot1 = spy(new Slot<>("child-key-1", group));
+    Slot<String, String, String, String, Integer> slot2 = spy(new Slot<>("child-key-2", group));
+    group.reserveNewSlot(slot1);
+    group.reserveNewSlot(slot2);
+
+    // Act
+    group.abort();
+
+    // Assert
+    verify(slot1).markAsFailed(any(GroupCommitException.class));
+    verify(slot2).markAsFailed(any(GroupCommitException.class));
+  }
+
+  @Test
+  void oldGroupAbortTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
+    // Arrange
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    long minOfCurrentTimeMillis = System.currentTimeMillis();
+    NormalGroup<String, String, String, String, Integer> group =
+        new NormalGroup<>(config, emitter, keyManipulator);
+    long maxOfCurrentTimeMillis = System.currentTimeMillis();
+
+    // Act
+    // Assert
+    assertThat(group.oldGroupAbortTimeoutAtMillis())
+        .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 60 * 1000)
+        .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 60 * 1000);
+  }
+
+  @Test
+  void groupSizeFixTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
@@ -405,7 +446,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void delayedSlotMoveTimeoutMillisAt_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
+  void delayedSlotMoveTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
@@ -421,7 +462,7 @@ class NormalGroupTest {
   }
 
   @Test
-  void updateDelayedSlotMoveTimeoutMillisAt_GivenArbitraryTimeoutValue_ShouldUpdateProperly() {
+  void updateDelayedSlotMoveTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldUpdateProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
     NormalGroup<String, String, String, String, Integer> group =

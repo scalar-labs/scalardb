@@ -2,6 +2,9 @@ package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
@@ -54,9 +57,9 @@ class DelayedGroupTest {
     assertThat(group.isSizeFixed()).isFalse();
 
     // Act
-    group.reserveNewSlot(slot);
-
     // Assert
+    assertThat(group.reserveNewSlot(slot)).isEqualTo("0000:full-key");
+
     assertThat(group.size()).isEqualTo(1);
     assertThat(group.isSizeFixed()).isTrue();
     assertThat(group.isReady()).isFalse();
@@ -235,5 +238,39 @@ class DelayedGroupTest {
     futures.get(0).get();
     assertThat(group.isDone()).isTrue();
     assertThat(emitted.get()).isTrue();
+  }
+
+  @Test
+  void oldGroupAbortTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
+    // Arrange
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    long minOfCurrentTimeMillis = System.currentTimeMillis();
+    DelayedGroup<String, String, String, String, Integer> group =
+        new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
+    long maxOfCurrentTimeMillis = System.currentTimeMillis();
+
+    // Act
+    // Assert
+    assertThat(group.oldGroupAbortTimeoutAtMillis())
+        .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 60 * 1000)
+        .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 60 * 1000);
+  }
+
+  @Test
+  void abort_ShouldAbortSlot() {
+    // Arrange
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    NormalGroup<String, String, String, String, Integer> oldGroup =
+        new NormalGroup<>(config, emitter, keyManipulator);
+    Slot<String, String, String, String, Integer> slot = spy(new Slot<>("child-key", oldGroup));
+    DelayedGroup<String, String, String, String, Integer> group =
+        new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
+    group.reserveNewSlot(slot);
+
+    // Act
+    group.abort();
+
+    // Assert
+    verify(slot).markAsFailed(any(GroupCommitException.class));
   }
 }
