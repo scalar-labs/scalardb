@@ -1,9 +1,12 @@
 package com.scalar.db.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetWithIndex;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -12,6 +15,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.PrimaryKey;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
@@ -26,16 +30,21 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 public final class ScalarDbUtils {
 
@@ -245,5 +254,215 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  /**
+   * Returns true if the mutation set is overlapped with the scan range.
+   *
+   * @param scan a scan operation to check
+   * @param scannedKeys a list of primary keys that have been scanned with the scan operation
+   * @param mutationSet a set of mutations to check
+   * @return true if the mutation set is overlapped with the scan range
+   */
+  public static boolean isMutationSetOverlappedWith(
+      Scan scan, List<PrimaryKey> scannedKeys, Map<PrimaryKey, ? extends Mutation> mutationSet) {
+    if (scan instanceof ScanAll) {
+      return isMutationSetOverlappedWith((ScanAll) scan, scannedKeys, mutationSet);
+    }
+
+    for (Map.Entry<PrimaryKey, ? extends Mutation> entry : mutationSet.entrySet()) {
+      Mutation mutation = entry.getValue();
+
+      if (!mutation.forNamespace().equals(scan.forNamespace())
+          || !mutation.forTable().equals(scan.forTable())
+          || !mutation.getPartitionKey().equals(scan.getPartitionKey())) {
+        continue;
+      }
+
+      // If partition keys match and a primary key does not have a clustering key
+      if (!mutation.getClusteringKey().isPresent()) {
+        return true;
+      }
+
+      Key writtenKey = mutation.getClusteringKey().get();
+      boolean isStartGiven = scan.getStartClusteringKey().isPresent();
+      boolean isEndGiven = scan.getEndClusteringKey().isPresent();
+
+      // If no range is specified, which means it scans the whole partition space
+      if (!isStartGiven && !isEndGiven) {
+        return true;
+      }
+
+      if (isStartGiven && isEndGiven) {
+        Key startKey = scan.getStartClusteringKey().get();
+        Key endKey = scan.getEndClusteringKey().get();
+        // If startKey <= writtenKey <= endKey
+        if ((scan.getStartInclusive() && writtenKey.equals(startKey))
+            || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
+            || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
+          return true;
+        }
+      }
+
+      if (isStartGiven && !isEndGiven) {
+        Key startKey = scan.getStartClusteringKey().get();
+        // If startKey <= writtenKey
+        if ((scan.getStartInclusive() && startKey.equals(writtenKey))
+            || writtenKey.compareTo(startKey) > 0) {
+          return true;
+        }
+      }
+
+      if (!isStartGiven) {
+        Key endKey = scan.getEndClusteringKey().get();
+        // If writtenKey <= endKey
+        if ((scan.getEndInclusive() && writtenKey.equals(endKey))
+            || writtenKey.compareTo(endKey) < 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean isMutationSetOverlappedWith(
+      ScanAll scan, List<PrimaryKey> scannedKeys, Map<PrimaryKey, ? extends Mutation> mutationSet) {
+    for (Map.Entry<PrimaryKey, ? extends Mutation> entry : mutationSet.entrySet()) {
+      // We need to consider three cases here to prevent scan-after-write.
+      //   1) A put operation overlaps the scan range regardless of the update (put) results.
+      //   2) A put operation does not overlap the scan range as a result of the update.
+      //   3) A put operation overlaps the scan range as a result of the update.
+      // See the following examples. Assume that we have a table with two columns whose names are
+      // "key" and "value" and two records in the table: (key=1, value=2) and (key=2, key=3).
+      // Case 2 covers a transaction that puts (1, 4) and then scans "where value < 3". In this
+      // case, there is no overlap, but we intentionally prohibit it due to the consistency and
+      // simplicity of snapshot management. We can find case 2 using the scan results.
+      // Case 3 covers a transaction that puts (2, 2) and then scans "where value < 3". In this
+      // case, we cannot find the overlap using the scan results since the database is not updated
+      // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
+
+      // Check for cases 1 and 2
+      if (scannedKeys.contains(entry.getKey())) {
+        return true;
+      }
+
+      // Check for case 3
+      Mutation mutation = entry.getValue();
+      if (!mutation.forNamespace().equals(scan.forNamespace())
+          || !mutation.forTable().equals(scan.forTable())) {
+        continue;
+      }
+
+      if (scan.getConjunctions().isEmpty()) {
+        return true;
+      }
+
+      if (!(mutation instanceof Put)) {
+        continue;
+      }
+
+      Put put = (Put) mutation;
+
+      Map<String, Column<?>> columns = new HashMap<>(put.getColumns());
+      put.getPartitionKey().getColumns().forEach(column -> columns.put(column.getName(), column));
+      put.getClusteringKey()
+          .ifPresent(
+              key -> key.getColumns().forEach(column -> columns.put(column.getName(), column)));
+      for (Scan.Conjunction conjunction : scan.getConjunctions()) {
+        boolean allMatched = true;
+        for (ConditionalExpression condition : conjunction.getConditions()) {
+          if (!columns.containsKey(condition.getColumn().getName())
+              || !match(columns.get(condition.getColumn().getName()), condition)) {
+            allMatched = false;
+            break;
+          }
+        }
+        if (allMatched) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> boolean match(Column<T> column, ConditionalExpression condition) {
+    assert column.getClass() == condition.getColumn().getClass();
+    switch (condition.getOperator()) {
+      case EQ:
+      case IS_NULL:
+        return column.equals(condition.getColumn());
+      case NE:
+      case IS_NOT_NULL:
+        return !column.equals(condition.getColumn());
+      case GT:
+        return column.compareTo((Column<T>) condition.getColumn()) > 0;
+      case GTE:
+        return column.compareTo((Column<T>) condition.getColumn()) >= 0;
+      case LT:
+        return column.compareTo((Column<T>) condition.getColumn()) < 0;
+      case LTE:
+        return column.compareTo((Column<T>) condition.getColumn()) <= 0;
+      case LIKE:
+      case NOT_LIKE:
+        return isMatched((LikeExpression) condition, column.getTextValue());
+      default:
+        throw new AssertionError("Unknown operator: " + condition.getOperator());
+    }
+  }
+
+  @VisibleForTesting
+  static boolean isMatched(LikeExpression likeExpression, String value) {
+    String escape = likeExpression.getEscape();
+    String regexPattern =
+        convertRegexPatternFrom(
+            likeExpression.getTextValue(), escape.isEmpty() ? null : escape.charAt(0));
+    if (likeExpression.getOperator().equals(ConditionalExpression.Operator.LIKE)) {
+      return value != null && Pattern.compile(regexPattern).matcher(value).matches();
+    } else {
+      return value != null && !Pattern.compile(regexPattern).matcher(value).matches();
+    }
+  }
+
+  /**
+   * Convert SQL 'like' pattern to a Java regular expression. Underscores (_) are converted to '.'
+   * and percent signs (%) are converted to '.*', other characters are quoted literally. If an
+   * escape character specified, escaping is done for '_', '%', and the escape character itself.
+   * Although we validate the pattern when constructing {@code LikeExpression}, we will assert it
+   * just in case. This method is implemented referencing the following Spark SQL implementation.
+   * https://github.com/apache/spark/blob/a8eadebd686caa110c4077f4199d11e797146dc5/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/StringUtils.scala
+   *
+   * @param likePattern a SQL LIKE pattern to convert
+   * @param escape an escape character.
+   * @return the equivalent Java regular expression of the given pattern
+   */
+  private static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
+    assert likePattern != null : "LIKE pattern must not be null";
+
+    StringBuilder out = new StringBuilder();
+    char[] chars = likePattern.toCharArray();
+    for (int i = 0; i < chars.length; i++) {
+      char c = chars[i];
+      if (escape != null && c == escape && i + 1 < chars.length) {
+        char nextChar = chars[++i];
+        if (nextChar == '_' || nextChar == '%') {
+          out.append(Pattern.quote(Character.toString(nextChar)));
+        } else if (nextChar == escape) {
+          out.append(Pattern.quote(Character.toString(nextChar)));
+        } else {
+          throw new AssertionError("LIKE pattern must not include only escape character");
+        }
+      } else if (escape != null && c == escape) {
+        throw new AssertionError("LIKE pattern must not end with escape character");
+      } else if (c == '_') {
+        out.append(".");
+      } else if (c == '%') {
+        out.append(".*");
+      } else {
+        out.append(Pattern.quote(Character.toString(c)));
+      }
+    }
+
+    return "(?s)" + out; // (?s) enables dotall mode, causing "." to match new lines
   }
 }

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.PrimaryKey;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -99,8 +100,8 @@ public class CommitHandlerTest {
     // different partition
     Put put1 = preparePut1();
     Put put2 = preparePut2();
-    snapshot.put(new Snapshot.Key(put1), put1);
-    snapshot.put(new Snapshot.Key(put2), put2);
+    snapshot.put(new PrimaryKey(put1), put1);
+    snapshot.put(new PrimaryKey(put2), put2);
 
     return snapshot;
   }
@@ -117,8 +118,8 @@ public class CommitHandlerTest {
     // same partition
     Put put1 = preparePut1();
     Put put3 = preparePut3();
-    snapshot.put(new Snapshot.Key(put1), put1);
-    snapshot.put(new Snapshot.Key(put3), put3);
+    snapshot.put(new PrimaryKey(put1), put1);
+    snapshot.put(new PrimaryKey(put3), put3);
 
     return snapshot;
   }

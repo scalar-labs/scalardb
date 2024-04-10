@@ -13,6 +13,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.PrimaryKey;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -71,19 +72,19 @@ public class CrudHandler {
 
   public Optional<Result> get(Get get) throws CrudException {
     List<String> originalProjections = new ArrayList<>(get.getProjections());
-    Snapshot.Key key = new Snapshot.Key(get);
+    PrimaryKey key = new PrimaryKey(get);
     readUnread(key, get);
     return createGetResult(key, originalProjections);
   }
 
   @VisibleForTesting
-  void readUnread(Snapshot.Key key, Get get) throws CrudException {
+  void readUnread(PrimaryKey key, Get get) throws CrudException {
     if (!snapshot.containsKeyInReadSet(key)) {
       read(key, get);
     }
   }
 
-  private void read(Snapshot.Key key, Get get) throws CrudException {
+  private void read(PrimaryKey key, Get get) throws CrudException {
     Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
       snapshot.put(key, result);
@@ -96,9 +97,9 @@ public class CrudHandler {
         snapshot.getId());
   }
 
-  private Optional<Result> createGetResult(Snapshot.Key key, List<String> projections)
+  private Optional<Result> createGetResult(PrimaryKey key, List<String> projections)
       throws CrudException {
-    TableMetadata metadata = getTableMetadata(key.getNamespace(), key.getTable());
+    TableMetadata metadata = getTableMetadata(key.getNamespaceName(), key.getTableName());
     return snapshot
         .get(key)
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled));
@@ -124,15 +125,15 @@ public class CrudHandler {
 
     List<Result> results = new ArrayList<>();
 
-    Optional<List<Snapshot.Key>> keysInSnapshot = snapshot.get(scan);
+    Optional<List<PrimaryKey>> keysInSnapshot = snapshot.get(scan);
     if (keysInSnapshot.isPresent()) {
-      for (Snapshot.Key key : keysInSnapshot.get()) {
+      for (PrimaryKey key : keysInSnapshot.get()) {
         snapshot.get(key).ifPresent(results::add);
       }
       return createScanResults(scan, originalProjections, results);
     }
 
-    List<Snapshot.Key> keys = new ArrayList<>();
+    List<PrimaryKey> keys = new ArrayList<>();
     Scanner scanner = null;
     try {
       scanner = getFromStorage(scan);
@@ -146,7 +147,7 @@ public class CrudHandler {
               snapshot.getId());
         }
 
-        Snapshot.Key key = new Snapshot.Key(scan, r);
+        PrimaryKey key = new PrimaryKey(scan, r);
 
         if (!snapshot.containsKeyInReadSet(key)) {
           snapshot.put(key, Optional.of(result));
@@ -178,7 +179,7 @@ public class CrudHandler {
   }
 
   public void put(Put put) throws CrudException {
-    Snapshot.Key key = new Snapshot.Key(put);
+    PrimaryKey key = new PrimaryKey(put);
 
     if (put.getCondition().isPresent()
         && (!put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key))) {
@@ -200,7 +201,7 @@ public class CrudHandler {
   }
 
   public void delete(Delete delete) throws CrudException {
-    Snapshot.Key key = new Snapshot.Key(delete);
+    PrimaryKey key = new PrimaryKey(delete);
 
     if (delete.getCondition().isPresent()) {
       readUnread(key, createGet(key));
@@ -215,14 +216,14 @@ public class CrudHandler {
     List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
     for (Put put : snapshot.getPutsInWriteSet()) {
       if (put.isImplicitPreReadEnabled()) {
-        Snapshot.Key key = new Snapshot.Key(put);
+        PrimaryKey key = new PrimaryKey(put);
         if (!snapshot.containsKeyInReadSet(key)) {
           tasks.add(() -> read(key, createGet(key)));
         }
       }
     }
     for (Delete delete : snapshot.getDeletesInDeleteSet()) {
-      Snapshot.Key key = new Snapshot.Key(delete);
+      PrimaryKey key = new PrimaryKey(delete);
       if (!snapshot.containsKeyInReadSet(key)) {
         tasks.add(() -> read(key, createGet(key)));
       }
@@ -233,11 +234,11 @@ public class CrudHandler {
     }
   }
 
-  private Get createGet(Snapshot.Key key) {
+  private Get createGet(PrimaryKey key) {
     GetBuilder.BuildableGet buildableGet =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey());
     key.getClusteringKey().ifPresent(buildableGet::clusteringKey);
     return buildableGet.build();

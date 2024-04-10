@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,7 +6,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.io.Key;
 import org.junit.jupiter.api.Test;
 
-public class SnapshotKeyTest {
+public class PrimaryKeyTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -41,10 +41,10 @@ public class SnapshotKeyTest {
   public void equals_SameOperationGivenInConstructor_ShouldReturnTrue() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    PrimaryKey key = new PrimaryKey(get);
 
     // Act
-    boolean res = key.equals(new Snapshot.Key(get));
+    boolean res = key.equals(new PrimaryKey(get));
 
     // Assert
     assertThat(res).isTrue();
@@ -54,11 +54,11 @@ public class SnapshotKeyTest {
   public void equals_EquivalentOperationGivenInConstructor_ShouldReturnTrue() {
     // Arrange
     Get one = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareGet();
 
     // Act
-    boolean res = key.equals(new Snapshot.Key(another));
+    boolean res = key.equals(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isTrue();
@@ -68,11 +68,11 @@ public class SnapshotKeyTest {
   public void equals_NonEquivalentOperationGivenInConstructor_ShouldReturnFalse() {
     // Arrange
     Get one = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareAnotherGet();
 
     // Act
-    boolean res = key.equals(new Snapshot.Key(another));
+    boolean res = key.equals(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isFalse();
@@ -82,11 +82,11 @@ public class SnapshotKeyTest {
   public void equals_EquivalentOperationWithoutClusteringKeyGivenInConstructor_ShouldReturnTrue() {
     // Arrange
     Get one = prepareGetWithoutClusteringKey();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareGetWithoutClusteringKey();
 
     // Act
-    boolean res = key.equals(new Snapshot.Key(another));
+    boolean res = key.equals(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isTrue();
@@ -97,11 +97,11 @@ public class SnapshotKeyTest {
       equals_NonEquivalentOperationWithoutClusteringKeyGivenInConstructor_ShouldReturnFalse() {
     // Arrange
     Get one = prepareGetWithoutClusteringKey();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareAnotherGet();
 
     // Act
-    boolean res = key.equals(new Snapshot.Key(another));
+    boolean res = key.equals(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isFalse();
@@ -111,10 +111,10 @@ public class SnapshotKeyTest {
   public void compareTo_SameOperationGivenInConstructor_ShouldReturnZero() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    PrimaryKey key = new PrimaryKey(get);
 
     // Act
-    int res = key.compareTo(new Snapshot.Key(get));
+    int res = key.compareTo(new PrimaryKey(get));
 
     // Assert
     assertThat(res).isEqualTo(0);
@@ -124,11 +124,11 @@ public class SnapshotKeyTest {
   public void compareTo_EquivalentOperationGivenInConstructor_ShouldReturnZero() {
     // Arrange
     Get one = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareGet();
 
     // Act
-    int res = key.compareTo(new Snapshot.Key(another));
+    int res = key.compareTo(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isEqualTo(0);
@@ -138,11 +138,11 @@ public class SnapshotKeyTest {
   public void compareTo_BiggerOperationGivenInConstructor_ShouldReturnNegative() {
     // Arrange
     Get one = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareAnotherGet();
 
     // Act
-    int res = key.compareTo(new Snapshot.Key(another));
+    int res = key.compareTo(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isLessThan(0);
@@ -152,11 +152,11 @@ public class SnapshotKeyTest {
   public void compareTo_LesserOperationGivenInConstructor_ShouldReturnPositive() {
     // Arrange
     Get one = prepareAnotherGet();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareGet();
 
     // Act
-    int res = key.compareTo(new Snapshot.Key(another));
+    int res = key.compareTo(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isGreaterThan(0);
@@ -167,11 +167,11 @@ public class SnapshotKeyTest {
       compareTo_SameOperationExceptWithClusteringKeyGivenInConstructor_ShouldReturnNegative() {
     // Arrange
     Get one = prepareGetWithoutClusteringKey();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareGet();
 
     // Act
-    int res = key.compareTo(new Snapshot.Key(another));
+    int res = key.compareTo(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isLessThan(0);
@@ -182,11 +182,11 @@ public class SnapshotKeyTest {
       compareTo_SameOperationExceptWithoutClusteringKeyGivenInConstructor_ShouldReturnPositive() {
     // Arrange
     Get one = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(one);
+    PrimaryKey key = new PrimaryKey(one);
     Get another = prepareGetWithoutClusteringKey();
 
     // Act
-    int res = key.compareTo(new Snapshot.Key(another));
+    int res = key.compareTo(new PrimaryKey(another));
 
     // Assert
     assertThat(res).isGreaterThan(0);

@@ -13,7 +13,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
@@ -21,7 +20,6 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -29,6 +27,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanBuilder.ConditionSetBuilder;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.PrimaryKey;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -93,10 +92,10 @@ public class SnapshotTest {
               .build());
 
   private Snapshot snapshot;
-  private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
-  private Map<Scan, List<Snapshot.Key>> scanSet;
-  private Map<Snapshot.Key, Put> writeSet;
-  private Map<Snapshot.Key, Delete> deleteSet;
+  private ConcurrentMap<PrimaryKey, Optional<TransactionResult>> readSet;
+  private Map<Scan, List<PrimaryKey>> scanSet;
+  private Map<PrimaryKey, Put> writeSet;
+  private Map<PrimaryKey, Delete> deleteSet;
 
   @Mock private ConsensusCommitConfig config;
   @Mock private PrepareMutationComposer prepareComposer;
@@ -269,22 +268,6 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME);
   }
 
-  private LikeExpression prepareLike(String pattern) {
-    return ConditionBuilder.column("col1").isLikeText(pattern);
-  }
-
-  private LikeExpression prepareLike(String pattern, String escape) {
-    return ConditionBuilder.column("col1").isLikeText(pattern, escape);
-  }
-
-  private LikeExpression prepareNotLike(String pattern) {
-    return ConditionBuilder.column("col1").isNotLikeText(pattern);
-  }
-
-  private LikeExpression prepareNotLike(String pattern, String escape) {
-    return ConditionBuilder.column("col1").isNotLikeText(pattern, escape);
-  }
-
   private void configureBehavior() throws ExecutionException {
     doNothing().when(prepareComposer).add(any(Put.class), any(TransactionResult.class));
     doNothing().when(prepareComposer).add(any(Delete.class), any(TransactionResult.class));
@@ -298,7 +281,7 @@ public class SnapshotTest {
   public void put_ResultGiven_ShouldHoldWhatsGivenInReadSet() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    PrimaryKey key = new PrimaryKey(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
 
     // Act
@@ -313,7 +296,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
-    Snapshot.Key key = new Snapshot.Key(put);
+    PrimaryKey key = new PrimaryKey(put);
 
     // Act
     snapshot.put(key, put);
@@ -327,7 +310,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put1 = preparePut();
-    Snapshot.Key key = new Snapshot.Key(put1);
+    PrimaryKey key = new PrimaryKey(put1);
 
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
@@ -358,7 +341,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Delete delete = prepareDelete();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    PrimaryKey key = new PrimaryKey(delete);
 
     // Act
     snapshot.put(key, delete);
@@ -372,8 +355,8 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Scan scan = prepareScan();
-    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
-    List<Snapshot.Key> expected = Collections.singletonList(key);
+    PrimaryKey key = new PrimaryKey(scan, prepareResult(ANY_ID));
+    List<PrimaryKey> expected = Collections.singletonList(key);
 
     // Act
     snapshot.put(scan, expected);
@@ -396,7 +379,7 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME)
             .withValue(ANY_NAME_3, ANY_TEXT_5)
             .withTextValue(ANY_NAME_4, null);
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    PrimaryKey key = new PrimaryKey(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.put(key, Optional.of(result));
     snapshot.put(key, put);
@@ -480,7 +463,7 @@ public class SnapshotTest {
   public void get_KeyGivenContainedInReadSet_ShouldReturnFromReadSet() throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    PrimaryKey key = new PrimaryKey(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.put(key, Optional.of(result));
 
@@ -495,7 +478,7 @@ public class SnapshotTest {
   public void get_KeyGivenNotContainedInSnapshot_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    PrimaryKey key = new PrimaryKey(prepareGet());
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.get(key)).isInstanceOf(IllegalArgumentException.class);
@@ -506,7 +489,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
-    Snapshot.Key key = new Snapshot.Key(put);
+    PrimaryKey key = new PrimaryKey(put);
     snapshot.put(key, put);
 
     // Act Assert
@@ -518,7 +501,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Delete delete = prepareDelete();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    PrimaryKey key = new PrimaryKey(delete);
     snapshot.put(key, delete);
 
     // Act
@@ -532,7 +515,7 @@ public class SnapshotTest {
   public void get_KeyGivenContainedInReadSetAndDeleteSet_ShouldReturnEmpty() throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    PrimaryKey key = new PrimaryKey(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.put(key, Optional.of(result));
 
@@ -553,7 +536,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
 
     // Act
-    Optional<List<Snapshot.Key>> keys = snapshot.get(scan);
+    Optional<List<PrimaryKey>> keys = snapshot.get(scan);
 
     // Assert
     assertThat(keys.isPresent()).isFalse();
@@ -567,10 +550,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.put(new PrimaryKey(prepareGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(prepareAnotherGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
+    snapshot.put(new PrimaryKey(delete), delete);
     configureBehavior();
 
     // Act
@@ -589,9 +572,9 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(prepareGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(prepareAnotherGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
     configureBehavior();
 
     // Act
@@ -612,10 +595,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.put(new PrimaryKey(prepareGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(prepareAnotherGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
+    snapshot.put(new PrimaryKey(delete), delete);
 
     // Act
     snapshot.to(commitComposer);
@@ -634,10 +617,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.put(new PrimaryKey(prepareGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(prepareAnotherGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
+    snapshot.put(new PrimaryKey(delete), delete);
     configureBehavior();
 
     // Act
@@ -658,10 +641,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.put(new PrimaryKey(prepareGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(prepareAnotherGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
+    snapshot.put(new PrimaryKey(delete), delete);
     configureBehavior();
 
     // Act
@@ -681,10 +664,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.put(new PrimaryKey(prepareGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(prepareAnotherGet()), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
+    snapshot.put(new PrimaryKey(delete), delete);
     configureBehavior();
 
     // Act
@@ -706,8 +689,8 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(get), Optional.of(txResult));
+    snapshot.put(new PrimaryKey(put), put);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraWrite(prepareComposer))
@@ -719,7 +702,7 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(get.forNamespace().get())
             .forTable(get.forTable().get());
-    assertThat(writeSet).contains(entry(new Snapshot.Key(get), expected));
+    assertThat(writeSet).contains(entry(new PrimaryKey(get), expected));
     assertThat(writeSet.size()).isEqualTo(2);
     verify(prepareComposer, never()).add(any(), any());
   }
@@ -732,8 +715,8 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
-    snapshot.put(new Snapshot.Key(get), Optional.empty());
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(get), Optional.empty());
+    snapshot.put(new PrimaryKey(put), put);
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
@@ -754,10 +737,10 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Scan scan = prepareScan();
-    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    PrimaryKey key = new PrimaryKey(scan, prepareResult(ANY_ID));
     Put put = preparePut();
     snapshot.put(scan, Collections.singletonList(key));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(put), put);
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
@@ -775,8 +758,8 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(get), Optional.of(txResult));
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
         prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
@@ -797,8 +780,8 @@ public class SnapshotTest {
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(get), Optional.of(txResult));
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Get getWithProjections =
@@ -820,8 +803,8 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Get get = prepareAnotherGet();
     Put put = preparePut();
-    snapshot.put(new Snapshot.Key(get), Optional.empty());
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(get), Optional.empty());
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
     Get getWithProjections =
@@ -844,10 +827,10 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    PrimaryKey key = new PrimaryKey(scan, txResult);
     snapshot.put(key, Optional.of(txResult));
     snapshot.put(scan, Collections.singletonList(key));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
@@ -872,10 +855,10 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    PrimaryKey key = new PrimaryKey(scan, txResult);
     snapshot.put(key, Optional.of(txResult));
     snapshot.put(scan, Collections.singletonList(key));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Scanner scanner = mock(Scanner.class);
@@ -904,7 +887,7 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID + "x");
     snapshot.put(scan, Collections.emptyList());
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
@@ -971,8 +954,8 @@ public class SnapshotTest {
                     ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION))),
                 TABLE_METADATA));
 
-    Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
+    PrimaryKey key1 = new PrimaryKey(scan1, result1);
+    PrimaryKey key2 = new PrimaryKey(scan2, result2);
 
     snapshot.put(scan1, Collections.singletonList(key1));
     snapshot.put(scan2, Collections.singletonList(key2));
@@ -1019,8 +1002,8 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.put(new Snapshot.Key(get), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(get), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
         Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
@@ -1043,8 +1026,8 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult changedResult = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(get), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.put(new PrimaryKey(get), Optional.of(result));
+    snapshot.put(new PrimaryKey(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
         Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
@@ -1063,11 +1046,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+    PrimaryKey putKey = new PrimaryKey(preparePut());
     snapshot.put(putKey, put);
 
     Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+    PrimaryKey deleteKey = new PrimaryKey(prepareDelete());
 
     // Act
     snapshot.put(deleteKey, delete);
@@ -1083,11 +1066,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+    PrimaryKey deleteKey = new PrimaryKey(prepareDelete());
     snapshot.put(deleteKey, delete);
 
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+    PrimaryKey putKey = new PrimaryKey(preparePut());
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.put(putKey, put))
@@ -1100,7 +1083,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
@@ -1124,7 +1107,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePutWithPartitionKeyOnly();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan = prepareScan();
 
@@ -1141,7 +1124,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePutWithPartitionKeyOnly();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan = prepareScan();
 
@@ -1159,7 +1142,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
@@ -1182,7 +1165,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan1 =
         prepareScan()
@@ -1232,7 +1215,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan1 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
@@ -1274,7 +1257,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan1 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
@@ -1315,14 +1298,14 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     ScanAll scanAll =
         new ScanAll()
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    Snapshot.Key key = new Snapshot.Key(scanAll, prepareResult(ANY_ID));
+    PrimaryKey key = new PrimaryKey(scanAll, prepareResult(ANY_ID));
     snapshot.put(scanAll, Collections.singletonList(key));
 
     // Act Assert
@@ -1339,14 +1322,14 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     ScanAll scanAll =
         new ScanAll()
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME_2)
             .forTable(ANY_TABLE_NAME_2);
-    Snapshot.Key key = new Snapshot.Key(scanAll, prepareResult(ANY_ID));
+    PrimaryKey key = new PrimaryKey(scanAll, prepareResult(ANY_ID));
     snapshot.put(scanAll, Collections.singletonList(key));
 
     // Act Assert
@@ -1362,7 +1345,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
 
     ScanAll scanAll =
@@ -1370,11 +1353,11 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME_2)
             .forTable(ANY_TABLE_NAME_2);
-    Snapshot.Key aKey = mock(Snapshot.Key.class);
+    PrimaryKey aKey = mock(PrimaryKey.class);
     snapshot.put(scanAll, Collections.singletonList(aKey));
 
     // Act Assert
-    Optional<List<Snapshot.Key>> keys = snapshot.get(scanAll);
+    Optional<List<PrimaryKey>> keys = snapshot.get(scanAll);
 
     // Assert
     assertThat(keys).isNotEmpty();
@@ -1386,10 +1369,10 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan = prepareCrossPartitionScan();
-    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    PrimaryKey key = new PrimaryKey(scan, prepareResult(ANY_ID));
     snapshot.put(scan, Collections.singletonList(key));
 
     // Act
@@ -1404,10 +1387,10 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
-    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    PrimaryKey key = new PrimaryKey(scan, prepareResult(ANY_ID));
     snapshot.put(scan, Collections.singletonList(key));
 
     // Act
@@ -1422,10 +1405,10 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
-    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    PrimaryKey key = new PrimaryKey(scan, prepareResult(ANY_ID));
     snapshot.put(scan, Collections.singletonList(key));
 
     // Act
@@ -1441,7 +1424,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePutWithIntColumns();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -1475,7 +1458,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -1498,7 +1481,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -1521,7 +1504,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -1544,7 +1527,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePutWithIntColumns();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    PrimaryKey putKey = new PrimaryKey(put);
     snapshot.put(putKey, put);
     Scan scan = Scan.newBuilder(prepareCrossPartitionScan()).clearConditions().build();
     snapshot.put(scan, Collections.emptyList());
@@ -1554,164 +1537,5 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void isMatchedWith_SomePatternsWithoutEscapeGiven_ShouldReturnBooleanProperly() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    // The following tests are added referring to the similar tests in Spark.
-    // https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/expressions/RegexpExpressionsSuite.scala
-    // simple patterns
-    assertThat(snapshot.isMatched(prepareLike("abdef"), "abdef")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a\\__b"), "a_%b")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a_%b"), "addb")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a\\__b"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a%\\%b"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a%\\%b"), "a_%b")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a%"), "addb")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("**"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a%"), "abc")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("b%"), "abc")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("bc%"), "abc")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a_b"), "a\nb")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a%b"), "ab")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a%b"), "a\nb")).isTrue();
-
-    // empty input
-    assertThat(snapshot.isMatched(prepareLike(""), "")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike(""), "a")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a"), "")).isFalse();
-
-    // SI-17647 double-escaping backslash
-    assertThat(snapshot.isMatched(prepareLike("%\\\\%"), "\\\\\\\\")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("%%"), "%%")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("\\\\\\__"), "\\__")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("%\\\\%\\%"), "\\\\\\__")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("%\\\\"), "_\\\\\\%")).isFalse();
-
-    // unicode
-    assertThat(snapshot.isMatched(prepareLike("_\u20AC_"), "a\u20ACa")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("_€_"), "a€a")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("_\u20AC_"), "a€a")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("_€_"), "a\u20ACa")).isTrue();
-
-    // case
-    assertThat(snapshot.isMatched(prepareLike("a%"), "A")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("A%"), "a")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("_a_"), "AaA")).isTrue();
-
-    // example
-    assertThat(
-            snapshot.isMatched(
-                prepareLike("\\%SystemDrive\\%\\\\Users%"), "%SystemDrive%\\Users\\John"))
-        .isTrue();
-  }
-
-  @Test
-  public void isMatchedWith_SomePatternsWithEscapeGiven_ShouldReturnBooleanProperly() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    // The following tests are added referring to the similar tests in Spark.
-    // https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/expressions/RegexpExpressionsSuite.scala
-    ImmutableList.of("/", "#", "\"")
-        .forEach(
-            escape -> {
-              // simple patterns
-              assertThat(snapshot.isMatched(prepareLike("abdef", escape), "abdef")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a" + escape + "__b", escape), "a_%b"))
-                  .isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a_%b", escape), "addb")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a" + escape + "__b", escape), "addb"))
-                  .isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a%" + escape + "%b", escape), "addb"))
-                  .isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a%" + escape + "%b", escape), "a_%b"))
-                  .isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a%", escape), "addb")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("**", escape), "addb")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a%", escape), "abc")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("b%", escape), "abc")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("bc%", escape), "abc")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a_b", escape), "a\nb")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a%b", escape), "ab")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a%b", escape), "a\nb")).isTrue();
-
-              // empty input
-              assertThat(snapshot.isMatched(prepareLike("", escape), "")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("", escape), "a")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a", escape), "")).isFalse();
-
-              // SI-17647 double-escaping backslash
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(String.format("%%%s%s%%", escape, escape), escape),
-                          String.format("%s%s%s%s", escape, escape, escape, escape)))
-                  .isTrue();
-              assertThat(snapshot.isMatched(prepareLike("%%", escape), "%%")).isTrue();
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(String.format("%s%s%s__", escape, escape, escape), escape),
-                          String.format("%s__", escape)))
-                  .isTrue();
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(
-                              String.format("%%%s%s%%%s%%", escape, escape, escape), escape),
-                          String.format("%s%s%s__", escape, escape, escape)))
-                  .isFalse();
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(String.format("%%%s%s", escape, escape), escape),
-                          String.format("_%s%s%s%%", escape, escape, escape)))
-                  .isFalse();
-
-              // unicode
-              assertThat(snapshot.isMatched(prepareLike("_\u20AC_", escape), "a\u20ACa")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("_€_", escape), "a€a")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("_\u20AC_", escape), "a€a")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("_€_", escape), "a\u20ACa")).isTrue();
-
-              // case
-              assertThat(snapshot.isMatched(prepareLike("a%", escape), "A")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("A%", escape), "a")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("_a_", escape), "AaA")).isTrue();
-
-              // example
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(
-                              String.format(
-                                  "%s%%SystemDrive%s%%%s%sUsers%%", escape, escape, escape, escape),
-                              escape),
-                          String.format("%%SystemDrive%%%sUsers%sJohn", escape, escape)))
-                  .isTrue();
-            });
-  }
-
-  @Test
-  public void isMatchedWith_IsNotLikeOperatorWithSomePatternsGiven_ShouldReturnBooleanProperly() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    assertThat(snapshot.isMatched(prepareNotLike("abdef"), "abdef")).isFalse();
-    assertThat(snapshot.isMatched(prepareNotLike("a\\__b"), "a_%b")).isFalse();
-    assertThat(snapshot.isMatched(prepareNotLike("a_%b"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareNotLike("a\\__b"), "addb")).isTrue();
-    ImmutableList.of("/", "#", "\"")
-        .forEach(
-            escape -> {
-              assertThat(snapshot.isMatched(prepareNotLike("abdef", escape), "abdef")).isFalse();
-              assertThat(snapshot.isMatched(prepareNotLike("a" + escape + "__b", escape), "a_%b"))
-                  .isFalse();
-              assertThat(snapshot.isMatched(prepareNotLike("a_%b", escape), "addb")).isFalse();
-              assertThat(snapshot.isMatched(prepareNotLike("a" + escape + "__b", escape), "addb"))
-                  .isTrue();
-            });
   }
 }

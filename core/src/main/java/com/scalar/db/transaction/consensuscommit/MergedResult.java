@@ -11,6 +11,7 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -44,14 +45,14 @@ public class MergedResult extends AbstractResult {
   /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
-  public Optional<com.scalar.db.io.Key> getPartitionKey() {
+  public Optional<Key> getPartitionKey() {
     return Optional.of(put.getPartitionKey());
   }
 
   /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
-  public Optional<com.scalar.db.io.Key> getClusteringKey() {
+  public Optional<Key> getClusteringKey() {
     return put.getClusteringKey();
   }
 

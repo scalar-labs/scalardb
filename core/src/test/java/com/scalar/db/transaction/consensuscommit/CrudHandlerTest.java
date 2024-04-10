@@ -23,6 +23,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.PrimaryKey;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -140,8 +141,8 @@ public class CrudHandlerTest {
     // Arrange
     Get get = prepareGet();
     Optional<TransactionResult> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
-    when(snapshot.containsKeyInReadSet(new Snapshot.Key(get))).thenReturn(true);
-    when(snapshot.get(new Snapshot.Key(get))).thenReturn(expected);
+    when(snapshot.containsKeyInReadSet(new PrimaryKey(get))).thenReturn(true);
+    when(snapshot.get(new PrimaryKey(get))).thenReturn(expected);
 
     // Act
     Optional<Result> actual = handler.get(get);
@@ -161,11 +162,11 @@ public class CrudHandlerTest {
     // Arrange
     Get get = prepareGet();
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
-    Snapshot.Key key = new Snapshot.Key(get);
+    PrimaryKey key = new PrimaryKey(get);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
     doNothing()
         .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(storage.get(get)).thenReturn(expected);
     when(snapshot.get(key)).thenReturn(expected.map(e -> (TransactionResult) e));
 
@@ -190,7 +191,7 @@ public class CrudHandlerTest {
     Get get = prepareGet();
     result = prepareResult(TransactionState.PREPARED);
     Optional<Result> expected = Optional.of(result);
-    when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
+    when(snapshot.get(new PrimaryKey(get))).thenReturn(Optional.empty());
     when(storage.get(get)).thenReturn(expected);
 
     // Act Assert
@@ -205,7 +206,7 @@ public class CrudHandlerTest {
             });
 
     verify(snapshot, never())
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
   }
 
   @Test
@@ -213,7 +214,7 @@ public class CrudHandlerTest {
       throws CrudException, ExecutionException {
     // Arrange
     Get get = prepareGet();
-    when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
+    when(snapshot.get(new PrimaryKey(get))).thenReturn(Optional.empty());
     when(storage.get(get)).thenReturn(Optional.empty());
 
     // Act
@@ -228,7 +229,7 @@ public class CrudHandlerTest {
       throws ExecutionException {
     // Arrange
     Get get = prepareGet();
-    when(snapshot.containsKeyInReadSet(new Snapshot.Key(get))).thenReturn(false);
+    when(snapshot.containsKeyInReadSet(new PrimaryKey(get))).thenReturn(false);
     ExecutionException toThrow = mock(ExecutionException.class);
     when(storage.get(get)).thenThrow(toThrow);
 
@@ -242,11 +243,11 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    PrimaryKey key = new PrimaryKey(scan, result);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
     doNothing()
         .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -284,7 +285,7 @@ public class CrudHandlerTest {
             });
 
     verify(snapshot, never())
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
   }
 
   @Test
@@ -295,10 +296,10 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     doNothing()
         .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    PrimaryKey key = new PrimaryKey(scan, result);
     when(snapshot.get(scan))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(Collections.singletonList(key)));
@@ -350,10 +351,10 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     doNothing()
         .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    PrimaryKey key = new PrimaryKey(scan, result);
     when(snapshot.get(scan)).thenReturn(Optional.empty());
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false).thenReturn(true);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
@@ -412,8 +413,8 @@ public class CrudHandlerTest {
             .build();
     Result result2 = new ResultImpl(columns, TABLE_METADATA);
 
-    ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet = new ConcurrentHashMap<>();
-    Map<Snapshot.Key, Delete> deleteSet = new HashMap<>();
+    ConcurrentMap<PrimaryKey, Optional<TransactionResult>> readSet = new ConcurrentHashMap<>();
+    Map<PrimaryKey, Delete> deleteSet = new HashMap<>();
     snapshot =
         new Snapshot(
             ANY_TX_ID,
@@ -445,14 +446,14 @@ public class CrudHandlerTest {
 
     // check the delete set
     assertThat(deleteSet.size()).isEqualTo(1);
-    assertThat(deleteSet).containsKey(new Snapshot.Key(delete));
+    assertThat(deleteSet).containsKey(new PrimaryKey(delete));
 
     // check if the scanned data is inserted correctly in the read set
     assertThat(readSet.size()).isEqualTo(2);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result);
+    PrimaryKey key1 = new PrimaryKey(scan, result);
     assertThat(readSet.get(key1).isPresent()).isTrue();
     assertThat(readSet.get(key1).get()).isEqualTo(new TransactionResult(result));
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    PrimaryKey key2 = new PrimaryKey(scan, result2);
     assertThat(readSet.get(key2).isPresent()).isTrue();
     assertThat(readSet.get(key2).get()).isEqualTo(new TransactionResult(result2));
   }
@@ -464,11 +465,11 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    PrimaryKey key = new PrimaryKey(scan, result);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
     doNothing()
         .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
 
@@ -506,7 +507,7 @@ public class CrudHandlerTest {
             });
 
     verify(snapshot, never())
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+        .put(any(PrimaryKey.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     verify(snapshot, never()).verify(any());
   }
 
@@ -525,7 +526,7 @@ public class CrudHandlerTest {
     verify(spied, never()).readUnread(any(), any());
     verify(snapshot, never()).getFromReadSet(any());
     verify(mutationConditionsValidator, never()).checkIfConditionIsSatisfied(any(Put.class), any());
-    verify(snapshot).put(new Snapshot.Key(put), put);
+    verify(snapshot).put(new PrimaryKey(put), put);
   }
 
   @Test
@@ -541,7 +542,7 @@ public class CrudHandlerTest {
             .condition(ConditionBuilder.putIfExists())
             .enableImplicitPreRead()
             .build();
-    Snapshot.Key key = new Snapshot.Key(put);
+    PrimaryKey key = new PrimaryKey(put);
     when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -549,8 +550,8 @@ public class CrudHandlerTest {
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -579,7 +580,7 @@ public class CrudHandlerTest {
             .condition(ConditionBuilder.putIfExists())
             .enableImplicitPreRead()
             .build();
-    Snapshot.Key key = new Snapshot.Key(put);
+    PrimaryKey key = new PrimaryKey(put);
     when(snapshot.containsKeyInReadSet(any())).thenReturn(false);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -587,8 +588,8 @@ public class CrudHandlerTest {
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -617,7 +618,7 @@ public class CrudHandlerTest {
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(ConditionBuilder.putIfExists())
             .build();
-    Snapshot.Key key = new Snapshot.Key(put);
+    PrimaryKey key = new PrimaryKey(put);
     when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -625,8 +626,8 @@ public class CrudHandlerTest {
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -680,7 +681,7 @@ public class CrudHandlerTest {
     verify(snapshot, never()).getFromReadSet(any());
     verify(mutationConditionsValidator, never())
         .checkIfConditionIsSatisfied(any(Delete.class), any());
-    verify(snapshot).put(new Snapshot.Key(delete), delete);
+    verify(snapshot).put(new PrimaryKey(delete), delete);
   }
 
   @Test
@@ -694,7 +695,7 @@ public class CrudHandlerTest {
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(ConditionBuilder.deleteIfExists())
             .build();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    PrimaryKey key = new PrimaryKey(delete);
     when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -702,8 +703,8 @@ public class CrudHandlerTest {
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -730,14 +731,14 @@ public class CrudHandlerTest {
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(ConditionBuilder.deleteIfExists())
             .build();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    PrimaryKey key = new PrimaryKey(delete);
     when(snapshot.containsKeyInReadSet(any())).thenReturn(false);
     when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -759,17 +760,17 @@ public class CrudHandlerTest {
   public void readUnread_ContainsKeyInReadSet_ShouldCallAppropriateMethods()
       throws CrudException, ExecutionException {
     // Arrange
-    Snapshot.Key key = mock(Snapshot.Key.class);
-    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
-    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    PrimaryKey key = mock(PrimaryKey.class);
+    when(key.getNamespaceName()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTableName()).thenReturn(ANY_TABLE_NAME);
     when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
 
     when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -786,9 +787,9 @@ public class CrudHandlerTest {
       readUnread_NotContainsKeyInReadSet_EmptyResultReturnedByStorage_ShouldCallAppropriateMethods()
           throws CrudException, ExecutionException {
     // Arrange
-    Snapshot.Key key = mock(Snapshot.Key.class);
-    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
-    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    PrimaryKey key = mock(PrimaryKey.class);
+    when(key.getNamespaceName()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTableName()).thenReturn(ANY_TABLE_NAME);
     when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
 
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
@@ -796,8 +797,8 @@ public class CrudHandlerTest {
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -814,9 +815,9 @@ public class CrudHandlerTest {
       readUnread_NotContainsKeyInReadSet_CommittedRecordReturnedByStorage_ShouldCallAppropriateMethods()
           throws CrudException, ExecutionException {
     // Arrange
-    Snapshot.Key key = mock(Snapshot.Key.class);
-    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
-    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    PrimaryKey key = mock(PrimaryKey.class);
+    when(key.getNamespaceName()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTableName()).thenReturn(ANY_TABLE_NAME);
     when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
 
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
@@ -827,8 +828,8 @@ public class CrudHandlerTest {
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
@@ -845,9 +846,9 @@ public class CrudHandlerTest {
       readUnread_NotContainsKeyInReadSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
           throws ExecutionException {
     // Arrange
-    Snapshot.Key key = mock(Snapshot.Key.class);
-    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
-    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    PrimaryKey key = mock(PrimaryKey.class);
+    when(key.getNamespaceName()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTableName()).thenReturn(ANY_TABLE_NAME);
     when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
 
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
@@ -858,8 +859,8 @@ public class CrudHandlerTest {
 
     Get getForKey =
         Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
+            .namespace(key.getNamespaceName())
+            .table(key.getTableName())
             .partitionKey(key.getPartitionKey())
             .build();
 
