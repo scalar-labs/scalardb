@@ -1,5 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import javax.annotation.concurrent.ThreadSafe;
 
 // A worker manages NormalGroup instances to size-fix timed-out groups and pass them to
@@ -32,6 +34,11 @@ class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
     } else {
       delayedSlotMoveWorker.add(normalGroup);
     }
+  }
+
+  @Override
+  BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+    return new LinkedBlockingQueue<>();
   }
 
   @Override

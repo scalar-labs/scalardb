@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -116,9 +118,12 @@ class DelayedSlotMoveWorkerTest {
             g -> {
               doReturnOldGroupAbortTimeoutAtMillis(g);
               doReturn(false, true).when(g).isReady();
-              doReturn(System.currentTimeMillis() - 5).when(g).delayedSlotMoveTimeoutAtMillis();
               doReturn(true).when(groupManager).moveDelayedSlotToDelayedGroup(g);
             });
+    doReturn(System.currentTimeMillis()).when(normalGroup1).delayedSlotMoveTimeoutAtMillis();
+    doReturn(System.currentTimeMillis() - 300).when(normalGroup2).delayedSlotMoveTimeoutAtMillis();
+    doReturn(System.currentTimeMillis() - 100).when(normalGroup3).delayedSlotMoveTimeoutAtMillis();
+    doReturn(System.currentTimeMillis() - 200).when(normalGroup4).delayedSlotMoveTimeoutAtMillis();
 
     // Act
     Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
@@ -126,11 +131,13 @@ class DelayedSlotMoveWorkerTest {
     Uninterruptibles.sleepUninterruptibly(LONG_WAIT_MILLIS * 2, TimeUnit.MILLISECONDS);
 
     // Assert
-    Arrays.asList(normalGroup1, normalGroup2, normalGroup3, normalGroup4)
+    InOrder inOrder = inOrder(groupManager, groupCleanupWorker);
+    // Enqueued groups should be handled in the order of the timeout.
+    Arrays.asList(normalGroup2, normalGroup4, normalGroup3, normalGroup1)
         .forEach(
             g -> {
-              verify(groupManager).moveDelayedSlotToDelayedGroup(g);
-              verify(groupCleanupWorker).add(g);
+              inOrder.verify(groupManager).moveDelayedSlotToDelayedGroup(g);
+              inOrder.verify(groupCleanupWorker).add(g);
             });
     assertThat(workerWithWait.size()).isEqualTo(0);
   }
