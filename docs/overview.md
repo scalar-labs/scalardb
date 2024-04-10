@@ -20,5 +20,6 @@ Modern architectures, like a microservice architecture, encourage a system to se
 
 ScalarDB simplifies managing such disparate databases with a correctness guarantee (or in other words, ACID with strict serializability), enabling you to focus on application development without worrying about guaranteeing consistency between databases.
 
-### Lowers database migration hurdles
+### Reducing database migration hurdles
+
 Applications tend to be locked into a database by, for example, using database-specific capabilities. Such database lock-in discourages upgrading or changing the database because it requires rewriting the application. ScalarDB provides a unified interface over diverse databases; thus, once an application is written with ScalarDB, the application becomes portable, which helps achieve database migration without application rewrite.
