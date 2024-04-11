@@ -1,14 +1,8 @@
 package com.scalar.db.util.groupcommit;
 
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
-import java.time.Instant;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +31,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
 
   // Executors
-  private final ExecutorService monitorExecutorService;
+  private final GroupCommitMonitor groupCommitMonitor;
 
   // This contains logics of how to treat keys.
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
@@ -53,28 +47,18 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       String label,
       GroupCommitConfig config,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
-    logger.info("Staring GroupCommitter. Label: {}, Config: {}", label, config);
+    logger.info("Starting GroupCommitter. Label: {}, Config: {}", label, config);
     this.keyManipulator = keyManipulator;
-    this.groupManager = new GroupManager<>(config, keyManipulator);
-    this.groupCleanupWorker =
-        new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), groupManager);
+    this.groupManager = createGroupManager(config, keyManipulator);
+    this.groupCleanupWorker = createGroupCleanupWorker(label, config, groupManager);
     this.delayedSlotMoveWorker =
-        new DelayedSlotMoveWorker<>(
-            label, config.timeoutCheckIntervalMillis(), groupManager, groupCleanupWorker);
+        createDelayedSlotMoveWorker(label, config, groupManager, groupCleanupWorker);
     this.groupSizeFixWorker =
-        new GroupSizeFixWorker<>(
-            label, config.timeoutCheckIntervalMillis(), delayedSlotMoveWorker, groupCleanupWorker);
-    this.groupManager.setGroupSizeFixWorker(groupSizeFixWorker);
-    this.groupManager.setGroupCleanupWorker(groupCleanupWorker);
+        createGroupSizeFixWorker(
+            label, config, groupManager, delayedSlotMoveWorker, groupCleanupWorker);
 
-    // TODO: This should be replaced by other metrics mechanism.
-    this.monitorExecutorService =
-        Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(label + "-group-commit-monitor-%d")
-                .build());
-    startMonitorExecutorService();
+    // TODO: Make this configurable.
+    this.groupCommitMonitor = createMonitor(label);
   }
 
   Metrics getMetrics() {
@@ -84,21 +68,6 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         groupCleanupWorker.size(),
         groupManager.sizeOfNormalGroupMap(),
         groupManager.sizeOfDelayedGroupMap());
-  }
-
-  // TODO: This should be replaced by other metrics mechanism.
-  private void startMonitorExecutorService() {
-    Runnable print =
-        () -> logger.debug("[MONITOR] Timestamp={}, Metrics={}", Instant.now(), getMetrics());
-
-    monitorExecutorService.execute(
-        () -> {
-          while (!monitorExecutorService.isShutdown()) {
-            print.run();
-            Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-          }
-          print.run();
-        });
   }
 
   /**
@@ -184,11 +153,57 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   @Override
   public void close() {
-    if (monitorExecutorService != null) {
-      MoreExecutors.shutdownAndAwaitTermination(monitorExecutorService, 5, TimeUnit.SECONDS);
-    }
+    groupCommitMonitor.close();
+    groupManager.abortAllGroups();
     delayedSlotMoveWorker.close();
     groupSizeFixWorker.close();
     groupCleanupWorker.close();
+  }
+
+  @VisibleForTesting
+  GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createGroupManager(
+      GroupCommitConfig config,
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+    return new GroupManager<>(config, keyManipulator);
+  }
+
+  @VisibleForTesting
+  GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createGroupCleanupWorker(
+      String label,
+      GroupCommitConfig config,
+      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager) {
+    GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> worker =
+        new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), groupManager);
+    groupManager.setGroupCleanupWorker(worker);
+    return worker;
+  }
+
+  @VisibleForTesting
+  DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createDelayedSlotMoveWorker(
+      String label,
+      GroupCommitConfig config,
+      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
+    return new DelayedSlotMoveWorker<>(
+        label, config.timeoutCheckIntervalMillis(), groupManager, groupCleanupWorker);
+  }
+
+  @VisibleForTesting
+  GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createGroupSizeFixWorker(
+      String label,
+      GroupCommitConfig config,
+      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
+      DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedSlotMoveWorker,
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
+    GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> worker =
+        new GroupSizeFixWorker<>(
+            label, config.timeoutCheckIntervalMillis(), delayedSlotMoveWorker, groupCleanupWorker);
+    groupManager.setGroupSizeFixWorker(worker);
+    return worker;
+  }
+
+  @VisibleForTesting
+  GroupCommitMonitor createMonitor(String label) {
+    return new GroupCommitMonitor(label, this::getMetrics);
   }
 }

@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
@@ -20,9 +21,12 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // Groups
   @Nullable private NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> currentGroup;
   // Note: Using ConcurrentHashMap results in less performance.
-  private final Map<PARENT_KEY, NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
+  @VisibleForTesting
+  protected final Map<PARENT_KEY, NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
       normalGroupMap = new HashMap<>();
-  private final Map<FULL_KEY, DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
+
+  @VisibleForTesting
+  protected final Map<FULL_KEY, DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
       delayedGroupMap = new HashMap<>();
   // Only this class uses this type of lock since the class can be heavy hotspot and StampedLock has
   // basically better performance than `synchronized` keyword.
@@ -210,5 +214,16 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
 
   int sizeOfDelayedGroupMap() {
     return delayedGroupMap.size();
+  }
+
+  void abortAllGroups() {
+    for (NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group :
+        normalGroupMap.values()) {
+      group.abort();
+    }
+    for (DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group :
+        delayedGroupMap.values()) {
+      group.abort();
+    }
   }
 }

@@ -2,6 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verify;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
@@ -24,6 +25,10 @@ class GroupManagerTest {
   @Mock private Emittable<String, Integer> emittable;
   @Mock private GroupSizeFixWorker<String, String, String, String, Integer> groupSizeFixWorker;
   @Mock private GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
+  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup1;
+  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup2;
+  @Mock private DelayedGroup<String, String, String, String, Integer> delayedGroup1;
+  @Mock private DelayedGroup<String, String, String, String, Integer> delayedGroup2;
 
   @BeforeEach
   void setUp() {
@@ -581,5 +586,43 @@ class GroupManagerTest {
         (DelayedGroup<String, String, String, String, Integer>) groupManager.getGroup(keys2);
     assertThat(delayedGroupForKey2.isSizeFixed()).isTrue();
     assertThat(delayedGroupForKey2.isReady()).isFalse();
+  }
+
+  private static class TestableGroupManager
+      extends GroupManager<String, String, String, String, Integer> {
+    TestableGroupManager(GroupCommitConfig config, KeyManipulator keyManipulator) {
+      super(config, keyManipulator);
+    }
+
+    void directlyAddNormalGroup(
+        String parentKey, NormalGroup<String, String, String, String, Integer> group) {
+      normalGroupMap.put(parentKey, group);
+    }
+
+    void directlyAddDelayedGroup(
+        String fullKey, DelayedGroup<String, String, String, String, Integer> group) {
+      delayedGroupMap.put(fullKey, group);
+    }
+  }
+
+  @Test
+  void abortAllGroups_ShouldAbortAllGroups() {
+    // Arrange
+    TestableGroupManager groupManager =
+        new TestableGroupManager(
+            new GroupCommitConfig(2, 100, 400, 60, TIMEOUT_CHECK_INTERVAL_MILLIS), keyManipulator);
+    groupManager.directlyAddNormalGroup("dummy-ng-1", normalGroup1);
+    groupManager.directlyAddNormalGroup("dummy-ng-2", normalGroup2);
+    groupManager.directlyAddDelayedGroup("dummy-dg-1", delayedGroup1);
+    groupManager.directlyAddDelayedGroup("dummy-dg-2", delayedGroup2);
+
+    // Act
+    groupManager.abortAllGroups();
+
+    // Assert
+    verify(normalGroup1).abort();
+    verify(normalGroup2).abort();
+    verify(delayedGroup1).abort();
+    verify(delayedGroup2).abort();
   }
 }
