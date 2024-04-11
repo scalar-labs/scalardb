@@ -18,7 +18,7 @@ For details on which databases ScalarDB supports, refer to [Supported Databases]
 ScalarDB can be used in various ways. Here are the three primary use cases of ScalarDB.
 
 ### Managing siloed databases easily
-Many enterprises comprise several organizations, departments, and business units to support agile business operations, which often leads to siloed information systems; different organizations likely manage different applications with different databases. Managing such siloed databases is challenging because applications must communicate each database separately and properly deal with the differences between databases.
+Many enterprises comprise several organizations, departments, and business units to support agile business operations, which often leads to siloed information systems; in particular, different organizations likely manage different applications with different databases. Managing such siloed databases is challenging because applications must communicate each database separately and properly deal with the differences between databases.
 
 ScalarDB simplifies the management of siloed databases with a unified interface, enabling users to treat the databases as if they were a single database. For example, users can run (analytical) join queries over multiple databases without interacting with the databases respectively.
 
