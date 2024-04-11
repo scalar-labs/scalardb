@@ -30,7 +30,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       delayedSlotMoveWorker;
   private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
 
-  // Executors
+  // Monitor
   private final GroupCommitMonitor groupCommitMonitor;
 
   // This contains logics of how to treat keys.

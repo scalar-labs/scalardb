@@ -410,14 +410,6 @@ class GroupCommitterTest {
 
   private class TestableGroupCommitter
       extends GroupCommitter<String, String, String, String, Integer> {
-    /*
-    private final GroupManager<String, String, String, String, Integer> groupManager;
-    private final GroupSizeFixWorker<String, String, String, String, Integer> groupSizeFixWorker;
-    private final DelayedSlotMoveWorker<String, String, String, String, Integer> delayedSlotMoveWorker;
-    private final GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
-    private final GroupCommitMonitor groupCommitMonitor;
-
-     */
 
     TestableGroupCommitter(
         GroupCommitConfig config, KeyManipulator<String, String, String, String> keyManipulator) {

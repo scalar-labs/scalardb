@@ -28,6 +28,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   @VisibleForTesting
   protected final Map<FULL_KEY, DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>>
       delayedGroupMap = new HashMap<>();
+
   // Only this class uses this type of lock since the class can be heavy hotspot and StampedLock has
   // basically better performance than `synchronized` keyword.
   private final StampedLock lock = new StampedLock();
