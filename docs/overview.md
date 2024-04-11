@@ -1,6 +1,9 @@
 # ScalarDB Overview
 
+TODO: make the content easy to understand for normal users.
+
 This page describes what ScalarDB is and its primary use cases.
+
 
 ## What is ScalarDB?
 
