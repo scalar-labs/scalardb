@@ -30,6 +30,8 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+    // Use a priority queue to prioritize groups based on their timeout values, processing groups
+    // with smaller timeout values first.
     return new PriorityBlockingQueue<>(
         64, Comparator.comparingLong(NormalGroup::delayedSlotMoveTimeoutAtMillis));
   }
