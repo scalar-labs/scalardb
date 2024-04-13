@@ -91,9 +91,9 @@ dependencies {
     implementation "com.datastax.cassandra:cassandra-driver-core:${cassandraDriverVersion}"
     implementation "com.azure:azure-cosmos:${azureCosmosVersion}"
     implementation "org.jooq:jooq:${jooqVersion}"
-    implementation "software.amazon.awssdk:applicationautoscaling:${awssdkVersion}"
-    implementation "software.amazon.awssdk:dynamodb:${awssdkVersion}"
-    implementation "software.amazon.awssdk:core:${awssdkVersion}@pom"
+    implementation platform("software.amazon.awssdk:bom:${awssdkVersion}")
+    implementation 'software.amazon.awssdk:applicationautoscaling'
+    implementation 'software.amazon.awssdk:dynamodb'
     implementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
     implementation "mysql:mysql-connector-java:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
