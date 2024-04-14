@@ -456,7 +456,7 @@ public class Snapshot {
               }
               // Check if read records are not changed
               TransactionResult latestResult = currentReadMap.get(key);
-              if (isChanged(Optional.of(latestResult), readSet.get(key))) {
+              if (isChanged(Optional.ofNullable(latestResult), readSet.get(key))) {
                 throwExceptionDueToAntiDependency();
               }
               validatedReadSet.add(key);
