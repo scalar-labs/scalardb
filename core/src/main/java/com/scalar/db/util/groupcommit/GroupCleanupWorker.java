@@ -1,5 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +21,18 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
         label + "-group-commit-group-cleanup",
         queueCheckIntervalInMillis,
         // It's likely an item at the head stays not-done for a long time.
-        RetryMode.MOVE_TO_TAIL);
+        RetryMode.RE_ENQUEUE);
     this.groupManager = groupManager;
+  }
+
+  @Override
+  BlockingQueue<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+    // Use a normal queue because:
+    // - The timeout of the queued groups is large since it's for "just in case"
+    // - In most cases a queued group gets DONE before it's timed-out
+    // - Therefore, scanning all the queued groups repeatedly without considering the timeout order
+    //   is necessary
+    return new LinkedBlockingQueue<>();
   }
 
   @Override
