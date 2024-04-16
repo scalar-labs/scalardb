@@ -144,8 +144,10 @@ public class CommitHandler {
       } else if (cause instanceof CoordinatorException) {
         throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
       } else {
+        // FIXME: This can be also reached when the coordinator table is inconsistent.
+        //        This error handling needs to be improved.
         throw new CommitConflictException(
-            "Group commit failed. Probably it's already done.", cause, id);
+            "Group commit failed. Probably it's already done.", e, id);
       }
     } catch (Exception e) {
       cancelGroupCommitIfNeeded(id);
