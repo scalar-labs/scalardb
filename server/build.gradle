@@ -3,6 +3,8 @@ plugins {
     id 'com.palantir.docker' version "${dockerPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'maven-publish'
+    id 'signing'
 }
 
 sourceSets {
@@ -126,8 +128,60 @@ distTar {
 }
 
 // for archiving and uploading to maven central
-if (!project.gradle.startParameter.taskNames.isEmpty() &&
-        (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
-                project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
-    apply from: 'archive.gradle'
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'scalardb-server'
+            from components.java
+            pom {
+                name = 'ScalarDB Server'
+                description = 'A gRPC interface of ScalarDB'
+                url = 'https://github.com/scalar-labs/scalardb'
+                licenses {
+                    license {
+                        name = 'Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'hiroyuki'
+                        name = 'Hiroyuki Yamada'
+                        email = 'hiroyuki.yamada@scalar-labs.com'
+                    }
+                    developer {
+                        id = 'brfrn169'
+                        name = 'Toshihiro Suzuki'
+                        email = 'brfrn169@gmail.com'
+                    }
+                    developer {
+                        id = 'Torch3333'
+                        name = 'Vincent Guilpain'
+                        email = 'vincent.guilpain@scalar-labs.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/scalar-labs/scalardb.git'
+                    developerConnection = 'scm:git:https://github.com/scalar-labs/scalardb.git'
+                    url = 'https://github.com/scalar-labs/scalardb'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username = project.properties['ossrhUsername'] ?: ""
+                password = project.properties['ossrhPassword'] ?: ""
+            }
+        }
+    }
+}
+
+signing {
+    required { project.gradle.taskGraph.hasTask("publish") }
+    sign publishing.publications.mavenJava
 }
