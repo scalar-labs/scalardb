@@ -27,6 +27,11 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   BlockingQueue<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+    // Use a normal queue because:
+    // - The timeout of the queued groups is large since it's for "just in case"
+    // - In most cases a queued group gets DONE before it's timed-out
+    // - Therefore, scanning all the queued groups repeatedly without considering the timeout order
+    //   is necessary
     return new LinkedBlockingQueue<>();
   }
 

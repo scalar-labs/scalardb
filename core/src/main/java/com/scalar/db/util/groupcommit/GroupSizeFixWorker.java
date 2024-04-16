@@ -38,6 +38,10 @@ class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+    // Use a normal queue because:
+    // - Queued groups are removed once processed, without being re-enqueued
+    // - No need for a priority queue since the order of queued groups is basically consistent with
+    //   the timeout order
     return new LinkedBlockingQueue<>();
   }
 
