@@ -1069,6 +1069,35 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  public void putAndCommit_PutWithImplicitPreReadEnabledGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
+            .build();
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(put);
+    transaction.commit();
+
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    DistributedTransaction another = manager.begin();
+    Optional<Result> r = another.get(get);
+    another.commit();
+
+    assertThat(r).isPresent();
+    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    assertThat(getBalance(result)).isEqualTo(expected);
+    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(result.getVersion()).isEqualTo(1);
+  }
+
+  @Test
   public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
       throws TransactionException, ExecutionException {
     // Arrange
@@ -1127,6 +1156,107 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(getBalance(actual)).isEqualTo(expected);
     Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(actual.getVersion()).isEqualTo(2);
+  }
+
+  @Test
+  public void putAndCommit_PutGivenForExisting_ShouldThrowCommitConflictException()
+      throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE + 100)
+            .build();
+    transaction.put(put);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void putAndCommit_PutWithInsertModeEnabledGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, expected)
+            .enableInsertMode()
+            .build();
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(put);
+    transaction.commit();
+
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    DistributedTransaction another = manager.begin();
+    Optional<Result> r = another.get(get);
+    another.commit();
+
+    assertThat(r).isPresent();
+    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    assertThat(getBalance(result)).isEqualTo(expected);
+    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(result.getVersion()).isEqualTo(1);
+  }
+
+  @Test
+  public void putAndCommit_PutWithInsertModeEnabledGivenForNonExistingAfterRead_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, expected)
+            .enableInsertMode()
+            .build();
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    assertThat(result).isNotPresent();
+
+    transaction.put(put);
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    Optional<Result> r = another.get(get);
+    another.commit();
+
+    assertThat(r).isPresent();
+    TransactionResult actual = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    assertThat(getBalance(actual)).isEqualTo(expected);
+    Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(actual.getVersion()).isEqualTo(1);
+  }
+
+  @Test
+  public void
+      putAndCommit_PutWithInsertModeGivenForExistingAfterRead_ShouldThrowCommitConflictException()
+          throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    Optional<Result> result = transaction.get(get);
+    assertThat(result).isPresent();
+
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, getBalance(result.get()) + 100)
+            .enableInsertMode()
+            .build();
+    transaction.put(put);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
@@ -2732,7 +2862,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .intValue(BALANCE, INITIAL_BALANCE)
-                .disableImplicitPreRead()
                 .build();
         transaction.put(put);
       }
