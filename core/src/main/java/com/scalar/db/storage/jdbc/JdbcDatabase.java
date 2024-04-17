@@ -24,7 +24,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +39,8 @@ import org.slf4j.LoggerFactory;
 public class JdbcDatabase extends AbstractDistributedStorage {
   private static final Logger logger = LoggerFactory.getLogger(JdbcDatabase.class);
 
-  private final BasicDataSource dataSource;
-  private final BasicDataSource tableMetadataDataSource;
+  private final AutoCloseableDataSource dataSource;
+  private final AutoCloseableDataSource tableMetadataDataSource;
   private final RdbEngineStrategy rdbEngine;
   private final JdbcService jdbcService;
 
@@ -67,8 +66,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   @VisibleForTesting
   JdbcDatabase(
       DatabaseConfig databaseConfig,
-      BasicDataSource dataSource,
-      BasicDataSource tableMetadataDataSource,
+      AutoCloseableDataSource dataSource,
+      AutoCloseableDataSource tableMetadataDataSource,
       RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     super(databaseConfig);
@@ -221,12 +220,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   public void close() {
     try {
       dataSource.close();
-    } catch (SQLException e) {
+    } catch (Exception e) {
       logger.error("Failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
-    } catch (SQLException e) {
+    } catch (Exception e) {
       logger.warn("Failed to close the table metadata dataSource", e);
     }
   }

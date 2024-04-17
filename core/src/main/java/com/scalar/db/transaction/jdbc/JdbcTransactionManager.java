@@ -12,6 +12,7 @@ import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.storage.jdbc.AutoCloseableDataSource;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
@@ -22,7 +23,6 @@ import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.SQLException;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
 public class JdbcTransactionManager extends ActiveTransactionManagedDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
-  private final BasicDataSource dataSource;
-  private final BasicDataSource tableMetadataDataSource;
+  private final AutoCloseableDataSource dataSource;
+  private final AutoCloseableDataSource tableMetadataDataSource;
   private final RdbEngineStrategy rdbEngine;
   private final JdbcService jdbcService;
 
@@ -57,8 +57,8 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   @VisibleForTesting
   JdbcTransactionManager(
       DatabaseConfig databaseConfig,
-      BasicDataSource dataSource,
-      BasicDataSource tableMetadataDataSource,
+      AutoCloseableDataSource dataSource,
+      AutoCloseableDataSource tableMetadataDataSource,
       RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     super(databaseConfig);
@@ -156,12 +156,12 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   public void close() {
     try {
       dataSource.close();
-    } catch (SQLException e) {
+    } catch (Exception e) {
       logger.warn("Failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
-    } catch (SQLException e) {
+    } catch (Exception e) {
       logger.warn("Failed to close the table metadata dataSource", e);
     }
   }

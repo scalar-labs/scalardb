@@ -43,9 +43,12 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
+    AutoCloseableDataSource ds = JdbcUtils.initDataSource(config, rdbEngine);
 
     // Assert
+    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
+    BasicDataSource dataSource = (BasicDataSource) ds.underlyingDataSource();
+
     assertThat(dataSource.getDriver()).isEqualTo(driver);
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
     assertThat(dataSource.getUsername()).isEqualTo("root");
@@ -85,9 +88,12 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
+    AutoCloseableDataSource ds = JdbcUtils.initDataSource(config, rdbEngine, true);
 
     // Assert
+    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
+    BasicDataSource dataSource = (BasicDataSource) ds.underlyingDataSource();
+
     assertThat(dataSource.getDriver()).isEqualTo(driver);
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:postgresql://localhost:5432/");
     assertThat(dataSource.getUsername()).isEqualTo("user");
@@ -125,10 +131,12 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource tableMetadataDataSource =
-        JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
+    AutoCloseableDataSource ds = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
 
     // Assert
+    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
+    BasicDataSource tableMetadataDataSource = (BasicDataSource) ds.underlyingDataSource();
+
     assertThat(tableMetadataDataSource.getDriver()).isEqualTo(driver);
     assertThat(tableMetadataDataSource.getUrl())
         .isEqualTo("jdbc:oracle:thin:@localhost:1521/XEPDB1");
@@ -159,9 +167,12 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    AutoCloseableDataSource ds = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
 
     // Assert
+    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
+    BasicDataSource adminDataSource = (BasicDataSource) ds.underlyingDataSource();
+
     assertThat(adminDataSource.getDriver()).isEqualTo(driver);
     assertThat(adminDataSource.getUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
     assertThat(adminDataSource.getUsername()).isEqualTo("user");

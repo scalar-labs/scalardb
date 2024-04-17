@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +59,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static final String INDEX_NAME_PREFIX = "index";
 
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
+  private final AutoCloseableDataSource dataSource;
   private final String metadataSchema;
 
   @Inject
@@ -72,7 +71,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
+  public JdbcAdmin(AutoCloseableDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
@@ -644,7 +643,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void close() {
     try {
       dataSource.close();
-    } catch (SQLException e) {
+    } catch (Exception e) {
       logger.error("Failed to close the dataSource", e);
     }
   }

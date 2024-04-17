@@ -95,6 +95,11 @@ public interface RdbEngineStrategy {
 
   Driver getDriver();
 
+  @Nullable
+  default AutoCloseableDataSource getDataSource(JdbcConfig config) {
+    return null;
+  }
+
   default boolean isImportable() {
     return true;
   }

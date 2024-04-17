@@ -24,13 +24,13 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.jdbc.AutoCloseableDataSource;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -43,8 +43,8 @@ public class JdbcTransactionManagerTest {
   private static final String ANY_ID = "id";
 
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private BasicDataSource dataSource;
-  @Mock private BasicDataSource tableMetadataDataSource;
+  @Mock private AutoCloseableDataSource dataSource;
+  @Mock private AutoCloseableDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
   @Mock private Connection connection;
   @Mock private SQLException sqlException;

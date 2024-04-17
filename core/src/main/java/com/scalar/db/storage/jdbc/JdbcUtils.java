@@ -7,12 +7,18 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public final class JdbcUtils {
   private JdbcUtils() {}
 
-  public static BasicDataSource initDataSource(JdbcConfig config, RdbEngineStrategy rdbEngine) {
+  public static AutoCloseableDataSource initDataSource(
+      JdbcConfig config, RdbEngineStrategy rdbEngine) {
     return initDataSource(config, rdbEngine, false);
   }
 
-  public static BasicDataSource initDataSource(
+  public static AutoCloseableDataSource initDataSource(
       JdbcConfig config, RdbEngineStrategy rdbEngine, boolean transactional) {
+    AutoCloseableDataSource ds = rdbEngine.getDataSource(config);
+    if (ds != null) {
+      return ds;
+    }
+
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
@@ -61,11 +67,16 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
-    return dataSource;
+    return new DbcpDataSource(dataSource);
   }
 
-  public static BasicDataSource initDataSourceForTableMetadata(
+  public static AutoCloseableDataSource initDataSourceForTableMetadata(
       JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    AutoCloseableDataSource ds = rdbEngine.getDataSource(config);
+    if (ds != null) {
+      return ds;
+    }
+
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
@@ -81,11 +92,16 @@ public final class JdbcUtils {
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getTableMetadataConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getTableMetadataConnectionPoolMaxTotal());
-    return dataSource;
+    return new DbcpDataSource(dataSource);
   }
 
-  public static BasicDataSource initDataSourceForAdmin(
+  public static AutoCloseableDataSource initDataSourceForAdmin(
       JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    AutoCloseableDataSource ds = rdbEngine.getDataSource(config);
+    if (ds != null) {
+      return ds;
+    }
+
     BasicDataSource dataSource = new BasicDataSource();
 
     /*
@@ -101,7 +117,7 @@ public final class JdbcUtils {
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getAdminConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
-    return dataSource;
+    return new DbcpDataSource(dataSource);
   }
 
   public static boolean isSqlite(JdbcConfig config) {

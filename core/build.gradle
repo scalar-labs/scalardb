@@ -95,11 +95,13 @@ dependencies {
     implementation 'software.amazon.awssdk:applicationautoscaling'
     implementation 'software.amazon.awssdk:dynamodb'
     implementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
+    implementation "com.zaxxer:HikariCP:${hikariCpVersion}"
     implementation "mysql:mysql-connector-java:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
     implementation "com.oracle.database.jdbc:ojdbc8:${oracleDriverVersion}"
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteDriverVersion}"
+    implementation "com.yugabyte:jdbc-yugabytedb:${yugabyteDriverVersion}"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
