@@ -14,7 +14,10 @@ class RdbEngineYugabyteTest {
   void buildHikariConfig() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "jdbc:yugabytedb://localhost:5433/mydb");
+    // FIXME: "127.0.0.3:5433" isn't handled since it's treated as the second contact point
+    props.setProperty(
+        DatabaseConfig.CONTACT_POINTS,
+        "jdbc:yugabytedb://127.0.0.1:5433/mydb?additionalEndpoints=127.0.0.2:5433,127.0.0.3:5433");
     props.setProperty(DatabaseConfig.USERNAME, "my-user");
     props.setProperty(DatabaseConfig.PASSWORD, "my-password");
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
@@ -42,12 +45,14 @@ class RdbEngineYugabyteTest {
     assertThat(hikariConfig.getDataSourceClassName())
         .isEqualTo("com.yugabyte.ysql.YBClusterAwareDataSource");
     assertThat(hikariConfig.getDataSourceProperties().getProperty("serverName"))
-        .isEqualTo("localhost");
+        .isEqualTo("127.0.0.1");
     assertThat(hikariConfig.getDataSourceProperties().getProperty("portNumber")).isEqualTo("5433");
     assertThat(hikariConfig.getDataSourceProperties().getProperty("databaseName"))
         .isEqualTo("mydb");
     assertThat(hikariConfig.getDataSourceProperties().getProperty("user")).isEqualTo("my-user");
     assertThat(hikariConfig.getDataSourceProperties().getProperty("password"))
         .isEqualTo("my-password");
+    assertThat(hikariConfig.getDataSourceProperties().getProperty("additionalEndpoints"))
+        .isEqualTo("127.0.0.2:5433,127.0.0.3:5433");
   }
 }

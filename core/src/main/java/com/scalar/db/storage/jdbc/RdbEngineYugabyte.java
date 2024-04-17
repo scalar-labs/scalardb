@@ -31,17 +31,13 @@ class RdbEngineYugabyte extends RdbEnginePostgresql {
     }
 
     String database = uri.getPath();
-    Map<String, String> ybParams;
     if (database.startsWith("/")) {
       database = database.substring(1);
     }
-    if (database.contains("?")) {
-      int paramDelimiterPos = database.indexOf('?');
-      String params = database.substring(paramDelimiterPos + 1);
-      ybParams = Splitter.on('&').withKeyValueSeparator('=').split(params);
-      database = database.substring(0, paramDelimiterPos);
-    } else {
-      ybParams = Collections.emptyMap();
+
+    Map<String, String> ybParams = Collections.emptyMap();
+    if (uri.getQuery() != null) {
+      ybParams = Splitter.on('&').withKeyValueSeparator('=').split(uri.getQuery());
     }
 
     hikariConfig.setDataSourceClassName("com.yugabyte.ysql.YBClusterAwareDataSource");
