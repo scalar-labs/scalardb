@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -39,6 +40,7 @@ class GroupCommitterTest {
 
   @Mock private GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
   @Mock private GroupCommitMonitor groupCommitMonitor;
+  @Mock private Metrics metrics;
 
   private GroupCommitter<String, String, String, String, Integer> createGroupCommitter(
       int slotCapacity, int groupSizeFixTimeoutMillis, int delayedSlotMoveTimeoutMillis) {
@@ -69,6 +71,19 @@ class GroupCommitterTest {
 
       verify(emitter, never()).execute(any(), any());
     }
+  }
+
+  @Test
+  void reserve_WhenAlreadyClosed_ShouldThrowException() {
+    // Arrange
+    GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400);
+    groupCommitter.setEmitter(emitter);
+    groupCommitter.close();
+
+    // Act
+    // Assert
+    assertThrows(GroupCommitException.class, () -> groupCommitter.reserve("child-key"));
   }
 
   @Test
@@ -453,23 +468,40 @@ class GroupCommitterTest {
     GroupCommitMonitor createMonitor(String label) {
       return groupCommitMonitor;
     }
+
+    @Override
+    Metrics getMetrics() {
+      return metrics;
+    }
   }
 
   @Test
-  void close_ShouldCloseAllResources() {
+  void close_WhenNoOngoingGroup_ShouldCloseAllResources()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // Arrange
+    doReturn(true).when(metrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
         new TestableGroupCommitter(
             new GroupCommitConfig(20, 100, 400, 60, 10), new TestableKeyManipulator());
+    ExecutorService executorService = Executors.newCachedThreadPool();
 
     // Act
-    groupCommitter.close();
-
     // Assert
-    verify(groupCommitMonitor).close();
-    verify(groupManager).abortAllGroups();
+    Future<?> future = executorService.submit(groupCommitter::close);
+    executorService.shutdown();
+    TimeUnit.SECONDS.sleep(2);
+
+    verify(groupSizeFixWorker, never()).close();
+    verify(delayedSlotMoveWorker, never()).close();
+    verify(groupCleanupWorker, never()).close();
+    verify(groupCommitMonitor, never()).close();
+    doReturn(false).when(metrics).hasRemaining();
+
+    future.get(2, TimeUnit.SECONDS);
+
     verify(groupSizeFixWorker).close();
     verify(delayedSlotMoveWorker).close();
     verify(groupCleanupWorker).close();
+    verify(groupCommitMonitor).close();
   }
 }

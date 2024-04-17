@@ -1,8 +1,11 @@
 package com.scalar.db.util.groupcommit;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
 
   private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager;
+
+  private final AtomicBoolean closing = new AtomicBoolean();
 
   /**
    * @param label A label used for thread name.
@@ -89,6 +94,12 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    * @return The full key associated with the reserved slot.
    */
   public FULL_KEY reserve(CHILD_KEY childKey) {
+    if (closing.get()) {
+      throw new GroupCommitException(
+          String.format(
+              "Reserving a new slot isn't allowed since already closed. Child key: %s", childKey));
+    }
+
     while (true) {
       FULL_KEY fullKey = groupManager.reserveNewSlot(childKey);
       if (fullKey != null) {
@@ -153,11 +164,24 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    */
   @Override
   public void close() {
-    groupCommitMonitor.close();
-    groupManager.abortAllGroups();
-    delayedSlotMoveWorker.close();
-    groupSizeFixWorker.close();
-    groupCleanupWorker.close();
+    logger.info("Closing GroupCommitter");
+    closing.set(true);
+    int count = 0;
+    do {
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+      Metrics metrics = getMetrics();
+      if (!metrics.hasRemaining()) {
+        logger.info("No ongoing group remains. Closing all the resources");
+        groupCommitMonitor.close();
+        groupSizeFixWorker.close();
+        delayedSlotMoveWorker.close();
+        groupCleanupWorker.close();
+        break;
+      }
+      if (++count % 20 == 0) {
+        logger.info("Ongoing slot still remains. Metrics: {}", metrics);
+      }
+    } while (true);
   }
 
   @VisibleForTesting

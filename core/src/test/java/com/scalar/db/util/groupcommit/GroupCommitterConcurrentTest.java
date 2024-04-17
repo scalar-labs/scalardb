@@ -299,11 +299,7 @@ class GroupCommitterConcurrentTest {
       Metrics metrics = null;
       for (int i = 0; i < 60; i++) {
         metrics = groupCommitter.getMetrics();
-        if (metrics.sizeOfNormalGroupMap == 0
-            && metrics.sizeOfDelayedGroupMap == 0
-            && metrics.queueLengthOfGroupCloseWorker == 0
-            && metrics.queueLengthOfDelayedSlotMoveWorker == 0
-            && metrics.queueLengthOfGroupCleanupWorker == 0) {
+        if (!metrics.hasRemaining()) {
           noGarbage = true;
           break;
         }

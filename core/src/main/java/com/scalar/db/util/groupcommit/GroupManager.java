@@ -216,15 +216,4 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   int sizeOfDelayedGroupMap() {
     return delayedGroupMap.size();
   }
-
-  void abortAllGroups() {
-    for (NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group :
-        normalGroupMap.values()) {
-      group.abort();
-    }
-    for (DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group :
-        delayedGroupMap.values()) {
-      group.abort();
-    }
-  }
 }
