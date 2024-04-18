@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -96,7 +97,7 @@ public interface RdbEngineStrategy {
   Driver getDriver();
 
   @Nullable
-  default AutoCloseableDataSource getDataSource(JdbcConfig config) {
+  default UnderlyingDataSourceConfig getDataSourceConfig(JdbcConfig config) {
     return null;
   }
 
@@ -128,4 +129,15 @@ public interface RdbEngineStrategy {
   boolean isDuplicateIndexError(SQLException e);
 
   String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);
+
+  class UnderlyingDataSourceConfig {
+    public final String dataSourceClassName;
+    public final ImmutableMap<String, String> defaultParams;
+
+    public UnderlyingDataSourceConfig(
+        String dataSourceClassName, ImmutableMap<String, String> defaultParams) {
+      this.dataSourceClassName = dataSourceClassName;
+      this.defaultParams = defaultParams;
+    }
+  }
 }
