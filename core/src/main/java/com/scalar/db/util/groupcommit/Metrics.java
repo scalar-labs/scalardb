@@ -6,11 +6,11 @@ import javax.annotation.concurrent.Immutable;
 // TODO: Remove after introducing a proper metrics.
 @Immutable
 class Metrics {
-  public final int queueLengthOfGroupCloseWorker;
-  public final int queueLengthOfDelayedSlotMoveWorker;
-  public final int queueLengthOfGroupCleanupWorker;
-  public final int sizeOfNormalGroupMap;
-  public final int sizeOfDelayedGroupMap;
+  private final int queueLengthOfGroupCloseWorker;
+  private final int queueLengthOfDelayedSlotMoveWorker;
+  private final int queueLengthOfGroupCleanupWorker;
+  private final int sizeOfNormalGroupMap;
+  private final int sizeOfDelayedGroupMap;
 
   Metrics(
       int queueLengthOfGroupCloseWorker,
@@ -35,4 +35,14 @@ class Metrics {
         .add("sizeOfDelayedGroupMap", sizeOfDelayedGroupMap)
         .toString();
   }
+
+  public boolean hasRemaining() {
+    return queueLengthOfGroupCloseWorker > 0
+        || queueLengthOfDelayedSlotMoveWorker > 0
+        || queueLengthOfGroupCleanupWorker > 0
+        || sizeOfNormalGroupMap > 0
+        || sizeOfDelayedGroupMap > 0;
+  }
+
+  // Add getters if necessary
 }
