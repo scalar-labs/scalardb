@@ -24,6 +24,10 @@ class GroupManagerTest {
   @Mock private Emittable<String, Integer> emittable;
   @Mock private GroupSizeFixWorker<String, String, String, String, Integer> groupSizeFixWorker;
   @Mock private GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
+  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup1;
+  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup2;
+  @Mock private DelayedGroup<String, String, String, String, Integer> delayedGroup1;
+  @Mock private DelayedGroup<String, String, String, String, Integer> delayedGroup2;
 
   @BeforeEach
   void setUp() {
