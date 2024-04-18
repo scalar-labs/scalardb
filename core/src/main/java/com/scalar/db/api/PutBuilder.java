@@ -237,7 +237,7 @@ public class PutBuilder {
 
     @Override
     public Buildable insertModeEnabled(boolean insertModeEnabled) {
-      this.implicitPreReadEnabled = insertModeEnabled;
+      this.insertModeEnabled = insertModeEnabled;
       return this;
     }
 
