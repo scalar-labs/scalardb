@@ -118,6 +118,10 @@ public class SelectStatementHandler extends StatementHandler {
     if (scan instanceof ScanAll) {
       query = makeQueryWithProjections(scan, tableMetadata).getSQL(ParamType.INLINED);
       options = new CosmosQueryRequestOptions();
+      if (!scan.getConjunctions().isEmpty()) {
+        // Ignore limit to control it in FilterableScannerImpl
+        return executeQueryWithFiltering((ScanAll) scan, tableMetadata, query, options);
+      }
     } else if (ScalarDbUtils.isSecondaryIndexSpecified(scan, tableMetadata)) {
       query = makeQueryWithIndex(scan, tableMetadata);
       options = new CosmosQueryRequestOptions();
@@ -333,6 +337,21 @@ public class SelectStatementHandler extends StatementHandler {
 
     return new ScannerImpl(
         pagesIterator, new ResultInterpreter(selection.getProjections(), tableMetadata));
+  }
+
+  private Scanner executeQueryWithFiltering(
+      ScanAll scanAll,
+      TableMetadata tableMetadata,
+      String query,
+      CosmosQueryRequestOptions queryOptions) {
+    Iterator<FeedResponse<Record>> pagesIterator =
+        getContainer(scanAll)
+            .queryItems(query, queryOptions, Record.class)
+            .iterableByPage()
+            .iterator();
+
+    return new FilterableScannerImpl(
+        scanAll, pagesIterator, new ResultInterpreter(scanAll.getProjections(), tableMetadata));
   }
 
   private Scanner executeQuery(Selection selection, TableMetadata tableMetadata, String query) {

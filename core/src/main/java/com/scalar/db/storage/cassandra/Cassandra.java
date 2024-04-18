@@ -46,11 +46,9 @@ public class Cassandra extends AbstractDistributedStorage {
   public Cassandra(DatabaseConfig config) {
     super(config);
 
-    if (config.isCrossPartitionScanFilteringEnabled()
-        || config.isCrossPartitionScanOrderingEnabled()) {
+    if (config.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
-          CoreError.CASSANDRA_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED
-              .buildMessage());
+          CoreError.CASSANDRA_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
 
     clusterManager = new ClusterManager(config);
@@ -121,11 +119,15 @@ public class Cassandra extends AbstractDistributedStorage {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
-    ResultSet results = handlers.select().handle(scan);
-
-    return new ScannerImpl(
-        results,
-        new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan)));
+    ResultInterpreter resultInterpreter =
+        new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan));
+    if (scan.getConjunctions().isEmpty()) {
+      return new ScannerImpl(handlers.select().handle(scan), resultInterpreter);
+    } else {
+      // Ignore limit to control it in FilterableScannerImpl
+      Scan scanAll = Scan.newBuilder(scan).limit(0).build();
+      return new FilterableScannerImpl(scan, handlers.select().handle(scanAll), resultInterpreter);
+    }
   }
 
   @Override

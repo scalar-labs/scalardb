@@ -19,6 +19,7 @@ import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
@@ -525,6 +526,31 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
 
     // Assert
+    String expectedQuery = "select * from Record r";
+    verify(container)
+        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void handle_ScanAllOperationWithLimitAndConjunction_ShouldCallQueryItemsWithoutLimit()
+      throws ExecutionException {
+    // Arrange
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll())
+            .clearConditions()
+            .where(mock(ConditionalExpression.class))
+            .limit(ANY_LIMIT)
+            .build();
+
+    // Act
+    Scanner actual = handler.handle(scanAll);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableScannerImpl.class);
     String expectedQuery = "select * from Record r";
     verify(container)
         .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));

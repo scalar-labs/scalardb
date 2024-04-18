@@ -1,13 +1,18 @@
 package com.scalar.db.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
+import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetWithIndex;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
@@ -30,12 +35,16 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 public final class ScalarDbUtils {
 
@@ -245,5 +254,106 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  public static boolean columnsMatchAnyOfConjunctions(
+      Map<String, Column<?>> columns, Set<Conjunction> conjunctions) {
+    for (Conjunction conjunction : conjunctions) {
+      boolean allMatched = true;
+      for (ConditionalExpression condition : conjunction.getConditions()) {
+        if (!columns.containsKey(condition.getColumn().getName())
+            || !columnMatchesCondition(columns.get(condition.getColumn().getName()), condition)) {
+          allMatched = false;
+          break;
+        }
+      }
+      if (allMatched) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> boolean columnMatchesCondition(
+      Column<T> column, ConditionalExpression condition) {
+    assert column.getClass() == condition.getColumn().getClass();
+    switch (condition.getOperator()) {
+      case EQ:
+      case IS_NULL:
+        return column.equals(condition.getColumn());
+      case NE:
+      case IS_NOT_NULL:
+        return !column.equals(condition.getColumn());
+      case GT:
+        return column.compareTo((Column<T>) condition.getColumn()) > 0;
+      case GTE:
+        return column.compareTo((Column<T>) condition.getColumn()) >= 0;
+      case LT:
+        return column.compareTo((Column<T>) condition.getColumn()) < 0;
+      case LTE:
+        return column.compareTo((Column<T>) condition.getColumn()) <= 0;
+      case LIKE:
+      case NOT_LIKE:
+        // assert condition instanceof LikeExpression;
+        return stringMatchesLikeExpression(column.getTextValue(), (LikeExpression) condition);
+      default:
+        throw new AssertionError("Unknown operator: " + condition.getOperator());
+    }
+  }
+
+  @VisibleForTesting
+  static boolean stringMatchesLikeExpression(String value, LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    String regexPattern =
+        convertRegexPatternFrom(
+            likeExpression.getTextValue(), escape.isEmpty() ? null : escape.charAt(0));
+    if (likeExpression.getOperator().equals(Operator.LIKE)) {
+      return value != null && Pattern.compile(regexPattern).matcher(value).matches();
+    } else {
+      return value != null && !Pattern.compile(regexPattern).matcher(value).matches();
+    }
+  }
+
+  /**
+   * Convert SQL 'like' pattern to a Java regular expression. Underscores (_) are converted to '.'
+   * and percent signs (%) are converted to '.*', other characters are quoted literally. If an
+   * escape character specified, escaping is done for '_', '%', and the escape character itself.
+   * Although we validate the pattern when constructing {@code LikeExpression}, we will assert it
+   * just in case. This method is implemented referencing the following Spark SQL implementation.
+   * https://github.com/apache/spark/blob/a8eadebd686caa110c4077f4199d11e797146dc5/sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/util/StringUtils.scala
+   *
+   * @param likePattern a SQL LIKE pattern to convert
+   * @param escape an escape character.
+   * @return the equivalent Java regular expression of the given pattern
+   */
+  private static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
+    assert likePattern != null : "LIKE pattern must not be null";
+
+    StringBuilder out = new StringBuilder();
+    char[] chars = likePattern.toCharArray();
+    for (int i = 0; i < chars.length; i++) {
+      char c = chars[i];
+      if (escape != null && c == escape && i + 1 < chars.length) {
+        char nextChar = chars[++i];
+        if (nextChar == '_' || nextChar == '%') {
+          out.append(Pattern.quote(Character.toString(nextChar)));
+        } else if (nextChar == escape) {
+          out.append(Pattern.quote(Character.toString(nextChar)));
+        } else {
+          throw new AssertionError("LIKE pattern must not include only escape character");
+        }
+      } else if (escape != null && c == escape) {
+        throw new AssertionError("LIKE pattern must not end with escape character");
+      } else if (c == '_') {
+        out.append(".");
+      } else if (c == '%') {
+        out.append(".*");
+      } else {
+        out.append(Pattern.quote(Character.toString(c)));
+      }
+    }
+
+    return "(?s)" + out; // (?s) enables dotall mode, causing "." to match new lines
   }
 }

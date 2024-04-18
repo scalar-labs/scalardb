@@ -15,9 +15,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public final class ScannerImpl implements Scanner {
-  private final ResultSet resultSet;
-  private final ResultInterpreter resultInterpreter;
+public class ScannerImpl implements Scanner {
+  protected final ResultSet resultSet;
+  protected final ResultInterpreter resultInterpreter;
 
   private ScannerIterator scannerIterator;
 

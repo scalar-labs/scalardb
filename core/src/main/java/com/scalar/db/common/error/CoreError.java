@@ -572,6 +572,24 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0124", "Columns must be specified. Table: %s", "", ""),
   SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE(
       Category.USER_ERROR, "0125", "Invalid column type. Table: %s; Column: %s; Type: %s", "", ""),
+  CASSANDRA_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0126",
+      "Cross-partition scan with ordering is not supported in Cassandra",
+      "",
+      ""),
+  COSMOS_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0127",
+      "Cross-partition scan with ordering is not supported in Cosmos DB",
+      "",
+      ""),
+  DYNAMO_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0128",
+      "Cross-partition scan with ordering is not supported in DynamoDB",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

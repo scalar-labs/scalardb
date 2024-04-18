@@ -52,11 +52,9 @@ public class Dynamo extends AbstractDistributedStorage {
   public Dynamo(DatabaseConfig databaseConfig) {
     super(databaseConfig);
 
-    if (databaseConfig.isCrossPartitionScanFilteringEnabled()
-        || databaseConfig.isCrossPartitionScanOrderingEnabled()) {
+    if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
-          CoreError.DYNAMO_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED
-              .buildMessage());
+          CoreError.DYNAMO_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
 
     DynamoConfig config = new DynamoConfig(databaseConfig);

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Result;
@@ -1998,6 +1999,30 @@ public abstract class SelectStatementHandlerTestBase {
     assertThat(actualRequest.projectionExpression())
         .isEqualTo(
             DynamoOperation.COLUMN_NAME_ALIAS + "0," + DynamoOperation.COLUMN_NAME_ALIAS + "1");
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
+  }
+
+  @Test
+  public void prepare_ScanAllOperationWithLimitAndConjunction_ShouldPrepareProperQueryWithoutLimit()
+      throws ExecutionException {
+    // Arrange
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll())
+            .where(ConditionBuilder.column("col").isGreaterThanInt(0))
+            .limit(ANY_LIMIT)
+            .build();
+
+    // Act
+    Scanner actual = handler.handle(scanAll);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableQueryScanner.class);
+    ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
+    verify(client).scan(captor.capture());
+    ScanRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.limit()).isEqualTo(null);
     assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 }

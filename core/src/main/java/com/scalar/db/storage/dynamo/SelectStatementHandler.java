@@ -194,7 +194,8 @@ public class SelectStatementHandler {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     ScanRequest.Builder builder = ScanRequest.builder().tableName(dynamoOperation.getTableName());
 
-    if (scan.getLimit() > 0) {
+    // Ignore limit to control it in FilterableQueryScanner if scan has condition(s)
+    if (scan.getLimit() > 0 && scan.getConjunctions().isEmpty()) {
       builder.limit(scan.getLimit());
     }
 
@@ -209,8 +210,14 @@ public class SelectStatementHandler {
     }
     com.scalar.db.storage.dynamo.request.ScanRequest requestWrapper =
         new com.scalar.db.storage.dynamo.request.ScanRequest(client, builder.build());
-    return new QueryScanner(
-        requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
+
+    if (scan.getConjunctions().isEmpty()) {
+      return new QueryScanner(
+          requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
+    } else {
+      return new FilterableQueryScanner(
+          scan, requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
+    }
   }
 
   private void projectionExpression(

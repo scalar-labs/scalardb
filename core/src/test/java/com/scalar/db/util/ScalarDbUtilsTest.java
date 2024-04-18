@@ -2,8 +2,11 @@ package com.scalar.db.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
@@ -143,5 +146,237 @@ public class ScalarDbUtilsTest {
     assertThat(actual.get(0).forTable()).isEqualTo(TABLE);
     assertThat(actual.get(1).forNamespace()).isEqualTo(NAMESPACE);
     assertThat(actual.get(1).forTable()).isEqualTo(TABLE);
+  }
+
+  @Test
+  public void isMatchedWith_SomePatternsWithoutEscapeGiven_ShouldReturnBooleanProperly() {
+    // Arrange Act Assert
+    // The following tests are added referring to the similar tests in Spark.
+    // https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/expressions/RegexpExpressionsSuite.scala
+    // simple patterns
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("abdef", prepareLike("abdef"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a_%b", prepareLike("a\\__b"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("addb", prepareLike("a_%b"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("addb", prepareLike("a\\__b"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("addb", prepareLike("a%\\%b"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a_%b", prepareLike("a%\\%b"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("addb", prepareLike("a%"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("addb", prepareLike("**"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("abc", prepareLike("a%"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("abc", prepareLike("b%"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("abc", prepareLike("bc%"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a\nb", prepareLike("a_b"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("ab", prepareLike("a%b"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a\nb", prepareLike("a%b"))).isTrue();
+
+    // empty input
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("", prepareLike(""))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a", prepareLike(""))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("", prepareLike("a"))).isFalse();
+
+    // SI-17647 double-escaping backslash
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("\\\\\\\\", prepareLike("%\\\\%")))
+        .isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("%%", prepareLike("%%"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("\\__", prepareLike("\\\\\\__"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("\\\\\\__", prepareLike("%\\\\%\\%")))
+        .isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("_\\\\\\%", prepareLike("%\\\\")))
+        .isFalse();
+
+    // unicode
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a\u20ACa", prepareLike("_\u20AC_")))
+        .isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a€a", prepareLike("_€_"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a€a", prepareLike("_\u20AC_"))).isTrue();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a\u20ACa", prepareLike("_€_"))).isTrue();
+
+    // case
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("A", prepareLike("a%"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a", prepareLike("A%"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("AaA", prepareLike("_a_"))).isTrue();
+
+    // example
+    assertThat(
+            ScalarDbUtils.stringMatchesLikeExpression(
+                "%SystemDrive%\\Users\\John", prepareLike("\\%SystemDrive\\%\\\\Users%")))
+        .isTrue();
+  }
+
+  @Test
+  public void isMatchedWith_SomePatternsWithEscapeGiven_ShouldReturnBooleanProperly() {
+    // Arrange Act Assert
+    // The following tests are added referring to the similar tests in Spark.
+    // https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/expressions/RegexpExpressionsSuite.scala
+    ImmutableList.of("/", "#", "\"")
+        .forEach(
+            escape -> {
+              // simple patterns
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "abdef", prepareLike("abdef", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "a_%b", prepareLike("a" + escape + "__b", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "addb", prepareLike("a_%b", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "addb", prepareLike("a" + escape + "__b", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "addb", prepareLike("a%" + escape + "%b", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "a_%b", prepareLike("a%" + escape + "%b", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("addb", prepareLike("a%", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("addb", prepareLike("**", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("abc", prepareLike("a%", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("abc", prepareLike("b%", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("abc", prepareLike("bc%", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("a\nb", prepareLike("a_b", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("ab", prepareLike("a%b", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("a\nb", prepareLike("a%b", escape)))
+                  .isTrue();
+
+              // empty input
+              assertThat(ScalarDbUtils.stringMatchesLikeExpression("", prepareLike("", escape)))
+                  .isTrue();
+              assertThat(ScalarDbUtils.stringMatchesLikeExpression("a", prepareLike("", escape)))
+                  .isFalse();
+              assertThat(ScalarDbUtils.stringMatchesLikeExpression("", prepareLike("a", escape)))
+                  .isFalse();
+
+              // SI-17647 double-escaping backslash
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          String.format("%s%s%s%s", escape, escape, escape, escape),
+                          prepareLike(String.format("%%%s%s%%", escape, escape), escape)))
+                  .isTrue();
+              assertThat(ScalarDbUtils.stringMatchesLikeExpression("%%", prepareLike("%%", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          String.format("%s__", escape),
+                          prepareLike(String.format("%s%s%s__", escape, escape, escape), escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          String.format("%s%s%s__", escape, escape, escape),
+                          prepareLike(
+                              String.format("%%%s%s%%%s%%", escape, escape, escape), escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          String.format("_%s%s%s%%", escape, escape, escape),
+                          prepareLike(String.format("%%%s%s", escape, escape), escape)))
+                  .isFalse();
+
+              // unicode
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "a\u20ACa", prepareLike("_\u20AC_", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("a€a", prepareLike("_€_", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "a€a", prepareLike("_\u20AC_", escape)))
+                  .isTrue();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "a\u20ACa", prepareLike("_€_", escape)))
+                  .isTrue();
+
+              // case
+              assertThat(ScalarDbUtils.stringMatchesLikeExpression("A", prepareLike("a%", escape)))
+                  .isFalse();
+              assertThat(ScalarDbUtils.stringMatchesLikeExpression("a", prepareLike("A%", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression("AaA", prepareLike("_a_", escape)))
+                  .isTrue();
+
+              // example
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          String.format("%%SystemDrive%%%sUsers%sJohn", escape, escape),
+                          prepareLike(
+                              String.format(
+                                  "%s%%SystemDrive%s%%%s%sUsers%%", escape, escape, escape, escape),
+                              escape)))
+                  .isTrue();
+            });
+  }
+
+  @Test
+  public void isMatchedWith_IsNotLikeOperatorWithSomePatternsGiven_ShouldReturnBooleanProperly() {
+    // Arrange Act Assert
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("abdef", prepareNotLike("abdef")))
+        .isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("a_%b", prepareNotLike("a\\__b")))
+        .isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("addb", prepareNotLike("a_%b"))).isFalse();
+    assertThat(ScalarDbUtils.stringMatchesLikeExpression("addb", prepareNotLike("a\\__b")))
+        .isTrue();
+    ImmutableList.of("/", "#", "\"")
+        .forEach(
+            escape -> {
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "abdef", prepareNotLike("abdef", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "a_%b", prepareNotLike("a" + escape + "__b", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "addb", prepareNotLike("a_%b", escape)))
+                  .isFalse();
+              assertThat(
+                      ScalarDbUtils.stringMatchesLikeExpression(
+                          "addb", prepareNotLike("a" + escape + "__b", escape)))
+                  .isTrue();
+            });
+  }
+
+  private LikeExpression prepareLike(String pattern) {
+    return ConditionBuilder.column("col1").isLikeText(pattern);
+  }
+
+  private LikeExpression prepareLike(String pattern, String escape) {
+    return ConditionBuilder.column("col1").isLikeText(pattern, escape);
+  }
+
+  private LikeExpression prepareNotLike(String pattern) {
+    return ConditionBuilder.column("col1").isNotLikeText(pattern);
+  }
+
+  private LikeExpression prepareNotLike(String pattern, String escape) {
+    return ConditionBuilder.column("col1").isNotLikeText(pattern, escape);
   }
 }

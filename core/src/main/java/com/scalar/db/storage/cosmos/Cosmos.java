@@ -46,11 +46,9 @@ public class Cosmos extends AbstractDistributedStorage {
   public Cosmos(DatabaseConfig databaseConfig) {
     super(databaseConfig);
 
-    if (databaseConfig.isCrossPartitionScanFilteringEnabled()
-        || databaseConfig.isCrossPartitionScanOrderingEnabled()) {
+    if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
-          CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED
-              .buildMessage());
+          CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
 
     CosmosConfig config = new CosmosConfig(databaseConfig);

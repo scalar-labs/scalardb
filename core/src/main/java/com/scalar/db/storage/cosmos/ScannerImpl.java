@@ -16,11 +16,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public final class ScannerImpl implements Scanner {
+public class ScannerImpl implements Scanner {
 
-  private final ResultInterpreter resultInterpreter;
-  private Iterator<FeedResponse<Record>> recordsPages;
-  private Iterator<Record> currentPageRecords;
+  protected final ResultInterpreter resultInterpreter;
+  protected Iterator<FeedResponse<Record>> recordsPages;
+  protected Iterator<Record> currentPageRecords;
   private ScannerIterator scannerIterator;
 
   /**
