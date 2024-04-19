@@ -6,6 +6,7 @@ import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
 
   // Monitor
-  private final GroupCommitMonitor groupCommitMonitor;
+  @Nullable private final GroupCommitMonitor groupCommitMonitor;
 
   // This contains logics of how to treat keys.
   private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
@@ -62,12 +63,15 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         createGroupSizeFixWorker(
             label, config, groupManager, delayedSlotMoveWorker, groupCleanupWorker);
 
-    // TODO: Make this configurable.
-    this.groupCommitMonitor = createMonitor(label);
+    if (config.metricsMonitorLogEnabled()) {
+      this.groupCommitMonitor = createGroupCommitMonitor(label);
+    } else {
+      this.groupCommitMonitor = null;
+    }
   }
 
-  Metrics getMetrics() {
-    return new Metrics(
+  GroupCommitMetrics getMetrics() {
+    return new GroupCommitMetrics(
         groupSizeFixWorker.size(),
         delayedSlotMoveWorker.size(),
         groupCleanupWorker.size(),
@@ -169,17 +173,19 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     int count = 0;
     do {
       Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-      Metrics metrics = getMetrics();
-      if (!metrics.hasRemaining()) {
+      GroupCommitMetrics groupCommitMetrics = getMetrics();
+      if (!groupCommitMetrics.hasRemaining()) {
         logger.info("No ongoing group remains. Closing all the resources");
-        groupCommitMonitor.close();
+        if (groupCommitMonitor != null) {
+          groupCommitMonitor.close();
+        }
         groupSizeFixWorker.close();
         delayedSlotMoveWorker.close();
         groupCleanupWorker.close();
         break;
       }
       if (++count % 20 == 0) {
-        logger.info("Ongoing slot still remains. Metrics: {}", metrics);
+        logger.info("Ongoing slot still remains. Metrics: {}", groupCommitMetrics);
       }
     } while (true);
   }
@@ -227,7 +233,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   }
 
   @VisibleForTesting
-  GroupCommitMonitor createMonitor(String label) {
+  GroupCommitMonitor createGroupCommitMonitor(String label) {
     return new GroupCommitMonitor(label, this::getMetrics);
   }
 }
