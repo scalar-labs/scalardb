@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import java.io.Closeable;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.ThreadSafe;
@@ -166,9 +167,10 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   public void close() {
     logger.info("Closing GroupCommitter");
     closing.set(true);
-    int count = 0;
+    long loggingIntervalMillis = 10000;
+    Instant nextLoggingAt = Instant.now().plusMillis(loggingIntervalMillis);
     do {
-      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+      Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
       Metrics metrics = getMetrics();
       if (!metrics.hasRemaining()) {
         logger.info("No ongoing group remains. Closing all the resources");
@@ -178,8 +180,10 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
         groupCleanupWorker.close();
         break;
       }
-      if (++count % 20 == 0) {
+      Instant now = Instant.now();
+      if (nextLoggingAt.isBefore(now)) {
         logger.info("Ongoing slot still remains. Metrics: {}", metrics);
+        nextLoggingAt = Instant.now().plusMillis(loggingIntervalMillis);
       }
     } while (true);
   }
