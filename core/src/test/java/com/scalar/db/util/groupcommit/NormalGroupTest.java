@@ -18,10 +18,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 class NormalGroupTest {
   private Emittable<String, Integer> emitter;
   private TestableKeyManipulator keyManipulator;
+  @Mock private Slot<String, String, String, String, Integer> slot1;
+  @Mock private Slot<String, String, String, String, Integer> slot2;
 
   @BeforeEach
   void setUp() {
