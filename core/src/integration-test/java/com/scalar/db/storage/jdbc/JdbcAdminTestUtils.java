@@ -11,13 +11,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
+  private final AutoCloseableDataSource dataSource;
 
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
@@ -130,7 +129,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
-  public void close() throws SQLException {
+  public void close() throws Exception {
     dataSource.close();
   }
 }

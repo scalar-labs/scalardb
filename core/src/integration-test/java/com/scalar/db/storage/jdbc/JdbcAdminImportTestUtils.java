@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminImportTestUtils {
   static final String SUPPORTED_TABLE_NAME = "supported_table";
@@ -109,7 +108,7 @@ public class JdbcAdminImportTestUtils {
 
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
-  private final BasicDataSource dataSource;
+  private final AutoCloseableDataSource dataSource;
 
   public JdbcAdminImportTestUtils(Properties properties) {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
@@ -559,7 +558,7 @@ public class JdbcAdminImportTestUtils {
     }
   }
 
-  public void close() throws SQLException {
+  public void close() throws Exception {
     dataSource.close();
   }
 }
