@@ -204,11 +204,7 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Scan scan =
-        Scan.newBuilder(prepareCrossPartitionScan(1, 0, 2))
-            .ordering(Ordering.asc(ACCOUNT_TYPE))
-            .limit(2)
-            .build();
+    Scan scan = Scan.newBuilder(prepareCrossPartitionScan(1, 0, 2)).limit(2).build();
 
     // Act
     List<Result> results = transaction.scan(scan);
@@ -216,15 +212,7 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
 
     // Assert
     assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(10);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(0);
-
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(11);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(1);
+    TestUtils.assertResultsAreASubsetOf(results, prepareExpectedResults(1, 0, 2, true));
   }
 
   @Test
@@ -408,7 +396,6 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
         .table(TABLE_WITH_TEXT)
         .all()
         .where(condition)
-        .ordering(Ordering.asc(ACCOUNT_ID))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -423,7 +410,6 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
         .table(TABLE_WITH_TEXT)
         .all()
         .where(condition)
-        .ordering(Ordering.asc(ACCOUNT_ID))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -458,6 +444,6 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
     for (Result actualResult : actualResults) {
       actual.add(actualResult.getInt(ACCOUNT_ID));
     }
-    assertThat(actual).isEqualTo(expected);
+    assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
   }
 }
