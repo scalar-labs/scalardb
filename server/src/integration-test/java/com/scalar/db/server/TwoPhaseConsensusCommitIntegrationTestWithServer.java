@@ -6,6 +6,8 @@ import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrat
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class TwoPhaseConsensusCommitIntegrationTestWithServer
     extends TwoPhaseConsensusCommitIntegrationTestBase {
@@ -57,4 +59,52 @@ public class TwoPhaseConsensusCommitIntegrationTestWithServer
       server2.shutdown();
     }
   }
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void insertAndCommit_InsertGivenForNonExisting_ShouldCreateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      insertAndCommit_InsertGivenForExisting_ShouldThrowCrudConflictExceptionOrPreparationConflictException() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void upsertAndCommit_UpsertGivenForNonExisting_ShouldCreateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void upsertAndCommit_UpsertGivenForExisting_ShouldUpdateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndCommit_UpdateGivenForNonExisting_ShouldThrowRecordNotFoundException() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndCommit_UpsertGivenForExisting_ShouldUpdateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void update_withUpdateIfWithVerifiedCondition_shouldPutProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      update_withUpdateIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      update_withUpdateIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException() {}
 }

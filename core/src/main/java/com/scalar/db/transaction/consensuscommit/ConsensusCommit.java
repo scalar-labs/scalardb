@@ -6,10 +6,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -17,7 +20,10 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -87,6 +93,8 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     }
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
@@ -99,6 +107,8 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     }
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
     checkArgument(!puts.isEmpty());
@@ -119,6 +129,8 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     }
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
     checkArgument(!deletes.isEmpty());
@@ -128,13 +140,62 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   @Override
+  public void insert(Insert insert) throws CrudException {
+    insert = copyAndSetTargetToIfNot(insert);
+    Put put = ConsensusCommitUtils.createPutForInsert(insert);
+    checkMutation(put);
+    crud.put(put);
+  }
+
+  @Override
+  public void upsert(Upsert upsert) throws CrudException {
+    upsert = copyAndSetTargetToIfNot(upsert);
+    Put put = ConsensusCommitUtils.createPutForUpsert(upsert);
+    checkMutation(put);
+    try {
+      crud.put(put);
+    } catch (UncommittedRecordException e) {
+      lazyRecovery(e);
+      throw e;
+    }
+  }
+
+  @Override
+  public void update(Update update) throws CrudException {
+    update = copyAndSetTargetToIfNot(update);
+    ScalarDbUtils.checkUpdate(update);
+    Put put = ConsensusCommitUtils.createPutForUpdate(update);
+    checkMutation(put);
+    try {
+      crud.put(put);
+    } catch (UnsatisfiedConditionException e) {
+      if (update.getCondition().isPresent()) {
+        throw e;
+      } else {
+        throw new RecordNotFoundException(
+            CoreError.CONSENSUS_COMMIT_RECORD_NOT_FOUND.buildMessage(), e, getId());
+      }
+    } catch (UncommittedRecordException e) {
+      lazyRecovery(e);
+      throw e;
+    }
+  }
+
+  @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(!mutations.isEmpty());
+    checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
     for (Mutation m : mutations) {
       if (m instanceof Put) {
         put((Put) m);
       } else if (m instanceof Delete) {
         delete((Delete) m);
+      } else if (m instanceof Insert) {
+        insert((Insert) m);
+      } else if (m instanceof Upsert) {
+        upsert((Upsert) m);
+      } else {
+        assert m instanceof Update;
+        update((Update) m);
       }
     }
   }

@@ -14,4 +14,10 @@ public interface OperationVisitor {
   void visit(Put put);
 
   void visit(Delete delete);
+
+  void visit(Insert insert);
+
+  void visit(Upsert upsert);
+
+  void visit(Update update);
 }

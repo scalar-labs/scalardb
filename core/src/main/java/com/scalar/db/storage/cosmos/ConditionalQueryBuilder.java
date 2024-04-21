@@ -9,6 +9,7 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.UpdateIf;
 import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.jooq.Field;
@@ -119,5 +120,10 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
       default:
         throw new AssertionError();
     }
+  }
+
+  @Override
+  public void visit(UpdateIf condition) {
+    throw new AssertionError("UpdateIf is not supported");
   }
 }

@@ -9,12 +9,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -22,8 +26,10 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -46,6 +52,7 @@ public class TwoPhaseConsensusCommitTest {
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
+  private static final String ANY_TEXT_4 = "text4";
   private static final String ANY_TX_ID = "any_id";
 
   @Mock private Snapshot snapshot;
@@ -251,6 +258,293 @@ public class TwoPhaseConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(() -> transaction.delete(delete))
+        .isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(get, result);
+  }
+
+  @Test
+  public void insert_InsertGiven_ShouldCallCrudHandlerPut()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+
+    // Act
+    transaction.insert(insert);
+
+    // Assert
+    Put expectedPut =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableInsertMode()
+            .build();
+    verify(crud).put(expectedPut);
+    verify(mutationOperationChecker).check(expectedPut);
+  }
+
+  @Test
+  public void upsert_UpsertGiven_ShouldCallCrudHandlerPut()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+
+    // Act
+    transaction.upsert(upsert);
+
+    // Assert
+    Put expectedPut =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableImplicitPreRead()
+            .build();
+    verify(crud).put(expectedPut);
+    verify(mutationOperationChecker).check(expectedPut);
+  }
+
+  @Test
+  public void upsert_UpsertForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
+    // Arrange
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableImplicitPreRead()
+            .build();
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .build();
+
+    TransactionResult result = mock(TransactionResult.class);
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    doThrow(toThrow).when(crud).put(put);
+    when(toThrow.getSelection()).thenReturn(get);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.upsert(upsert))
+        .isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(get, result);
+  }
+
+  @Test
+  public void update_UpdateWithoutConditionGiven_ShouldCallCrudHandlerPut()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+
+    // Act
+    transaction.update(update);
+
+    // Assert
+    Put expectedPut =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
+            .build();
+    verify(crud).put(expectedPut);
+    verify(mutationOperationChecker).check(expectedPut);
+  }
+
+  @Test
+  public void update_UpdateWithConditionGiven_ShouldCallCrudHandlerPut()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(
+                ConditionBuilder.updateIf(
+                        ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                    .build())
+            .build();
+
+    // Act
+    transaction.update(update);
+
+    // Assert
+    Put expectedPut =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                    .build())
+            .enableImplicitPreRead()
+            .build();
+    verify(crud).put(expectedPut);
+    verify(mutationOperationChecker).check(expectedPut);
+  }
+
+  @Test
+  public void
+      update_UpdateWithoutConditionGivenAndUnsatisfiedConditionExceptionThrownByCrudHandler_ShouldThrowRecordNotFoundException()
+          throws CrudException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
+            .build();
+
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(snapshot.getId()).thenReturn(ANY_TX_ID);
+
+    doThrow(UnsatisfiedConditionException.class).when(crud).put(put);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.update(update))
+        .isInstanceOf(RecordNotFoundException.class);
+  }
+
+  @Test
+  public void
+      update_UpdateWithConditionGivenAndUnsatisfiedConditionExceptionThrownByCrudHandler_ShouldThrowUnsatisfiedConditionException()
+          throws CrudException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(
+                ConditionBuilder.updateIf(
+                        ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                    .build())
+            .build();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                    .build())
+            .enableImplicitPreRead()
+            .build();
+
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(snapshot.getId()).thenReturn(ANY_TX_ID);
+
+    doThrow(UnsatisfiedConditionException.class).when(crud).put(put);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.update(update))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void update_UpdateForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
+            .build();
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .build();
+
+    TransactionResult result = mock(TransactionResult.class);
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    doThrow(toThrow).when(crud).put(put);
+    when(toThrow.getSelection()).thenReturn(get);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.update(update))
         .isInstanceOf(UncommittedRecordException.class);
 
     verify(recovery).recover(get, result);

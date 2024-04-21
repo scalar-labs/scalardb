@@ -10,7 +10,7 @@ import java.util.Collection;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to retrieve an entry from {@link DistributedStorage}.
+ * A command to retrieve an entry from a storage.
  *
  * @author Hiroyuki Yamada
  */

@@ -125,14 +125,16 @@ public interface DistributedStorage {
   Optional<Result> get(Get get) throws ExecutionException;
 
   /**
-   * Retrieves results from the storage with the specified {@link Scan} or {@link ScanAll} command
-   * and returns {@link Scanner} to iterate the results.
+   * Retrieves results from the storage with the specified {@link Scan} or {@link ScanAll} or {@link
+   * ScanWithIndex} command and returns {@link Scanner} to iterate the results.
    *
    * <ul>
    *   <li>{@link Scan} : by specifying a partition key, it will return results within the
    *       partition. Results can be filtered by specifying a range of clustering keys.
    *   <li>{@link ScanAll} : for a given table, it will return all its records even if they span
    *       several partitions.
+   *   <li>{@link ScanWithIndex} : by specifying a index key, it will return results within the
+   *       index.
    * </ul>
    *
    * @param scan a {@code Scan} or {@code ScanAll} command

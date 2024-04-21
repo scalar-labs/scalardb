@@ -2,16 +2,22 @@ package com.scalar.db.transaction.jdbc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -19,11 +25,13 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import com.scalar.db.util.ScalarDbUtils;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -86,6 +94,8 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     }
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
@@ -102,6 +112,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     }
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
     mutate(puts);
@@ -124,9 +137,99 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     }
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
     mutate(deletes);
+  }
+
+  @Override
+  public void insert(Insert insert) throws CrudException {
+    insert = copyAndSetTargetToIfNot(insert);
+
+    PutBuilder.Buildable buildable =
+        Put.newBuilder()
+            .namespace(insert.forNamespace().orElse(null))
+            .table(insert.forTable().orElse(null))
+            .partitionKey(insert.getPartitionKey());
+    insert.getClusteringKey().ifPresent(buildable::clusteringKey);
+    insert.getColumns().values().forEach(buildable::value);
+    buildable.condition(ConditionBuilder.putIfNotExists());
+    Put put = buildable.build();
+
+    try {
+      if (!jdbcService.put(put, connection)) {
+        throw new CrudConflictException(
+            CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_INSERT.buildMessage(), txId);
+      }
+    } catch (SQLException e) {
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_INSERT_OPERATION_FAILED.buildMessage());
+    } catch (ExecutionException e) {
+      throw new CrudException(
+          CoreError.JDBC_TRANSACTION_INSERT_OPERATION_FAILED.buildMessage(), e, txId);
+    }
+  }
+
+  @Override
+  public void upsert(Upsert upsert) throws CrudException {
+    upsert = copyAndSetTargetToIfNot(upsert);
+
+    PutBuilder.Buildable buildable =
+        Put.newBuilder()
+            .namespace(upsert.forNamespace().orElse(null))
+            .table(upsert.forTable().orElse(null))
+            .partitionKey(upsert.getPartitionKey());
+    upsert.getClusteringKey().ifPresent(buildable::clusteringKey);
+    upsert.getColumns().values().forEach(buildable::value);
+    Put put = buildable.build();
+
+    try {
+      jdbcService.put(put, connection);
+    } catch (SQLException e) {
+      throw createCrudException(e, CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.getMessage());
+    } catch (ExecutionException e) {
+      throw new CrudException(
+          CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.buildMessage(), e, txId);
+    }
+  }
+
+  @Override
+  public void update(Update update) throws CrudException {
+    update = copyAndSetTargetToIfNot(update);
+    ScalarDbUtils.checkUpdate(update);
+
+    PutBuilder.Buildable buildable =
+        Put.newBuilder()
+            .namespace(update.forNamespace().orElse(null))
+            .table(update.forTable().orElse(null))
+            .partitionKey(update.getPartitionKey());
+    update.getClusteringKey().ifPresent(buildable::clusteringKey);
+    update.getColumns().values().forEach(buildable::value);
+    if (update.getCondition().isPresent()) {
+      buildable.condition(ConditionBuilder.putIf(update.getCondition().get().getExpressions()));
+    } else {
+      buildable.condition(ConditionBuilder.putIfExists());
+    }
+    Put put = buildable.build();
+
+    try {
+      if (!jdbcService.put(put, connection)) {
+        if (update.getCondition().isPresent()) {
+          throwUnsatisfiedConditionException(update);
+        } else {
+          throw new RecordNotFoundException(
+              CoreError.JDBC_TRANSACTION_RECORD_NOT_FOUND.buildMessage(), txId);
+        }
+      }
+    } catch (SQLException e) {
+      throw createCrudException(e, CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.getMessage());
+    } catch (ExecutionException e) {
+      throw new CrudException(
+          CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.buildMessage(), e, txId);
+    }
   }
 
   @Override
@@ -137,6 +240,13 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         put((Put) mutation);
       } else if (mutation instanceof Delete) {
         delete((Delete) mutation);
+      } else if (mutation instanceof Insert) {
+        insert((Insert) mutation);
+      } else if (mutation instanceof Upsert) {
+        upsert((Upsert) mutation);
+      } else {
+        assert mutation instanceof Update;
+        update((Update) mutation);
       }
     }
   }
@@ -166,13 +276,16 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
   private void throwUnsatisfiedConditionException(Mutation mutation)
       throws UnsatisfiedConditionException {
+    assert mutation instanceof Put || mutation instanceof Delete || mutation instanceof Update;
     assert mutation.getCondition().isPresent();
 
     // Build the exception message
     MutationCondition condition = mutation.getCondition().get();
     String conditionColumns = null;
-    // For PutIf and DeleteIf, aggregate the condition columns to the message
-    if (condition instanceof PutIf || condition instanceof DeleteIf) {
+    // For PutIf, DeleteIf, and UpdateIf, aggregate the condition columns to the message
+    if (condition instanceof PutIf
+        || condition instanceof DeleteIf
+        || condition instanceof UpdateIf) {
       List<ConditionalExpression> expressions = condition.getExpressions();
       conditionColumns =
           expressions.stream()

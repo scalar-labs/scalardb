@@ -21,6 +21,7 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.UpdateIf;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -128,5 +129,10 @@ public class ConditionSetter implements MutationConditionVisitor {
       default:
         throw new AssertionError();
     }
+  }
+
+  @Override
+  public void visit(UpdateIf condition) {
+    throw new AssertionError("UpdateIf is not supported");
   }
 }

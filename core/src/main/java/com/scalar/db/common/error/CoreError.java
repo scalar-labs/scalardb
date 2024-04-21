@@ -572,6 +572,14 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0124", "Columns must be specified. Table: %s", "", ""),
   SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE(
       Category.USER_ERROR, "0125", "Invalid column type. Table: %s; Column: %s; Type: %s", "", ""),
+  OPERATION_CHECK_ERROR_UNSUPPORTED_MUTATION_TYPE(
+      Category.USER_ERROR, "0126", "The mutation type is not supported. Mutation: %s", "", ""),
+  CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_UPDATE_IF(
+      Category.USER_ERROR,
+      "0127",
+      "This condition is not allowed for the UpdateIf operation. Condition: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -665,6 +673,16 @@ public enum CoreError implements ScalarDbError {
       "An anti-dependency was found. The transaction has been aborted",
       "",
       ""),
+  CONSENSUS_COMMIT_RECORD_NOT_FOUND(
+      Category.CONCURRENCY_ERROR, "0023", "The record does not exist", "", ""),
+  JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_INSERT(
+      Category.CONCURRENCY_ERROR,
+      "0024",
+      "A transaction conflict occurred in the Insert operation",
+      "",
+      ""),
+  JDBC_TRANSACTION_RECORD_NOT_FOUND(
+      Category.CONCURRENCY_ERROR, "0025", "The record does not exist", "", ""),
 
   //
   // Errors for the internal error category
@@ -774,10 +792,10 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_VALIDATION_FAILED(Category.INTERNAL_ERROR, "0037", "Validation failed", "", ""),
   CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED(
       Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed", "", ""),
-  CONSENSUS_COMMIT_GET_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0039", "The Get operation failed", "", ""),
-  CONSENSUS_COMMIT_SCAN_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0040", "The Scan operation failed", "", ""),
+  CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED(
+      Category.INTERNAL_ERROR, "0039", "Reading a record from the storage failed", "", ""),
+  CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED(
+      Category.INTERNAL_ERROR, "0040", "Scanning records from the storage failed", "", ""),
   CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
       Category.INTERNAL_ERROR,
       "0041",
@@ -785,6 +803,12 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_ROLLBACK_FAILED(Category.INTERNAL_ERROR, "0042", "Rollback failed", "", ""),
+  JDBC_TRANSACTION_INSERT_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0043", "The Insert operation failed", "", ""),
+  JDBC_TRANSACTION_UPSERT_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0044", "The Upsert operation failed", "", ""),
+  JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
+      Category.INTERNAL_ERROR, "0045", "The Update operation failed", "", ""),
 
   //
   // Errors for the unknown transaction status error category

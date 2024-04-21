@@ -8,10 +8,13 @@ import com.datastax.driver.core.PreparedStatement;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.OperationVisitor;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -77,6 +80,24 @@ public class BatchComposer implements OperationVisitor {
   @Override
   public void visit(Delete delete) {
     composeWith(handlers.delete(), delete);
+  }
+
+  @Override
+  public void visit(Insert insert) {
+    throw new AssertionError(
+        "Insert operation is not supported since it is a transaction operation");
+  }
+
+  @Override
+  public void visit(Upsert upsert) {
+    throw new AssertionError(
+        "Upsert operation is not supported since it is a transaction operation");
+  }
+
+  @Override
+  public void visit(Update update) {
+    throw new AssertionError(
+        "Update operation is not supported since it is a transaction operation");
   }
 
   @VisibleForTesting

@@ -6,10 +6,12 @@ import com.google.common.base.MoreObjects;
 import com.scalar.db.api.DeleteBuilder.BuildableFromExisting;
 import com.scalar.db.api.DeleteBuilder.Namespace;
 import com.scalar.db.io.Key;
+import java.util.Optional;
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to delete an entry from {@link DistributedStorage}.
+ * A command to delete an entry from a storage.
  *
  * @author Hiroyuki Yamada
  */
@@ -120,6 +122,12 @@ public class Delete extends Mutation {
   @Deprecated
   public Delete withCondition(MutationCondition condition) {
     return (Delete) super.withCondition(condition);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<MutationCondition> getCondition() {
+    return super.getCondition();
   }
 
   /**

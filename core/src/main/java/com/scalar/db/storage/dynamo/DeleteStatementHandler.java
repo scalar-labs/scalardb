@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -75,6 +76,7 @@ public class DeleteStatementHandler {
       if (delete.getCondition().get() instanceof DeleteIfExists) {
         condition = dynamoMutation.getIfExistsCondition();
       } else {
+        assert delete.getCondition().get() instanceof DeleteIf;
         condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
         builder.expressionAttributeNames(dynamoMutation.getConditionColumnMap());
         Map<String, AttributeValue> bindMap = dynamoMutation.getConditionBindMap();
