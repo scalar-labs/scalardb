@@ -56,7 +56,7 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
   }
 
   @Override
-  protected boolean supportFloatTypeKey() {
+  protected boolean isFloatTypeKeySupported() {
     return !(rdbEngine instanceof RdbEngineYugabyte);
   }
 }

@@ -132,7 +132,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     return namespaceBaseName + firstColumnType;
   }
 
-  protected boolean supportParallelDdl() {
+  protected boolean isParallelDdlSupported() {
     return true;
   }
 
@@ -1036,7 +1036,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private void executeDdls(List<Callable<Void>> ddls)
       throws InterruptedException, java.util.concurrent.ExecutionException {
-    if (supportParallelDdl()) {
+    if (isParallelDdlSupported()) {
       executeInParallel(ddls);
     } else {
       ddls.forEach(
