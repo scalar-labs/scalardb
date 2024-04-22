@@ -38,4 +38,9 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     }
     return super.getRandomColumn(random, columnName, dataType);
   }
+
+  @Override
+  protected boolean supportParallelDdl() {
+    return !(rdbEngine instanceof RdbEngineYugabyte);
+  }
 }
