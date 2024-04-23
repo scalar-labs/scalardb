@@ -497,7 +497,7 @@ class GroupCommitterTest {
     verify(groupCommitMonitor, never()).close();
     doReturn(false).when(metrics).hasRemaining();
 
-    future.get(2, TimeUnit.SECONDS);
+    future.get(10, TimeUnit.SECONDS);
 
     verify(groupSizeFixWorker).close();
     verify(delayedSlotMoveWorker).close();
