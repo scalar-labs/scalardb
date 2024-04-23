@@ -188,6 +188,25 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
+  public void put_PutGivenAndUncommittedRecordExceptionThrown_ShouldRecoverRecord()
+      throws CrudException {
+    // Arrange
+    Put put = preparePut();
+    Get get = prepareGet();
+
+    TransactionResult result = mock(TransactionResult.class);
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    doThrow(toThrow).when(crud).put(put);
+    when(toThrow.getSelection()).thenReturn(get);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.put(put)).isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(get, result);
+  }
+
+  @Test
   public void delete_DeleteGiven_ShouldCallCrudHandlerDelete()
       throws CrudException, ExecutionException {
     // Arrange
@@ -215,6 +234,26 @@ public class TwoPhaseConsensusCommitTest {
     // Assert
     verify(crud, times(2)).delete(delete);
     verify(mutationOperationChecker, times(2)).check(delete);
+  }
+
+  @Test
+  public void delete_DeleteGivenAndUncommittedRecordExceptionThrown_ShouldRecoverRecord()
+      throws CrudException {
+    // Arrange
+    Delete delete = prepareDelete();
+    Get get = prepareGet();
+
+    TransactionResult result = mock(TransactionResult.class);
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    doThrow(toThrow).when(crud).delete(delete);
+    when(toThrow.getSelection()).thenReturn(get);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.delete(delete))
+        .isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(get, result);
   }
 
   @Test
