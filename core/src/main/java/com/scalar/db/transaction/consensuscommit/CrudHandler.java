@@ -213,6 +213,9 @@ public class CrudHandler {
 
   public void readIfImplicitPreReadEnabled() throws CrudException {
     List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
+
+    // For each put in the write set, if implicit pre-read is enabled and the record is not read
+    // yet, read the record
     for (Put put : snapshot.getPutsInWriteSet()) {
       if (put.isImplicitPreReadEnabled()) {
         Snapshot.Key key = new Snapshot.Key(put);
@@ -221,6 +224,8 @@ public class CrudHandler {
         }
       }
     }
+
+    // For each delete in the write set, if the record is not read yet, read the record
     for (Delete delete : snapshot.getDeletesInDeleteSet()) {
       Snapshot.Key key = new Snapshot.Key(delete);
       if (!snapshot.containsKeyInReadSet(key)) {
