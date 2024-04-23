@@ -21,6 +21,7 @@ import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -1064,6 +1065,35 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  public void putAndCommit_PutWithImplicitPreReadEnabledGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
+            .build();
+    transaction.put(put);
+    transaction.prepare();
+    transaction.commit();
+
+    // Assert
+    TwoPhaseCommitTransaction another = manager1.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    another.prepare();
+    another.commit();
+
+    assertThat(result).isPresent();
+    assertThat(getAccountId(result.get())).isEqualTo(0);
+    assertThat(getAccountType(result.get())).isEqualTo(0);
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
   public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
@@ -1123,6 +1153,114 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(afterBalance);
+  }
+
+  @Test
+  public void putAndCommit_PutGivenForExisting_ShouldThrowPreparationConflictException()
+      throws TransactionException {
+    // Arrange
+    populate(manager1, namespace1, TABLE_1);
+
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act Assert
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE + 100)
+            .build();
+    transaction.put(put);
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
+    transaction.rollback();
+  }
+
+  @Test
+  public void putAndCommit_PutWithInsertModeEnabledGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, expected)
+            .enableInsertMode()
+            .build();
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act
+    transaction.put(put);
+    transaction.prepare();
+    transaction.commit();
+
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction another = manager1.begin();
+    Optional<Result> r = another.get(get);
+    another.prepare();
+    another.commit();
+
+    assertThat(r).isPresent();
+    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    assertThat(getBalance(result)).isEqualTo(expected);
+    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(result.getVersion()).isEqualTo(1);
+  }
+
+  @Test
+  public void putAndCommit_PutWithInsertModeEnabledGivenForNonExistingAfterRead_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, expected)
+            .enableInsertMode()
+            .build();
+
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    assertThat(result).isNotPresent();
+
+    transaction.put(put);
+    transaction.prepare();
+    transaction.commit();
+
+    // Assert
+    TwoPhaseCommitTransaction another = manager1.begin();
+    Optional<Result> r = another.get(get);
+    another.prepare();
+    another.commit();
+
+    assertThat(r).isPresent();
+    TransactionResult actual = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    assertThat(getBalance(actual)).isEqualTo(expected);
+    Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(actual.getVersion()).isEqualTo(1);
+  }
+
+  @Test
+  public void
+      putAndCommit_PutWithInsertModeGivenForExistingAfterRead_ShouldThrowPreparationConflictException()
+          throws TransactionException {
+    // Arrange
+    populate(manager1, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.begin();
+
+    // Act Assert
+    Optional<Result> result = transaction.get(get);
+    assertThat(result).isPresent();
+
+    Put put =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, getBalance(result.get()) + 100)
+            .enableInsertMode()
+            .build();
+    transaction.put(put);
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
+    transaction.rollback();
   }
 
   @Test
@@ -2900,7 +3038,6 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .intValue(BALANCE, INITIAL_BALANCE)
-                .disableImplicitPreRead()
                 .build());
       }
     }
