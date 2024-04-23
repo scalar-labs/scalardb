@@ -96,7 +96,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private void putInternal(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
     checkMutation(put);
-    crud.put(put);
+    try {
+      crud.put(put);
+    } catch (UncommittedRecordException e) {
+      lazyRecovery(e);
+      throw e;
+    }
   }
 
   @Override
@@ -115,7 +120,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private void deleteInternal(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
     checkMutation(delete);
-    crud.delete(delete);
+    try {
+      crud.delete(delete);
+    } catch (UncommittedRecordException e) {
+      lazyRecovery(e);
+      throw e;
+    }
   }
 
   @Override
