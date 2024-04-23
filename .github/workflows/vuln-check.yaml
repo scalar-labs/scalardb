@@ -99,7 +99,7 @@ jobs:
 
       - name: Post Trivy vulnerability check failure for ScalarDB Server to Slack
         if: failure()
-        uses: slackapi/slack-github-action@v1.25.0
+        uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
@@ -130,7 +130,7 @@ jobs:
 
       - name: Post Trivy vulnerability check failure for ScalarDB Schema Loader to Slack
         if: failure()
-        uses: slackapi/slack-github-action@v1.25.0
+        uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
