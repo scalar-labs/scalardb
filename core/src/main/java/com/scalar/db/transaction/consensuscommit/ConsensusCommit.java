@@ -90,7 +90,12 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   public void put(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
     checkMutation(put);
-    crud.put(put);
+    try {
+      crud.put(put);
+    } catch (UncommittedRecordException e) {
+      lazyRecovery(e);
+      throw e;
+    }
   }
 
   @Override
@@ -105,7 +110,12 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   public void delete(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
     checkMutation(delete);
-    crud.delete(delete);
+    try {
+      crud.delete(delete);
+    } catch (UncommittedRecordException e) {
+      lazyRecovery(e);
+      throw e;
+    }
   }
 
   @Override
