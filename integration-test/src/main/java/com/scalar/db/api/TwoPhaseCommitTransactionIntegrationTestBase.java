@@ -469,39 +469,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutWithImplicitPreReadDisabledGivenForNonExisting_ShouldCreateRecord()
-      throws TransactionException {
-    // Arrange
-    int expected = INITIAL_BALANCE;
-    Put put =
-        Put.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .disableImplicitPreRead()
-            .build();
-    TwoPhaseCommitTransaction transaction = manager1.start();
-
-    // Act
-    transaction.put(put);
-    transaction.prepare();
-    transaction.validate();
-    transaction.commit();
-
-    // Assert
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    TwoPhaseCommitTransaction another = manager1.start();
-    Optional<Result> result = another.get(get);
-    another.prepare();
-    another.validate();
-    another.commit();
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getBalance(result.get())).isEqualTo(expected);
-  }
-
-  @Test
   public void putAndCommit_PutGivenForExisting_ShouldUpdateRecord() throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
@@ -532,29 +499,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     assertThat(actual.isPresent()).isTrue();
     assertThat(getBalance(actual.get())).isEqualTo(expected);
-  }
-
-  @Test
-  public void
-      putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowPreparationConflictException()
-          throws TransactionException {
-    // Arrange
-    populateRecords(manager1, namespace1, TABLE_1);
-    TwoPhaseCommitTransaction transaction = manager1.start();
-
-    // Act Assert
-    Put put =
-        Put.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE + 100)
-            .disableImplicitPreRead()
-            .build();
-    transaction.put(put);
-    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
-    transaction.rollback();
   }
 
   @Test
@@ -1677,7 +1621,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                                   .clusteringKey(clusteringKey)
                                   .intValue(BALANCE, INITIAL_BALANCE)
                                   .intValue(SOME_COLUMN, i * j)
-                                  .disableImplicitPreRead()
                                   .build();
                           try {
                             transaction.put(put);
@@ -1703,7 +1646,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .intValue(BALANCE, INITIAL_BALANCE)
-            .disableImplicitPreRead()
             .build();
 
     transaction.put(put);

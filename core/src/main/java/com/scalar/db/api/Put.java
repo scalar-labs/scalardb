@@ -42,6 +42,8 @@ public class Put extends Mutation {
 
   private boolean implicitPreReadEnabled;
 
+  private boolean insertModeEnabled;
+
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
@@ -84,6 +86,7 @@ public class Put extends Mutation {
     super(put);
     columns = new LinkedHashMap<>(put.columns);
     implicitPreReadEnabled = put.implicitPreReadEnabled;
+    insertModeEnabled = put.insertModeEnabled;
   }
 
   /**
@@ -740,11 +743,6 @@ public class Put extends Mutation {
     return (Put) super.withConsistency(consistency);
   }
 
-  @Override
-  public void accept(OperationVisitor v) {
-    v.visit(this);
-  }
-
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
@@ -775,6 +773,30 @@ public class Put extends Mutation {
   }
 
   /**
+   * Returns whether the insert mode is enabled for this Put.
+   *
+   * @return whether the insert mode is enabled for this Put
+   */
+  public boolean isInsertModeEnabled() {
+    return insertModeEnabled;
+  }
+
+  /**
+   * Sets whether the insert mode is enabled for this Put.
+   *
+   * @param insertModeEnabled whether the insert mode is enabled for this Put
+   */
+  Put setInsertModeEnabled(boolean insertModeEnabled) {
+    this.insertModeEnabled = insertModeEnabled;
+    return this;
+  }
+
+  @Override
+  public void accept(OperationVisitor v) {
+    v.visit(this);
+  }
+
+  /**
    * Indicates whether some other object is "equal to" this object. The other object is considered
    * equal if:
    *
@@ -799,12 +821,14 @@ public class Put extends Mutation {
       return false;
     }
     Put other = (Put) o;
-    return columns.equals(other.columns) && implicitPreReadEnabled == other.implicitPreReadEnabled;
+    return columns.equals(other.columns)
+        && implicitPreReadEnabled == other.implicitPreReadEnabled
+        && insertModeEnabled == other.insertModeEnabled;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), columns, implicitPreReadEnabled);
+    return Objects.hash(super.hashCode(), columns, implicitPreReadEnabled, insertModeEnabled);
   }
 
   @Override
@@ -818,6 +842,7 @@ public class Put extends Mutation {
         .add("consistency", getConsistency())
         .add("condition", getCondition())
         .add("implicitPreReadEnabled", isImplicitPreReadEnabled())
+        .add("insertModeEnabled", isInsertModeEnabled())
         .toString();
   }
 }
