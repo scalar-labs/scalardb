@@ -96,7 +96,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   protected void waitForDifferentSessionDdl() {
     if (rdbEngine instanceof RdbEngineYugabyte) {
       // This is needed to avoid schema or catalog version mismatch database errors.
-      Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
+      Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
     }
   }
 }
