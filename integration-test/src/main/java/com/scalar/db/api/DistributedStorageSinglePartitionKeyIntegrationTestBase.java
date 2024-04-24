@@ -106,6 +106,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
     } catch (Exception e) {
       logger.warn("Failed to drop tables", e);
     }
+
     try {
       if (admin != null) {
         admin.close();
@@ -113,6 +114,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
     } catch (Exception e) {
       logger.warn("Failed to close admin", e);
     }
+
     try {
       if (storage != null) {
         storage.close();

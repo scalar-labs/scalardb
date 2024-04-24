@@ -122,6 +122,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     } catch (Exception e) {
       logger.warn("Failed to drop tables", e);
     }
+
     try {
       if (admin != null) {
         admin.close();
