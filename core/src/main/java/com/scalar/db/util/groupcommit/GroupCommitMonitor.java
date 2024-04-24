@@ -16,7 +16,7 @@ class GroupCommitMonitor implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitMonitor.class);
   private final ExecutorService executorService;
 
-  GroupCommitMonitor(String label, Supplier<Metrics> metricsSupplier) {
+  GroupCommitMonitor(String label, Supplier<GroupCommitMetrics> metricsSupplier) {
     executorService =
         Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
@@ -26,9 +26,11 @@ class GroupCommitMonitor implements Closeable {
     startExecutorService(metricsSupplier);
   }
 
-  private void startExecutorService(Supplier<Metrics> metricsSupplier) {
+  private void startExecutorService(Supplier<GroupCommitMetrics> metricsSupplier) {
     Runnable print =
-        () -> logger.debug("[MONITOR] Timestamp={}, Metrics={}", Instant.now(), metricsSupplier);
+        () ->
+            logger.info(
+                "Timestamp={}, GroupCommitMetrics={}", Instant.now(), metricsSupplier.get());
 
     executorService.execute(
         () -> {
