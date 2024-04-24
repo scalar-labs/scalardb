@@ -620,7 +620,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_TRANSACTION_CONFLICT_OCCURRED(
       Category.CONCURRENCY_ERROR,
       "0011",
-      "A conflict occurred. Please try restarting the transaction",
+      "A conflict occurred. Please try restarting the transaction. Details: %s",
       "",
       ""),
   JDBC_TRANSACTION_CONDITION_NOT_SATISFIED(
@@ -682,7 +682,11 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   JDBC_TRANSACTION_RECORD_NOT_FOUND(
-      Category.CONCURRENCY_ERROR, "0025", "The record does not exist", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0025",
+      "The record does not exist for the Update operation",
+      "",
+      ""),
 
   //
   // Errors for the internal error category
@@ -774,19 +778,19 @@ public enum CoreError implements ScalarDbError {
   JDBC_FETCHING_NEXT_RESULT_FAILED(
       Category.INTERNAL_ERROR, "0028", "Fetching the next result failed", "", ""),
   JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_FAILED(
-      Category.INTERNAL_ERROR, "0029", "Rolling back the transaction failed", "", ""),
+      Category.INTERNAL_ERROR, "0029", "Rolling back the transaction failed. Details: %s", "", ""),
   JDBC_TRANSACTION_COMMITTING_TRANSACTION_FAILED(
-      Category.INTERNAL_ERROR, "0030", "Committing the transaction failed", "", ""),
+      Category.INTERNAL_ERROR, "0030", "Committing the transaction failed. Details: %s", "", ""),
   JDBC_TRANSACTION_GET_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0031", "The Get operation failed", "", ""),
+      Category.INTERNAL_ERROR, "0031", "The Get operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_SCAN_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0032", "The Scan operation failed", "", ""),
+      Category.INTERNAL_ERROR, "0032", "The Scan operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_PUT_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0033", "The Put operation failed", "", ""),
+      Category.INTERNAL_ERROR, "0033", "The Put operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_DELETE_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0034", "The Delete operation failed", "", ""),
+      Category.INTERNAL_ERROR, "0034", "The Delete operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED(
-      Category.INTERNAL_ERROR, "0035", "Beginning a transaction failed", "", ""),
+      Category.INTERNAL_ERROR, "0035", "Beginning a transaction failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0036", "Preparing records failed", "", ""),
   CONSENSUS_COMMIT_VALIDATION_FAILED(Category.INTERNAL_ERROR, "0037", "Validation failed", "", ""),
@@ -804,11 +808,11 @@ public enum CoreError implements ScalarDbError {
       ""),
   CONSENSUS_COMMIT_ROLLBACK_FAILED(Category.INTERNAL_ERROR, "0042", "Rollback failed", "", ""),
   JDBC_TRANSACTION_INSERT_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0043", "The Insert operation failed", "", ""),
+      Category.INTERNAL_ERROR, "0043", "The Insert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPSERT_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0044", "The Upsert operation failed", "", ""),
+      Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
-      Category.INTERNAL_ERROR, "0045", "The Update operation failed", "", ""),
+      Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category
@@ -816,7 +820,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0000",
-      "Rolling back the transaction failed",
+      "Rolling back the transaction failed. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(

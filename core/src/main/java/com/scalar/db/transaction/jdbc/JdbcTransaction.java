@@ -74,10 +74,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       return jdbcService.get(get, connection);
     } catch (SQLException e) {
-      throw createCrudException(e, CoreError.JDBC_TRANSACTION_GET_OPERATION_FAILED.buildMessage());
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_GET_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.JDBC_TRANSACTION_GET_OPERATION_FAILED.buildMessage(), e, txId);
+      throw new CrudException(e.getMessage(), e, txId);
     }
   }
 
@@ -87,10 +87,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       return jdbcService.scan(scan, connection);
     } catch (SQLException e) {
-      throw createCrudException(e, CoreError.JDBC_TRANSACTION_SCAN_OPERATION_FAILED.buildMessage());
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_SCAN_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.JDBC_TRANSACTION_SCAN_OPERATION_FAILED.buildMessage(), e, txId);
+      throw new CrudException(e.getMessage(), e, txId);
     }
   }
 
@@ -105,10 +105,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         throwUnsatisfiedConditionException(put);
       }
     } catch (SQLException e) {
-      throw createCrudException(e, CoreError.JDBC_TRANSACTION_PUT_OPERATION_FAILED.buildMessage());
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_PUT_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.JDBC_TRANSACTION_PUT_OPERATION_FAILED.buildMessage(), e, txId);
+      throw new CrudException(e.getMessage(), e, txId);
     }
   }
 
@@ -130,10 +130,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       }
     } catch (SQLException e) {
       throw createCrudException(
-          e, CoreError.JDBC_TRANSACTION_DELETE_OPERATION_FAILED.buildMessage());
+          e, CoreError.JDBC_TRANSACTION_DELETE_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.JDBC_TRANSACTION_DELETE_OPERATION_FAILED.buildMessage(), e, txId);
+      throw new CrudException(e.getMessage(), e, txId);
     }
   }
 
@@ -166,10 +165,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       }
     } catch (SQLException e) {
       throw createCrudException(
-          e, CoreError.JDBC_TRANSACTION_INSERT_OPERATION_FAILED.buildMessage());
+          e, CoreError.JDBC_TRANSACTION_INSERT_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.JDBC_TRANSACTION_INSERT_OPERATION_FAILED.buildMessage(), e, txId);
+      throw new CrudException(e.getMessage(), e, txId);
     }
   }
 
@@ -189,10 +187,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       jdbcService.put(put, connection);
     } catch (SQLException e) {
-      throw createCrudException(e, CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.getMessage());
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.buildMessage(), e, txId);
+      throw new CrudException(e.getMessage(), e, txId);
     }
   }
 
@@ -225,10 +223,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         }
       }
     } catch (SQLException e) {
-      throw createCrudException(e, CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.getMessage());
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_UPDATE_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.buildMessage(), e, txId);
+      throw new CrudException(e.getMessage(), e, txId);
     }
   }
 
@@ -260,7 +258,8 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         connection.rollback();
       } catch (SQLException sqlException) {
         throw new UnknownTransactionStatusException(
-            CoreError.JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS.buildMessage(),
+            CoreError.JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS.buildMessage(
+                sqlException.getMessage()),
             sqlException,
             txId);
       }
@@ -312,7 +311,9 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       connection.rollback();
     } catch (SQLException e) {
       throw new RollbackException(
-          CoreError.JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_FAILED.buildMessage(), e, txId);
+          CoreError.JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_FAILED.buildMessage(e.getMessage()),
+          e,
+          txId);
     } finally {
       try {
         connection.close();
@@ -325,7 +326,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   private CrudException createCrudException(SQLException e, String message) {
     if (rdbEngine.isConflict(e)) {
       return new CrudConflictException(
-          CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(), e, txId);
+          CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(e.getMessage()), e, txId);
     }
     return new CrudException(message, e, txId);
   }
@@ -333,9 +334,11 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   private CommitException createCommitException(SQLException e) {
     if (rdbEngine.isConflict(e)) {
       return new CommitConflictException(
-          CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(), e, txId);
+          CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(e.getMessage()), e, txId);
     }
     return new CommitException(
-        CoreError.JDBC_TRANSACTION_COMMITTING_TRANSACTION_FAILED.buildMessage(), e, txId);
+        CoreError.JDBC_TRANSACTION_COMMITTING_TRANSACTION_FAILED.buildMessage(e.getMessage()),
+        e,
+        txId);
   }
 }

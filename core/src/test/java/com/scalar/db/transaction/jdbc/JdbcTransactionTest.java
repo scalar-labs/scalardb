@@ -3,6 +3,7 @@ package com.scalar.db.transaction.jdbc;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -295,7 +296,9 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfNotExists())
             .build();
 
-    when(jdbcService.put(put, connection)).thenThrow(ExecutionException.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(jdbcService.put(put, connection)).thenThrow(executionException);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.insert(insert)).isInstanceOf(CrudException.class);
@@ -380,7 +383,9 @@ public class JdbcTransactionTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .build();
 
-    when(jdbcService.put(put, connection)).thenThrow(ExecutionException.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(jdbcService.put(put, connection)).thenThrow(executionException);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.upsert(upsert)).isInstanceOf(CrudException.class);
@@ -577,7 +582,9 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.put(put, connection)).thenThrow(ExecutionException.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(jdbcService.put(put, connection)).thenThrow(executionException);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update)).isInstanceOf(CrudException.class);
