@@ -140,7 +140,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         storage.close();
       }
     } catch (Exception e) {
-      logger.warn("Failed to storage", e);
+      logger.warn("Failed to close storage", e);
     }
   }
 
