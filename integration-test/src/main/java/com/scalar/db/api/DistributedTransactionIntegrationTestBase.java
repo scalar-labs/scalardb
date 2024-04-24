@@ -556,35 +556,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void putAndCommit_PutWithImplicitPreReadDisabledGivenForNonExisting_ShouldCreateRecord()
-      throws TransactionException {
-    // Arrange
-    int expected = INITIAL_BALANCE;
-    Put put =
-        Put.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .disableImplicitPreRead()
-            .build();
-    DistributedTransaction transaction = manager.start();
-
-    // Act
-    transaction.put(put);
-    transaction.commit();
-
-    // Assert
-    Get get = prepareGet(0, 0);
-    DistributedTransaction another = manager.start();
-    Optional<Result> result = another.get(get);
-    another.commit();
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getBalance(result.get())).isEqualTo(expected);
-  }
-
-  @Test
   public void putAndCommit_PutGivenForExisting_ShouldUpdateRecord() throws TransactionException {
     // Arrange
     populateRecords();
@@ -611,29 +582,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     assertThat(actual.isPresent()).isTrue();
     assertThat(getBalance(actual.get())).isEqualTo(expected);
-  }
-
-  @Test
-  public void
-      putAndCommit_PutWithImplicitPreReadDisabledGivenForExisting_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    populateRecords();
-    DistributedTransaction transaction = manager.start();
-
-    // Act Assert
-    Put put =
-        Put.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE + 100)
-            .disableImplicitPreRead()
-            .build();
-    transaction.put(put);
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-    transaction.rollback();
   }
 
   @Test
@@ -1419,7 +1367,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
                                   .clusteringKey(clusteringKey)
                                   .intValue(BALANCE, INITIAL_BALANCE)
                                   .intValue(SOME_COLUMN, i * j)
-                                  .disableImplicitPreRead()
                                   .build();
                           try {
                             transaction.put(put);

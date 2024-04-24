@@ -305,6 +305,30 @@ class OperationBuilder {
     T implicitPreReadEnabled(boolean implicitPreReadEnabled);
   }
 
+  interface InsertModeEnabled<T> {
+    /**
+     * Disables the insert mode for this put operation.
+     *
+     * @return the operation builder
+     */
+    T disableInsertMode();
+
+    /**
+     * Enables the insert mode for this put operation.
+     *
+     * @return the operation builder
+     */
+    T enableInsertMode();
+
+    /**
+     * Sets whether the insert mode is enabled or not for this put operation.
+     *
+     * @param insertModeEnabled whether the insert mode is enabled or not
+     * @return the operation builder
+     */
+    T insertModeEnabled(boolean insertModeEnabled);
+  }
+
   interface Limit<T> {
     /**
      * Sets the specified number of results to be returned
