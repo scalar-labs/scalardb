@@ -6,8 +6,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(JdbcSchemaLoaderImportIntegrationTest.class);
 
   private JdbcAdminImportTestUtils testUtils;
   private RdbEngineStrategy rdbEngine;
@@ -65,9 +69,20 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   }
 
   @Override
-  public void afterAll() throws Exception {
-    super.afterAll();
-    testUtils.close();
+  public void afterAll() {
+    try {
+      super.afterAll();
+    } catch (Exception e) {
+      logger.warn("Failed to call super.afterAll", e);
+    }
+
+    try {
+      if (testUtils != null) {
+        testUtils.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close test utils", e);
+    }
   }
 
   @SuppressWarnings("unused")

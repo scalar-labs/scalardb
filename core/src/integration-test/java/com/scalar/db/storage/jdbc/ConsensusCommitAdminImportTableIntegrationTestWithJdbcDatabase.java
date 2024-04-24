@@ -9,9 +9,13 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminImportTableIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase.class);
 
   private JdbcAdminImportTestUtils testUtils;
 
@@ -20,6 +24,23 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
     Properties properties = JdbcEnv.getProperties(testName);
     testUtils = new JdbcAdminImportTestUtils(properties);
     return JdbcEnv.getProperties(testName);
+  }
+
+  @Override
+  public void afterAll() {
+    try {
+      super.afterAll();
+    } catch (Exception e) {
+      logger.warn("Failed to call super.afterAll", e);
+    }
+
+    try {
+      if (testUtils != null) {
+        testUtils.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close test utils", e);
+    }
   }
 
   @Override
