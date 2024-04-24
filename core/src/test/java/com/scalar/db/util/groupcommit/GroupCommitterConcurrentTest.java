@@ -101,7 +101,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 20, 200, 20, 20));
+        .exec(new GroupCommitConfig(40, 20, 200, 20, 20, true));
   }
 
   @Test
@@ -116,7 +116,7 @@ class GroupCommitterConcurrentTest {
             1, // ErrorBeforeReadyPercentage
             1 // ErrorAfterReadyPercentage
             )
-        .exec(new GroupCommitConfig(40, 40, 200, 20, 20));
+        .exec(new GroupCommitConfig(40, 40, 200, 20, 20, true));
   }
 
   private static class Runner {
@@ -296,17 +296,17 @@ class GroupCommitterConcurrentTest {
     private void checkGarbage(
         GroupCommitter<String, String, String, String, Value> groupCommitter) {
       boolean noGarbage = false;
-      Metrics metrics = null;
+      GroupCommitMetrics groupCommitMetrics = null;
       for (int i = 0; i < 60; i++) {
-        metrics = groupCommitter.getMetrics();
-        if (!metrics.hasRemaining()) {
+        groupCommitMetrics = groupCommitter.getMetrics();
+        if (!groupCommitMetrics.hasRemaining()) {
           noGarbage = true;
           break;
         }
         Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
       }
       if (!noGarbage) {
-        throw new AssertionError("Some garbage remains in GroupCommitter. " + metrics);
+        throw new AssertionError("Some garbage remains in GroupCommitter. " + groupCommitMetrics);
       }
     }
 
