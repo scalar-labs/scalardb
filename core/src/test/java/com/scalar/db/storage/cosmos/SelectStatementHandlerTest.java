@@ -19,6 +19,7 @@ import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
@@ -27,6 +28,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
@@ -545,13 +547,68 @@ public class SelectStatementHandlerTest {
             .where(mock(ConditionalExpression.class))
             .limit(ANY_LIMIT)
             .build();
+    String expectedQuery = "select * from Record r";
 
     // Act
     Scanner actual = handler.handle(scanAll);
 
     // Assert
-    assertThat(actual).isInstanceOf(FilterableScannerImpl.class);
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
+    verify(container)
+        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void
+      handle_ScanAllOperationWithConjunctionWithoutProjections_ShouldCallQueryItemsWithoutrojections()
+          throws ExecutionException {
+    // Arrange
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll())
+            .clearConditions()
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
     String expectedQuery = "select * from Record r";
+
+    // Act
+    Scanner actual = handler.handle(scanAll);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
+    verify(container)
+        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void
+      handle_ScanAllOperationWithProjectionsAndConjunction_ShouldCallQueryItemsWithExtendedProjections()
+          throws ExecutionException {
+    // Arrange
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll())
+            .clearConditions()
+            .projections("col1")
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
+    String expectedQuery =
+        "select r.id, "
+            + "r.concatenatedPartitionKey, "
+            + "{\"col1\":r.values[\"col1\"],\"col2\":r.values[\"col2\"]} as values "
+            + "from Record r";
+
+    // Act
+    Scanner actual = handler.handle(scanAll);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
     verify(container)
         .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
   }

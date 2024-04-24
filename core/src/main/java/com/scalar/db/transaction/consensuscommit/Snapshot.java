@@ -20,7 +20,6 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
-import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -386,10 +385,10 @@ public class Snapshot {
             Scanner scanner = null;
             try {
               Scan scan = entry.getKey();
-              // For JDBC databases or non-JDBC databases without filtering, we only get tx_id,
-              // tx_version, and primary key columns because we use only them to compare. For
-              // non-JDBC databases with filtering, we also need filtering columns to compare.
-              projectRequiredColumns(storage, scan);
+              // only get tx_id and tx_version columns because we use only them to compare
+              scan.clearProjections();
+              scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+              ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
               scanner = storage.scan(scan);
               for (Result result : scanner) {
                 TransactionResult transactionResult = new TransactionResult(result);
@@ -463,27 +462,6 @@ public class Snapshot {
     }
 
     parallelExecutor.validate(tasks, getId());
-  }
-
-  private void projectRequiredColumns(DistributedStorage storage, Scan scan)
-      throws ExecutionException {
-    scan.clearProjections();
-    scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
-    ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
-    if (!(storage instanceof JdbcDatabase)) {
-      scan.getConjunctions()
-          .forEach(
-              conjunction ->
-                  conjunction
-                      .getConditions()
-                      .forEach(
-                          condition -> {
-                            String columnName = condition.getColumn().getName();
-                            if (!scan.getProjections().contains(columnName)) {
-                              scan.withProjection(columnName);
-                            }
-                          }));
-    }
   }
 
   private boolean isChanged(

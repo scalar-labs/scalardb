@@ -19,6 +19,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
@@ -2018,11 +2019,67 @@ public abstract class SelectStatementHandlerTestBase {
     Scanner actual = handler.handle(scanAll);
 
     // Assert
-    assertThat(actual).isInstanceOf(FilterableQueryScanner.class);
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
     ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
     verify(client).scan(captor.capture());
     ScanRequest actualRequest = captor.getValue();
     assertThat(actualRequest.limit()).isEqualTo(null);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
+  }
+
+  @Test
+  public void
+      prepare_ScanAllOperationWithConjunctionWithoutProjections_ShouldPrepareQueryWithoutProjections()
+          throws ExecutionException {
+    // Arrange
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll())
+            .where(ConditionBuilder.column("col").isLessThanInt(0))
+            .build();
+
+    // Act
+    Scanner actual = handler.handle(scanAll);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
+    ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
+    verify(client).scan(captor.capture());
+    ScanRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.projectionExpression()).isNull();
+    assertThat(actualRequest.expressionAttributeNames().size()).isEqualTo(0);
+    assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
+  }
+
+  @Test
+  public void
+      prepare_ScanAllOperationWithProjectionsAndConjunction_ShouldPrepareQueryWithExtendedProjections()
+          throws ExecutionException {
+    // Arrange
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+    String columnA = "columnA";
+    String columnB = "columnB";
+    String aliasA = DynamoOperation.COLUMN_NAME_ALIAS + "0";
+    String aliasB = DynamoOperation.COLUMN_NAME_ALIAS + "1";
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll())
+            .projections(columnA)
+            .where(ConditionBuilder.column(columnB).isLessThanInt(0))
+            .build();
+
+    // Act
+    Scanner actual = handler.handle(scanAll);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
+    ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
+    verify(client).scan(captor.capture());
+    ScanRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.projectionExpression()).isEqualTo(aliasA + "," + aliasB);
+    assertThat(actualRequest.expressionAttributeNames())
+        .containsExactlyEntriesOf(ImmutableMap.of(aliasA, columnA, aliasB, columnB));
     assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 }

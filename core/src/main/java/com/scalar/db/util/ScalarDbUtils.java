@@ -34,6 +34,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -254,6 +255,16 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  public static Set<String> getColumnNamesUsedIn(Set<Conjunction> conjunctions) {
+    Set<String> columns = new HashSet<>();
+    conjunctions.forEach(
+        conjunction ->
+            conjunction
+                .getConditions()
+                .forEach(condition -> columns.add(condition.getColumn().getName())));
+    return columns;
   }
 
   public static boolean columnsMatchAnyOfConjunctions(

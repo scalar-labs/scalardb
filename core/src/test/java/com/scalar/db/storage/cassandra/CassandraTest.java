@@ -8,10 +8,12 @@ import static org.mockito.Mockito.when;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
@@ -92,10 +94,63 @@ public class CassandraTest {
     Scanner actual = cassandra.scan(scan);
 
     // Assert
-    assertThat(actual).isInstanceOf(FilterableScannerImpl.class);
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
     ArgumentCaptor<Scan> captor = ArgumentCaptor.forClass(Scan.class);
     verify(handler).handle(captor.capture());
     Scan actualScan = captor.getValue();
     assertThat(actualScan.getLimit()).isEqualTo(0);
+  }
+
+  @Test
+  public void scan_WithConjunctionWithoutProjections_ShouldHandledWithoutProjections()
+      throws ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
+    when(handlers.select()).thenReturn(handler);
+    when(handler.handle(any(Scan.class))).thenReturn(resultSet);
+    when(metadataManager.getTableMetadata(any(Scan.class))).thenReturn(tableMetadata);
+
+    // Act
+    Scanner actual = cassandra.scan(scan);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
+    ArgumentCaptor<Scan> captor = ArgumentCaptor.forClass(Scan.class);
+    verify(handler).handle(captor.capture());
+    Scan actualScan = captor.getValue();
+    assertThat(actualScan.getProjections()).isEmpty();
+  }
+
+  @Test
+  public void scan_WithProjectionsAndConjunction_ShouldHandledWithExtendedProjections()
+      throws ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .projections("col1")
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
+    when(handlers.select()).thenReturn(handler);
+    when(handler.handle(any(Scan.class))).thenReturn(resultSet);
+    when(metadataManager.getTableMetadata(any(Scan.class))).thenReturn(tableMetadata);
+
+    // Act
+    Scanner actual = cassandra.scan(scan);
+
+    // Assert
+    assertThat(actual).isInstanceOf(FilterableScanner.class);
+    ArgumentCaptor<Scan> captor = ArgumentCaptor.forClass(Scan.class);
+    verify(handler).handle(captor.capture());
+    Scan actualScan = captor.getValue();
+    assertThat(actualScan.getProjections()).containsExactlyInAnyOrder("col1", "col2");
   }
 }

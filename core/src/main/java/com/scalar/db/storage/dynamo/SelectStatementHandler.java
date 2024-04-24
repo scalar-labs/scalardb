@@ -13,6 +13,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.EmptyScanner;
+import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -106,7 +107,7 @@ public class SelectStatementHandler {
 
     if (!get.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
-      projectionExpression(builder, get, expressionAttributeNames);
+      projectionExpression(builder, get.getProjections(), expressionAttributeNames);
       builder.expressionAttributeNames(expressionAttributeNames);
     }
 
@@ -137,7 +138,7 @@ public class SelectStatementHandler {
     expressionAttributeNames.put(expressionColumnName, column);
 
     if (!selection.getProjections().isEmpty()) {
-      projectionExpression(builder, selection, expressionAttributeNames);
+      projectionExpression(builder, selection.getProjections(), expressionAttributeNames);
     }
 
     builder.expressionAttributeNames(expressionAttributeNames);
@@ -177,7 +178,7 @@ public class SelectStatementHandler {
 
     if (!scan.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
-      projectionExpression(builder, scan, expressionAttributeNames);
+      projectionExpression(builder, scan.getProjections(), expressionAttributeNames);
       builder.expressionAttributeNames(expressionAttributeNames);
     }
 
@@ -199,9 +200,14 @@ public class SelectStatementHandler {
       builder.limit(scan.getLimit());
     }
 
-    if (!scan.getProjections().isEmpty()) {
+    List<String> projections = new ArrayList<>(scan.getProjections());
+    if (!projections.isEmpty()) {
+      // add columns in conditions into projections to use them in our own filtering
+      ScalarDbUtils.getColumnNamesUsedIn(scan.getConjunctions()).stream()
+          .filter(columnName -> !scan.getProjections().contains(columnName))
+          .forEach(projections::add);
       Map<String, String> expressionAttributeNames = new HashMap<>();
-      projectionExpression(builder, scan, expressionAttributeNames);
+      projectionExpression(builder, projections, expressionAttributeNames);
       builder.expressionAttributeNames(expressionAttributeNames);
     }
 
@@ -215,26 +221,27 @@ public class SelectStatementHandler {
       return new QueryScanner(
           requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
     } else {
-      return new FilterableQueryScanner(
-          scan, requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
+      return new FilterableScanner(
+          scan,
+          new QueryScanner(requestWrapper, new ResultInterpreter(projections, tableMetadata)));
     }
   }
 
   private void projectionExpression(
       DynamoDbRequest.Builder builder,
-      Selection selection,
+      List<String> projections,
       Map<String, String> expressionAttributeNames) {
     assert builder instanceof GetItemRequest.Builder
         || builder instanceof QueryRequest.Builder
         || builder instanceof ScanRequest.Builder;
 
-    List<String> projections = new ArrayList<>(selection.getProjections().size());
-    for (String projection : selection.getProjections()) {
+    List<String> aliasedProjections = new ArrayList<>(projections.size());
+    for (String projection : projections) {
       String alias = DynamoOperation.COLUMN_NAME_ALIAS + expressionAttributeNames.size();
-      projections.add(alias);
+      aliasedProjections.add(alias);
       expressionAttributeNames.put(alias, projection);
     }
-    String projectionExpression = String.join(",", projections);
+    String projectionExpression = String.join(",", aliasedProjections);
 
     if (builder instanceof GetItemRequest.Builder) {
       ((GetItemRequest.Builder) builder).projectionExpression(projectionExpression);

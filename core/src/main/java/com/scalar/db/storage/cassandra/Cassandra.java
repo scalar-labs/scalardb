@@ -16,11 +16,13 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -119,14 +121,23 @@ public class Cassandra extends AbstractDistributedStorage {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
-    ResultInterpreter resultInterpreter =
-        new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan));
     if (scan.getConjunctions().isEmpty()) {
+      ResultInterpreter resultInterpreter =
+          new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan));
       return new ScannerImpl(handlers.select().handle(scan), resultInterpreter);
     } else {
-      // Ignore limit to control it in FilterableScannerImpl
+      // Ignore limit to control it in FilterableScanner and add columns in conditions into
+      // projections to use them in our own filtering
       Scan scanAll = Scan.newBuilder(scan).limit(0).build();
-      return new FilterableScannerImpl(scan, handlers.select().handle(scanAll), resultInterpreter);
+      if (!scanAll.getProjections().isEmpty()) {
+        ScalarDbUtils.getColumnNamesUsedIn(scanAll.getConjunctions()).stream()
+            .filter(columnName -> !scanAll.getProjections().contains(columnName))
+            .forEach(scanAll::withProjection);
+      }
+      ResultInterpreter resultInterpreter =
+          new ResultInterpreter(scanAll.getProjections(), metadataManager.getTableMetadata(scan));
+      return new FilterableScanner(
+          scan, new ScannerImpl(handlers.select().handle(scanAll), resultInterpreter));
     }
   }
 

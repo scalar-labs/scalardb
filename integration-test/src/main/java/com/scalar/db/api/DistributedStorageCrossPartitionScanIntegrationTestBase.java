@@ -608,6 +608,20 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     assertThat(actual).describedAs(description).containsAnyElementsOf(expected);
   }
 
+  private void assertProjectedResult(
+      List<Result> actualResults,
+      List<Integer> expected,
+      List<String> projections,
+      String description) {
+    List<Integer> actual = new ArrayList<>();
+    for (Result actualResult : actualResults) {
+      assertThat(actualResult.getContainedColumnNames())
+          .containsExactlyInAnyOrderElementsOf(projections);
+      actual.add(actualResult.getInt(PARTITION_KEY_NAME));
+    }
+    assertThat(actual).describedAs(description).containsExactlyInAnyOrderElementsOf(expected);
+  }
+
   private String description(Column<?> column, Operator operator) {
     return String.format("failed with column: %s, operator: %s", column, operator);
   }
@@ -1050,6 +1064,30 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         getExpectedResults(column.getDataType(), Operator.LTE, column.getIntValue()),
         limit,
         descriptionForLimitTests(column, Operator.LTE, limit));
+  }
+
+  @Test
+  public void scan_WithConditionButColumnsNotAppearedInProjections_ShouldReturnProjectedResult()
+      throws IOException, ExecutionException {
+    prepareRecords();
+    // Arrange
+    IntColumn column = IntColumn.of(COL_NAME1, CONDITION_TEST_PREDICATE_VALUE);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(getNamespaceName())
+            .table(CONDITION_TEST_TABLE)
+            .all()
+            .projections(PARTITION_KEY_NAME, COL_NAME2)
+            .where(ConditionBuilder.buildConditionalExpression(column, Operator.LTE))
+            .build();
+
+    // Act
+    List<Result> actual = scanAll(scan);
+    assertProjectedResult(
+        actual,
+        getExpectedResults(column.getDataType(), Operator.LTE, column.getIntValue()),
+        ImmutableList.of(PARTITION_KEY_NAME, COL_NAME2),
+        description(column, Operator.LTE));
   }
 
   private void executeInParallel(List<Callable<Void>> testCallables)
