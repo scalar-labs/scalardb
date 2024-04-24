@@ -19,9 +19,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(DistributedTransactionAdminRepairIntegrationTestBase.class);
 
   protected static final String TEST_NAME = "tx_admin_repair";
   protected static final String NAMESPACE = "int_test_" + TEST_NAME;
@@ -79,9 +83,29 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    admin.close();
-    storageAdmin.close();
-    adminTestUtils.close();
+    try {
+      if (admin != null) {
+        admin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin", e);
+    }
+
+    try {
+      if (storageAdmin != null) {
+        storageAdmin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage admin", e);
+    }
+
+    try {
+      if (adminTestUtils != null) {
+        adminTestUtils.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin test utils", e);
+    }
   }
 
   protected abstract Properties getProperties(String testName);

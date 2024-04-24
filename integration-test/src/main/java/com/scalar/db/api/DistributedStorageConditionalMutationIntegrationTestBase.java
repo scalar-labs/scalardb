@@ -40,9 +40,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(DistributedStorageConditionalMutationIntegrationTestBase.class);
 
   private static final String TEST_NAME = "storage_cond_mutation";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
@@ -127,9 +131,27 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTable();
-    admin.close();
-    storage.close();
+    try {
+      dropTable();
+    } catch (Exception e) {
+      logger.warn("Failed to drop table", e);
+    }
+
+    try {
+      if (admin != null) {
+        admin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin", e);
+    }
+
+    try {
+      if (storage != null) {
+        storage.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage", e);
+    }
   }
 
   private void dropTable() throws ExecutionException {

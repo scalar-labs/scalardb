@@ -9,6 +9,7 @@ dependencies {
     implementation project(':core')
     implementation project(':schema-loader')
     implementation "com.google.guava:guava:${guavaVersion}"
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
     implementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     implementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
     runtimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
