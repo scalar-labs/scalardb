@@ -1,17 +1,21 @@
 package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +51,84 @@ public class ProjectedResultTest {
             .build();
 
     result = new ResultImpl(columns, TABLE_METADATA);
+  }
+
+  @Test
+  public void getPartitionKey_RequiredValuesGiven_ShouldReturnPartitionKey() {
+    // Arrange
+    ProjectedResult projectedResult = new ProjectedResult(result, Collections.emptyList());
+
+    // Act
+    Optional<Key> key = projectedResult.getPartitionKey();
+
+    // Assert
+    assertThat(key.isPresent()).isTrue();
+    assertThat(key.get().getColumns().size()).isEqualTo(1);
+    assertThat(key.get().getIntValue(0)).isEqualTo(0);
+  }
+
+  @Test
+  public void getClusteringKey_RequiredValuesGiven_ShouldReturnPartitionKey() {
+    // Arrange
+    ProjectedResult projectedResult = new ProjectedResult(result, Collections.emptyList());
+
+    // Act
+    Optional<Key> key = projectedResult.getClusteringKey();
+
+    // Assert
+    assertThat(key.isPresent()).isTrue();
+    assertThat(key.get().getColumns().size()).isEqualTo(1);
+    assertThat(key.get().getIntValue(0)).isEqualTo(1);
+  }
+
+  @Test
+  public void getPartitionKey_NotRequiredValuesGiven_ShouldThrowIllegalStateException() {
+    // Arrange
+    ProjectedResult projectedResult = new ProjectedResult(result, ImmutableList.of(BALANCE));
+
+    // Act
+    Throwable thrown = catchThrowable(projectedResult::getPartitionKey);
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void getClusteringKey_NotRequiredValuesGiven_ShouldThrowIllegalStateException() {
+    // Arrange
+    ProjectedResult projectedResult = new ProjectedResult(result, ImmutableList.of(BALANCE));
+
+    // Act
+    Throwable thrown = catchThrowable(projectedResult::getClusteringKey);
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void getClusteringKey_WithoutClusteringKeySchemaGiven_ShouldReturnEmpty() {
+    // Arrange
+    Map<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ACCOUNT_ID, ACCOUNT_ID_COLUMN)
+            .put(ACCOUNT_TYPE, ACCOUNT_TYPE_COLUMN)
+            .put(BALANCE, BALANCE_COLUMN)
+            .build();
+    result =
+        new ResultImpl(
+            columns,
+            TableMetadata.newBuilder()
+                .addColumn(ACCOUNT_ID, DataType.INT)
+                .addColumn(BALANCE, DataType.INT)
+                .addPartitionKey(ACCOUNT_ID)
+                .build());
+    ProjectedResult projectedResult = new ProjectedResult(result, ImmutableList.of());
+
+    // Act
+    Optional<Key> key = projectedResult.getClusteringKey();
+
+    // Assert
+    assertThat(key.isPresent()).isFalse();
   }
 
   @Test

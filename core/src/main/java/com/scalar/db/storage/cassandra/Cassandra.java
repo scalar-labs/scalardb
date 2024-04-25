@@ -2,8 +2,6 @@ package com.scalar.db.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -22,7 +20,7 @@ import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.ScalarDbUtils;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -100,19 +98,34 @@ public class Cassandra extends AbstractDistributedStorage {
     get = copyAndSetTargetToIfNot(get);
     operationChecker.check(get);
 
-    ResultSet resultSet = handlers.select().handle(get);
-    Row row = resultSet.one();
-    if (row == null) {
-      return Optional.empty();
+    Scanner scanner = null;
+    try {
+      if (get.getConjunctions().isEmpty()) {
+        scanner = getInternal(get);
+      } else {
+        scanner = new FilterableScanner(get, getInternal(copyAndPrepareForDynamicFiltering(get)));
+      }
+      Optional<Result> ret = scanner.one();
+      if (scanner.one().isPresent()) {
+        throw new IllegalArgumentException(
+            CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
+      }
+      return ret;
+    } finally {
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          logger.warn("Failed to close the scanner", e);
+        }
+      }
     }
-    Row next = resultSet.one();
-    if (next != null) {
-      throw new IllegalArgumentException(
-          CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
-    }
-    return Optional.of(
-        new ResultInterpreter(get.getProjections(), metadataManager.getTableMetadata(get))
-            .interpret(row));
+  }
+
+  private Scanner getInternal(Get get) throws ExecutionException {
+    return new ScannerImpl(
+        handlers.select().handle(get),
+        new ResultInterpreter(get.getProjections(), metadataManager.getTableMetadata(get)));
   }
 
   @Override
@@ -122,23 +135,16 @@ public class Cassandra extends AbstractDistributedStorage {
     operationChecker.check(scan);
 
     if (scan.getConjunctions().isEmpty()) {
-      ResultInterpreter resultInterpreter =
-          new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan));
-      return new ScannerImpl(handlers.select().handle(scan), resultInterpreter);
+      return scanInternal(scan);
     } else {
-      // Ignore limit to control it in FilterableScanner and add columns in conditions into
-      // projections to use them in our own filtering
-      Scan scanAll = Scan.newBuilder(scan).limit(0).build();
-      if (!scanAll.getProjections().isEmpty()) {
-        ScalarDbUtils.getColumnNamesUsedIn(scanAll.getConjunctions()).stream()
-            .filter(columnName -> !scanAll.getProjections().contains(columnName))
-            .forEach(scanAll::withProjection);
-      }
-      ResultInterpreter resultInterpreter =
-          new ResultInterpreter(scanAll.getProjections(), metadataManager.getTableMetadata(scan));
-      return new FilterableScanner(
-          scan, new ScannerImpl(handlers.select().handle(scanAll), resultInterpreter));
+      return new FilterableScanner(scan, scanInternal(copyAndPrepareForDynamicFiltering(scan)));
     }
+  }
+
+  private Scanner scanInternal(Scan scan) throws ExecutionException {
+    return new ScannerImpl(
+        handlers.select().handle(scan),
+        new ResultInterpreter(scan.getProjections(), metadataManager.getTableMetadata(scan)));
   }
 
   @Override

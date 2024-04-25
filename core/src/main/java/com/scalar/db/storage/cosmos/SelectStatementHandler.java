@@ -15,7 +15,6 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.EmptyScanner;
-import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -95,7 +94,7 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     String query =
-        makeQueryWithProjections(get.getProjections(), tableMetadata)
+        makeQueryWithProjections(get, tableMetadata)
             .where(
                 DSL.field("r.concatenatedPartitionKey")
                     .eq(cosmosOperation.getConcatenatedPartitionKey()),
@@ -117,15 +116,8 @@ public class SelectStatementHandler extends StatementHandler {
     CosmosQueryRequestOptions options;
 
     if (scan instanceof ScanAll) {
-      if (scan.getConjunctions().isEmpty()) {
-        query =
-            makeQueryWithProjections(scan.getProjections(), tableMetadata)
-                .getSQL(ParamType.INLINED);
-        options = new CosmosQueryRequestOptions();
-      } else {
-        // Return FilterableScanner before setting limit to control it in the scanner
-        return executeQueryWithFiltering(scan, tableMetadata);
-      }
+      query = makeQueryWithProjections(scan, tableMetadata).getSQL(ParamType.INLINED);
+      options = new CosmosQueryRequestOptions();
     } else if (ScalarDbUtils.isSecondaryIndexSpecified(scan, tableMetadata)) {
       query = makeQueryWithIndex(scan, tableMetadata);
       options = new CosmosQueryRequestOptions();
@@ -148,7 +140,7 @@ public class SelectStatementHandler extends StatementHandler {
       TableMetadata tableMetadata, CosmosOperation cosmosOperation, Scan scan) {
     String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
     SelectConditionStep<org.jooq.Record> select =
-        makeQueryWithProjections(scan.getProjections(), tableMetadata)
+        makeQueryWithProjections(scan, tableMetadata)
             .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
 
     setStart(select, scan);
@@ -160,8 +152,8 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private SelectJoinStep<org.jooq.Record> makeQueryWithProjections(
-      List<String> projections, TableMetadata tableMetadata) {
-    if (projections.isEmpty()) {
+      Selection selection, TableMetadata tableMetadata) {
+    if (selection.getProjections().isEmpty()) {
       return DSL.using(SQLDialect.DEFAULT).select().from("Record r");
     }
 
@@ -177,19 +169,20 @@ public class SelectStatementHandler extends StatementHandler {
     addJsonFormattedProjectionsFieldForAttribute(
         projectedFields,
         "partitionKey",
-        projections.stream().filter(tableMetadata.getPartitionKeyNames()::contains));
+        selection.getProjections().stream().filter(tableMetadata.getPartitionKeyNames()::contains));
 
     // Project clustering key columns
     addJsonFormattedProjectionsFieldForAttribute(
         projectedFields,
         "clusteringKey",
-        projections.stream().filter(tableMetadata.getClusteringKeyNames()::contains));
+        selection.getProjections().stream()
+            .filter(tableMetadata.getClusteringKeyNames()::contains));
 
     // Project non-primary key columns
     addJsonFormattedProjectionsFieldForAttribute(
         projectedFields,
         "values",
-        projections.stream()
+        selection.getProjections().stream()
             .filter(
                 c ->
                     !tableMetadata.getPartitionKeyNames().contains(c)
@@ -310,8 +303,7 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private String makeQueryWithIndex(Selection selection, TableMetadata tableMetadata) {
-    SelectWhereStep<org.jooq.Record> select =
-        makeQueryWithProjections(selection.getProjections(), tableMetadata);
+    SelectWhereStep<org.jooq.Record> select = makeQueryWithProjections(selection, tableMetadata);
     Column<?> column = selection.getPartitionKey().getColumns().get(0);
     String fieldName;
     if (tableMetadata.getClusteringKeyNames().contains(column.getName())) {
@@ -345,25 +337,5 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Scanner executeQuery(Selection selection, TableMetadata tableMetadata, String query) {
     return executeQuery(selection, tableMetadata, query, new CosmosQueryRequestOptions());
-  }
-
-  private Scanner executeQueryWithFiltering(Scan scan, TableMetadata tableMetadata) {
-    List<String> projections = new ArrayList<>(scan.getProjections());
-    if (!projections.isEmpty()) {
-      // add columns in conditions into projections to use them in our own filtering
-      ScalarDbUtils.getColumnNamesUsedIn(scan.getConjunctions()).stream()
-          .filter(columnName -> !scan.getProjections().contains(columnName))
-          .forEach(projections::add);
-    }
-
-    String query = makeQueryWithProjections(projections, tableMetadata).getSQL(ParamType.INLINED);
-    Iterator<FeedResponse<Record>> pagesIterator =
-        getContainer(scan)
-            .queryItems(query, new CosmosQueryRequestOptions(), Record.class)
-            .iterableByPage()
-            .iterator();
-
-    return new FilterableScanner(
-        scan, new ScannerImpl(pagesIterator, new ResultInterpreter(projections, tableMetadata)));
   }
 }

@@ -18,9 +18,9 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public class QueryScanner implements Scanner {
 
   private final PaginatedRequest request;
-  protected final ResultInterpreter resultInterpreter;
+  private final ResultInterpreter resultInterpreter;
 
-  protected Iterator<Map<String, AttributeValue>> itemsIterator;
+  private Iterator<Map<String, AttributeValue>> itemsIterator;
   @Nullable private Map<String, AttributeValue> lastEvaluatedKey;
   private int totalResultCount;
 
@@ -44,7 +44,7 @@ public class QueryScanner implements Scanner {
     return Optional.of(resultInterpreter.interpret(itemsIterator.next()));
   }
 
-  protected boolean hasNext() {
+  private boolean hasNext() {
     if (itemsIterator.hasNext()) {
       return true;
     }

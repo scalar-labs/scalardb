@@ -22,6 +22,6 @@ public class CassandraCrossPartitionScanIntegrationTest
 
   @Test
   @Override
-  @Disabled
+  @Disabled("Cross partition scan with ordering is not supported in Cassandra")
   public void scan_WithOrderingForNonPrimaryColumns_ShouldReturnProperResult() {}
 }

@@ -13,6 +13,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
@@ -116,7 +117,13 @@ public class Dynamo extends AbstractDistributedStorage {
 
     Scanner scanner = null;
     try {
-      scanner = selectStatementHandler.handle(get);
+      if (get.getConjunctions().isEmpty()) {
+        scanner = selectStatementHandler.handle(get);
+      } else {
+        scanner =
+            new FilterableScanner(
+                get, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)));
+      }
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
         throw new IllegalArgumentException(
@@ -139,7 +146,12 @@ public class Dynamo extends AbstractDistributedStorage {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
-    return selectStatementHandler.handle(scan);
+    if (scan.getConjunctions().isEmpty()) {
+      return selectStatementHandler.handle(scan);
+    } else {
+      return new FilterableScanner(
+          scan, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)));
+    }
   }
 
   @Override

@@ -21,6 +21,6 @@ public class DynamoCrossPartitionScanIntegrationTest
 
   @Test
   @Override
-  @Disabled
+  @Disabled("Cross partition scan with ordering is not supported in DynamoDB")
   public void scan_WithOrderingForNonPrimaryColumns_ShouldReturnProperResult() {}
 }

@@ -301,12 +301,6 @@ public enum CoreError implements ScalarDbError {
   STORAGE_NOT_FOUND(Category.USER_ERROR, "0065", "Storage '%s' is not found", "", ""),
   TRANSACTION_MANAGER_NOT_FOUND(
       Category.USER_ERROR, "0066", "Transaction manager '%s' is not found", "", ""),
-  CASSANDRA_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0067",
-      "Cross-partition scan with filtering or ordering is not supported in Cassandra",
-      "",
-      ""),
   GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION(
       Category.USER_ERROR,
       "0068",
@@ -325,12 +319,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0071",
       "The property 'scalar.db.contact_port' must be greater than or equal to zero",
-      "",
-      ""),
-  COSMOS_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0072",
-      "Cross-partition scan with filtering or ordering is not supported in Cosmos DB",
       "",
       ""),
   COSMOS_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
@@ -371,12 +359,6 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_ENCODER_CANNOT_ENCODE_TEXT_VALUE_CONTAINING_0X0000(
       Category.USER_ERROR, "0079", "Cannot encode a Text value that contains '\\u0000'", "", ""),
-  DYNAMO_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0080",
-      "Cross-partition scan with filtering or ordering is not supported in DynamoDB",
-      "",
-      ""),
   DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_NULL_OR_EMPTY(
       Category.USER_ERROR,
       "0081",

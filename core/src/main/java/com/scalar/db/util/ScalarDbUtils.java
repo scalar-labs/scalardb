@@ -295,6 +295,29 @@ public final class ScalarDbUtils {
             });
   }
 
+  public static Get copyAndPrepareForDynamicFiltering(Get get) {
+    Get ret = Get.newBuilder(get).build(); // copy
+    if (!ret.getProjections().isEmpty()) {
+      // Add columns in conditions into projections to use them in dynamic filtering
+      ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
+          .filter(columnName -> !ret.getProjections().contains(columnName))
+          .forEach(ret::withProjection);
+    }
+    return ret;
+  }
+
+  public static Scan copyAndPrepareForDynamicFiltering(Scan scan) {
+    // Ignore limit to control it during dynamic filtering
+    Scan ret = Scan.newBuilder(scan).limit(0).build(); // copy
+    if (!ret.getProjections().isEmpty()) {
+      // Add columns in conditions into projections to use them in dynamic filtering
+      ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
+          .filter(columnName -> !ret.getProjections().contains(columnName))
+          .forEach(ret::withProjection);
+    }
+    return ret;
+  }
+
   public static Set<String> getColumnNamesUsedIn(Set<Conjunction> conjunctions) {
     Set<String> columns = new HashSet<>();
     conjunctions.forEach(

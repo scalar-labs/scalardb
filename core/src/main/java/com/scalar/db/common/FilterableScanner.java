@@ -3,9 +3,11 @@ package com.scalar.db.common;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -24,11 +26,16 @@ public class FilterableScanner implements Scanner {
 
   private ScannerIterator scannerIterator;
 
-  public FilterableScanner(Scan scan, Scanner scanner) {
+  public FilterableScanner(Selection selection, Scanner scanner) {
     this.scanner = scanner;
-    this.projections = scan.getProjections();
-    this.conjunctions = scan.getConjunctions();
-    this.left = scan.getLimit() > 0 ? scan.getLimit() : -1;
+    this.projections = selection.getProjections();
+    this.conjunctions = selection.getConjunctions();
+    if (selection instanceof Scan) {
+      Scan scan = (Scan) selection;
+      this.left = scan.getLimit() > 0 ? scan.getLimit() : -1;
+    } else {
+      this.left = -1;
+    }
   }
 
   @Override
@@ -74,5 +81,7 @@ public class FilterableScanner implements Scanner {
   }
 
   @Override
-  public void close() {}
+  public void close() throws IOException {
+    scanner.close();
+  }
 }
