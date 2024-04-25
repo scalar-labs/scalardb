@@ -29,6 +29,11 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
   }
 
   @Override
+  protected boolean isParallelDdlSupported() {
+    return !(rdbEngine instanceof RdbEngineYugabyte);
+  }
+
+  @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
     if (rdbEngine instanceof RdbEngineOracle) {
       if (dataType == DataType.DOUBLE) {
