@@ -35,7 +35,7 @@ The following table summarizes how ScalarDB is different from the other solution
 | Global transaction managers (e.g., Oracle MicroTx, Atomikos) | Yes (but, existing solutions support only a limited set of databases) |                    No                    |
 |      Data federation engines (e.g., Denodo, Starburst)       |                                  No                                   |                   Yes                    |
 |            HTAP systems (e.g., TiDB, SingleStore)            |                No (support homogeneous databases only)                | No (support homogeneous databases only)  |
-|                           ScalarDB                           |               Yes (ScalarDB supports various databases)               |                   Yes                    |
+|                         **ScalarDB**                         |             **Yes (ScalarDB supports various databases)**             |                 **Yes**                  |
 
 
 ## ScalarDB use cases
