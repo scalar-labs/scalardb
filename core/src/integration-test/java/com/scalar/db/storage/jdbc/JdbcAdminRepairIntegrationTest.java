@@ -29,6 +29,8 @@ public class JdbcAdminRepairIntegrationTest
     if (rdbEngine instanceof RdbEngineYugabyte) {
       // This is needed to avoid schema or catalog version mismatch database errors.
       Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
+      return;
     }
+    super.waitForDifferentSessionDdl();
   }
 }

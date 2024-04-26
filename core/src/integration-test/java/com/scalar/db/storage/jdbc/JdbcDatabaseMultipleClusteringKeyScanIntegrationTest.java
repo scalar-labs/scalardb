@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
@@ -10,7 +11,7 @@ import java.util.Random;
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -30,7 +31,15 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    return !(rdbEngine instanceof RdbEngineYugabyte);
+    if (rdbEngine instanceof RdbEngineYugabyte) {
+      return false;
+    }
+    return super.isParallelDdlSupported();
+  }
+
+  @Override
+  protected boolean isYugabyteDb() {
+    return rdbEngine instanceof RdbEngineYugabyte;
   }
 
   @Override

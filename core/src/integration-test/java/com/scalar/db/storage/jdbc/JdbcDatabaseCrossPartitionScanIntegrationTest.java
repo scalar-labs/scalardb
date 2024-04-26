@@ -41,6 +41,9 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    return !(rdbEngine instanceof RdbEngineYugabyte);
+    if (rdbEngine instanceof RdbEngineYugabyte) {
+      return false;
+    }
+    return super.isParallelDdlSupported();
   }
 }

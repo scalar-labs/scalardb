@@ -36,6 +36,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,6 +117,11 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
 
   protected boolean isParallelDdlSupported() {
     return true;
+  }
+
+  // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed.
+  protected boolean isYugabyteDb() {
+    return false;
   }
 
   private void createTables()
@@ -1032,6 +1038,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
             withLimit));
   }
 
+  // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed.
+  @DisabledIf("isYugabyteDb")
   @Test
   public void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
