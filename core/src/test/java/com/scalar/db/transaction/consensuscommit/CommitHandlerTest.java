@@ -38,7 +38,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public abstract class CommitHandlerTestBase {
+public class CommitHandlerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -48,6 +48,7 @@ public abstract class CommitHandlerTestBase {
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
+  private static final String ANY_ID = "id";
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
 
@@ -59,15 +60,21 @@ public abstract class CommitHandlerTestBase {
   private CommitHandler handler;
   private ParallelExecutor parallelExecutor;
 
-  void extraInitialize() {}
+  protected Optional<CoordinatorGroupCommitter> groupCommitter() {
+    return Optional.empty();
+  }
 
-  void extraCleanup() {}
+  protected String anyId() {
+    return ANY_ID;
+  }
 
-  abstract Optional<CoordinatorGroupCommitter> groupCommitter();
+  protected String anyGroupCommitParentId() {
+    throw new AssertionError("Shouldn't reach here");
+  }
 
-  abstract String anyId();
+  protected void extraInitialize() {}
 
-  abstract String anyGroupCommitParentId();
+  protected void extraCleanup() {}
 
   @BeforeEach
   void setUp() throws Exception {

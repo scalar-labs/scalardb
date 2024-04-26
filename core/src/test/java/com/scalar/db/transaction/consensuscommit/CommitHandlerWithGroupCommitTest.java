@@ -5,7 +5,7 @@ import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.Optional;
 import java.util.UUID;
 
-class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
+class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   private String parentKey;
@@ -13,7 +13,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   private CoordinatorGroupCommitter groupCommitter;
 
   @Override
-  void extraInitialize() {
+  protected void extraInitialize() {
     // `groupCommitter` is instantiated separately since the timing of the instantiation and calling
     // GroupCommitter.reserve() would be different.
     childKey = UUID.randomUUID().toString();
@@ -22,7 +22,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   }
 
   @Override
-  Optional<CoordinatorGroupCommitter> groupCommitter() {
+  protected Optional<CoordinatorGroupCommitter> groupCommitter() {
     if (groupCommitter == null) {
       groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 60, 10));
     }
@@ -30,17 +30,17 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTestBase {
   }
 
   @Override
-  String anyId() {
+  protected String anyId() {
     return keyManipulator.fullKey(parentKey, childKey);
   }
 
   @Override
-  String anyGroupCommitParentId() {
+  protected String anyGroupCommitParentId() {
     return parentKey;
   }
 
   @Override
-  void extraCleanup() {
+  protected void extraCleanup() {
     groupCommitter.close();
   }
 }
