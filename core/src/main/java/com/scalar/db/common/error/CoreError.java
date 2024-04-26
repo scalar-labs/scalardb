@@ -573,7 +573,11 @@ public enum CoreError implements ScalarDbError {
   SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE(
       Category.USER_ERROR, "0125", "Invalid column type. Table: %s; Column: %s; Type: %s", "", ""),
   OPERATION_CHECK_ERROR_UNSUPPORTED_MUTATION_TYPE(
-      Category.USER_ERROR, "0126", "The mutation type is not supported. Mutation: %s", "", ""),
+      Category.USER_ERROR,
+      "0126",
+      "The mutation type is not supported. Only the Put or Delete type is supported. Mutation: %s",
+      "",
+      ""),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_UPDATE_IF(
       Category.USER_ERROR,
       "0127",

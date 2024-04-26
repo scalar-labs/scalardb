@@ -84,9 +84,9 @@ public class ConditionBuilder {
   }
 
   /**
-   * Returns a builder object for a UpdateIf condition.
+   * Returns a builder object for an UpdateIf condition.
    *
-   * @param conditionalExpression a condition expression for a UpdateIf condition
+   * @param conditionalExpression a condition expression for an UpdateIf condition
    * @return a builder object
    */
   public static UpdateIfBuilder updateIf(ConditionalExpression conditionalExpression) {
@@ -94,10 +94,10 @@ public class ConditionBuilder {
   }
 
   /**
-   * Creates a UpdateIf condition with the specified conditional expressions.
+   * Creates an UpdateIf condition with the specified conditional expressions.
    *
-   * @param conditionalExpressions condition expressions for a UpdateIf condition
-   * @return a UpdateIf condition
+   * @param conditionalExpressions condition expressions for an UpdateIf condition
+   * @return an UpdateIf condition
    */
   public static UpdateIf updateIf(List<ConditionalExpression> conditionalExpressions) {
     return new UpdateIf(conditionalExpressions);
@@ -881,9 +881,9 @@ public class ConditionBuilder {
     }
 
     /**
-     * Adds a condition for a UpdateIf condition.
+     * Adds a condition for an UpdateIf condition.
      *
-     * @param conditionalExpression a condition for a UpdateIf condition
+     * @param conditionalExpression a condition for an UpdateIf condition
      * @return a builder object
      */
     public UpdateIfBuilder and(ConditionalExpression conditionalExpression) {
@@ -893,9 +893,9 @@ public class ConditionBuilder {
     }
 
     /**
-     * Builds a UpdateIf condition with the specified conditional expressions.
+     * Builds an UpdateIf condition with the specified conditional expressions.
      *
-     * @return a UpdateIf condition
+     * @return an UpdateIf condition
      */
     public UpdateIf build() {
       return new UpdateIf(conditionalExpressions);
