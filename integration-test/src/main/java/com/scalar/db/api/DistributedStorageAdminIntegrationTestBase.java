@@ -23,9 +23,13 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageAdminIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(DistributedStorageAdminIntegrationTestBase.class);
 
   private static final String TEST_NAME = "storage_admin";
   private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
@@ -121,8 +125,19 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTables();
-    admin.close();
+    try {
+      dropTables();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables", e);
+    }
+
+    try {
+      if (admin != null) {
+        admin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin", e);
+    }
   }
 
   private void dropTables() throws ExecutionException {

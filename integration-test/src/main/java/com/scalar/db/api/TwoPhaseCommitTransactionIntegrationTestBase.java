@@ -37,9 +37,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(TwoPhaseCommitTransactionIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE_1 = "test_table1";
@@ -120,11 +124,43 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTables();
-    admin1.close();
-    admin2.close();
-    manager1.close();
-    manager2.close();
+    try {
+      dropTables();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables", e);
+    }
+
+    try {
+      if (admin1 != null) {
+        admin1.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin#1", e);
+    }
+
+    try {
+      if (admin2 != null) {
+        admin2.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin#2", e);
+    }
+
+    try {
+      if (manager1 != null) {
+        manager1.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close manager#1", e);
+    }
+
+    try {
+      if (manager2 != null) {
+        manager2.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close manager#2", e);
+    }
   }
 
   private void dropTables() throws ExecutionException {
