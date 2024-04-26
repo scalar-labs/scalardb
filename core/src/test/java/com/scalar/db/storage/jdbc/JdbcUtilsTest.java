@@ -1,14 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.JdbcUtils.createHikariConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.RdbEngineStrategy.UnderlyingDataSourceConfig;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.util.IsolationLevel;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
@@ -48,12 +43,9 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    AutoCloseableDataSource ds = JdbcUtils.initDataSource(config, rdbEngine);
+    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
 
     // Assert
-    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
-    BasicDataSource dataSource = (BasicDataSource) ds.underlyingDataSource();
-
     assertThat(dataSource.getDriver()).isEqualTo(driver);
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
     assertThat(dataSource.getUsername()).isEqualTo("root");
@@ -93,12 +85,9 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    AutoCloseableDataSource ds = JdbcUtils.initDataSource(config, rdbEngine, true);
+    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
 
     // Assert
-    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
-    BasicDataSource dataSource = (BasicDataSource) ds.underlyingDataSource();
-
     assertThat(dataSource.getDriver()).isEqualTo(driver);
     assertThat(dataSource.getUrl()).isEqualTo("jdbc:postgresql://localhost:5432/");
     assertThat(dataSource.getUsername()).isEqualTo("user");
@@ -136,12 +125,10 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    AutoCloseableDataSource ds = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
+    BasicDataSource tableMetadataDataSource =
+        JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
 
     // Assert
-    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
-    BasicDataSource tableMetadataDataSource = (BasicDataSource) ds.underlyingDataSource();
-
     assertThat(tableMetadataDataSource.getDriver()).isEqualTo(driver);
     assertThat(tableMetadataDataSource.getUrl())
         .isEqualTo("jdbc:oracle:thin:@localhost:1521/XEPDB1");
@@ -172,12 +159,9 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
 
     // Act
-    AutoCloseableDataSource ds = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
 
     // Assert
-    assertThat(ds.underlyingDataSource()).isInstanceOf(BasicDataSource.class);
-    BasicDataSource adminDataSource = (BasicDataSource) ds.underlyingDataSource();
-
     assertThat(adminDataSource.getDriver()).isEqualTo(driver);
     assertThat(adminDataSource.getUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
     assertThat(adminDataSource.getUsername()).isEqualTo("user");
@@ -188,59 +172,5 @@ public class JdbcUtilsTest {
     assertThat(adminDataSource.getMaxTotal()).isEqualTo(300);
 
     adminDataSource.close();
-  }
-
-  @Test
-  void createHikariConfig_ForTransactionManagerWithTransactional_ShouldReturnProperConfig() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(
-        DatabaseConfig.CONTACT_POINTS,
-        "jdbc:yugabytedb://127.0.0.1:5433/mydb?additionalEndpoints=127.0.0.2:5433\\,127.0.0.3:5433");
-    props.setProperty(DatabaseConfig.USERNAME, "my-user");
-    props.setProperty(DatabaseConfig.PASSWORD, "my-password");
-    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, "my-namespace");
-    props.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "1");
-    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "100");
-    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "500");
-    props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
-    props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
-    props.setProperty(JdbcConfig.ISOLATION_LEVEL, Isolation.REPEATABLE_READ.name());
-    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "100");
-    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "200");
-    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
-    props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "50");
-    props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "150");
-    props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "200");
-    JdbcConfig jdbcConfig = new JdbcConfig(new DatabaseConfig(props));
-
-    UnderlyingDataSourceConfig underlyingDataSourceConfig =
-        new UnderlyingDataSourceConfig(
-            "com.yugabyte.ysql.YBClusterAwareDataSource",
-            ImmutableMap.<String, String>builder().put("portNumber", "5433").build());
-
-    // Act
-    HikariConfig hikariConfig =
-        createHikariConfig(jdbcConfig, underlyingDataSourceConfig, true, true);
-
-    // Assert
-    assertThat(hikariConfig.getDataSourceClassName())
-        .isEqualTo("com.yugabyte.ysql.YBClusterAwareDataSource");
-    assertThat(hikariConfig.getDataSourceProperties().getProperty("serverName"))
-        .isEqualTo("127.0.0.1");
-    assertThat(hikariConfig.getDataSourceProperties().getProperty("portNumber")).isEqualTo("5433");
-    assertThat(hikariConfig.getDataSourceProperties().getProperty("databaseName"))
-        .isEqualTo("mydb");
-    assertThat(hikariConfig.getDataSourceProperties().getProperty("user")).isEqualTo("my-user");
-    assertThat(hikariConfig.getDataSourceProperties().getProperty("password"))
-        .isEqualTo("my-password");
-    assertThat(hikariConfig.getDataSourceProperties().getProperty("additionalEndpoints"))
-        .isEqualTo("127.0.0.2:5433,127.0.0.3:5433");
-    assertThat(hikariConfig.getMinimumIdle()).isEqualTo(1);
-    assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(500);
-    assertThat(hikariConfig.getTransactionIsolation())
-        .isEqualTo(IsolationLevel.TRANSACTION_REPEATABLE_READ.name());
-    assertThat(hikariConfig.isAutoCommit()).isFalse();
   }
 }

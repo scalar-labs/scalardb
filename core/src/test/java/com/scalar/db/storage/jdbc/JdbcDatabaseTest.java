@@ -22,6 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -33,8 +34,8 @@ public class JdbcDatabaseTest {
   private static final String TABLE = "tbl";
 
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private AutoCloseableDataSource dataSource;
-  @Mock private AutoCloseableDataSource tableMetadataDataSource;
+  @Mock private BasicDataSource dataSource;
+  @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
 
   @Mock private ResultInterpreter resultInterpreter;

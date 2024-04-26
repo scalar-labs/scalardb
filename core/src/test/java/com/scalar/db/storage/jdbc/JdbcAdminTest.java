@@ -46,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -76,7 +77,7 @@ public class JdbcAdminTest {
           RdbEngine.SQL_SERVER, RdbEngineFactory.create("jdbc:sqlserver:"),
           RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"));
 
-  @Mock private AutoCloseableDataSource dataSource;
+  @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
   @Mock private JdbcConfig config;
 

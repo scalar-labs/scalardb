@@ -11,12 +11,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
-  private final AutoCloseableDataSource dataSource;
+  private final BasicDataSource dataSource;
 
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
