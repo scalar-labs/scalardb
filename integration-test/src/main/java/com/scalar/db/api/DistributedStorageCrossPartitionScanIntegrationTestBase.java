@@ -54,9 +54,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(DistributedStorageCrossPartitionScanIntegrationTestBase.class);
 
   private static final String TEST_NAME = "storage_cross_partition_scan";
   private static final String NAMESPACE_BASE_NAME = "int_test_" + TEST_NAME + "_";
@@ -643,11 +647,41 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTablesForOrderingTests();
-    dropTableForConditionTests();
-    admin.close();
-    storage.close();
-    executorService.shutdown();
+    try {
+      dropTablesForOrderingTests();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables for ordering tests", e);
+    }
+
+    try {
+      dropTableForConditionTests();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables for condition tests", e);
+    }
+
+    try {
+      if (admin != null) {
+        admin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin", e);
+    }
+
+    try {
+      if (storage != null) {
+        storage.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage", e);
+    }
+
+    try {
+      if (executorService != null) {
+        executorService.shutdown();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to shutdown executor service", e);
+    }
   }
 
   private void dropTableForConditionTests() throws ExecutionException {

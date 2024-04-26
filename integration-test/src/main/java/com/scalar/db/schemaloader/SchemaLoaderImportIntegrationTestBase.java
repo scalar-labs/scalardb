@@ -24,9 +24,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SchemaLoaderImportIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
   private static final String TEST_NAME = "schema_loader_import";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path IMPORT_SCHEMA_FILE_PATH =
@@ -108,9 +112,27 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTablesIfExist();
-    transactionAdmin.close();
-    storageAdmin.close();
+    try {
+      dropTablesIfExist();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables", e);
+    }
+
+    try {
+      if (transactionAdmin != null) {
+        transactionAdmin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close transaction admin", e);
+    }
+
+    try {
+      if (storageAdmin != null) {
+        storageAdmin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage admin", e);
+    }
 
     // Delete the files
     Files.delete(CONFIG_FILE_PATH);
