@@ -1,5 +1,8 @@
 package com.scalar.db.util.groupcommit;
 
+import java.util.Comparator;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import javax.annotation.concurrent.ThreadSafe;
 
 // A worker manages NormalGroup instances to move delayed slots to a new DelayedGroup.
@@ -20,9 +23,17 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
         queueCheckIntervalInMillis,
         // Enqueued items of this worker can be out of order since `delayedSlotMoveTimeoutAt` would
         // be updated.
-        RetryMode.MOVE_TO_TAIL);
+        RetryMode.RE_ENQUEUE);
     this.groupManager = groupManager;
     this.groupCleanupWorker = groupCleanupWorker;
+  }
+
+  @Override
+  BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+    // Use a priority queue to prioritize groups based on their timeout values, processing groups
+    // with smaller timeout values first.
+    return new PriorityBlockingQueue<>(
+        64, Comparator.comparingLong(NormalGroup::delayedSlotMoveTimeoutAtMillis));
   }
 
   @Override

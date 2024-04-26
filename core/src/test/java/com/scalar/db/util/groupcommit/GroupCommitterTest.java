@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -20,6 +21,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -27,10 +30,93 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class GroupCommitterTest {
-  private static final int OLD_GROUP_ABORT_TIMEOUT_SECONDS = 60;
+  private static final int OLD_GROUP_ABORT_TIMEOUT_SECONDS = 10;
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
 
   @Mock private Emittable<String, Integer> emitter;
+  @Mock private GroupManager<String, String, String, String, Integer> groupManager;
+  @Mock private GroupSizeFixWorker<String, String, String, String, Integer> groupSizeFixWorker;
+
+  @Mock
+  private DelayedSlotMoveWorker<String, String, String, String, Integer> delayedSlotMoveWorker;
+
+  @Mock private GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
+  @Mock private GroupCommitMonitor groupCommitMonitor;
+  @Mock private GroupCommitMetrics groupCommitMetrics;
+
+  private final AtomicBoolean testableGroupCommitterGroupManagerCreated = new AtomicBoolean();
+  private final AtomicBoolean testableGroupCommitterGroupSizeFixWorkerCreated = new AtomicBoolean();
+  private final AtomicBoolean testableGroupCommitterDelayedSlotMoveWorkerCreated =
+      new AtomicBoolean();
+  private final AtomicBoolean testableGroupCommitterGroupCleanupWorkerCreated = new AtomicBoolean();
+  private final AtomicBoolean testableGroupCommitterGroupCommitMonitorCreated = new AtomicBoolean();
+
+  // Use only a single instance at most in a test case.
+  private class TestableGroupCommitter
+      extends GroupCommitter<String, String, String, String, Integer> {
+
+    TestableGroupCommitter(
+        GroupCommitConfig config, KeyManipulator<String, String, String, String> keyManipulator) {
+      super("test", config, keyManipulator);
+    }
+
+    @Override
+    GroupManager<String, String, String, String, Integer> createGroupManager(
+        GroupCommitConfig config, KeyManipulator<String, String, String, String> keyManipulator) {
+      testableGroupCommitterGroupManagerCreated.set(true);
+      return groupManager;
+    }
+
+    @Override
+    GroupSizeFixWorker<String, String, String, String, Integer> createGroupSizeFixWorker(
+        String label,
+        GroupCommitConfig config,
+        GroupManager<String, String, String, String, Integer> groupManager,
+        DelayedSlotMoveWorker<String, String, String, String, Integer> delayedSlotMoveWorker,
+        GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker) {
+      testableGroupCommitterGroupSizeFixWorkerCreated.set(true);
+      return groupSizeFixWorker;
+    }
+
+    @Override
+    DelayedSlotMoveWorker<String, String, String, String, Integer> createDelayedSlotMoveWorker(
+        String label,
+        GroupCommitConfig config,
+        GroupManager<String, String, String, String, Integer> groupManager,
+        GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker) {
+      testableGroupCommitterDelayedSlotMoveWorkerCreated.set(true);
+      return delayedSlotMoveWorker;
+    }
+
+    @Override
+    GroupCleanupWorker<String, String, String, String, Integer> createGroupCleanupWorker(
+        String label,
+        GroupCommitConfig config,
+        GroupManager<String, String, String, String, Integer> groupManager) {
+      testableGroupCommitterGroupCleanupWorkerCreated.set(true);
+      return groupCleanupWorker;
+    }
+
+    @Override
+    GroupCommitMonitor createGroupCommitMonitor(String label) {
+      testableGroupCommitterGroupCommitMonitorCreated.set(true);
+      return groupCommitMonitor;
+    }
+
+    @Override
+    GroupCommitMetrics getMetrics() {
+      return groupCommitMetrics;
+    }
+  }
+
+  @BeforeEach
+  void setUp() {
+    testableGroupCommitterGroupManagerCreated.set(false);
+    testableGroupCommitterGroupSizeFixWorkerCreated.set(false);
+    testableGroupCommitterDelayedSlotMoveWorkerCreated.set(false);
+    testableGroupCommitterGroupCleanupWorkerCreated.set(false);
+    testableGroupCommitterGroupCommitMonitorCreated.set(false);
+  }
 
   private GroupCommitter<String, String, String, String, Integer> createGroupCommitter(
       int slotCapacity, int groupSizeFixTimeoutMillis, int delayedSlotMoveTimeoutMillis) {
@@ -43,6 +129,38 @@ class GroupCommitterTest {
             OLD_GROUP_ABORT_TIMEOUT_SECONDS,
             TIMEOUT_CHECK_INTERVAL_MILLIS),
         new TestableKeyManipulator());
+  }
+
+  @Test
+  void initialize_GivenMetricsMonitorLogEnabled_ShouldStartAllWorkers() {
+    // Arrange
+    // Act
+    try (TestableGroupCommitter ignored =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(20, 100, 400, 60, 10, true), new TestableKeyManipulator())) {
+      // Assert
+      assertThat(testableGroupCommitterGroupManagerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterGroupSizeFixWorkerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterDelayedSlotMoveWorkerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterGroupCleanupWorkerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterGroupCommitMonitorCreated.get()).isTrue();
+    }
+  }
+
+  @Test
+  void initialize_GivenMetricsMonitorLogDisalbled_ShouldStartAllWorkersExceptForMonitor() {
+    // Arrange
+    // Act
+    try (TestableGroupCommitter ignored =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(20, 100, 400, 60, 10, false), new TestableKeyManipulator())) {
+      // Assert
+      assertThat(testableGroupCommitterGroupManagerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterGroupSizeFixWorkerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterDelayedSlotMoveWorkerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterGroupCleanupWorkerCreated.get()).isTrue();
+      assertThat(testableGroupCommitterGroupCommitMonitorCreated.get()).isFalse();
+    }
   }
 
   @Test
@@ -61,6 +179,19 @@ class GroupCommitterTest {
 
       verify(emitter, never()).execute(any(), any());
     }
+  }
+
+  @Test
+  void reserve_WhenAlreadyClosed_ShouldThrowException() {
+    // Arrange
+    GroupCommitter<String, String, String, String, Integer> groupCommitter =
+        createGroupCommitter(2, 100, 400);
+    groupCommitter.setEmitter(emitter);
+    groupCommitter.close();
+
+    // Act
+    // Assert
+    assertThrows(GroupCommitException.class, () -> groupCommitter.reserve("child-key"));
   }
 
   @Test
@@ -398,5 +529,72 @@ class GroupCommitterTest {
       // - NormalGroup("0000", DONE, slots:[Slot("child-key-1"), Slot("child-key-2")])
       verify(testableEmitter).execute("0000", Arrays.asList(11, 22));
     }
+  }
+
+  @Test
+  void close_WithMetricsMonitorLogEnabled_ShouldCloseAllResources() throws InterruptedException {
+    // Arrange
+    doReturn(false).when(groupCommitMetrics).hasRemaining();
+    TestableGroupCommitter groupCommitter =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(20, 100, 400, 60, 10, true), new TestableKeyManipulator());
+    // Act
+    groupCommitter.close();
+    TimeUnit.SECONDS.sleep(4);
+
+    // Assert
+    verify(groupSizeFixWorker).close();
+    verify(delayedSlotMoveWorker).close();
+    verify(groupCleanupWorker).close();
+    verify(groupCommitMonitor).close();
+  }
+
+  @Test
+  void close_WithMetricsMonitorLogDisabled_ShouldCloseAllResourcesExceptForMonitor()
+      throws InterruptedException {
+    // Arrange
+    doReturn(false).when(groupCommitMetrics).hasRemaining();
+    TestableGroupCommitter groupCommitter =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(20, 100, 400, 60, 10, false), new TestableKeyManipulator());
+    // Act
+    groupCommitter.close();
+    TimeUnit.SECONDS.sleep(4);
+
+    // Assert
+    verify(groupSizeFixWorker).close();
+    verify(delayedSlotMoveWorker).close();
+    verify(groupCleanupWorker).close();
+    verify(groupCommitMonitor, never()).close();
+  }
+
+  @Test
+  void close_WhenNoOngoingGroup_ShouldCloseAllResources()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    // Arrange
+    doReturn(true).when(groupCommitMetrics).hasRemaining();
+    TestableGroupCommitter groupCommitter =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(20, 100, 400, 60, 10), new TestableKeyManipulator());
+    ExecutorService executorService = Executors.newCachedThreadPool();
+
+    // Act
+    // Assert
+    Future<?> future = executorService.submit(groupCommitter::close);
+    executorService.shutdown();
+    TimeUnit.SECONDS.sleep(2);
+
+    verify(groupSizeFixWorker, never()).close();
+    verify(delayedSlotMoveWorker, never()).close();
+    verify(groupCleanupWorker, never()).close();
+    verify(groupCommitMonitor, never()).close();
+    doReturn(false).when(groupCommitMetrics).hasRemaining();
+
+    future.get(10, TimeUnit.SECONDS);
+
+    verify(groupSizeFixWorker).close();
+    verify(delayedSlotMoveWorker).close();
+    verify(groupCleanupWorker).close();
+    verify(groupCommitMonitor, never()).close();
   }
 }

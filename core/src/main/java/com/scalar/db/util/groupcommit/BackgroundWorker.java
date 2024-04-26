@@ -7,7 +7,6 @@ import java.io.Closeable;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -16,14 +15,14 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 abstract class BackgroundWorker<T> implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(BackgroundWorker.class);
-  private final BlockingQueue<T> queue = new LinkedBlockingQueue<>();
+  private final BlockingQueue<T> queue;
   private final ExecutorService executorService;
   private final long timeoutCheckIntervalMillis;
   private final RetryMode retryMode;
 
   enum RetryMode {
     KEEP_AT_HEAD,
-    MOVE_TO_TAIL
+    RE_ENQUEUE
   }
 
   BackgroundWorker(String threadName, long timeoutCheckIntervalMillis, RetryMode retryMode) {
@@ -32,8 +31,11 @@ abstract class BackgroundWorker<T> implements Closeable {
             new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName + "-%d").build());
     this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
     this.retryMode = retryMode;
+    this.queue = createQueue();
     startExecutorService();
   }
+
+  abstract BlockingQueue<T> createQueue();
 
   void add(T item) {
     queue.add(item);
@@ -90,7 +92,7 @@ abstract class BackgroundWorker<T> implements Closeable {
 
       // Keep the dequeued item.
 
-      if (retryMode == RetryMode.MOVE_TO_TAIL) {
+      if (retryMode == RetryMode.RE_ENQUEUE) {
         // Move the item to the tail if configured.
         T removed = queue.poll();
         // Check if the removed slot is expected just in case.

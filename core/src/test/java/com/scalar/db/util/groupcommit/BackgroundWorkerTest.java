@@ -6,6 +6,8 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.groupcommit.BackgroundWorker.RetryMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,11 @@ class BackgroundWorkerTest {
         int timeoutCheckIntervalMillis, RetryMode retryMode, Function<String, Boolean> func) {
       super("test", timeoutCheckIntervalMillis, retryMode);
       this.func = func;
+    }
+
+    @Override
+    BlockingQueue<String> createQueue() {
+      return new LinkedBlockingQueue<>();
     }
 
     @Override
@@ -95,7 +102,7 @@ class BackgroundWorkerTest {
     try (TestableBackgroundWorker worker =
         new TestableBackgroundWorker(
             200,
-            RetryMode.MOVE_TO_TAIL,
+            RetryMode.RE_ENQUEUE,
             item -> {
               processedItems.add(item);
               return false;

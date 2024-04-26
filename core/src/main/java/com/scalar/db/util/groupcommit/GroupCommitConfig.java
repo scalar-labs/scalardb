@@ -11,7 +11,7 @@ public class GroupCommitConfig {
   private final int delayedSlotMoveTimeoutMillis;
   private final int oldGroupAbortTimeoutSeconds;
   private final int timeoutCheckIntervalMillis;
-  private final boolean metricsConsoleReporterEnabled;
+  private final boolean metricsMonitorLogEnabled;
 
   /**
    * A configuration of group commit.
@@ -22,7 +22,7 @@ public class GroupCommitConfig {
    *     to {@link DelayedGroup}.
    * @param oldGroupAbortTimeoutSeconds A timeout to abort too old {@link Group}.
    * @param timeoutCheckIntervalMillis An interval to check the queues.
-   * @param metricsConsoleReporterEnabled Whether to enable the console reporter for metrics.
+   * @param metricsMonitorLogEnabled Whether to enable the metrics monitor logging.
    */
   public GroupCommitConfig(
       int slotCapacity,
@@ -30,16 +30,25 @@ public class GroupCommitConfig {
       int delayedSlotMoveTimeoutMillis,
       int oldGroupAbortTimeoutSeconds,
       int timeoutCheckIntervalMillis,
-      boolean metricsConsoleReporterEnabled) {
+      boolean metricsMonitorLogEnabled) {
     this.slotCapacity = slotCapacity;
     this.groupSizeFixTimeoutMillis = groupSizeFixTimeoutMillis;
     this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
     this.oldGroupAbortTimeoutSeconds = oldGroupAbortTimeoutSeconds;
     this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
-    this.metricsConsoleReporterEnabled = metricsConsoleReporterEnabled;
+    this.metricsMonitorLogEnabled = metricsMonitorLogEnabled;
   }
 
-  // Mainly only for testing.
+  /**
+   * A configuration of group commit.
+   *
+   * @param slotCapacity How many slots can be stored in a {@link NormalGroup}.
+   * @param groupSizeFixTimeoutMillis A timeout to close (or size-fix) a {@link NormalGroup}.
+   * @param delayedSlotMoveTimeoutMillis A timeout to move a delayed slot from {@link NormalGroup}
+   *     to {@link DelayedGroup}.
+   * @param oldGroupAbortTimeoutSeconds A timeout to abort too old {@link Group}.
+   * @param timeoutCheckIntervalMillis An interval to check the queues.
+   */
   public GroupCommitConfig(
       int slotCapacity,
       int groupSizeFixTimeoutMillis,
@@ -79,8 +88,8 @@ public class GroupCommitConfig {
     return timeoutCheckIntervalMillis;
   }
 
-  public boolean metricsConsoleReporterEnabled() {
-    return metricsConsoleReporterEnabled;
+  public boolean metricsMonitorLogEnabled() {
+    return metricsMonitorLogEnabled;
   }
 
   @Override
@@ -91,7 +100,7 @@ public class GroupCommitConfig {
         .add("delayedSlotMoveTimeoutMillis", delayedSlotMoveTimeoutMillis)
         .add("oldGroupAbortTimeoutSeconds", oldGroupAbortTimeoutSeconds)
         .add("timeoutCheckIntervalMillis", timeoutCheckIntervalMillis)
-        .add("metricsConsoleReporterEnabled", metricsConsoleReporterEnabled)
+        .add("metricsMonitorLogEnabled", metricsMonitorLogEnabled)
         .toString();
   }
 }

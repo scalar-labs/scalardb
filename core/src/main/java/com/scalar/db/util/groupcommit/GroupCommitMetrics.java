@@ -1,16 +1,16 @@
 package com.scalar.db.util.groupcommit;
 
-import com.codahale.metrics.Metric;
 import com.google.common.base.MoreObjects;
 import javax.annotation.concurrent.Immutable;
 
+// TODO: Remove after introducing a proper metrics.
 @Immutable
-class GroupCommitMetrics implements Metric {
-  public final int queueLengthOfGroupCloseWorker;
-  public final int queueLengthOfDelayedSlotMoveWorker;
-  public final int queueLengthOfGroupCleanupWorker;
-  public final int sizeOfNormalGroupMap;
-  public final int sizeOfDelayedGroupMap;
+class GroupCommitMetrics {
+  private final int queueLengthOfGroupCloseWorker;
+  private final int queueLengthOfDelayedSlotMoveWorker;
+  private final int queueLengthOfGroupCleanupWorker;
+  private final int sizeOfNormalGroupMap;
+  private final int sizeOfDelayedGroupMap;
 
   GroupCommitMetrics(
       int queueLengthOfGroupCloseWorker,
@@ -35,4 +35,14 @@ class GroupCommitMetrics implements Metric {
         .add("sizeOfDelayedGroupMap", sizeOfDelayedGroupMap)
         .toString();
   }
+
+  public boolean hasRemaining() {
+    return queueLengthOfGroupCloseWorker > 0
+        || queueLengthOfDelayedSlotMoveWorker > 0
+        || queueLengthOfGroupCleanupWorker > 0
+        || sizeOfNormalGroupMap > 0
+        || sizeOfDelayedGroupMap > 0;
+  }
+
+  // Add getters if necessary
 }

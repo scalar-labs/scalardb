@@ -296,21 +296,17 @@ class GroupCommitterConcurrentTest {
     private void checkGarbage(
         GroupCommitter<String, String, String, String, Value> groupCommitter) {
       boolean noGarbage = false;
-      GroupCommitMetrics metrics = null;
+      GroupCommitMetrics groupCommitMetrics = null;
       for (int i = 0; i < 60; i++) {
-        metrics = groupCommitter.getMetrics();
-        if (metrics.sizeOfNormalGroupMap == 0
-            && metrics.sizeOfDelayedGroupMap == 0
-            && metrics.queueLengthOfGroupCloseWorker == 0
-            && metrics.queueLengthOfDelayedSlotMoveWorker == 0
-            && metrics.queueLengthOfGroupCleanupWorker == 0) {
+        groupCommitMetrics = groupCommitter.getMetrics();
+        if (!groupCommitMetrics.hasRemaining()) {
           noGarbage = true;
           break;
         }
         Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
       }
       if (!noGarbage) {
-        throw new AssertionError("Some garbage remains in GroupCommitter. " + metrics);
+        throw new AssertionError("Some garbage remains in GroupCommitter. " + groupCommitMetrics);
       }
     }
 
