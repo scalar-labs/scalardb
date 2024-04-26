@@ -7,8 +7,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(JdbcSchemaLoaderImportIntegrationTest.class);
 
   private JdbcAdminImportTestUtils testUtils;
   private RdbEngineStrategy rdbEngine;
@@ -73,6 +77,15 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   @DisabledIf("isSqlite")
   public void importTables_ImportableTablesGiven_ShouldImportProperly() throws Exception {
     super.importTables_ImportableTablesGiven_ShouldImportProperly();
+  }
+
+  @Override
+  public void afterAll() {
+    try {
+      super.afterAll();
+    } catch (Exception e) {
+      logger.warn("Failed to call super.afterAll", e);
+    }
   }
 
   @SuppressWarnings("unused")
