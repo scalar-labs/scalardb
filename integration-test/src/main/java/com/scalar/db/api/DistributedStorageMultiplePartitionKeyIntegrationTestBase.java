@@ -114,14 +114,15 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     return true;
   }
 
-  private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
+  private void createTables()
+      throws java.util.concurrent.ExecutionException, InterruptedException, ExecutionException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
     Map<String, String> options = getCreationOptions();
+    admin.createNamespace(getNamespaceName(), true, options);
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
       Callable<Void> testCallable =
           () -> {
-            admin.createNamespace(getNamespaceName(firstPartitionKeyType), true, options);
             for (DataType secondPartitionKeyType : partitionKeyTypes.get(firstPartitionKeyType)) {
               createTable(firstPartitionKeyType, secondPartitionKeyType, options);
             }
@@ -145,7 +146,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       DataType firstPartitionKeyType, DataType secondPartitionKeyType, Map<String, String> options)
       throws ExecutionException {
     admin.createTable(
-        getNamespaceName(firstPartitionKeyType),
+        getNamespaceName(),
         getTableName(firstPartitionKeyType, secondPartitionKeyType),
         TableMetadata.newBuilder()
             .addColumn(FIRST_PARTITION_KEY, firstPartitionKeyType)
@@ -183,17 +184,16 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     }
   }
 
-  private void dropTables() throws java.util.concurrent.ExecutionException, InterruptedException {
+  private void dropTables()
+      throws java.util.concurrent.ExecutionException, InterruptedException, ExecutionException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
       Callable<Void> testCallable =
           () -> {
             for (DataType secondPartitionKeyType : partitionKeyTypes.get(firstPartitionKeyType)) {
               admin.dropTable(
-                  getNamespaceName(firstPartitionKeyType),
-                  getTableName(firstPartitionKeyType, secondPartitionKeyType));
+                  getNamespaceName(), getTableName(firstPartitionKeyType, secondPartitionKeyType));
             }
-            admin.dropNamespace(getNamespaceName(firstPartitionKeyType));
             return null;
           };
       testCallables.add(testCallable);
@@ -204,21 +204,21 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     // handled in multiple threads/processes at the same time.
     executeDdls(testCallables.subList(0, testCallables.size() - 1));
     executeDdls(testCallables.subList(testCallables.size() - 1, testCallables.size()));
+    admin.dropNamespace(getNamespaceName());
   }
 
   private void truncateTable(DataType firstPartitionKeyType, DataType secondPartitionKeyType)
       throws ExecutionException {
     admin.truncateTable(
-        getNamespaceName(firstPartitionKeyType),
-        getTableName(firstPartitionKeyType, secondPartitionKeyType));
+        getNamespaceName(), getTableName(firstPartitionKeyType, secondPartitionKeyType));
   }
 
   private String getTableName(DataType firstPartitionKeyType, DataType secondPartitionKeyType) {
     return String.join("_", firstPartitionKeyType.toString(), secondPartitionKeyType.toString());
   }
 
-  private String getNamespaceName(DataType firstPartitionKeyType) {
-    return namespaceBaseName + firstPartitionKeyType;
+  private String getNamespaceName() {
+    return namespaceBaseName + "all";
   }
 
   private void executeDdls(List<Callable<Void>> ddls)
@@ -448,7 +448,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       Value<?> secondPartitionKeyValue) {
     return new Put(new Key(firstPartitionKeyValue, secondPartitionKeyValue))
         .withValue(COL_NAME, 1)
-        .forNamespace(getNamespaceName(firstPartitionKeyType))
+        .forNamespace(getNamespaceName())
         .forTable(getTableName(firstPartitionKeyType, secondPartitionKeyType));
   }
 
@@ -458,7 +458,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       DataType secondPartitionKeyType,
       Value<?> secondPartitionKeyValue) {
     return new Get(new Key(firstPartitionKeyValue, secondPartitionKeyValue))
-        .forNamespace(getNamespaceName(firstPartitionKeyType))
+        .forNamespace(getNamespaceName())
         .forTable(getTableName(firstPartitionKeyType, secondPartitionKeyType));
   }
 
@@ -468,7 +468,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       DataType secondPartitionKeyType,
       Value<?> secondPartitionKeyValue) {
     return new Delete(new Key(firstPartitionKeyValue, secondPartitionKeyValue))
-        .forNamespace(getNamespaceName(firstPartitionKeyType))
+        .forNamespace(getNamespaceName())
         .forTable(getTableName(firstPartitionKeyType, secondPartitionKeyType));
   }
 
