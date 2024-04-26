@@ -6,7 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -29,7 +33,9 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -42,13 +48,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ConsensusCommitSpecificIntegrationTestBase {
@@ -81,6 +94,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private Coordinator coordinator;
   private RecoveryHandler recovery;
   private CommitHandler commit;
+  private CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -143,7 +157,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
+    groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
+    commit =
+        spy(
+            new CommitHandler(
+                storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter));
     manager =
         new ConsensusCommitManager(
             storage,
@@ -153,7 +171,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             coordinator,
             parallelExecutor,
             recovery,
-            commit);
+            commit,
+            groupCommitter);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    if (groupCommitter != null) {
+      groupCommitter.close();
+    }
   }
 
   private void truncateTables() throws ExecutionException {
@@ -1278,6 +1304,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     // one for prepare, one for commit
     verify(storage, times(2)).mutate(anyList());
+    if (isGroupCommitEnabled()) {
+      verify(coordinator)
+          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+      return;
+    }
     verify(coordinator).putState(any(Coordinator.State.class));
   }
 
@@ -1299,6 +1330,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     // twice for prepare, twice for commit
     verify(storage, times(4)).mutate(anyList());
+    if (isGroupCommitEnabled()) {
+      verify(coordinator)
+          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+      return;
+    }
     verify(coordinator).putState(any(Coordinator.State.class));
   }
 
@@ -2115,7 +2151,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown1).isInstanceOf(CommitException.class);
   }
 
+  private boolean isGroupCommitEnabled() {
+    return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
+  }
+
   @Test
+  @DisabledIf("isGroupCommitEnabled")
   public void
       commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
           throws TransactionException, CoordinatorException {
@@ -2124,6 +2165,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  @DisabledIf("isGroupCommitEnabled")
   public void
       commit_WriteSkewOnNonExistingRecordsInDifferentTableWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
           throws TransactionException, CoordinatorException {
@@ -2789,6 +2831,116 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scanAll);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenOneOfTransactionsIsDelayed_ShouldBeCommittedWithoutBlocked() throws Exception {
+    // Arrange
+    ExecutorService executorService = Executors.newCachedThreadPool();
+
+    // Act
+    DistributedTransaction slowTxn = manager.begin();
+    DistributedTransaction fastTxn = manager.begin();
+    fastTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    Future<?> future =
+        executorService.submit(
+            () -> {
+              try {
+                fastTxn.commit();
+              } catch (CommitException | UnknownTransactionStatusException e) {
+                throw new RuntimeException(e);
+              }
+            });
+    executorService.shutdown();
+    future.get(10, TimeUnit.SECONDS);
+
+    slowTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+    slowTxn.commit();
+
+    // Assert
+    DistributedTransaction validationTxn = manager.begin();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isPresent();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(slowTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(coordinator.getState(fastTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenTheOtherTransactionAbortDueToConflict_ShouldBeCommittedWithoutBlocked()
+      throws Exception {
+    // Arrange
+    ExecutorService executorService = Executors.newCachedThreadPool();
+
+    // Act
+    DistributedTransaction failedTxn =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction successTxn =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    failedTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    failedTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+    Future<?> future =
+        executorService.submit(
+            () -> {
+              try {
+                successTxn.commit();
+              } catch (CommitException | UnknownTransactionStatusException e) {
+                throw new RuntimeException(e);
+              }
+            });
+    executorService.shutdown();
+    assertThat(catchThrowable(failedTxn::commit)).isInstanceOf(CommitConflictException.class);
+    future.get(10, TimeUnit.SECONDS);
+
+    // Assert
+    DistributedTransaction validationTxn = manager.begin();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(failedTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinator.getState(successTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenAllTransactionsAbort_ShouldBeAbortedProperly() throws Exception {
+    // Act
+    DistributedTransaction failedTxn1 =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction failedTxn2 =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+
+    doThrow(PreparationConflictException.class).when(commit).prepare(any());
+
+    failedTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
+    failedTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
+
+    try {
+      assertThat(catchThrowable(failedTxn1::commit)).isInstanceOf(CommitConflictException.class);
+      assertThat(catchThrowable(failedTxn2::commit)).isInstanceOf(CommitConflictException.class);
+    } finally {
+      reset(commit);
+    }
+
+    // Assert
+    DistributedTransaction validationTxn = manager.begin();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isEmpty();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(failedTxn1.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinator.getState(failedTxn2.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
   }
 
   private DistributedTransaction prepareTransfer(

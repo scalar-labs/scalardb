@@ -932,8 +932,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
       scan_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.begin();
     populateSingleRecord();
+    DistributedTransaction transaction = manager.begin();
     Scan scan = prepareScan(0, 0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act

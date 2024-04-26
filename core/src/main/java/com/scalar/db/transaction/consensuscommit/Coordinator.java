@@ -3,6 +3,8 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
@@ -16,7 +18,13 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.Value;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +40,7 @@ public class Coordinator {
   public static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(Attribute.ID, DataType.TEXT)
+          .addColumn(Attribute.CHILD_IDS, DataType.TEXT)
           .addColumn(Attribute.STATE, DataType.INT)
           .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
           .addPartitionKey(Attribute.ID)
@@ -42,6 +51,7 @@ public class Coordinator {
   private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
   private final DistributedStorage storage;
   private final String coordinatorNamespace;
+  private final CoordinatorGroupCommitKeyManipulator keyManipulator;
 
   /**
    * @param storage a storage
@@ -52,20 +62,85 @@ public class Coordinator {
   public Coordinator(DistributedStorage storage) {
     this.storage = storage;
     coordinatorNamespace = NAMESPACE;
+    keyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
+    keyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
+    if (keyManipulator.isFullKey(id)) {
+      // The following read operation order is important. It's likely getting a coordinator state
+      // occurs for lazy recovery. The possibility of lazy recovery would increase if a transaction
+      // scanned by another transaction executing lazy recovery is delayed. In the group commit,
+      // delayed transactions are specified with a full transaction ID. So, looking up with full
+      // transaction ID should be tried first.
+
+      // Scan with the full ID for single transaction record.
+      Optional<State> state = get(createGetWith(id));
+      if (state.isPresent()) {
+        return state;
+      }
+
+      // Scan with the parent ID for group committed record.
+      return getStateForGroupCommit(id);
+    }
+
     Get get = createGetWith(id);
     return get(get);
   }
 
+  @VisibleForTesting
+  Optional<Coordinator.State> getStateForGroupCommit(String id) throws CoordinatorException {
+    if (!keyManipulator.isFullKey(id)) {
+      throw new IllegalArgumentException("This id format isn't for group commit. Id:" + id);
+    }
+    Keys<String, String, String> idForGroupCommit = keyManipulator.keysFromFullKey(id);
+
+    String parentId = idForGroupCommit.parentKey;
+    String childId = idForGroupCommit.childKey;
+    Get get = createGetWith(parentId);
+    Optional<State> state = get(get);
+    return state.flatMap(
+        s -> {
+          if (s.getChildIds().contains(childId)) {
+            return state;
+          }
+          return Optional.empty();
+        });
+  }
+
   public void putState(Coordinator.State state) throws CoordinatorException {
+    Put put = createPutWith(state);
+    put(put);
+  }
+
+  void putStateForGroupCommit(
+      String id, List<String> fullIds, TransactionState transactionState, long createdAt)
+      throws CoordinatorException {
+    State state;
+    if (keyManipulator.isFullKey(id)) {
+      // In this case, this is same as normal commit and child_ids isn't needed.
+      state = new State(id, transactionState, createdAt);
+    } else {
+      // Group commit with child_ids.
+      List<String> childIds = new ArrayList<>(fullIds.size());
+      for (String fullId : fullIds) {
+        if (!keyManipulator.isFullKey(fullId)) {
+          throw new IllegalStateException(
+              String.format(
+                  "The full transaction ID for group commit is invalid format. ID:%s, FullIds:%s, State:%s, CreatedAt:%s",
+                  id, fullId, transactionState, createdAt));
+        }
+        Keys<String, String, String> keys = keyManipulator.keysFromFullKey(fullId);
+        childIds.add(keys.childKey);
+      }
+      state = new State(id, childIds, transactionState, createdAt);
+    }
     Put put = createPutWith(state);
     put(put);
   }
@@ -99,8 +174,11 @@ public class Coordinator {
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    return new Put(new Key(Attribute.toIdValue(state.getId())))
-        .withValue(Attribute.toStateValue(state.getState()))
+    Put put = new Put(new Key(Attribute.toIdValue(state.getId())));
+    if (!state.getChildIds().isEmpty()) {
+      put.withValue(Attribute.toChildIdsValue(Joiner.on(',').join(state.getChildIds())));
+    }
+    return put.withValue(Attribute.toStateValue(state.getState()))
         .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
         .withConsistency(Consistency.LINEARIZABLE)
         .withCondition(new PutIfNotExists())
@@ -133,15 +211,29 @@ public class Coordinator {
 
   @ThreadSafe
   public static class State {
+    private static final List<String> EMPTY_CHILD_IDS = Collections.emptyList();
+    private static final String CHILD_IDS_DELIMITER = ",";
     private final String id;
     private final TransactionState state;
     private final long createdAt;
+    private final List<String> childIds;
 
     public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
       id = result.getValue(Attribute.ID).get().getAsString().get();
       state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
       createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
+      Optional<Value<?>> childIdsOpt = result.getValue(Attribute.CHILD_IDS);
+      Optional<String> childIdsStrOpt;
+      if (childIdsOpt.isPresent()) {
+        childIdsStrOpt = childIdsOpt.get().getAsString();
+      } else {
+        childIdsStrOpt = Optional.empty();
+      }
+      childIds =
+          childIdsStrOpt
+              .map(s -> Splitter.on(CHILD_IDS_DELIMITER).omitEmptyStrings().splitToList(s))
+              .orElse(EMPTY_CHILD_IDS);
     }
 
     public State(String id, TransactionState state) {
@@ -153,10 +245,24 @@ public class Coordinator {
     protected final void finalize() {}
 
     @VisibleForTesting
-    State(String id, TransactionState state, long createdAt) {
+    State(String id, List<String> childIds, TransactionState state, long createdAt) {
       this.id = checkNotNull(id);
+      for (String childId : childIds) {
+        if (childId.contains(CHILD_IDS_DELIMITER)) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "This child transaction ID itself contains the delimiter. ChildTransactionID: %s, Delimiter: %s",
+                  childId, CHILD_IDS_DELIMITER));
+        }
+      }
+      this.childIds = childIds;
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
+    }
+
+    @VisibleForTesting
+    State(String id, TransactionState state, long createdAt) {
+      this(id, EMPTY_CHILD_IDS, state, createdAt);
     }
 
     @Nonnull
@@ -173,6 +279,10 @@ public class Coordinator {
       return createdAt;
     }
 
+    public List<String> getChildIds() {
+      return childIds;
+    }
+
     @Override
     public boolean equals(Object o) {
       if (o == this) {
@@ -183,12 +293,15 @@ public class Coordinator {
       }
       State other = (State) o;
       // NOTICE: createdAt is not taken into account
-      return (getId().equals(other.getId()) && getState().equals(other.getState()));
+      return Objects.equals(id, other.id)
+          && state == other.state
+          && Objects.equals(childIds, other.childIds);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(id, state);
+      // NOTICE: createdAt is not taken into account
+      return Objects.hash(id, state, childIds);
     }
 
     private void checkNotMissingRequired(Result result) throws CoordinatorException {

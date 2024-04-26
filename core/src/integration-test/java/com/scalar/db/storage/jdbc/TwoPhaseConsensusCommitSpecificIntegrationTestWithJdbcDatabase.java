@@ -8,6 +8,6 @@ public class TwoPhaseConsensusCommitSpecificIntegrationTestWithJdbcDatabase
 
   @Override
   protected Properties getProperties1(String testName) {
-    return JdbcEnv.getProperties(testName);
+    return ConsensusCommitJdbcEnv.getProperties(testName);
   }
 }
