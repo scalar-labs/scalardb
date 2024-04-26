@@ -922,6 +922,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
             withLimit));
   }
 
+  // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed.
+  @DisabledIf("isYugabyteDb")
   @Test
   public void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult()
       throws java.util.concurrent.ExecutionException, InterruptedException {
