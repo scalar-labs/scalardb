@@ -124,15 +124,14 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     return false;
   }
 
-  private void createTables()
-      throws java.util.concurrent.ExecutionException, InterruptedException, ExecutionException {
+  private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
     Map<String, String> options = getCreationOptions();
-    admin.createNamespace(getNamespaceName(), true, options);
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       Callable<Void> testCallable =
           () -> {
+            admin.createNamespace(getNamespaceName(firstClusteringKeyType), true, options);
             for (DataType secondClusteringKeyType :
                 clusteringKeyTypes.get(firstClusteringKeyType)) {
               for (Order firstClusteringOrder : Order.values()) {
@@ -170,7 +169,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       Map<String, String> options)
       throws ExecutionException {
     admin.createTable(
-        getNamespaceName(),
+        getNamespaceName(firstClusteringKeyType),
         getTableName(
             firstClusteringKeyType,
             firstClusteringOrder,
@@ -222,8 +221,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     }
   }
 
-  private void dropTables()
-      throws java.util.concurrent.ExecutionException, InterruptedException, ExecutionException {
+  private void dropTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       Callable<Void> testCallable =
@@ -233,7 +231,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
               for (Order firstClusteringOrder : Order.values()) {
                 for (Order secondClusteringOrder : Order.values()) {
                   admin.dropTable(
-                      getNamespaceName(),
+                      getNamespaceName(firstClusteringKeyType),
                       getTableName(
                           firstClusteringKeyType,
                           firstClusteringOrder,
@@ -242,6 +240,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
                 }
               }
             }
+            admin.dropNamespace(getNamespaceName(firstClusteringKeyType));
             return null;
           };
       testCallables.add(testCallable);
@@ -252,7 +251,6 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     // handled in multiple threads/processes at the same time.
     executeDdls(testCallables.subList(0, testCallables.size() - 1));
     executeDdls(testCallables.subList(testCallables.size() - 1, testCallables.size()));
-    admin.dropNamespace(getNamespaceName());
   }
 
   private void truncateTable(
@@ -262,7 +260,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       Order secondClusteringOrder)
       throws ExecutionException {
     admin.truncateTable(
-        getNamespaceName(),
+        getNamespaceName(firstClusteringKeyType),
         getTableName(
             firstClusteringKeyType,
             firstClusteringOrder,
@@ -283,8 +281,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
         secondClusteringOrder.toString());
   }
 
-  private String getNamespaceName() {
-    return namespaceBaseName + "all";
+  private String getNamespaceName(DataType firstClusteringKeyType) {
+    return namespaceBaseName + firstClusteringKeyType;
   }
 
   @Test
@@ -1791,7 +1789,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       Value<?> secondClusteringKeyValue) {
     return new Put(getPartitionKey(), new Key(firstClusteringKeyValue, secondClusteringKeyValue))
         .withValue(COL_NAME, 1)
-        .forNamespace(getNamespaceName())
+        .forNamespace(getNamespaceName(firstClusteringKeyType))
         .forTable(
             getTableName(
                 firstClusteringKeyType,
@@ -1915,7 +1913,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       int limit) {
     Scan scan =
         new Scan(getPartitionKey())
-            .forNamespace(getNamespaceName())
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
                     firstClusteringKeyType,
