@@ -104,9 +104,9 @@ public class ConditionBuilder {
   }
 
   /**
-   * Creates a UpdateIfExists condition.
+   * Creates an UpdateIfExists condition.
    *
-   * @return a UpdateIfExists condition
+   * @return an UpdateIfExists condition
    */
   public static UpdateIfExists updateIfExists() {
     return new UpdateIfExists();

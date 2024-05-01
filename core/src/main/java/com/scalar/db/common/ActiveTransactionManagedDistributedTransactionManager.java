@@ -142,17 +142,17 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
     }
 
     @Override
-    public void insert(Insert insert) throws CrudException {
+    public synchronized void insert(Insert insert) throws CrudException {
       super.insert(insert);
     }
 
     @Override
-    public void upsert(Upsert upsert) throws CrudException {
+    public synchronized void upsert(Upsert upsert) throws CrudException {
       super.upsert(upsert);
     }
 
     @Override
-    public void update(Update update) throws CrudException {
+    public synchronized void update(Update update) throws CrudException {
       super.update(update);
     }
 
