@@ -142,6 +142,7 @@ public final class ConfigUtils {
     if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
     }
+    // Prevent escaped commas from being used as delimiters for contact points.
     return Arrays.stream(value.split("\\s*(?<!\\\\),\\s*"))
         .map(s -> s.replace("\\", ""))
         .toArray(String[]::new);

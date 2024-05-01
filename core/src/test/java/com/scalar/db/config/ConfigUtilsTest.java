@@ -105,7 +105,7 @@ public class ConfigUtilsTest {
     Properties properties = new Properties();
     properties.setProperty("name1", "aaa,bbb,ccc");
     properties.setProperty("name2", "   aaa  ,  bbb,  ccc   ");
-    properties.setProperty("name3", "aaa,bbb\\,ccc");
+    properties.setProperty("name3", "aaa\\,bbb\\,ccc,ddd");
     properties.setProperty("name4", "");
 
     // Act Assert
@@ -114,7 +114,7 @@ public class ConfigUtilsTest {
     assertThat(ConfigUtils.getStringArray(properties, "name2", new String[] {"xxx", "yyy", "zzz"}))
         .isEqualTo(new String[] {"aaa", "bbb", "ccc"});
     assertThat(ConfigUtils.getStringArray(properties, "name3", new String[] {"xxx", "yyy", "zzz"}))
-        .isEqualTo(new String[] {"aaa", "bbb,ccc"});
+        .isEqualTo(new String[] {"aaa,bbb,ccc", "ddd"});
     assertThat(ConfigUtils.getStringArray(properties, "name4", new String[] {"xxx", "yyy", "zzz"}))
         .isEqualTo(new String[] {"xxx", "yyy", "zzz"});
     assertThat(ConfigUtils.getStringArray(properties, "name5", new String[] {"xxx", "yyy", "zzz"}))

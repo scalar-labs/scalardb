@@ -13,10 +13,15 @@ public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTest
 
   @Override
   protected Properties getProperties(String testName) {
-    Properties properties = JdbcEnv.getProperties(testName);
+    return JdbcEnv.getProperties(testName);
+  }
+
+  @Override
+  protected void initialize(String testName) throws Exception {
+    super.initialize(testName);
+    Properties properties = getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    return properties;
   }
 
   @Override

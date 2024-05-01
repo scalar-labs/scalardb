@@ -130,7 +130,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
-  public void close() throws Exception {
+  public void close() throws SQLException {
     dataSource.close();
   }
 }
