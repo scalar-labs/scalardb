@@ -25,7 +25,7 @@ import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.api.OperationBuilder.Where;
 import com.scalar.db.api.OperationBuilder.WhereAnd;
 import com.scalar.db.api.OperationBuilder.WhereOr;
-import com.scalar.db.api.Scan.Conjunction;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
@@ -33,11 +33,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.Immutable;
 
 public class ScanBuilder {
 
@@ -621,9 +619,9 @@ public class ScanBuilder {
           OperationBuilder.Table<BuildableScanOrScanAllFromExisting>,
           PartitionKey<BuildableScanOrScanAllFromExisting>,
           IndexKey<BuildableScanOrScanAllFromExisting>,
-          Where<BuildableScanAllFromExistingWithOngoingWhere>,
-          WhereAnd<BuildableScanAllFromExistingWithOngoingWhereAnd>,
-          WhereOr<BuildableScanAllFromExistingWithOngoingWhereOr>,
+          Where<BuildableScanFromExistingWithOngoingWhere>,
+          WhereAnd<BuildableScanFromExistingWithOngoingWhereAnd>,
+          WhereOr<BuildableScanFromExistingWithOngoingWhereOr>,
           ClearConditions<BuildableScanOrScanAllFromExisting>,
           ClearProjections<BuildableScanOrScanAllFromExisting>,
           ClearOrderings<BuildableScanOrScanAllFromExisting>,
@@ -781,45 +779,45 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhere where(ConditionalExpression condition) {
+    public BuildableScanFromExistingWithOngoingWhere where(ConditionalExpression condition) {
       checkScanAll();
       checkConditionsEmpty();
       checkNotNull(condition);
-      return new BuildableScanAllFromExistingWithOngoingWhere(this, condition);
+      return new BuildableScanFromExistingWithOngoingWhere(this, condition);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
+    public BuildableScanFromExistingWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkScanAll();
       checkConditionsEmpty();
       checkNotNull(orConditionSet);
-      return new BuildableScanAllFromExistingWithOngoingWhereAnd(this, orConditionSet);
+      return new BuildableScanFromExistingWithOngoingWhereAnd(this, orConditionSet);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereOr where(AndConditionSet andConditionSet) {
+    public BuildableScanFromExistingWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkScanAll();
       checkConditionsEmpty();
       checkNotNull(andConditionSet);
-      return new BuildableScanAllFromExistingWithOngoingWhereOr(this, andConditionSet);
+      return new BuildableScanFromExistingWithOngoingWhereOr(this, andConditionSet);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereAnd whereAnd(
+    public BuildableScanFromExistingWithOngoingWhereAnd whereAnd(
         Set<OrConditionSet> orConditionSets) {
       checkScanAll();
       checkConditionsEmpty();
       checkNotNull(orConditionSets);
-      return new BuildableScanAllFromExistingWithOngoingWhereAnd(this, orConditionSets);
+      return new BuildableScanFromExistingWithOngoingWhereAnd(this, orConditionSets);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereOr whereOr(
+    public BuildableScanFromExistingWithOngoingWhereOr whereOr(
         Set<AndConditionSet> andConditionSets) {
       checkScanAll();
       checkConditionsEmpty();
       checkNotNull(andConditionSets);
-      return new BuildableScanAllFromExistingWithOngoingWhereOr(this, andConditionSets);
+      return new BuildableScanFromExistingWithOngoingWhereOr(this, andConditionSets);
     }
 
     @Override
@@ -936,221 +934,195 @@ public class ScanBuilder {
     }
   }
 
-  public static class BuildableScanAllFromExistingWithWhere
-      implements OperationBuilder.Namespace<BuildableScanAllFromExistingWithWhere>,
-          OperationBuilder.Table<BuildableScanAllFromExistingWithWhere>,
-          Consistency<BuildableScanAllFromExistingWithWhere>,
-          Projection<BuildableScanAllFromExistingWithWhere>,
-          Ordering<BuildableScanAllFromExistingWithWhere>,
-          Limit<BuildableScanAllFromExistingWithWhere>,
-          ClearProjections<BuildableScanAllFromExistingWithWhere>,
-          ClearOrderings<BuildableScanAllFromExistingWithWhere>,
-          ClearNamespace<BuildableScanAllFromExistingWithWhere> {
+  public static class BuildableScanFromExistingWithWhere
+      implements OperationBuilder.Namespace<BuildableScanFromExistingWithWhere>,
+          OperationBuilder.Table<BuildableScanFromExistingWithWhere>,
+          Consistency<BuildableScanFromExistingWithWhere>,
+          Projection<BuildableScanFromExistingWithWhere>,
+          Ordering<BuildableScanFromExistingWithWhere>,
+          Limit<BuildableScanFromExistingWithWhere>,
+          ClearProjections<BuildableScanFromExistingWithWhere>,
+          ClearOrderings<BuildableScanFromExistingWithWhere>,
+          ClearNamespace<BuildableScanFromExistingWithWhere> {
 
-    @Nullable protected String namespaceName;
-    protected String tableName;
+    BuildableScanOrScanAllFromExisting buildableScanFromExisting;
     @Nullable protected final ConditionalExpression condition;
     protected final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
     protected final Set<Set<ConditionalExpression>> disjunctions = new HashSet<>();
-    protected final List<String> projections = new ArrayList<>();
-    protected final List<Scan.Ordering> orderings = new ArrayList<>();
-    protected int limit;
-    @Nullable protected com.scalar.db.api.Consistency consistency;
 
-    private BuildableScanAllFromExistingWithWhere(BuildableScanAllFromExistingWithWhere buildable) {
-      this.namespaceName = buildable.namespaceName;
-      this.tableName = buildable.tableName;
+    private BuildableScanFromExistingWithWhere(BuildableScanFromExistingWithWhere buildable) {
+      this.buildableScanFromExisting = buildable.buildableScanFromExisting;
       this.condition = null;
       this.conjunctions.addAll(buildable.conjunctions);
       this.disjunctions.addAll(buildable.disjunctions);
-      this.limit = buildable.limit;
-      this.orderings.addAll(buildable.orderings);
-      this.projections.addAll(buildable.projections);
-      this.consistency = buildable.consistency;
     }
 
-    private BuildableScanAllFromExistingWithWhere(
+    private BuildableScanFromExistingWithWhere(
         BuildableScanOrScanAllFromExisting buildable, @Nullable ConditionalExpression condition) {
-      this.namespaceName = buildable.namespaceName;
-      this.tableName = buildable.tableName;
+      this.buildableScanFromExisting = buildable;
       this.condition = condition;
-      this.limit = buildable.limit;
-      this.orderings.addAll(buildable.orderings);
-      this.projections.addAll(buildable.projections);
-      this.consistency = buildable.consistency;
+    }
+
+    private BuildableScanFromExistingWithWhere(BuildableScanOrScanAllFromExisting buildable) {
+      this(buildable, null);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere namespace(String namespaceName) {
-      checkNotNull(namespaceName);
-      this.namespaceName = namespaceName;
+    public BuildableScanFromExistingWithWhere namespace(String namespaceName) {
+      buildableScanFromExisting = buildableScanFromExisting.namespace(namespaceName);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere table(String tableName) {
-      checkNotNull(tableName);
-      this.tableName = tableName;
+    public BuildableScanFromExistingWithWhere table(String tableName) {
+      buildableScanFromExisting = buildableScanFromExisting.table(tableName);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere projection(String projection) {
-      checkNotNull(projection);
-      projections.add(projection);
+    public BuildableScanFromExistingWithWhere projection(String projection) {
+      buildableScanFromExisting = buildableScanFromExisting.projections(projection);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere projections(Collection<String> projections) {
-      checkNotNull(projections);
-      this.projections.addAll(projections);
+    public BuildableScanFromExistingWithWhere projections(Collection<String> projections) {
+      buildableScanFromExisting = buildableScanFromExisting.projections(projections);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere projections(String... projections) {
+    public BuildableScanFromExistingWithWhere projections(String... projections) {
       return projections(Arrays.asList(projections));
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere ordering(Scan.Ordering ordering) {
-      checkNotNull(ordering);
-      orderings.add(ordering);
+    public BuildableScanFromExistingWithWhere ordering(Scan.Ordering ordering) {
+      buildableScanFromExisting = buildableScanFromExisting.ordering(ordering);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere orderings(Collection<Scan.Ordering> orderings) {
-      checkNotNull(orderings);
-      this.orderings.addAll(orderings);
+    public BuildableScanFromExistingWithWhere orderings(Collection<Scan.Ordering> orderings) {
+      buildableScanFromExisting = buildableScanFromExisting.orderings(orderings);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere orderings(Scan.Ordering... orderings) {
+    public BuildableScanFromExistingWithWhere orderings(Scan.Ordering... orderings) {
       return orderings(Arrays.asList(orderings));
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere limit(int limit) {
-      this.limit = limit;
+    public BuildableScanFromExistingWithWhere limit(int limit) {
+      buildableScanFromExisting = buildableScanFromExisting.limit(limit);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere consistency(
+    public BuildableScanFromExistingWithWhere consistency(
         com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
+      buildableScanFromExisting = buildableScanFromExisting.consistency(consistency);
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere clearProjections() {
-      this.projections.clear();
+    public BuildableScanFromExistingWithWhere clearProjections() {
+      buildableScanFromExisting = buildableScanFromExisting.clearProjections();
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere clearOrderings() {
-      this.orderings.clear();
+    public BuildableScanFromExistingWithWhere clearOrderings() {
+      buildableScanFromExisting = buildableScanFromExisting.clearOrderings();
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithWhere clearNamespace() {
-      this.namespaceName = null;
+    public BuildableScanFromExistingWithWhere clearNamespace() {
+      buildableScanFromExisting = buildableScanFromExisting.clearNamespace();
       return this;
     }
 
     public Scan build() {
-      return buildScanAllWithConjunctions(
-          namespaceName,
-          tableName,
-          condition,
-          conjunctions,
-          disjunctions,
-          projections,
-          orderings,
-          limit,
-          consistency);
+      return addConjunctionsTo(
+          buildableScanFromExisting.build(), condition, conjunctions, disjunctions);
     }
   }
 
-  public static class BuildableScanAllFromExistingWithOngoingWhere
-      extends BuildableScanAllFromExistingWithWhere
-      implements And<BuildableScanAllFromExistingWithOngoingWhereAnd>,
-          Or<BuildableScanAllFromExistingWithOngoingWhereOr> {
+  public static class BuildableScanFromExistingWithOngoingWhere
+      extends BuildableScanFromExistingWithWhere
+      implements And<BuildableScanFromExistingWithOngoingWhereAnd>,
+          Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
-    private BuildableScanAllFromExistingWithOngoingWhere(
+    private BuildableScanFromExistingWithOngoingWhere(
         BuildableScanOrScanAllFromExisting buildable) {
-      super(buildable, null);
+      super(buildable);
     }
 
-    private BuildableScanAllFromExistingWithOngoingWhere(
+    private BuildableScanFromExistingWithOngoingWhere(
         BuildableScanOrScanAllFromExisting buildable, ConditionalExpression condition) {
       super(buildable, condition);
     }
 
-    private BuildableScanAllFromExistingWithOngoingWhere(
-        BuildableScanAllFromExistingWithOngoingWhere buildable) {
+    private BuildableScanFromExistingWithOngoingWhere(
+        BuildableScanFromExistingWithOngoingWhere buildable) {
       super(buildable);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereAnd and(ConditionalExpression condition) {
+    public BuildableScanFromExistingWithOngoingWhereAnd and(ConditionalExpression condition) {
       checkNotNull(this.condition);
       checkNotNull(condition);
       disjunctions.add(ImmutableSet.of(this.condition));
       disjunctions.add(ImmutableSet.of(condition));
-      return new BuildableScanAllFromExistingWithOngoingWhereAnd(this);
+      return new BuildableScanFromExistingWithOngoingWhereAnd(this);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
+    public BuildableScanFromExistingWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
       checkNotNull(this.condition);
       checkNotNull(orConditionSet);
       disjunctions.add(ImmutableSet.of(this.condition));
       disjunctions.add(orConditionSet.getConditions());
-      return new BuildableScanAllFromExistingWithOngoingWhereAnd(this);
+      return new BuildableScanFromExistingWithOngoingWhereAnd(this);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereOr or(ConditionalExpression condition) {
+    public BuildableScanFromExistingWithOngoingWhereOr or(ConditionalExpression condition) {
       checkNotNull(this.condition);
       checkNotNull(condition);
       conjunctions.add(ImmutableSet.of(this.condition));
       conjunctions.add(ImmutableSet.of(condition));
-      return new BuildableScanAllFromExistingWithOngoingWhereOr(this);
+      return new BuildableScanFromExistingWithOngoingWhereOr(this);
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereOr or(AndConditionSet andConditionSet) {
+    public BuildableScanFromExistingWithOngoingWhereOr or(AndConditionSet andConditionSet) {
       checkNotNull(this.condition);
       checkNotNull(andConditionSet);
       conjunctions.add(ImmutableSet.of(this.condition));
       conjunctions.add(andConditionSet.getConditions());
-      return new BuildableScanAllFromExistingWithOngoingWhereOr(this);
+      return new BuildableScanFromExistingWithOngoingWhereOr(this);
     }
   }
 
-  public static class BuildableScanAllFromExistingWithOngoingWhereOr
-      extends BuildableScanAllFromExistingWithOngoingWhere
-      implements Or<BuildableScanAllFromExistingWithOngoingWhereOr> {
+  public static class BuildableScanFromExistingWithOngoingWhereOr
+      extends BuildableScanFromExistingWithOngoingWhere
+      implements Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
-    private BuildableScanAllFromExistingWithOngoingWhereOr(
-        BuildableScanAllFromExistingWithOngoingWhere buildable) {
+    private BuildableScanFromExistingWithOngoingWhereOr(
+        BuildableScanFromExistingWithOngoingWhere buildable) {
       super(buildable);
     }
 
-    private BuildableScanAllFromExistingWithOngoingWhereOr(
+    private BuildableScanFromExistingWithOngoingWhereOr(
         BuildableScanOrScanAllFromExisting buildable, AndConditionSet andConditionSet) {
       super(buildable);
       conjunctions.add(andConditionSet.getConditions());
     }
 
-    private BuildableScanAllFromExistingWithOngoingWhereOr(
+    private BuildableScanFromExistingWithOngoingWhereOr(
         BuildableScanOrScanAllFromExisting buildable, Set<AndConditionSet> andConditionSets) {
       super(buildable);
       conjunctions.addAll(
@@ -1160,36 +1132,36 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereOr or(ConditionalExpression condition) {
+    public BuildableScanFromExistingWithOngoingWhereOr or(ConditionalExpression condition) {
       checkNotNull(condition);
       conjunctions.add(ImmutableSet.of(condition));
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereOr or(AndConditionSet andConditionSet) {
+    public BuildableScanFromExistingWithOngoingWhereOr or(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
       conjunctions.add(andConditionSet.getConditions());
       return this;
     }
   }
 
-  public static class BuildableScanAllFromExistingWithOngoingWhereAnd
-      extends BuildableScanAllFromExistingWithOngoingWhere
-      implements And<BuildableScanAllFromExistingWithOngoingWhereAnd> {
+  public static class BuildableScanFromExistingWithOngoingWhereAnd
+      extends BuildableScanFromExistingWithOngoingWhere
+      implements And<BuildableScanFromExistingWithOngoingWhereAnd> {
 
-    private BuildableScanAllFromExistingWithOngoingWhereAnd(
-        BuildableScanAllFromExistingWithOngoingWhere buildable) {
+    private BuildableScanFromExistingWithOngoingWhereAnd(
+        BuildableScanFromExistingWithOngoingWhere buildable) {
       super(buildable);
     }
 
-    private BuildableScanAllFromExistingWithOngoingWhereAnd(
+    private BuildableScanFromExistingWithOngoingWhereAnd(
         BuildableScanOrScanAllFromExisting buildable, OrConditionSet orConditionSet) {
       super(buildable);
       disjunctions.add(orConditionSet.getConditions());
     }
 
-    private BuildableScanAllFromExistingWithOngoingWhereAnd(
+    private BuildableScanFromExistingWithOngoingWhereAnd(
         BuildableScanOrScanAllFromExisting buildable, Set<OrConditionSet> orConditionSets) {
       super(buildable);
       disjunctions.addAll(
@@ -1197,255 +1169,17 @@ public class ScanBuilder {
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereAnd and(ConditionalExpression condition) {
+    public BuildableScanFromExistingWithOngoingWhereAnd and(ConditionalExpression condition) {
       checkNotNull(condition);
       disjunctions.add(ImmutableSet.of(condition));
       return this;
     }
 
     @Override
-    public BuildableScanAllFromExistingWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
+    public BuildableScanFromExistingWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
       disjunctions.add(orConditionSet.getConditions());
       return this;
-    }
-  }
-
-  /**
-   * An and-wise set of {@link ConditionalExpression} used for specifying arbitrary conditions in a
-   * {@link Scan} command.
-   */
-  @Immutable
-  public static class AndConditionSet {
-    private final ImmutableSet<ConditionalExpression> conditions;
-
-    private AndConditionSet(ImmutableSet<ConditionalExpression> conditions) {
-      this.conditions = conditions;
-    }
-
-    /**
-     * Returns the set of {@code ConditionalExpression}.
-     *
-     * @return set of {@code ConditionalExpression}
-     */
-    public Set<ConditionalExpression> getConditions() {
-      return conditions;
-    }
-
-    /**
-     * Indicates whether some other object is "equal to" this object. The other object is considered
-     * equal if:
-     *
-     * <ul>
-     *   <li>it is also an {@code AndConditionSet}
-     *   <li>both instances have the same set of {@code ConditionalExpression}
-     * </ul>
-     *
-     * @param o an object to be tested for equality
-     * @return {@code true} if the other object is "equal to" this object otherwise {@code false}
-     */
-    @Override
-    public boolean equals(Object o) {
-      if (o == this) {
-        return true;
-      }
-      if (!(o instanceof AndConditionSet)) {
-        return false;
-      }
-      AndConditionSet other = (AndConditionSet) o;
-      return conditions.equals(other.conditions);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(conditions);
-    }
-
-    @Override
-    public String toString() {
-      return conditions.toString();
-    }
-  }
-
-  /**
-   * An or-wise set of {@link ConditionalExpression} used for specifying arbitrary conditions in a
-   * {@link Scan} command.
-   */
-  @Immutable
-  public static class OrConditionSet {
-    private final ImmutableSet<ConditionalExpression> conditions;
-
-    private OrConditionSet(ImmutableSet<ConditionalExpression> conditions) {
-      this.conditions = conditions;
-    }
-
-    /**
-     * Returns the set of {@code ConditionalExpression}.
-     *
-     * @return set of {@code ConditionalExpression}
-     */
-    public Set<ConditionalExpression> getConditions() {
-      return conditions;
-    }
-
-    /**
-     * Indicates whether some other object is "equal to" this object. The other object is considered
-     * equal if:
-     *
-     * <ul>
-     *   <li>it is also an {@code OrConditionSet}
-     *   <li>both instances have the same set of {@code ConditionalExpression}
-     * </ul>
-     *
-     * @param o an object to be tested for equality
-     * @return {@code true} if the other object is "equal to" this object otherwise {@code false}
-     */
-    @Override
-    public boolean equals(Object o) {
-      if (o == this) {
-        return true;
-      }
-      if (!(o instanceof OrConditionSet)) {
-        return false;
-      }
-      OrConditionSet other = (OrConditionSet) o;
-      return conditions.equals(other.conditions);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(conditions);
-    }
-
-    @Override
-    public String toString() {
-      return conditions.toString();
-    }
-  }
-
-  public static class ConditionSetBuilder {
-
-    /**
-     * Returns a builder object to build a {@code AndConditionSet} or {@code OrConditionSet}.
-     *
-     * @param condition a conditional expression to build a {@code AndConditionSet} or {@code
-     *     OrConditionSet}.
-     * @return a builder object
-     */
-    public static AndOrConditionSetBuilder condition(ConditionalExpression condition) {
-      return new AndOrConditionSetBuilder(ImmutableSet.of(condition));
-    }
-
-    /**
-     * Returns a builder object to build a {@code AndConditionSet}.
-     *
-     * @param conditions a set of conditional expressions to build a {@code AndConditionSet}.
-     * @return a builder object
-     */
-    public static BuildableAndConditionSet andConditionSet(Set<ConditionalExpression> conditions) {
-      return new BuildableAndConditionSet(conditions);
-    }
-
-    /**
-     * Returns a builder object to build a {@code OrConditionSet}.
-     *
-     * @param conditions a set of conditional expressions to build a {@code OrConditionSet}.
-     * @return a builder object
-     */
-    public static BuildableOrConditionSet orConditionSet(Set<ConditionalExpression> conditions) {
-      return new BuildableOrConditionSet(conditions);
-    }
-  }
-
-  public static class AndOrConditionSetBuilder {
-
-    private final Set<ConditionalExpression> conditions;
-
-    private AndOrConditionSetBuilder(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code AndConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code AndConditionSet}.
-     * @return a builder object
-     */
-    public BuildableAndConditionSet and(ConditionalExpression condition) {
-      conditions.add(condition);
-      return new BuildableAndConditionSet(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code OrConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code OrConditionSet}.
-     * @return a builder object
-     */
-    public BuildableOrConditionSet or(ConditionalExpression condition) {
-      conditions.add(condition);
-      return new BuildableOrConditionSet(conditions);
-    }
-  }
-
-  public static class BuildableAndConditionSet {
-
-    private final Set<ConditionalExpression> conditions;
-
-    private BuildableAndConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code AndConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code AndConditionSet}.
-     * @return a builder object
-     */
-    public BuildableAndConditionSet and(ConditionalExpression condition) {
-      conditions.add(condition);
-      return this;
-    }
-
-    /**
-     * Builds an and-wise condition set with the specified conditional expressions.
-     *
-     * @return an and-wise condition set
-     */
-    public AndConditionSet build() {
-      return new AndConditionSet(ImmutableSet.copyOf(conditions));
-    }
-  }
-
-  public static class BuildableOrConditionSet {
-
-    private final Set<ConditionalExpression> conditions;
-
-    private BuildableOrConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
-    }
-
-    /**
-     * Adds a conditional expression for a {@code OrConditionSet}.
-     *
-     * @param condition a conditional expression for a {@code OrConditionSet}.
-     * @return a builder object
-     */
-    public BuildableOrConditionSet or(ConditionalExpression condition) {
-      conditions.add(condition);
-      return this;
-    }
-
-    /**
-     * Builds an or-wise condition set with the specified conditional expressions.
-     *
-     * @return an or-wise condition set
-     */
-    public OrConditionSet build() {
-      return new OrConditionSet(ImmutableSet.copyOf(conditions));
     }
   }
 
@@ -1463,14 +1197,31 @@ public class ScanBuilder {
     scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
     orderings.forEach(scan::withOrdering);
 
+    if (!projections.isEmpty()) {
+      scan.withProjections(projections);
+    }
+
+    if (consistency != null) {
+      scan.withConsistency(consistency);
+    }
+
+    return addConjunctionsTo(scan, condition, conjunctions, disjunctions);
+  }
+
+  private static Scan addConjunctionsTo(
+      Scan scan,
+      @Nullable ConditionalExpression condition,
+      Set<Set<ConditionalExpression>> conjunctions,
+      Set<Set<ConditionalExpression>> disjunctions) {
+
     if (condition != null) {
       assert conjunctions.isEmpty() && disjunctions.isEmpty();
-      scan.withConjunctions(ImmutableSet.of(Scan.Conjunction.of(condition)));
+      scan.withConjunctions(ImmutableSet.of(Conjunction.of(condition)));
     } else if (conjunctions.isEmpty()) {
       scan.withConjunctions(
           Sets.cartesianProduct(new ArrayList<>(disjunctions)).stream()
               .filter(conditions -> conditions.size() > 0)
-              .map(Scan.Conjunction::of)
+              .map(Conjunction::of)
               .collect(Collectors.toSet()));
     } else {
       scan.withConjunctions(
@@ -1478,14 +1229,6 @@ public class ScanBuilder {
               .filter(conditions -> conditions.size() > 0)
               .map(Conjunction::of)
               .collect(Collectors.toSet()));
-    }
-
-    if (!projections.isEmpty()) {
-      scan.withProjections(projections);
-    }
-
-    if (consistency != null) {
-      scan.withConsistency(consistency);
     }
 
     return scan;

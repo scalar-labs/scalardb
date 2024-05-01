@@ -1,12 +1,16 @@
 package com.scalar.db.api;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -17,6 +21,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public abstract class Selection extends Operation {
   private final List<String> projections;
+  private final Set<Conjunction> conjunctions;
 
   /**
    * @param partitionKey a partition key
@@ -27,6 +32,7 @@ public abstract class Selection extends Operation {
   public Selection(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
     projections = new ArrayList<>();
+    conjunctions = new HashSet<>();
   }
 
   /**
@@ -37,6 +43,7 @@ public abstract class Selection extends Operation {
   public Selection(Selection selection) {
     super(selection);
     projections = new ArrayList<>(selection.projections);
+    conjunctions = new HashSet<>(selection.conjunctions);
   }
 
   /**
@@ -76,6 +83,25 @@ public abstract class Selection extends Operation {
     return ImmutableList.copyOf(projections);
   }
 
+  Selection withConjunctions(Collection<Conjunction> conjunctions) {
+    this.conjunctions.addAll(conjunctions);
+    return this;
+  }
+
+  /**
+   * Returns the set of {@code Conjunction}. We regard this set as a disjunction of conjunctions
+   * (i.e., a disjunctive normal form, DNF).
+   *
+   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+   * this method. Users should not depend on it.
+   *
+   * @return set of {@code Conjunction}
+   */
+  @Nonnull
+  public Set<Conjunction> getConjunctions() {
+    return ImmutableSet.copyOf(conjunctions);
+  }
+
   /**
    * Indicates whether some other object is "equal to" this object. The other object is considered
    * equal if:
@@ -101,11 +127,101 @@ public abstract class Selection extends Operation {
       return false;
     }
     Selection other = (Selection) o;
-    return projections.equals(other.projections);
+    return projections.equals(other.projections) && conjunctions.equals(other.conjunctions);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), projections);
+    return Objects.hash(super.hashCode(), projections, conjunctions);
+  }
+
+  /**
+   * A conjunctive set of {@link ConditionalExpression}, and it is an internal representation of the
+   * optional parameter for {@link Selection} operations, which specifies arbitrary conditions with
+   * a disjunction of {@link Conjunction}s (i.e., a disjunctive normal form, DNF). Its functionality
+   * is similar to {@link AndConditionSet}, but unlike {@link AndConditionSet}, this class is
+   * primarily used for an internal purpose. Breaking changes can and will be introduced to this
+   * class. Users should not depend on it.
+   */
+  @Immutable
+  public static class Conjunction {
+    private final ImmutableSet<ConditionalExpression> conditions;
+
+    private Conjunction(ImmutableSet<ConditionalExpression> conditions) {
+      this.conditions = conditions;
+    }
+
+    /**
+     * Returns the set of {@code ConditionalExpression} which this conjunction is composed of.
+     *
+     * @return set of {@code ConditionalExpression} which this conjunction is composed of
+     */
+    public Set<ConditionalExpression> getConditions() {
+      return conditions;
+    }
+
+    /**
+     * Creates a {@code Conjunction} object with a single conditional expression.
+     *
+     * @param condition a conditional expression
+     * @return a {@code Conjunction} object
+     */
+    public static Conjunction of(ConditionalExpression condition) {
+      return new Conjunction(ImmutableSet.of(condition));
+    }
+
+    /**
+     * Creates a {@code Conjunction} object with a collection of conditional expressions.
+     *
+     * @param conditions a collection of conditional expressions
+     * @return a {@code Conjunction} object
+     */
+    public static Conjunction of(Collection<ConditionalExpression> conditions) {
+      return new Conjunction(ImmutableSet.copyOf(conditions));
+    }
+
+    /**
+     * Creates a {@code Conjunction} object with conditional expressions.
+     *
+     * @param conditions conditional expressions
+     * @return a {@code Conjunction} object
+     */
+    public static Conjunction of(ConditionalExpression... conditions) {
+      return new Conjunction(ImmutableSet.copyOf(conditions));
+    }
+
+    /**
+     * Indicates whether some other object is "equal to" this object. The other object is considered
+     * equal if:
+     *
+     * <ul>
+     *   <li>it is also an {@code Conjunction}
+     *   <li>both instances have the same set of {@code ConditionalExpression}
+     * </ul>
+     *
+     * @param o an object to be tested for equality
+     * @return {@code true} if the other object is "equal to" this object otherwise {@code false}
+     */
+    @Override
+    public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
+      if (!(o instanceof Conjunction)) {
+        return false;
+      }
+      Conjunction other = (Conjunction) o;
+      return conditions.equals(other.conditions);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(conditions);
+    }
+
+    @Override
+    public String toString() {
+      return conditions.toString();
+    }
   }
 }
