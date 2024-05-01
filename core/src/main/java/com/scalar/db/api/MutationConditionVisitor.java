@@ -18,4 +18,6 @@ public interface MutationConditionVisitor {
   void visit(DeleteIfExists condition);
 
   void visit(UpdateIf condition);
+
+  void visit(UpdateIfExists condition);
 }

@@ -11,6 +11,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -88,6 +89,11 @@ public class ConditionChecker implements MutationConditionVisitor {
 
   @Override
   public void visit(UpdateIf condition) {
+    isValid = false;
+  }
+
+  @Override
+  public void visit(UpdateIfExists condition) {
     isValid = false;
   }
 }

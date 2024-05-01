@@ -677,18 +677,10 @@ public enum CoreError implements ScalarDbError {
       "An anti-dependency was found. The transaction has been aborted",
       "",
       ""),
-  CONSENSUS_COMMIT_RECORD_NOT_FOUND(
-      Category.CONCURRENCY_ERROR, "0023", "The record does not exist", "", ""),
   JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_INSERT(
       Category.CONCURRENCY_ERROR,
-      "0024",
+      "0023",
       "A transaction conflict occurred in the Insert operation",
-      "",
-      ""),
-  JDBC_TRANSACTION_RECORD_NOT_FOUND(
-      Category.CONCURRENCY_ERROR,
-      "0025",
-      "The record does not exist for the Update operation",
       "",
       ""),
 

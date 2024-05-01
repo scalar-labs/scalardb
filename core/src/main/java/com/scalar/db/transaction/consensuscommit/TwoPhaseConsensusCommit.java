@@ -21,7 +21,6 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
-import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
@@ -172,11 +171,14 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       crud.put(put);
     } catch (UnsatisfiedConditionException e) {
       if (update.getCondition().isPresent()) {
-        throw e;
-      } else {
-        throw new RecordNotFoundException(
-            CoreError.CONSENSUS_COMMIT_RECORD_NOT_FOUND.buildMessage(), e, getId());
+        throw new UnsatisfiedConditionException(
+            ConsensusCommitUtils.convertUnsatisfiedConditionExceptionMessageForUpdate(
+                e, update.getCondition().get()),
+            crud.getSnapshot().getId());
       }
+
+      // If the condition is not specified, it means that the record does not exist. In this case,
+      // we do nothing
     } catch (UncommittedRecordException e) {
       lazyRecovery(e);
       throw e;

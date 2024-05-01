@@ -4,7 +4,6 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +76,8 @@ public interface TransactionCrudOperable {
    *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
+   *     instead.
    */
   @Deprecated
   void put(List<Put> puts)
@@ -114,7 +114,8 @@ public interface TransactionCrudOperable {
    *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
+   *     instead.
    */
   @Deprecated
   void delete(List<Delete> deletes)
@@ -122,9 +123,7 @@ public interface TransactionCrudOperable {
 
   /**
    * Inserts an entry into the storage through a transaction with the specified {@link Insert}
-   * command.
-   *
-   * <p>If the entry already exists, a conflict error occurs. Note that the location where the
+   * command. If the entry already exists, a conflict error occurs. Note that the location where the
    * conflict error is thrown depends on the implementation of the transaction manager. This method
    * may throw {@link CrudConflictException}. Alternatively, {@link DistributedTransaction#commit()}
    * or {@link TwoPhaseCommitTransaction#prepare()} may throw {@link CommitConflictException} or
@@ -154,10 +153,9 @@ public interface TransactionCrudOperable {
 
   /**
    * Updates an entry in the storage through a transaction with the specified {@link Update}
-   * command. If a condition is specified in the {@link Update} command, and if the condition is not
-   * satisfied or the entry does not exist, it throws {@link UnsatisfiedConditionException}. If no
-   * condition is specified in the {@link Update} command and the entry does not exist, it throws
-   * {@link RecordNotFoundException}.
+   * command. If the entry does not exist, it does nothing. If a condition is specified in the
+   * {@link Update} command, and if the condition is not satisfied or the entry does not exist, it
+   * throws {@link UnsatisfiedConditionException}.
    *
    * @param update an {@code Update} command
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
@@ -167,11 +165,9 @@ public interface TransactionCrudOperable {
    *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
-   * @throws RecordNotFoundException if no condition is specified and the entry does not exist
    */
   void update(Update update)
-      throws CrudConflictException, CrudException, UnsatisfiedConditionException,
-          RecordNotFoundException;
+      throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
    * Mutates entries of the storage through a transaction with the specified list of {@link
@@ -186,8 +182,6 @@ public interface TransactionCrudOperable {
    * @throws UnsatisfiedConditionException if a condition is specified in a {@link Put}, {@link
    *     Delete}, or {@link Update} command, and if the condition is not satisfied or the entry does
    *     not exist
-   * @throws RecordNotFoundException if no condition is specified in an {@link Update} command and
-   *     the entry does not exist
    */
   void mutate(List<? extends Mutation> mutations)
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;

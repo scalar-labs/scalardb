@@ -11,6 +11,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.Query;
@@ -152,5 +153,10 @@ public class ConditionalMutator implements MutationConditionVisitor {
   @Override
   public void visit(UpdateIf condition) {
     throw new AssertionError("UpdateIf is not supported");
+  }
+
+  @Override
+  public void visit(UpdateIfExists condition) {
+    throw new AssertionError("UpdateIfExists is not supported");
   }
 }

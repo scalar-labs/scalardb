@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -26,7 +27,6 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
-import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
@@ -435,7 +435,7 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void
-      update_UpdateWithoutConditionGivenAndUnsatisfiedConditionExceptionThrownByCrudHandler_ShouldThrowRecordNotFoundException()
+      update_UpdateWithoutConditionGivenAndUnsatisfiedConditionExceptionThrownByCrudHandler_ShouldDoNothing()
           throws CrudException {
     // Arrange
     Update update =
@@ -458,18 +458,17 @@ public class TwoPhaseConsensusCommitTest {
             .build();
 
     when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn(ANY_TX_ID);
+    when(snapshot.getId()).thenReturn("id");
 
     doThrow(UnsatisfiedConditionException.class).when(crud).put(put);
 
     // Act Assert
-    assertThatThrownBy(() -> transaction.update(update))
-        .isInstanceOf(RecordNotFoundException.class);
+    assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
   }
 
   @Test
   public void
-      update_UpdateWithConditionGivenAndUnsatisfiedConditionExceptionThrownByCrudHandler_ShouldThrowUnsatisfiedConditionException()
+      update_UpdateWithUpdateIfConditionGivenAndUnsatisfiedConditionExceptionThrownByCrudHandler_ShouldThrowUnsatisfiedConditionException()
           throws CrudException {
     // Arrange
     Update update =
@@ -499,13 +498,58 @@ public class TwoPhaseConsensusCommitTest {
             .build();
 
     when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn(ANY_TX_ID);
+    when(snapshot.getId()).thenReturn("id");
 
-    doThrow(UnsatisfiedConditionException.class).when(crud).put(put);
+    UnsatisfiedConditionException unsatisfiedConditionException =
+        mock(UnsatisfiedConditionException.class);
+    when(unsatisfiedConditionException.getMessage()).thenReturn("PutIf");
+    doThrow(unsatisfiedConditionException).when(crud).put(put);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
-        .isInstanceOf(UnsatisfiedConditionException.class);
+        .isInstanceOf(UnsatisfiedConditionException.class)
+        .hasMessageContaining("UpdateIf")
+        .hasMessageNotContaining("PutIf");
+  }
+
+  @Test
+  public void
+      update_UpdateWithUpdateIfExistsConditionGivenAndUnsatisfiedConditionExceptionThrownByCrudHandler_ShouldThrowUnsatisfiedConditionException()
+          throws CrudException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(ConditionBuilder.updateIfExists())
+            .build();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
+            .build();
+
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(snapshot.getId()).thenReturn("id");
+
+    UnsatisfiedConditionException unsatisfiedConditionException =
+        mock(UnsatisfiedConditionException.class);
+    when(unsatisfiedConditionException.getMessage()).thenReturn("PutIfExists");
+    doThrow(unsatisfiedConditionException).when(crud).put(put);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.update(update))
+        .isInstanceOf(UnsatisfiedConditionException.class)
+        .hasMessageContaining("UpdateIfExists")
+        .hasMessageNotContaining("PutIfExists");
   }
 
   @Test

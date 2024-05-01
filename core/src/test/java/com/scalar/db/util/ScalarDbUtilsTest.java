@@ -226,7 +226,7 @@ public class ScalarDbUtilsTest {
   @Test
   public void checkUpdate_ShouldBehaveProperly() {
     // Arrange
-    Update updateWithValidCondition =
+    Update updateWithValidCondition1 =
         Update.newBuilder()
             .namespace(NAMESPACE.get())
             .table(TABLE.get())
@@ -234,6 +234,13 @@ public class ScalarDbUtilsTest {
             .condition(
                 ConditionBuilder.updateIf(ConditionBuilder.column("c2").isEqualToText("v2"))
                     .build())
+            .build();
+    Update updateWithValidCondition2 =
+        Update.newBuilder()
+            .namespace(NAMESPACE.get())
+            .table(TABLE.get())
+            .partitionKey(Key.ofText("c1", "v1"))
+            .condition(ConditionBuilder.updateIfExists())
             .build();
     Update updateWithInvalidCondition =
         Update.newBuilder()
@@ -244,7 +251,9 @@ public class ScalarDbUtilsTest {
             .build();
 
     // Act
-    assertThatCode(() -> ScalarDbUtils.checkUpdate(updateWithValidCondition))
+    assertThatCode(() -> ScalarDbUtils.checkUpdate(updateWithValidCondition1))
+        .doesNotThrowAnyException();
+    assertThatCode(() -> ScalarDbUtils.checkUpdate(updateWithValidCondition2))
         .doesNotThrowAnyException();
     assertThatThrownBy(() -> ScalarDbUtils.checkUpdate(updateWithInvalidCondition))
         .isInstanceOf(IllegalArgumentException.class);

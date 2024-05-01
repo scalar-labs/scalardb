@@ -17,6 +17,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.common.error.CoreError;
@@ -25,7 +26,6 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
@@ -207,7 +207,12 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     update.getClusteringKey().ifPresent(buildable::clusteringKey);
     update.getColumns().values().forEach(buildable::value);
     if (update.getCondition().isPresent()) {
-      buildable.condition(ConditionBuilder.putIf(update.getCondition().get().getExpressions()));
+      if (update.getCondition().get() instanceof UpdateIf) {
+        buildable.condition(ConditionBuilder.putIf(update.getCondition().get().getExpressions()));
+      } else {
+        assert update.getCondition().get() instanceof UpdateIfExists;
+        buildable.condition(ConditionBuilder.putIfExists());
+      }
     } else {
       buildable.condition(ConditionBuilder.putIfExists());
     }
@@ -217,10 +222,10 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
       if (!jdbcService.put(put, connection)) {
         if (update.getCondition().isPresent()) {
           throwUnsatisfiedConditionException(update);
-        } else {
-          throw new RecordNotFoundException(
-              CoreError.JDBC_TRANSACTION_RECORD_NOT_FOUND.buildMessage(), txId);
         }
+
+        // If the condition is not specified, it means that the record does not exist. In this case,
+        // we do nothing
       }
     } catch (SQLException e) {
       throw createCrudException(

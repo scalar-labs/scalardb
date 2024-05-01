@@ -13,7 +13,6 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
@@ -1433,7 +1432,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void updateAndCommit_UpdateGivenForNonExisting_ShouldThrowRecordNotFoundException()
+  public void updateAndCommit_UpdateGivenForNonExisting_ShouldDoNothing()
       throws TransactionException {
     // Arrange
     Update update =
@@ -1447,13 +1446,41 @@ public abstract class DistributedTransactionIntegrationTestBase {
     DistributedTransaction transaction = manager.start();
 
     // Act
+    assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.start();
+    Optional<Result> actual = another.get(prepareGet(0, 0));
+    another.commit();
+
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void
+      updateAndCommit_UpdateWithUpdateIfExistsGivenForNonExisting_ShouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.updateIfExists())
+            .build();
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
-        .isInstanceOf(RecordNotFoundException.class);
+        .isInstanceOf(UnsatisfiedConditionException.class);
     transaction.rollback();
   }
 
   @Test
-  public void updateAndCommit_UpsertGivenForExisting_ShouldUpdateRecord()
+  public void updateAndCommit_UpdateGivenForExisting_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
     populateRecords();
@@ -1482,7 +1509,37 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void update_withUpdateIfWithVerifiedCondition_shouldPutProperly()
+  public void updateAndCommit_UpdateWithUpdateIfExistsGivenForExisting_ShouldUpdateRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.start();
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .condition(ConditionBuilder.updateIfExists())
+            .build();
+    transaction.update(update);
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.start();
+    Optional<Result> actual = another.get(prepareGet(0, 0));
+    another.commit();
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void update_withUpdateIfWithVerifiedCondition_shouldUpdateProperly()
       throws TransactionException {
     // Arrange
     int someColumnValue = 10;

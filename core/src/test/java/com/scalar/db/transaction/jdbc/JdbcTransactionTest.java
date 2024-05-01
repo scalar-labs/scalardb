@@ -17,7 +17,6 @@ import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcService;
@@ -423,9 +422,8 @@ public class JdbcTransactionTest {
   }
 
   @Test
-  public void
-      update_UpdateWithoutConditionGiven_WhenRecordDoesNotExist_ShouldThrowRecordNotFoundException()
-          throws ExecutionException, SQLException {
+  public void update_UpdateWithoutConditionGiven_WhenRecordDoesNotExist_ShouldDoNothing()
+      throws ExecutionException, SQLException {
     // Arrange
     Update update =
         Update.newBuilder()
@@ -448,15 +446,15 @@ public class JdbcTransactionTest {
     when(jdbcService.put(expectedPut, connection)).thenReturn(false);
 
     // Act Assert
-    assertThatThrownBy(() -> transaction.update(update))
-        .isInstanceOf(RecordNotFoundException.class);
+    assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
 
     verify(jdbcService).put(expectedPut, connection);
   }
 
   @Test
-  public void update_UpdateWithConditionGiven_WhenConditionSatisfied_ShouldCallJdbcServiceProperly()
-      throws CrudException, ExecutionException, SQLException {
+  public void
+      update_UpdateWithUpdateIfConditionGiven_WhenConditionSatisfied_ShouldCallJdbcServiceProperly()
+          throws CrudException, ExecutionException, SQLException {
     // Arrange
     Update update =
         Update.newBuilder()
@@ -494,7 +492,40 @@ public class JdbcTransactionTest {
 
   @Test
   public void
-      update_UpdateWithConditionGiven_WhenConditionNotSatisfied_ShouldThrowUnsatisfiedConditionException()
+      update_UpdateWithUpdateIfExistsConditionGiven_WhenConditionSatisfied_ShouldCallJdbcServiceProperly()
+          throws CrudException, ExecutionException, SQLException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(ConditionBuilder.updateIfExists())
+            .build();
+    Put expectedPut =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+
+    when(jdbcService.put(expectedPut, connection)).thenReturn(true);
+
+    // Act
+    transaction.update(update);
+
+    // Assert
+    verify(jdbcService).put(expectedPut, connection);
+  }
+
+  @Test
+  public void
+      update_UpdateWithUpdateIfConditionGiven_WhenConditionNotSatisfied_ShouldThrowUnsatisfiedConditionException()
           throws ExecutionException, SQLException {
     // Arrange
     Update update =
@@ -520,6 +551,39 @@ public class JdbcTransactionTest {
                 ConditionBuilder.putIf(
                         ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                     .build())
+            .build();
+
+    when(jdbcService.put(expectedPut, connection)).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.update(update))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+
+    verify(jdbcService).put(expectedPut, connection);
+  }
+
+  @Test
+  public void
+      update_UpdateWithUpdateIfExistsConditionGiven_WhenConditionNotSatisfied_ShouldThrowUnsatisfiedConditionException()
+          throws ExecutionException, SQLException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(ConditionBuilder.updateIfExists())
+            .build();
+    Put expectedPut =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .condition(ConditionBuilder.putIfExists())
             .build();
 
     when(jdbcService.put(expectedPut, connection)).thenReturn(false);

@@ -15,6 +15,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.BigIntColumn;
@@ -277,7 +278,7 @@ public final class ScalarDbUtils {
         .getCondition()
         .ifPresent(
             c -> {
-              if (!(c instanceof UpdateIf)) {
+              if (!(c instanceof UpdateIf) && !(c instanceof UpdateIfExists)) {
                 throw new IllegalArgumentException(
                     CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(update));
               }

@@ -13,7 +13,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.exception.transaction.RecordNotFoundException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
@@ -1693,7 +1692,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void updateAndCommit_UpdateGivenForNonExisting_ShouldThrowRecordNotFoundException()
+  public void updateAndCommit_UpdateGivenForNonExisting_ShouldDoNothing()
       throws TransactionException {
     // Arrange
     Update update =
@@ -1707,13 +1706,45 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     TwoPhaseCommitTransaction transaction = manager1.start();
 
     // Act
+    assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    TwoPhaseCommitTransaction another = manager1.start();
+    Optional<Result> actual = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    another.prepare();
+    another.validate();
+    another.commit();
+
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void
+      updateAndCommit_UpdateWithUpdateIfExistsGivenForNonExisting_ShouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.updateIfExists())
+            .build();
+    TwoPhaseCommitTransaction transaction = manager1.start();
+
+    // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
-        .isInstanceOf(RecordNotFoundException.class);
+        .isInstanceOf(UnsatisfiedConditionException.class);
     transaction.rollback();
   }
 
   @Test
-  public void updateAndCommit_UpsertGivenForExisting_ShouldUpdateRecord()
+  public void updateAndCommit_UpdateGivenForExisting_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
@@ -1746,7 +1777,41 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void update_withUpdateIfWithVerifiedCondition_shouldPutProperly()
+  public void updateAndCommit_UpdateWithUpdateIfExistsGivenForExisting_ShouldUpdateRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .condition(ConditionBuilder.updateIfExists())
+            .build();
+    transaction.update(update);
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    TwoPhaseCommitTransaction another = manager1.start();
+    Optional<Result> actual = another.get(prepareGet(0, 0, namespace1, TABLE_1));
+    another.prepare();
+    another.validate();
+    another.commit();
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void update_withUpdateIfWithVerifiedCondition_shouldUpdateProperly()
       throws TransactionException {
     // Arrange
     int someColumnValue = 10;

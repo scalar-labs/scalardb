@@ -84,17 +84,28 @@ public class TwoPhaseConsensusCommitIntegrationTestWithServer
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override
   @Test
-  public void updateAndCommit_UpdateGivenForNonExisting_ShouldThrowRecordNotFoundException() {}
+  public void updateAndCommit_UpdateGivenForNonExisting_ShouldDoNothing() {}
 
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override
   @Test
-  public void updateAndCommit_UpsertGivenForExisting_ShouldUpdateRecord() {}
+  public void
+      updateAndCommit_UpdateWithUpdateIfExistsGivenForNonExisting_ShouldThrowUnsatisfiedConditionException() {}
 
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override
   @Test
-  public void update_withUpdateIfWithVerifiedCondition_shouldPutProperly() {}
+  public void updateAndCommit_UpdateGivenForExisting_ShouldUpdateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndCommit_UpdateWithUpdateIfExistsGivenForExisting_ShouldUpdateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void update_withUpdateIfWithVerifiedCondition_shouldUpdateProperly() {}
 
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override

@@ -3,12 +3,16 @@ package com.scalar.db.transaction.consensuscommit;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Insert;
+import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
+import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashSet;
@@ -272,13 +276,27 @@ public final class ConsensusCommitUtils {
     update.getClusteringKey().ifPresent(buildable::clusteringKey);
     update.getColumns().values().forEach(buildable::value);
     if (update.getCondition().isPresent()) {
-      update
-          .getCondition()
-          .ifPresent(c -> buildable.condition(ConditionBuilder.putIf(c.getExpressions())));
+      if (update.getCondition().get() instanceof UpdateIf) {
+        update
+            .getCondition()
+            .ifPresent(c -> buildable.condition(ConditionBuilder.putIf(c.getExpressions())));
+      } else {
+        assert update.getCondition().get() instanceof UpdateIfExists;
+        buildable.condition(ConditionBuilder.putIfExists());
+      }
     } else {
       buildable.condition(ConditionBuilder.putIfExists());
     }
     buildable.enableImplicitPreRead();
     return buildable.build();
+  }
+
+  static String convertUnsatisfiedConditionExceptionMessageForUpdate(
+      UnsatisfiedConditionException e, MutationCondition condition) {
+    String message = e.getMessage();
+    if (message.contains("PutIf") || message.contains("PutIfExists")) {
+      return message.replaceFirst("PutIf|PutIfExists", condition.getClass().getSimpleName());
+    }
+    return message;
   }
 }

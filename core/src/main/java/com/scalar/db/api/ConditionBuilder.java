@@ -104,6 +104,15 @@ public class ConditionBuilder {
   }
 
   /**
+   * Creates a UpdateIfExists condition.
+   *
+   * @return a UpdateIfExists condition
+   */
+  public static UpdateIfExists updateIfExists() {
+    return new UpdateIfExists();
+  }
+
+  /**
    * Builds a conditional expression with the specified column and operator.
    *
    * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
