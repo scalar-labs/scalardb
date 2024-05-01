@@ -86,7 +86,7 @@ Create/Delete schemas in the storage defined in the config file
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
       --repair-all    Repair namespaces and tables that are in an unknown
                         state: it re-creates namespaces, tables, secondary
-                        indexes, and their metadata if necessary.          
+                        indexes, and their metadata if necessary.
       --replication-factor=<replicaFactor>
                       The replication factor (supported in Cassandra)
       --replication-strategy=<replicationStrategy>
@@ -616,25 +616,32 @@ Auto-scaling for Cosmos DB for NoSQL is enabled only when this option is set to 
 
 The following table shows the supported data types in ScalarDB and their mapping to the data types of other databases.
 
-| ScalarDB  | Cassandra | Cosmos DB for NoSQL | DynamoDB | MySQL    | PostgreSQL       | Oracle         | SQL Server      | SQLite  |
-|-----------|-----------|---------------------|----------|----------|------------------|----------------|-----------------|---------|
-| BOOLEAN   | boolean   | boolean (JSON)      | BOOL     | boolean  | boolean          | number(1)      | bit             | boolean |
-| INT       | int       | number (JSON)       | N        | int      | int              | int            | int             | int     |
-| BIGINT    | bigint    | number (JSON)       | N        | bigint   | bigint           | number(19)     | bigint          | bigint  |
-| FLOAT     | float     | number (JSON)       | N        | double   | float            | binary_float   | float(24)       | float   |
-| DOUBLE    | double    | number (JSON)       | N        | double   | double precision | binary_double  | float           | double  |
-| TEXT      | text      | string (JSON)       | S        | longtext | text             | varchar2(4000) | varchar(8000)   | text    |
-| BLOB      | blob      | string (JSON)       | B        | longblob | bytea            | RAW(2000)      | varbinary(8000) | blob    |
+| ScalarDB  | Cassandra | Cosmos DB for NoSQL | DynamoDB | MySQL    | PostgreSQL/YugabyteDB | Oracle         | SQL Server      | SQLite  |
+|-----------|-----------|---------------------|----------|----------|-----------------------|----------------|-----------------|---------|
+| BOOLEAN   | boolean   | boolean (JSON)      | BOOL     | boolean  | boolean               | number(1)      | bit             | boolean |
+| INT       | int       | number (JSON)       | N        | int      | int                   | int            | int             | int     |
+| BIGINT    | bigint    | number (JSON)       | N        | bigint   | bigint                | number(19)     | bigint          | bigint  |
+| FLOAT     | float     | number (JSON)       | N        | double   | float                 | binary_float   | float(24)       | float   |
+| DOUBLE    | double    | number (JSON)       | N        | double   | double precision      | binary_double  | float           | double  |
+| TEXT      | text      | string (JSON)       | S        | longtext | text                  | varchar2(4000) | varchar(8000)   | text    |
+| BLOB      | blob      | string (JSON)       | B        | longblob | bytea                 | RAW(2000)      | varbinary(8000) | blob    |
 
 However, the following data types in JDBC databases are converted differently when they are used as a primary key or a secondary index key. This is due to the limitations of RDB data types.
 
-| ScalarDB | MySQL         | PostgreSQL        | Oracle       |
-|----------|---------------|-------------------|--------------|
-| TEXT     | VARCHAR(64)   | VARCHAR(10485760) | VARCHAR2(64) |
-| BLOB     | VARBINARY(64) |                   | RAW(64)      |
+| ScalarDB | MySQL         | PostgreSQL/YugabyteDB | Oracle       |
+|----------|---------------|-----------------------|--------------|
+| TEXT     | VARCHAR(64)   | VARCHAR(10485760)     | VARCHAR2(64) |
+| BLOB     | VARBINARY(64) |                       | RAW(64)      |
 
 The value range of `BIGINT` in ScalarDB is from -2^53 to 2^53, regardless of the underlying database.
 
+{% capture notice--info %}
+**Note**
+
+YugabyteDB has limitations that prevent floating point types (FLOAT and DOUBLE) from functioning correctly as a primary key, clustering keys, or secondary index keys.
+{% endcapture %}
+
+<div class="notice--info">{{ notice--info | markdownify }}</div>
 If this data-type mapping doesn't match your application, please alter the tables to change the data types after creating them by using this tool.
 
 ## Internal metadata for Consensus Commit
