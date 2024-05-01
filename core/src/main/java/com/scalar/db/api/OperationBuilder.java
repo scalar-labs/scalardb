@@ -10,7 +10,7 @@ import javax.annotation.Nullable;
  * This class defines common interfaces used by {@link DeleteBuilder}, {@link PutBuilder}, {@link
  * GetBuilder} and {@link ScanBuilder}
  */
-class OperationBuilder {
+public class OperationBuilder {
   interface Namespace<T> {
     /**
      * Sets the specified target namespace for this operation
