@@ -642,6 +642,7 @@ YugabyteDB has limitations that prevent floating point types (FLOAT and DOUBLE) 
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
+
 If this data-type mapping doesn't match your application, please alter the tables to change the data types after creating them by using this tool.
 
 ## Internal metadata for Consensus Commit
