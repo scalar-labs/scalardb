@@ -1199,7 +1199,7 @@ In the sample code, the transaction is retried three times maximum and sleeps fo
 
 ### Group commit for the Coordinator table
 
-The Coordinator table used for Consensus Commit transactions is a vital data store, and it is recommended to use a robust storage for it. However, utilizing more robust storage options, such as internally leveraging multi-AZ replication, may lead to increased latency in writing records to the storage, resulting in poor throughput performance. ScalarDB provides a group commit feature for the Coordinator table, which groups multiple record writes into a single write operation.
+The Coordinator table used for Consensus Commit transactions is a vital data store, and it is recommended to use a robust storage for it. However, utilizing more robust storage options, such as internally leveraging multi-AZ or multi-region replication, may lead to increased latency in writing records to the storage, resulting in poor throughput performance. ScalarDB provides a group commit feature for the Coordinator table, which groups multiple record writes into a single write operation.
 
 By adding the following configuration, the group commit feature will be enabled:
 
@@ -1210,7 +1210,7 @@ By adding the following configuration, the group commit feature will be enabled:
 scalar.db.consensus_commit.coordinator.group_commit.enabled=true
 
 # These properties are for the performance tuning of the group commit.
-# scalar.db.consensus_commit.coordinator.group_commit.group_close_timeout_millis=20
+# scalar.db.consensus_commit.coordinator.group_commit.group_size_fix_timeout_millis=40
 # scalar.db.consensus_commit.coordinator.group_commit.delayed_slot_move_timeout_millis=800
 # scalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=30000
 # scalar.db.consensus_commit.coordinator.group_commit.timeout_check_interval_millis=10
@@ -1221,7 +1221,7 @@ scalar.db.consensus_commit.coordinator.group_commit.enabled=true
 
 ##### Custom transaction ID
 
-The group commit feature implicitly generates a random value and uses it as a part of transaction ID. Therefore, a custom transaction ID manually passed by users via `com.scalar.db.transaction.consensuscommit.ConsensusCommitManager.begin(String txId)` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager.begin(String txId)` can't be used as is for later API calls. Always use `com.scalar.db.transaction.consensuscommit.ConsensusCommit.getId()` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.getId()` instead.
+The group commit feature implicitly generates an internal value and uses it as a part of transaction ID. Therefore, a custom transaction ID manually passed by users via `com.scalar.db.transaction.consensuscommit.ConsensusCommitManager.begin(String txId)` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager.begin(String txId)` can't be used as is for later API calls. You need to use a transaction ID returned from`com.scalar.db.transaction.consensuscommit.ConsensusCommit.getId()` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.getId()` instead.
 
 ```java
    // This custom transaction ID needs to be used for ScalarDB transactions for some reason...
