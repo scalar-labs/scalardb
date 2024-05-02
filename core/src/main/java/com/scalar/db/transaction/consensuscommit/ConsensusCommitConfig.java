@@ -57,6 +57,12 @@ public class ConsensusCommitConfig {
   public static final String COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED =
       COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_console_reporter_enabled";
 
+  public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY = 20;
+  public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS = 40;
+  public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS = 1200;
+  public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_MILLIS = 60000;
+  public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS = 20;
+
   private final Isolation isolation;
   private final SerializableStrategy strategy;
   @Nullable private final String coordinatorNamespace;
@@ -152,27 +158,30 @@ public class ConsensusCommitConfig {
     coordinatorGroupCommitEnabled =
         getBoolean(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_ENABLED, false);
     coordinatorGroupCommitSlotCapacity =
-        getInt(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY, 20);
+        getInt(
+            databaseConfig.getProperties(),
+            COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY,
+            DEFAULT_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY);
     coordinatorGroupCommitGroupSizeFixTimeoutMillis =
         getInt(
             databaseConfig.getProperties(),
             COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS,
-            40);
+            DEFAULT_COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS);
     coordinatorGroupCommitDelayedSlotMoveTimeoutMillis =
         getInt(
             databaseConfig.getProperties(),
             COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS,
-            1200);
+            DEFAULT_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS);
     coordinatorGroupCommitOldGroupAbortTimeoutMillis =
         getInt(
             databaseConfig.getProperties(),
             COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_MILLIS,
-            60000);
+            DEFAULT_COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_MILLIS);
     coordinatorGroupCommitTimeoutCheckIntervalMillis =
         getInt(
             databaseConfig.getProperties(),
             COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS,
-            20);
+            DEFAULT_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS);
     coordinatorGroupCommitMetricsConsoleReporterEnabled =
         getBoolean(
             databaseConfig.getProperties(),
