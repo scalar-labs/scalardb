@@ -413,7 +413,7 @@ class NormalGroupTest {
   @Test
   void oldGroupAbortTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
@@ -422,8 +422,8 @@ class NormalGroupTest {
     // Act
     // Assert
     assertThat(group.oldGroupAbortTimeoutAtMillis())
-        .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 60 * 1000)
-        .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 60 * 1000);
+        .isGreaterThanOrEqualTo(minOfCurrentTimeMillis + 60000)
+        .isLessThanOrEqualTo(maxOfCurrentTimeMillis + 60000);
   }
 
   @Test

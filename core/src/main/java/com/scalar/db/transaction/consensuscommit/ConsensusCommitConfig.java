@@ -50,8 +50,8 @@ public class ConsensusCommitConfig {
       COORDINATOR_GROUP_COMMIT_PREFIX + "group_size_fix_timeout_millis";
   public static final String COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS =
       COORDINATOR_GROUP_COMMIT_PREFIX + "delayed_slot_move_timeout_millis";
-  public static final String COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_SECONDS =
-      COORDINATOR_GROUP_COMMIT_PREFIX + "old_group_abort_timeout_seconds";
+  public static final String COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_MILLIS =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "old_group_abort_timeout_millis";
   public static final String COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
       COORDINATOR_GROUP_COMMIT_PREFIX + "timeout_check_interval_millis";
   public static final String COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED =
@@ -77,7 +77,7 @@ public class ConsensusCommitConfig {
   private final int coordinatorGroupCommitSlotCapacity;
   private final int coordinatorGroupCommitGroupSizeFixTimeoutMillis;
   private final int coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
-  private final int coordinatorGroupCommitOldGroupAbortTimeoutSeconds;
+  private final int coordinatorGroupCommitOldGroupAbortTimeoutMillis;
   private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
   private final boolean coordinatorGroupCommitMetricsConsoleReporterEnabled;
 
@@ -163,11 +163,11 @@ public class ConsensusCommitConfig {
             databaseConfig.getProperties(),
             COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS,
             1200);
-    coordinatorGroupCommitOldGroupAbortTimeoutSeconds =
+    coordinatorGroupCommitOldGroupAbortTimeoutMillis =
         getInt(
             databaseConfig.getProperties(),
-            COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_SECONDS,
-            60);
+            COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_MILLIS,
+            60000);
     coordinatorGroupCommitTimeoutCheckIntervalMillis =
         getInt(
             databaseConfig.getProperties(),
@@ -248,8 +248,8 @@ public class ConsensusCommitConfig {
     return coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
   }
 
-  public int getCoordinatorGroupCommitOldGroupAbortTimeoutSeconds() {
-    return coordinatorGroupCommitOldGroupAbortTimeoutSeconds;
+  public int getCoordinatorGroupCommitOldGroupAbortTimeoutMillis() {
+    return coordinatorGroupCommitOldGroupAbortTimeoutMillis;
   }
 
   public int getCoordinatorGroupCommitTimeoutCheckIntervalMillis() {
