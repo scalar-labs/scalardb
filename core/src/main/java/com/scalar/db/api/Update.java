@@ -47,6 +47,7 @@ public class Update extends Mutation {
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
+  @Override
   public Operation withConsistency(Consistency consistency) {
     throw new UnsupportedOperationException();
   }
