@@ -18,6 +18,7 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
+import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
@@ -127,7 +128,7 @@ public class CommitHandler {
   }
 
   private void commitStateViaGroupCommit(Snapshot snapshot)
-      throws CommitConflictException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
       assert groupCommitter != null;
@@ -135,23 +136,24 @@ public class CommitHandler {
       groupCommitter.ready(id, snapshot);
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
+    } catch (GroupCommitConflictException e) {
+      cancelGroupCommitIfNeeded(id);
+      // Throw a proper exception from this method if needed.
+      handleCommitConflict(snapshot, e);
     } catch (GroupCommitException e) {
       cancelGroupCommitIfNeeded(id);
       Throwable cause = e.getCause();
       if (cause instanceof CoordinatorConflictException) {
         // Throw a proper exception from this method if needed.
         handleCommitConflict(snapshot, (CoordinatorConflictException) cause);
-      } else if (cause instanceof CoordinatorException) {
-        throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
       } else {
-        // FIXME: This can be also reached when the coordinator table is inconsistent.
-        //        This error handling needs to be improved.
-        throw new CommitConflictException(
-            "Group commit failed. Probably it's already done.", e, id);
+        // Failed to access the coordinator state. The state is unknown.
+        throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
       }
     } catch (Exception e) {
+      // This is an unexpected exception, but clean up resources just in case.
       cancelGroupCommitIfNeeded(id);
-      throw new IllegalStateException("Group commit unexpectedly failed. TransactionID:" + id, e);
+      throw new AssertionError("Group commit unexpectedly failed. TransactionID:" + id, e);
     }
   }
 
@@ -204,7 +206,7 @@ public class CommitHandler {
   }
 
   public void commitState(Snapshot snapshot)
-      throws CommitConflictException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException {
     if (groupCommitter != null) {
       commitStateViaGroupCommit(snapshot);
       return;

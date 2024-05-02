@@ -442,8 +442,8 @@ class GroupCommitterTest {
       // There should be no group at this moment.
 
       // The slots are already removed and these operations must fail.
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey1, 42));
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey2, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
       verify(emitter, never()).execute(any(), any());
     }
   }
@@ -470,8 +470,8 @@ class GroupCommitterTest {
       // There should be no group at this moment.
 
       // The slots are already removed and these operations must fail.
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey1, 42));
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey2, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
       verify(emitter, never()).execute(any(), any());
     }
   }

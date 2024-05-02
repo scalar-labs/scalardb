@@ -247,9 +247,9 @@ class GroupManagerTest {
     // Act
     // Assert
     assertThat(groupManager.removeGroupFromMap(groupManager.getGroup(keys1))).isTrue();
-    assertThrows(GroupCommitException.class, () -> groupManager.getGroup(keys1));
+    assertThrows(GroupCommitConflictException.class, () -> groupManager.getGroup(keys1));
     assertThat(groupManager.removeGroupFromMap(groupManager.getGroup(keys3))).isTrue();
-    assertThrows(GroupCommitException.class, () -> groupManager.getGroup(keys3));
+    assertThrows(GroupCommitConflictException.class, () -> groupManager.getGroup(keys3));
   }
 
   @Test
