@@ -189,6 +189,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       Instant now = Instant.now();
       if (nextLoggingAt.isBefore(now)) {
         logger.info("Ongoing slot still remains. Metrics: {}", groupCommitMetrics);
+        nextLoggingAt = Instant.now().plusMillis(loggingIntervalMillis);
       }
     } while (true);
   }
