@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class ActiveTransactionManagedDistributedTransactionManager
-    extends AbstractDistributedTransactionManager {
+    extends TransactionDecorationDistributedTransactionManager {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 

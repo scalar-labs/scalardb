@@ -46,6 +46,11 @@ public class ConsensusCommitIntegrationTestWithServer extends ConsensusCommitInt
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override
   @Test
+  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
   public void insertAndCommit_InsertGivenForNonExisting_ShouldCreateRecord() {}
 
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
@@ -101,4 +106,39 @@ public class ConsensusCommitIntegrationTestWithServer extends ConsensusCommitInt
   @Test
   public void
       update_withUpdateIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_insert_InsertGivenForNonExisting_ShouldCreateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_insert_InsertGivenForExisting_ShouldThrowCrudConflictException() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_upsert_UpsertGivenForNonExisting_ShouldCreateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_upsert_UpsertGivenForExisting_ShouldUpdateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_update_UpdateGivenForExisting_ShouldUpdateRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_update_UpdateGivenForNonExisting_ShouldDoNothing() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_operation_DefaultNamespaceGiven_ShouldWorkProperly() {}
 }
