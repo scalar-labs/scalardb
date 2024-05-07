@@ -30,12 +30,12 @@ Unlike other solutions, ScalarDB stands out by offering the ability to run both 
 
 The following table summarizes how ScalarDB is different from the other solutions.
 
-|                                                              |              Transactions across heterogeneous databases              | Analytics across heterogeneous databases |
-| :----------------------------------------------------------: | :-------------------------------------------------------------------: | :--------------------------------------: |
-| Global transaction managers (e.g., Oracle MicroTx, Atomikos) | Yes (but, existing solutions support only a limited set of databases) |                    No                    |
-|      Data federation engines (e.g., Denodo, Starburst)       |                                  No                                   |                   Yes                    |
-|            HTAP systems (e.g., TiDB, SingleStore)            |                No (support homogeneous databases only)                | No (support homogeneous databases only)  |
-|                         **ScalarDB**                         |             **Yes (ScalarDB supports various databases)**             |                 **Yes**                  |
+|                                                                |              Transactions across heterogeneous databases             | Analytics across heterogeneous databases |
+| :------------------------------------------------------------: | :------------------------------------------------------------------: | :--------------------------------------: |
+| Global transaction managers (like Oracle MicroTx and Atomikos) | Yes (but existing solutions support only a limited set of databases) |                    No                    |
+|      Data federation engines (like Denodo and Starburst)       |                                  No                                  |                   Yes                    |
+|            HTAP systems (like TiDB and SingleStore)            |                No (support homogeneous databases only)               | No (support homogeneous databases only)  |
+|                         **ScalarDB**                           |                 **Yes (supports various databases)**                 |                 **Yes**                  |
 
 
 ## ScalarDB use cases
