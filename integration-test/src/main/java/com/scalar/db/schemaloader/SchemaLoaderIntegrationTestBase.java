@@ -318,10 +318,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
     storageAdmin.dropNamespace(namespace2, true);
   }
 
-  protected boolean couldFailToReadNamespaceAfterDeletingTable() {
-    return false;
-  }
-
   @Test
   public void createTablesThenDeleteTables_ShouldExecuteProperly() throws Exception {
     createTables_ShouldCreateTables();
@@ -343,9 +339,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private void deleteTables_ShouldDeleteTables() throws Exception {
     // Act
     int exitCode = executeWithArgs(getCommandArgsForDeletion(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
-    if (exitCode != 0 && couldFailToReadNamespaceAfterDeletingTable()) {
-      exitCode = executeWithArgs(getCommandArgsForDeletion(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
-    }
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
