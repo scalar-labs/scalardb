@@ -20,9 +20,9 @@ For details on which databases ScalarDB supports, refer to [Supported Databases]
 
 There are several solutions, such as global transaction managers, data federation engines, and HTAP systems, built towards similar goals, but they are limited in the following perspectives:
 
-- Global transaction managers (e.g., Oracle MicroTx, Atomikos) are designed to run transactions across a limited set of heterogeneous databases (e.g., only XA-compliant databases).
-- Data federation engines (e.g., Denodo, Starburst) are designed to run analytical queries across heterogeneous databases.
-- HTAP systems (e.g., TiDB, SingleStore) run both transactions and analytical queries only on homogeneous databases.
+- Global transaction managers (like Oracle MicroTx and Atomikos) are designed to run transactions across a limited set of heterogeneous databases (like only XA-compliant databases).
+- Data federation engines (like Denodo and Starburst) are designed to run analytical queries across heterogeneous databases.
+- HTAP systems (like TiDB and SingleStore) run both transactions and analytical queries only on homogeneous databases.
 
 In other words, they virtually unify databases in a half-baked way.
 For example, with data federation engines, users can run read-only analytical queries on a virtualized view across multiple databases. However, they often need to run update queries separately for each database.
