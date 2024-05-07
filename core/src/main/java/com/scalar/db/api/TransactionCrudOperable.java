@@ -45,7 +45,7 @@ public interface TransactionCrudOperable {
   List<Result> scan(Scan scan) throws CrudConflictException, CrudException;
 
   /**
-   * Inserts/Updates an entry to the storage through a transaction with the specified {@link Put}
+   * Inserts an entry into or updates an entry in the underlying storage through a transaction with the specified {@link Put}
    * command. If a condition is specified in the {@link Put} command, and if the condition is not
    * satisfied or the entry does not exist, it throws {@link UnsatisfiedConditionException}.
    *
@@ -63,7 +63,7 @@ public interface TransactionCrudOperable {
   void put(Put put) throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Inserts/Updates multiple entries to the storage through a transaction with the specified list
+   * Inserts multiple entries into or updates multiple entries in the underlying storage through a transaction with the specified list
    * of {@link Put} commands. If a condition is specified in the {@link Put} command, and if the
    * condition is not satisfied or the entry does not exist, it throws {@link
    * UnsatisfiedConditionException}.
@@ -84,7 +84,7 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Deletes an entry from the storage through a transaction with the specified {@link Delete}
+   * Deletes an entry from the underlying storage through a transaction with the specified {@link Delete}
    * command. If a condition is specified in the {@link Delete} command, and if the condition is not
    * satisfied or the entry does not exist, it throws {@link UnsatisfiedConditionException}.
    *
@@ -101,7 +101,7 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Deletes entries from the storage through a transaction with the specified list of {@link
+   * Deletes entries from the underlying storage through a transaction with the specified list of {@link
    * Delete} commands. If a condition is specified in the {@link Delete} command, and if the
    * condition is not satisfied or the entry does not exist, it throws {@link
    * UnsatisfiedConditionException}.
@@ -122,7 +122,7 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Inserts an entry into the storage through a transaction with the specified {@link Insert}
+   * Inserts an entry into the underlying storage through a transaction with the specified {@link Insert}
    * command. If the entry already exists, a conflict error occurs. Note that the location where the
    * conflict error is thrown depends on the implementation of the transaction manager. This method
    * may throw {@link CrudConflictException}. Alternatively, {@link DistributedTransaction#commit()}
@@ -139,7 +139,7 @@ public interface TransactionCrudOperable {
   void insert(Insert insert) throws CrudConflictException, CrudException;
 
   /**
-   * Inserts or updates an entry in the storage through a transaction with the specified {@link
+   * Inserts an entry into or updates an entry in the underlying storage through a transaction with the specified {@link
    * Upsert} command. If the entry already exists, it is updated; otherwise, it is inserted.
    *
    * @param upsert a {@code Upsert} command
@@ -152,7 +152,7 @@ public interface TransactionCrudOperable {
   void upsert(Upsert upsert) throws CrudConflictException, CrudException;
 
   /**
-   * Updates an entry in the storage through a transaction with the specified {@link Update}
+   * Updates an entry in the underlying storage through a transaction with the specified {@link Update}
    * command. If the entry does not exist, it does nothing. If a condition is specified in the
    * {@link Update} command, and if the condition is not satisfied or the entry does not exist, it
    * throws {@link UnsatisfiedConditionException}.
@@ -170,7 +170,7 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Mutates entries of the storage through a transaction with the specified list of {@link
+   * Mutates entries of the underlying storage through a transaction with the specified list of {@link
    * Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands

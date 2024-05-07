@@ -10,7 +10,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
- * A result retrieved from a storage.
+ * A result retrieved from the underlying storage.
  *
  * @author Hiroyuki Yamada
  */

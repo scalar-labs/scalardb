@@ -85,19 +85,19 @@ public class BatchComposer implements OperationVisitor {
   @Override
   public void visit(Insert insert) {
     throw new AssertionError(
-        "Insert operation is not supported since it is a transaction operation");
+        "The Insert operation is not supported since it is a transaction operation");
   }
 
   @Override
   public void visit(Upsert upsert) {
     throw new AssertionError(
-        "Upsert operation is not supported since it is a transaction operation");
+        "The Upsert operation is not supported since it is a transaction operation");
   }
 
   @Override
   public void visit(Update update) {
     throw new AssertionError(
-        "Update operation is not supported since it is a transaction operation");
+        "The Update operation is not supported since it is a transaction operation");
   }
 
   @VisibleForTesting

@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to delete an entry from a storage.
+ * A command to delete an entry from the underlying storage.
  *
  * @author Hiroyuki Yamada
  */

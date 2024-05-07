@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
 
-/** A command to retrieve a entry of a storage by using a index. */
+/** A command to retrieve an entry from the underlying storage by using an index. */
 @NotThreadSafe
 public class GetWithIndex extends Get {
 

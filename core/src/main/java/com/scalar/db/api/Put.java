@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to put an entry to a storage.
+ * A command to put an entry in the underlying storage.
  *
  * @author Hiroyuki Yamada
  */

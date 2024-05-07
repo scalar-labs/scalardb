@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
-/** A command to insert an entry to a storage. */
+/** A command to insert an entry into the underlying storage. */
 @NotThreadSafe
 public class Insert extends Mutation {
 
