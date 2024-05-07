@@ -56,7 +56,7 @@ ScalarDB simplifies managing such diverse databases with a correctness guarantee
 
 Applications tend to be locked into using a certain database because of the specific capabilities that the database provides. Such database lock-in discourages upgrading or changing the database because doing so often requires rewriting the application.
 
-ScalarDB provides a unified interface for diverse databases. Thus, once an application is written using the ScalarDB interface, it becomes portable, which helps to achieve seamless database migration without rewriting the application.
+ScalarDB provides a unified interface for diverse databases. Thus, once an application is written by using the ScalarDB interface, it becomes portable, which helps to achieve seamless database migration without rewriting the application.
 
 ## Further reading
 
