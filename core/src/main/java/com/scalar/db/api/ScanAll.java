@@ -6,8 +6,9 @@ import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to retrieve all the entries from the underlying storage. The scan range of clustering key and {@link
- * Ordering} cannot be specified for this command. The number of {@link Result} can be limited.
+ * A command to retrieve all the entries from the underlying storage. The scan range of clustering
+ * key and {@link Ordering} cannot be specified for this command. The number of {@link Result} can
+ * be limited.
  */
 @NotThreadSafe
 public class ScanAll extends Scan {

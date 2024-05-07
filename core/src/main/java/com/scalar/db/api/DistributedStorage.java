@@ -115,8 +115,8 @@ public interface DistributedStorage {
   Optional<String> getTable();
 
   /**
-   * Retrieves a result from the storage with the specified {@link Get} command with a primary key
-   * and returns the result.
+   * Retrieves a result from the underlying storage with the specified {@link Get} command with a
+   * primary key and returns the result.
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
@@ -125,8 +125,8 @@ public interface DistributedStorage {
   Optional<Result> get(Get get) throws ExecutionException;
 
   /**
-   * Retrieves results from the underlying storage with the specified {@link Scan} or {@link ScanAll} or {@link
-   * ScanWithIndex} command and returns {@link Scanner} to iterate the results.
+   * Retrieves results from the underlying storage with the specified {@link Scan} or {@link
+   * ScanAll} or {@link ScanWithIndex} command and returns {@link Scanner} to iterate the results.
    *
    * <ul>
    *   <li>{@link Scan} : by specifying a partition key, it will return results within the
@@ -144,7 +144,8 @@ public interface DistributedStorage {
   Scanner scan(Scan scan) throws ExecutionException;
 
   /**
-   * Inserts/Updates an entry to the storage with the specified {@link Put} command.
+   * Inserts an entry into or updates an entry to the underlying storage with the specified {@link
+   * Put} command.
    *
    * @param put a {@code Put} command
    * @throws ExecutionException if the operation fails
@@ -152,9 +153,9 @@ public interface DistributedStorage {
   void put(Put put) throws ExecutionException;
 
   /**
-   * Inserts/Updates multiple entries within the same partition to the storage with the specified
-   * list of {@link Put} commands. When entries spanning multiple partitions are inserted, this will
-   * throw {@code MultiPartitionException}.
+   * Inserts multiple entries into or updates multiple entries within the same partition to the
+   * underlying storage with the specified list of {@link Put} commands. When entries spanning
+   * multiple partitions are inserted, this will throw {@code MultiPartitionException}.
    *
    * @param puts a list of {@code Put} commands
    * @throws ExecutionException if the operation fails
@@ -162,7 +163,7 @@ public interface DistributedStorage {
   void put(List<Put> puts) throws ExecutionException;
 
   /**
-   * Deletes an entry from the storage with the specified {@link Delete} command.
+   * Deletes an entry from the underlying storage with the specified {@link Delete} command.
    *
    * @param delete a {@code Delete} command
    * @throws ExecutionException if the operation fails
@@ -170,7 +171,7 @@ public interface DistributedStorage {
   void delete(Delete delete) throws ExecutionException;
 
   /**
-   * Deletes entries from the storage with the specified list of {@link Delete} commands.
+   * Deletes entries from the underlying storage with the specified list of {@link Delete} commands.
    *
    * @param deletes a list of {@code Delete} commands
    * @throws ExecutionException if the operation fails
@@ -178,7 +179,7 @@ public interface DistributedStorage {
   void delete(List<Delete> deletes) throws ExecutionException;
 
   /**
-   * Mutates entries of the storage with the specified list of {@link Mutation} commands.
+   * Mutates entries of the underlying storage with the specified list of {@link Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
    * @throws ExecutionException if the operation fails

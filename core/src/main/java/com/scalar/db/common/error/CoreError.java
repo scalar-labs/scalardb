@@ -793,9 +793,17 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED(
       Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed", "", ""),
   CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED(
-      Category.INTERNAL_ERROR, "0039", "Reading a record from the underlying storage failed", "", ""),
+      Category.INTERNAL_ERROR,
+      "0039",
+      "Reading a record from the underlying storage failed",
+      "",
+      ""),
   CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED(
-      Category.INTERNAL_ERROR, "0040", "Scanning records from the underlying storage failed", "", ""),
+      Category.INTERNAL_ERROR,
+      "0040",
+      "Scanning records from the underlying storage failed",
+      "",
+      ""),
   CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
       Category.INTERNAL_ERROR,
       "0041",

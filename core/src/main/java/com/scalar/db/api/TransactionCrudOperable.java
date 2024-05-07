@@ -45,9 +45,10 @@ public interface TransactionCrudOperable {
   List<Result> scan(Scan scan) throws CrudConflictException, CrudException;
 
   /**
-   * Inserts an entry into or updates an entry in the underlying storage through a transaction with the specified {@link Put}
-   * command. If a condition is specified in the {@link Put} command, and if the condition is not
-   * satisfied or the entry does not exist, it throws {@link UnsatisfiedConditionException}.
+   * Inserts an entry into or updates an entry in the underlying storage through a transaction with
+   * the specified {@link Put} command. If a condition is specified in the {@link Put} command, and
+   * if the condition is not satisfied or the entry does not exist, it throws {@link
+   * UnsatisfiedConditionException}.
    *
    * @param put a {@code Put} command
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
@@ -63,10 +64,10 @@ public interface TransactionCrudOperable {
   void put(Put put) throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Inserts multiple entries into or updates multiple entries in the underlying storage through a transaction with the specified list
-   * of {@link Put} commands. If a condition is specified in the {@link Put} command, and if the
-   * condition is not satisfied or the entry does not exist, it throws {@link
-   * UnsatisfiedConditionException}.
+   * Inserts multiple entries into or updates multiple entries in the underlying storage through a
+   * transaction with the specified list of {@link Put} commands. If a condition is specified in the
+   * {@link Put} command, and if the condition is not satisfied or the entry does not exist, it
+   * throws {@link UnsatisfiedConditionException}.
    *
    * @param puts a list of {@code Put} commands
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
@@ -84,9 +85,10 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Deletes an entry from the underlying storage through a transaction with the specified {@link Delete}
-   * command. If a condition is specified in the {@link Delete} command, and if the condition is not
-   * satisfied or the entry does not exist, it throws {@link UnsatisfiedConditionException}.
+   * Deletes an entry from the underlying storage through a transaction with the specified {@link
+   * Delete} command. If a condition is specified in the {@link Delete} command, and if the
+   * condition is not satisfied or the entry does not exist, it throws {@link
+   * UnsatisfiedConditionException}.
    *
    * @param delete a {@code Delete} command
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
@@ -101,8 +103,8 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Deletes entries from the underlying storage through a transaction with the specified list of {@link
-   * Delete} commands. If a condition is specified in the {@link Delete} command, and if the
+   * Deletes entries from the underlying storage through a transaction with the specified list of
+   * {@link Delete} commands. If a condition is specified in the {@link Delete} command, and if the
    * condition is not satisfied or the entry does not exist, it throws {@link
    * UnsatisfiedConditionException}.
    *
@@ -122,12 +124,13 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Inserts an entry into the underlying storage through a transaction with the specified {@link Insert}
-   * command. If the entry already exists, a conflict error occurs. Note that the location where the
-   * conflict error is thrown depends on the implementation of the transaction manager. This method
-   * may throw {@link CrudConflictException}. Alternatively, {@link DistributedTransaction#commit()}
-   * or {@link TwoPhaseCommitTransaction#prepare()} may throw {@link CommitConflictException} or
-   * {@link PreparationConflictException} respectively in case of a conflict error.
+   * Inserts an entry into the underlying storage through a transaction with the specified {@link
+   * Insert} command. If the entry already exists, a conflict error occurs. Note that the location
+   * where the conflict error is thrown depends on the implementation of the transaction manager.
+   * This method may throw {@link CrudConflictException}. Alternatively, {@link
+   * DistributedTransaction#commit()} or {@link TwoPhaseCommitTransaction#prepare()} may throw
+   * {@link CommitConflictException} or {@link PreparationConflictException} respectively in case of
+   * a conflict error.
    *
    * @param insert a {@code Insert} command
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
@@ -139,8 +142,9 @@ public interface TransactionCrudOperable {
   void insert(Insert insert) throws CrudConflictException, CrudException;
 
   /**
-   * Inserts an entry into or updates an entry in the underlying storage through a transaction with the specified {@link
-   * Upsert} command. If the entry already exists, it is updated; otherwise, it is inserted.
+   * Inserts an entry into or updates an entry in the underlying storage through a transaction with
+   * the specified {@link Upsert} command. If the entry already exists, it is updated; otherwise, it
+   * is inserted.
    *
    * @param upsert a {@code Upsert} command
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
@@ -152,10 +156,10 @@ public interface TransactionCrudOperable {
   void upsert(Upsert upsert) throws CrudConflictException, CrudException;
 
   /**
-   * Updates an entry in the underlying storage through a transaction with the specified {@link Update}
-   * command. If the entry does not exist, it does nothing. If a condition is specified in the
-   * {@link Update} command, and if the condition is not satisfied or the entry does not exist, it
-   * throws {@link UnsatisfiedConditionException}.
+   * Updates an entry in the underlying storage through a transaction with the specified {@link
+   * Update} command. If the entry does not exist, it does nothing. If a condition is specified in
+   * the {@link Update} command, and if the condition is not satisfied or the entry does not exist,
+   * it throws {@link UnsatisfiedConditionException}.
    *
    * @param update an {@code Update} command
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
@@ -170,8 +174,8 @@ public interface TransactionCrudOperable {
       throws CrudConflictException, CrudException, UnsatisfiedConditionException;
 
   /**
-   * Mutates entries of the underlying storage through a transaction with the specified list of {@link
-   * Mutation} commands.
+   * Mutates entries of the underlying storage through a transaction with the specified list of
+   * {@link Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
