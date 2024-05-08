@@ -447,12 +447,14 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithOngoingWhereAnd and(ConditionalExpression condition) {
+      checkNotNull(condition);
       where.and(condition);
       return this;
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
+      checkNotNull(orConditionSet);
       where.and(orConditionSet);
       return this;
     }
@@ -479,12 +481,14 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithOngoingWhereOr or(ConditionalExpression condition) {
+      checkNotNull(condition);
       where.or(condition);
       return this;
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereOr or(AndConditionSet andConditionSet) {
+      checkNotNull(andConditionSet);
       where.or(andConditionSet);
       return this;
     }
@@ -788,6 +792,7 @@ public class ScanBuilder {
         Set<AndConditionSet> andConditionSets) {
       checkScanAll();
       checkConditionsEmpty();
+      checkNotNull(andConditionSets);
       return new BuildableScanFromExistingWithOngoingWhereOr(this, andConditionSets);
     }
 
