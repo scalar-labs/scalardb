@@ -399,37 +399,29 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithOngoingWhereAnd and(ConditionalExpression condition) {
-      checkNotNull(super.condition);
       checkNotNull(condition);
-      disjunctions.add(ImmutableSet.of(super.condition));
-      disjunctions.add(ImmutableSet.of(condition));
+      where.and(condition);
       return new BuildableScanAllWithOngoingWhereAnd(this);
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
-      checkNotNull(super.condition);
       checkNotNull(orConditionSet);
-      disjunctions.add(ImmutableSet.of(super.condition));
-      disjunctions.add(orConditionSet.getConditions());
+      where.and(orConditionSet);
       return new BuildableScanAllWithOngoingWhereAnd(this);
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereOr or(ConditionalExpression condition) {
-      checkNotNull(super.condition);
       checkNotNull(condition);
-      conjunctions.add(ImmutableSet.of(super.condition));
-      conjunctions.add(ImmutableSet.of(condition));
+      where.or(condition);
       return new BuildableScanAllWithOngoingWhereOr(this);
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereOr or(AndConditionSet andConditionSet) {
-      checkNotNull(super.condition);
       checkNotNull(andConditionSet);
-      conjunctions.add(ImmutableSet.of(super.condition));
-      conjunctions.add(andConditionSet.getConditions());
+      where.or(andConditionSet);
       return new BuildableScanAllWithOngoingWhereOr(this);
     }
   }
@@ -444,27 +436,24 @@ public class ScanBuilder {
     private BuildableScanAllWithOngoingWhereAnd(
         BuildableScanAll buildable, OrConditionSet orConditionSet) {
       super(buildable);
-      disjunctions.add(orConditionSet.getConditions());
+      where.and(orConditionSet);
     }
 
     private BuildableScanAllWithOngoingWhereAnd(
         BuildableScanAll buildable, Set<OrConditionSet> orConditionSets) {
       super(buildable);
-      disjunctions.addAll(
-          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
+      where.and(orConditionSets);
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereAnd and(ConditionalExpression condition) {
-      checkNotNull(condition);
-      disjunctions.add(ImmutableSet.of(condition));
+      where.and(condition);
       return this;
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
-      checkNotNull(orConditionSet);
-      disjunctions.add(orConditionSet.getConditions());
+      where.and(orConditionSet);
       return this;
     }
   }
@@ -479,29 +468,24 @@ public class ScanBuilder {
     private BuildableScanAllWithOngoingWhereOr(
         BuildableScanAll buildable, AndConditionSet andConditionSet) {
       super(buildable);
-      conjunctions.add(andConditionSet.getConditions());
+      where.or(andConditionSet);
     }
 
     private BuildableScanAllWithOngoingWhereOr(
         BuildableScanAll buildable, Set<AndConditionSet> andConditionSets) {
       super(buildable);
-      conjunctions.addAll(
-          andConditionSets.stream()
-              .map(AndConditionSet::getConditions)
-              .collect(Collectors.toSet()));
+      where.or(andConditionSets);
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereOr or(ConditionalExpression condition) {
-      checkNotNull(condition);
-      conjunctions.add(ImmutableSet.of(condition));
+      where.or(condition);
       return this;
     }
 
     @Override
     public BuildableScanAllWithOngoingWhereOr or(AndConditionSet andConditionSet) {
-      checkNotNull(andConditionSet);
-      conjunctions.add(andConditionSet.getConditions());
+      where.or(andConditionSet);
       return this;
     }
   }
@@ -514,9 +498,7 @@ public class ScanBuilder {
 
     protected final String namespaceName;
     protected final String tableName;
-    @Nullable protected final ConditionalExpression condition;
-    protected final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
-    protected final Set<Set<ConditionalExpression>> disjunctions = new HashSet<>();
+    protected final OngoingWhere where;
     protected final List<String> projections = new ArrayList<>();
     protected final List<Scan.Ordering> orderings = new ArrayList<>();
     protected int limit;
@@ -530,7 +512,7 @@ public class ScanBuilder {
         BuildableScanAll buildable, @Nullable ConditionalExpression condition) {
       this.namespaceName = buildable.namespaceName;
       this.tableName = buildable.tableName;
-      this.condition = condition;
+      this.where = new OngoingWhere(condition);
       this.limit = buildable.limit;
       this.orderings.addAll(buildable.orderings);
       this.projections.addAll(buildable.projections);
@@ -540,9 +522,7 @@ public class ScanBuilder {
     private BuildableScanAllWithWhere(BuildableScanAllWithOngoingWhere buildable) {
       this.namespaceName = buildable.namespaceName;
       this.tableName = buildable.tableName;
-      this.condition = null;
-      this.conjunctions.addAll(buildable.conjunctions);
-      this.disjunctions.addAll(buildable.disjunctions);
+      this.where = buildable.where;
       this.limit = buildable.limit;
       this.projections.addAll(buildable.projections);
       this.orderings.addAll(buildable.orderings);
@@ -602,15 +582,7 @@ public class ScanBuilder {
 
     public Scan build() {
       return buildScanAllWithConjunctions(
-          namespaceName,
-          tableName,
-          condition,
-          conjunctions,
-          disjunctions,
-          projections,
-          orderings,
-          limit,
-          consistency);
+          namespaceName, tableName, where, projections, orderings, limit, consistency);
     }
   }
 
@@ -816,7 +788,6 @@ public class ScanBuilder {
         Set<AndConditionSet> andConditionSets) {
       checkScanAll();
       checkConditionsEmpty();
-      checkNotNull(andConditionSets);
       return new BuildableScanFromExistingWithOngoingWhereOr(this, andConditionSets);
     }
 
@@ -946,21 +917,17 @@ public class ScanBuilder {
           ClearNamespace<BuildableScanFromExistingWithWhere> {
 
     BuildableScanOrScanAllFromExisting buildableScanFromExisting;
-    @Nullable protected final ConditionalExpression condition;
-    protected final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
-    protected final Set<Set<ConditionalExpression>> disjunctions = new HashSet<>();
+    protected final OngoingWhere where;
 
     private BuildableScanFromExistingWithWhere(BuildableScanFromExistingWithWhere buildable) {
       this.buildableScanFromExisting = buildable.buildableScanFromExisting;
-      this.condition = null;
-      this.conjunctions.addAll(buildable.conjunctions);
-      this.disjunctions.addAll(buildable.disjunctions);
+      this.where = buildable.where;
     }
 
     private BuildableScanFromExistingWithWhere(
         BuildableScanOrScanAllFromExisting buildable, @Nullable ConditionalExpression condition) {
       this.buildableScanFromExisting = buildable;
-      this.condition = condition;
+      this.where = new OngoingWhere(condition);
     }
 
     private BuildableScanFromExistingWithWhere(BuildableScanOrScanAllFromExisting buildable) {
@@ -1045,8 +1012,7 @@ public class ScanBuilder {
     }
 
     public Scan build() {
-      return addConjunctionsTo(
-          buildableScanFromExisting.build(), condition, conjunctions, disjunctions);
+      return addConjunctionsTo(buildableScanFromExisting.build(), where);
     }
   }
 
@@ -1072,37 +1038,29 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereAnd and(ConditionalExpression condition) {
-      checkNotNull(this.condition);
       checkNotNull(condition);
-      disjunctions.add(ImmutableSet.of(this.condition));
-      disjunctions.add(ImmutableSet.of(condition));
+      where.and(condition);
       return new BuildableScanFromExistingWithOngoingWhereAnd(this);
     }
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
-      checkNotNull(this.condition);
       checkNotNull(orConditionSet);
-      disjunctions.add(ImmutableSet.of(this.condition));
-      disjunctions.add(orConditionSet.getConditions());
+      where.and(orConditionSet);
       return new BuildableScanFromExistingWithOngoingWhereAnd(this);
     }
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereOr or(ConditionalExpression condition) {
-      checkNotNull(this.condition);
       checkNotNull(condition);
-      conjunctions.add(ImmutableSet.of(this.condition));
-      conjunctions.add(ImmutableSet.of(condition));
+      where.or(condition);
       return new BuildableScanFromExistingWithOngoingWhereOr(this);
     }
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereOr or(AndConditionSet andConditionSet) {
-      checkNotNull(this.condition);
       checkNotNull(andConditionSet);
-      conjunctions.add(ImmutableSet.of(this.condition));
-      conjunctions.add(andConditionSet.getConditions());
+      where.or(andConditionSet);
       return new BuildableScanFromExistingWithOngoingWhereOr(this);
     }
   }
@@ -1119,29 +1077,26 @@ public class ScanBuilder {
     private BuildableScanFromExistingWithOngoingWhereOr(
         BuildableScanOrScanAllFromExisting buildable, AndConditionSet andConditionSet) {
       super(buildable);
-      conjunctions.add(andConditionSet.getConditions());
+      where.or(andConditionSet);
     }
 
     private BuildableScanFromExistingWithOngoingWhereOr(
         BuildableScanOrScanAllFromExisting buildable, Set<AndConditionSet> andConditionSets) {
       super(buildable);
-      conjunctions.addAll(
-          andConditionSets.stream()
-              .map(AndConditionSet::getConditions)
-              .collect(Collectors.toSet()));
+      where.or(andConditionSets);
     }
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereOr or(ConditionalExpression condition) {
       checkNotNull(condition);
-      conjunctions.add(ImmutableSet.of(condition));
+      where.or(condition);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereOr or(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
-      conjunctions.add(andConditionSet.getConditions());
+      where.or(andConditionSet);
       return this;
     }
   }
@@ -1158,37 +1113,91 @@ public class ScanBuilder {
     private BuildableScanFromExistingWithOngoingWhereAnd(
         BuildableScanOrScanAllFromExisting buildable, OrConditionSet orConditionSet) {
       super(buildable);
-      disjunctions.add(orConditionSet.getConditions());
+      where.and(orConditionSet);
     }
 
     private BuildableScanFromExistingWithOngoingWhereAnd(
         BuildableScanOrScanAllFromExisting buildable, Set<OrConditionSet> orConditionSets) {
       super(buildable);
-      disjunctions.addAll(
-          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
+      where.and(orConditionSets);
     }
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereAnd and(ConditionalExpression condition) {
       checkNotNull(condition);
-      disjunctions.add(ImmutableSet.of(condition));
+      where.and(condition);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithOngoingWhereAnd and(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
-      disjunctions.add(orConditionSet.getConditions());
+      where.and(orConditionSet);
       return this;
+    }
+  }
+
+  private static class OngoingWhere {
+
+    @Nullable private ConditionalExpression condition;
+    private final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
+    private final Set<Set<ConditionalExpression>> disjunctions = new HashSet<>();
+
+    private OngoingWhere(ConditionalExpression condition) {
+      this.condition = condition;
+    }
+
+    private void and(ConditionalExpression condition) {
+      checkNotNull(condition);
+      if (this.condition != null) {
+        disjunctions.add(ImmutableSet.of(this.condition));
+        this.condition = null;
+      }
+      disjunctions.add(ImmutableSet.of(condition));
+    }
+
+    private void and(OrConditionSet orConditionSet) {
+      checkNotNull(orConditionSet);
+      if (this.condition != null) {
+        disjunctions.add(ImmutableSet.of(this.condition));
+        this.condition = null;
+      }
+      disjunctions.add(orConditionSet.getConditions());
+    }
+
+    private void and(Set<OrConditionSet> orConditionSets) {
+      disjunctions.addAll(
+          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
+    }
+
+    private void or(ConditionalExpression condition) {
+      if (this.condition != null) {
+        conjunctions.add(ImmutableSet.of(this.condition));
+        this.condition = null;
+      }
+      conjunctions.add(ImmutableSet.of(condition));
+    }
+
+    private void or(AndConditionSet andConditionSet) {
+      if (this.condition != null) {
+        conjunctions.add(ImmutableSet.of(this.condition));
+        this.condition = null;
+      }
+      conjunctions.add(andConditionSet.getConditions());
+    }
+
+    private void or(Set<AndConditionSet> andConditionSets) {
+      conjunctions.addAll(
+          andConditionSets.stream()
+              .map(AndConditionSet::getConditions)
+              .collect(Collectors.toSet()));
     }
   }
 
   private static Scan buildScanAllWithConjunctions(
       String namespaceName,
       String tableName,
-      @Nullable ConditionalExpression condition,
-      Set<Set<ConditionalExpression>> conjunctions,
-      Set<Set<ConditionalExpression>> disjunctions,
+      OngoingWhere where,
       List<String> projections,
       List<Scan.Ordering> orderings,
       int limit,
@@ -1205,27 +1214,23 @@ public class ScanBuilder {
       scan.withConsistency(consistency);
     }
 
-    return addConjunctionsTo(scan, condition, conjunctions, disjunctions);
+    return addConjunctionsTo(scan, where);
   }
 
-  private static Scan addConjunctionsTo(
-      Scan scan,
-      @Nullable ConditionalExpression condition,
-      Set<Set<ConditionalExpression>> conjunctions,
-      Set<Set<ConditionalExpression>> disjunctions) {
+  private static Scan addConjunctionsTo(Scan scan, OngoingWhere where) {
 
-    if (condition != null) {
-      assert conjunctions.isEmpty() && disjunctions.isEmpty();
-      scan.withConjunctions(ImmutableSet.of(Conjunction.of(condition)));
-    } else if (conjunctions.isEmpty()) {
+    if (where.condition != null) {
+      assert where.conjunctions.isEmpty() && where.disjunctions.isEmpty();
+      scan.withConjunctions(ImmutableSet.of(Conjunction.of(where.condition)));
+    } else if (where.conjunctions.isEmpty()) {
       scan.withConjunctions(
-          Sets.cartesianProduct(new ArrayList<>(disjunctions)).stream()
+          Sets.cartesianProduct(new ArrayList<>(where.disjunctions)).stream()
               .filter(conditions -> conditions.size() > 0)
               .map(Conjunction::of)
               .collect(Collectors.toSet()));
     } else {
       scan.withConjunctions(
-          conjunctions.stream()
+          where.conjunctions.stream()
               .filter(conditions -> conditions.size() > 0)
               .map(Conjunction::of)
               .collect(Collectors.toSet()));
