@@ -7,6 +7,8 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
@@ -37,8 +39,9 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     return super.isParallelDdlSupported();
   }
 
-  @Override
-  protected boolean isYugabyteDb() {
+  // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed and the
+  //       fix is released.
+  private boolean isYugabyteDb() {
     return rdbEngine instanceof RdbEngineYugabyte;
   }
 
@@ -75,5 +78,23 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
       }
     }
     return super.getMaxValue(columnName, dataType);
+  }
+
+  // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed and the
+  //       fix is released.
+  @DisabledIf("isYugabyteDb")
+  @Test
+  @Override
+  public void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    super.scan_WithSecondClusteringKeyRange_ShouldReturnProperResult();
+  }
+
+  @DisabledIf("isYugabyteDb")
+  @Test
+  @Override
+  public void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    super.scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult();
   }
 }
