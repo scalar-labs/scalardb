@@ -49,7 +49,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     } else if (base instanceof Get) {
       add((Get) base);
     } else {
-      throw new IllegalArgumentException("PrepareMutationComposer.add only accepts Put or Delete");
+      throw new AssertionError("PrepareMutationComposer.add only accepts Put, Delete, or Get");
     }
   }
 

@@ -3,8 +3,9 @@ package com.scalar.db.storage.cosmos;
 import static com.scalar.db.storage.cosmos.CosmosUtils.quoteKeyword;
 
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteIf;
+import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
@@ -37,6 +38,7 @@ public class CosmosMutation extends CosmosOperation {
       if (mutation instanceof Put) {
         return MutationType.PUT;
       } else {
+        assert mutation instanceof Delete;
         return MutationType.DELETE_IF;
       }
     }
@@ -47,6 +49,7 @@ public class CosmosMutation extends CosmosOperation {
     } else if (condition instanceof PutIfExists || condition instanceof PutIf) {
       return MutationType.PUT_IF;
     } else {
+      assert condition instanceof DeleteIf || condition instanceof DeleteIfExists;
       return MutationType.DELETE_IF;
     }
   }
@@ -122,8 +125,7 @@ public class CosmosMutation extends CosmosOperation {
     return visitor.get();
   }
 
-  @VisibleForTesting
-  enum MutationType {
+  public enum MutationType {
     PUT,
     PUT_IF_NOT_EXISTS,
     PUT_IF,

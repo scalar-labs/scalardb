@@ -8,9 +8,12 @@ import static org.mockito.Mockito.mock;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -53,6 +56,9 @@ public class AbstractDistributedTransactionManagerTest {
       Delete delete = mock(Delete.class);
       @SuppressWarnings("unchecked")
       List<Delete> deletes = (List<Delete>) mock(List.class);
+      Insert insert = mock(Insert.class);
+      Upsert upsert = mock(Upsert.class);
+      Update update = mock(Update.class);
       @SuppressWarnings("unchecked")
       List<Mutation> mutations = (List<Mutation>) mock(List.class);
 
@@ -63,6 +69,9 @@ public class AbstractDistributedTransactionManagerTest {
       assertThatCode(() -> transaction.put(puts)).doesNotThrowAnyException();
       assertThatCode(() -> transaction.delete(delete)).doesNotThrowAnyException();
       assertThatCode(() -> transaction.delete(deletes)).doesNotThrowAnyException();
+      assertThatCode(() -> transaction.insert(insert)).doesNotThrowAnyException();
+      assertThatCode(() -> transaction.upsert(upsert)).doesNotThrowAnyException();
+      assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
       assertThatCode(() -> transaction.mutate(mutations)).doesNotThrowAnyException();
     }
 
@@ -78,6 +87,9 @@ public class AbstractDistributedTransactionManagerTest {
       Delete delete = mock(Delete.class);
       @SuppressWarnings("unchecked")
       List<Delete> deletes = (List<Delete>) mock(List.class);
+      Insert insert = mock(Insert.class);
+      Upsert upsert = mock(Upsert.class);
+      Update update = mock(Update.class);
       @SuppressWarnings("unchecked")
       List<Mutation> mutations = (List<Mutation>) mock(List.class);
 
@@ -91,6 +103,12 @@ public class AbstractDistributedTransactionManagerTest {
       assertThatThrownBy(() -> transaction.delete(delete))
           .isInstanceOf(IllegalStateException.class);
       assertThatThrownBy(() -> transaction.delete(deletes))
+          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> transaction.insert(insert))
+          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> transaction.upsert(upsert))
+          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> transaction.update(update))
           .isInstanceOf(IllegalStateException.class);
       assertThatThrownBy(() -> transaction.mutate(mutations))
           .isInstanceOf(IllegalStateException.class);
@@ -107,6 +125,9 @@ public class AbstractDistributedTransactionManagerTest {
       Delete delete = mock(Delete.class);
       @SuppressWarnings("unchecked")
       List<Delete> deletes = (List<Delete>) mock(List.class);
+      Insert insert = mock(Insert.class);
+      Upsert upsert = mock(Upsert.class);
+      Update update = mock(Update.class);
       @SuppressWarnings("unchecked")
       List<Mutation> mutations = (List<Mutation>) mock(List.class);
 
@@ -120,6 +141,12 @@ public class AbstractDistributedTransactionManagerTest {
       assertThatThrownBy(() -> transaction.delete(delete))
           .isInstanceOf(IllegalStateException.class);
       assertThatThrownBy(() -> transaction.delete(deletes))
+          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> transaction.insert(insert))
+          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> transaction.upsert(upsert))
+          .isInstanceOf(IllegalStateException.class);
+      assertThatThrownBy(() -> transaction.update(update))
           .isInstanceOf(IllegalStateException.class);
       assertThatThrownBy(() -> transaction.mutate(mutations))
           .isInstanceOf(IllegalStateException.class);
