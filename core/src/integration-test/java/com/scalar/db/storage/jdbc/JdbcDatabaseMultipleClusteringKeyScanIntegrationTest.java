@@ -41,6 +41,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed and the
   //       fix is released.
+  @SuppressWarnings("unused")
   private boolean isYugabyteDb() {
     return rdbEngine instanceof RdbEngineYugabyte;
   }
