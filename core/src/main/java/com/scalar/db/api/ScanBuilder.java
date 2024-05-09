@@ -22,7 +22,6 @@ import com.scalar.db.api.OperationBuilder.PartitionKey;
 import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
 import com.scalar.db.api.OperationBuilder.Projection;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
-import com.scalar.db.api.OperationBuilder.Where;
 import com.scalar.db.api.OperationBuilder.WhereAnd;
 import com.scalar.db.api.OperationBuilder.WhereOr;
 import com.scalar.db.api.Selection.Conjunction;
@@ -275,7 +274,7 @@ public class ScanBuilder {
       implements Ordering<BuildableScanAll>,
           Consistency<BuildableScanAll>,
           Projection<BuildableScanAll>,
-          Where<BuildableScanAllWithOngoingWhere>,
+          OperationBuilder.Where<BuildableScanAllWithOngoingWhere>,
           WhereAnd<BuildableScanAllWithOngoingWhereAnd>,
           WhereOr<BuildableScanAllWithOngoingWhereOr>,
           Limit<BuildableScanAll> {
@@ -501,7 +500,7 @@ public class ScanBuilder {
           Limit<BuildableScanAllWithWhere> {
 
     protected BuildableScanAll buildableScanAll;
-    protected final OngoingWhere where;
+    final Where where;
 
     private BuildableScanAllWithWhere(BuildableScanAll buildable) {
       this(buildable, null);
@@ -510,7 +509,7 @@ public class ScanBuilder {
     private BuildableScanAllWithWhere(
         BuildableScanAll buildable, @Nullable ConditionalExpression condition) {
       this.buildableScanAll = buildable;
-      this.where = new OngoingWhere(condition);
+      this.where = new Where(condition);
     }
 
     private BuildableScanAllWithWhere(BuildableScanAllWithOngoingWhere buildable) {
@@ -574,7 +573,7 @@ public class ScanBuilder {
           OperationBuilder.Table<BuildableScanOrScanAllFromExisting>,
           PartitionKey<BuildableScanOrScanAllFromExisting>,
           IndexKey<BuildableScanOrScanAllFromExisting>,
-          Where<BuildableScanFromExistingWithOngoingWhere>,
+          OperationBuilder.Where<BuildableScanFromExistingWithOngoingWhere>,
           WhereAnd<BuildableScanFromExistingWithOngoingWhereAnd>,
           WhereOr<BuildableScanFromExistingWithOngoingWhereOr>,
           ClearConditions<BuildableScanOrScanAllFromExisting>,
@@ -900,8 +899,8 @@ public class ScanBuilder {
           ClearOrderings<BuildableScanFromExistingWithWhere>,
           ClearNamespace<BuildableScanFromExistingWithWhere> {
 
-    BuildableScanOrScanAllFromExisting buildableScanFromExisting;
-    protected final OngoingWhere where;
+    private BuildableScanOrScanAllFromExisting buildableScanFromExisting;
+    final Where where;
 
     private BuildableScanFromExistingWithWhere(BuildableScanFromExistingWithWhere buildable) {
       this.buildableScanFromExisting = buildable.buildableScanFromExisting;
@@ -911,7 +910,7 @@ public class ScanBuilder {
     private BuildableScanFromExistingWithWhere(
         BuildableScanOrScanAllFromExisting buildable, @Nullable ConditionalExpression condition) {
       this.buildableScanFromExisting = buildable;
-      this.where = new OngoingWhere(condition);
+      this.where = new Where(condition);
     }
 
     private BuildableScanFromExistingWithWhere(BuildableScanOrScanAllFromExisting buildable) {
@@ -1121,13 +1120,13 @@ public class ScanBuilder {
     }
   }
 
-  private static class OngoingWhere {
+  private static class Where {
 
     @Nullable private ConditionalExpression condition;
     private final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
     private final Set<Set<ConditionalExpression>> disjunctions = new HashSet<>();
 
-    private OngoingWhere(ConditionalExpression condition) {
+    private Where(ConditionalExpression condition) {
       this.condition = condition;
     }
 
@@ -1178,7 +1177,7 @@ public class ScanBuilder {
     }
   }
 
-  private static Scan addConjunctionsTo(Scan scan, OngoingWhere where) {
+  private static Scan addConjunctionsTo(Scan scan, Where where) {
 
     if (where.condition != null) {
       assert where.conjunctions.isEmpty() && where.disjunctions.isEmpty();

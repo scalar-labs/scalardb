@@ -1,8 +1,8 @@
 package com.scalar.db.api;
 
 import com.google.common.collect.ImmutableSet;
-import java.util.HashSet;
 import java.util.Set;
+import javax.annotation.concurrent.Immutable;
 
 public class ConditionSetBuilder {
 
@@ -24,7 +24,7 @@ public class ConditionSetBuilder {
    * @return a builder object
    */
   public static BuildableAndConditionSet andConditionSet(Set<ConditionalExpression> conditions) {
-    return new BuildableAndConditionSet(conditions);
+    return new BuildableAndConditionSet(ImmutableSet.copyOf(conditions));
   }
 
   /**
@@ -34,16 +34,16 @@ public class ConditionSetBuilder {
    * @return a builder object
    */
   public static BuildableOrConditionSet orConditionSet(Set<ConditionalExpression> conditions) {
-    return new BuildableOrConditionSet(conditions);
+    return new BuildableOrConditionSet(ImmutableSet.copyOf(conditions));
   }
 
+  @Immutable
   public static class AndOrConditionSetBuilder {
 
-    private final Set<ConditionalExpression> conditions;
+    private final ImmutableSet<ConditionalExpression> conditions;
 
-    AndOrConditionSetBuilder(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
+    private AndOrConditionSetBuilder(ImmutableSet<ConditionalExpression> conditions) {
+      this.conditions = conditions;
     }
 
     /**
@@ -53,8 +53,11 @@ public class ConditionSetBuilder {
      * @return a builder object
      */
     public BuildableAndConditionSet and(ConditionalExpression condition) {
-      conditions.add(condition);
-      return new BuildableAndConditionSet(conditions);
+      return new BuildableAndConditionSet(
+          new ImmutableSet.Builder<ConditionalExpression>()
+              .addAll(conditions)
+              .add(condition)
+              .build());
     }
 
     /**
@@ -64,18 +67,21 @@ public class ConditionSetBuilder {
      * @return a builder object
      */
     public BuildableOrConditionSet or(ConditionalExpression condition) {
-      conditions.add(condition);
-      return new BuildableOrConditionSet(conditions);
+      return new BuildableOrConditionSet(
+          new ImmutableSet.Builder<ConditionalExpression>()
+              .addAll(conditions)
+              .add(condition)
+              .build());
     }
   }
 
+  @Immutable
   public static class BuildableAndConditionSet {
 
-    private final Set<ConditionalExpression> conditions;
+    private final ImmutableSet<ConditionalExpression> conditions;
 
-    BuildableAndConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
+    BuildableAndConditionSet(ImmutableSet<ConditionalExpression> conditions) {
+      this.conditions = conditions;
     }
 
     /**
@@ -85,8 +91,11 @@ public class ConditionSetBuilder {
      * @return a builder object
      */
     public BuildableAndConditionSet and(ConditionalExpression condition) {
-      conditions.add(condition);
-      return this;
+      return new BuildableAndConditionSet(
+          new ImmutableSet.Builder<ConditionalExpression>()
+              .addAll(conditions)
+              .add(condition)
+              .build());
     }
 
     /**
@@ -95,17 +104,17 @@ public class ConditionSetBuilder {
      * @return an and-wise condition set
      */
     public AndConditionSet build() {
-      return new AndConditionSet(ImmutableSet.copyOf(conditions));
+      return new AndConditionSet(conditions);
     }
   }
 
+  @Immutable
   public static class BuildableOrConditionSet {
 
-    private final Set<ConditionalExpression> conditions;
+    private final ImmutableSet<ConditionalExpression> conditions;
 
-    BuildableOrConditionSet(Set<ConditionalExpression> conditions) {
-      this.conditions = new HashSet<>();
-      this.conditions.addAll(conditions);
+    private BuildableOrConditionSet(ImmutableSet<ConditionalExpression> conditions) {
+      this.conditions = conditions;
     }
 
     /**
@@ -115,8 +124,11 @@ public class ConditionSetBuilder {
      * @return a builder object
      */
     public BuildableOrConditionSet or(ConditionalExpression condition) {
-      conditions.add(condition);
-      return this;
+      return new BuildableOrConditionSet(
+          new ImmutableSet.Builder<ConditionalExpression>()
+              .addAll(conditions)
+              .add(condition)
+              .build());
     }
 
     /**
@@ -125,7 +137,7 @@ public class ConditionSetBuilder {
      * @return an or-wise condition set
      */
     public OrConditionSet build() {
-      return new OrConditionSet(ImmutableSet.copyOf(conditions));
+      return new OrConditionSet(conditions);
     }
   }
 }
