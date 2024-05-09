@@ -500,13 +500,8 @@ public class ScanBuilder {
           Ordering<BuildableScanAllWithWhere>,
           Limit<BuildableScanAllWithWhere> {
 
-    protected final String namespaceName;
-    protected final String tableName;
+    protected BuildableScanAll buildableScanAll;
     protected final OngoingWhere where;
-    protected final List<String> projections = new ArrayList<>();
-    protected final List<Scan.Ordering> orderings = new ArrayList<>();
-    protected int limit;
-    @Nullable protected com.scalar.db.api.Consistency consistency;
 
     private BuildableScanAllWithWhere(BuildableScanAll buildable) {
       this(buildable, null);
@@ -514,36 +509,24 @@ public class ScanBuilder {
 
     private BuildableScanAllWithWhere(
         BuildableScanAll buildable, @Nullable ConditionalExpression condition) {
-      this.namespaceName = buildable.namespaceName;
-      this.tableName = buildable.tableName;
+      this.buildableScanAll = buildable;
       this.where = new OngoingWhere(condition);
-      this.limit = buildable.limit;
-      this.orderings.addAll(buildable.orderings);
-      this.projections.addAll(buildable.projections);
-      this.consistency = buildable.consistency;
     }
 
     private BuildableScanAllWithWhere(BuildableScanAllWithOngoingWhere buildable) {
-      this.namespaceName = buildable.namespaceName;
-      this.tableName = buildable.tableName;
+      this.buildableScanAll = buildable.buildableScanAll;
       this.where = buildable.where;
-      this.limit = buildable.limit;
-      this.projections.addAll(buildable.projections);
-      this.orderings.addAll(buildable.orderings);
-      this.consistency = buildable.consistency;
     }
 
     @Override
     public BuildableScanAllWithWhere projection(String projection) {
-      checkNotNull(projection);
-      projections.add(projection);
+      buildableScanAll = buildableScanAll.projection(projection);
       return this;
     }
 
     @Override
     public BuildableScanAllWithWhere projections(Collection<String> projections) {
-      checkNotNull(projections);
-      this.projections.addAll(projections);
+      buildableScanAll = buildableScanAll.projections(projections);
       return this;
     }
 
@@ -554,15 +537,13 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithWhere ordering(Scan.Ordering ordering) {
-      checkNotNull(ordering);
-      orderings.add(ordering);
+      buildableScanAll = buildableScanAll.ordering(ordering);
       return this;
     }
 
     @Override
     public BuildableScanAllWithWhere orderings(Collection<Scan.Ordering> orderings) {
-      checkNotNull(orderings);
-      this.orderings.addAll(orderings);
+      buildableScanAll = buildableScanAll.orderings(orderings);
       return this;
     }
 
@@ -573,20 +554,18 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithWhere limit(int limit) {
-      this.limit = limit;
+      buildableScanAll = buildableScanAll.limit(limit);
       return this;
     }
 
     @Override
     public BuildableScanAllWithWhere consistency(com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
+      buildableScanAll = buildableScanAll.consistency(consistency);
       return this;
     }
 
     public Scan build() {
-      return buildScanAllWithConjunctions(
-          namespaceName, tableName, where, projections, orderings, limit, consistency);
+      return addConjunctionsTo(buildableScanAll.build(), where);
     }
   }
 
@@ -1197,29 +1176,6 @@ public class ScanBuilder {
               .map(AndConditionSet::getConditions)
               .collect(Collectors.toSet()));
     }
-  }
-
-  private static Scan buildScanAllWithConjunctions(
-      String namespaceName,
-      String tableName,
-      OngoingWhere where,
-      List<String> projections,
-      List<Scan.Ordering> orderings,
-      int limit,
-      @Nullable com.scalar.db.api.Consistency consistency) {
-    ScanAll scan = new ScanAll();
-    scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
-    orderings.forEach(scan::withOrdering);
-
-    if (!projections.isEmpty()) {
-      scan.withProjections(projections);
-    }
-
-    if (consistency != null) {
-      scan.withConsistency(consistency);
-    }
-
-    return addConjunctionsTo(scan, where);
   }
 
   private static Scan addConjunctionsTo(Scan scan, OngoingWhere where) {
