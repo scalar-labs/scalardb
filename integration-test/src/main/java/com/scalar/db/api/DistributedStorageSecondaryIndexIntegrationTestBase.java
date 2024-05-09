@@ -21,9 +21,13 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(DistributedStorageSecondaryIndexIntegrationTestBase.class);
 
   private static final String TEST_NAME = "storage_secondary_idx";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
@@ -98,9 +102,27 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTables();
-    admin.close();
-    storage.close();
+    try {
+      dropTables();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables", e);
+    }
+
+    try {
+      if (admin != null) {
+        admin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin", e);
+    }
+
+    try {
+      if (storage != null) {
+        storage.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage", e);
+    }
   }
 
   private void dropTables() throws ExecutionException {

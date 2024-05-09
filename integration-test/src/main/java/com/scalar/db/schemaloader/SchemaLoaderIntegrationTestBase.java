@@ -31,9 +31,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SchemaLoaderIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(SchemaLoaderIntegrationTestBase.class);
   private static final String TEST_NAME = "schema_loader";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path SCHEMA_FILE_PATH = Paths.get("schema.json").toAbsolutePath();
@@ -270,10 +274,36 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTablesIfExist();
-    storageAdmin.close();
-    transactionAdmin.close();
-    adminTestUtils.close();
+    try {
+      dropTablesIfExist();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables", e);
+    }
+
+    try {
+      if (storageAdmin != null) {
+        storageAdmin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage admin", e);
+    }
+
+    try {
+      if (transactionAdmin != null) {
+        transactionAdmin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close transaction admin", e);
+    }
+
+    try {
+      if (adminTestUtils != null) {
+        adminTestUtils.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin test utils", e);
+    }
+
     // Delete the files
     Files.delete(CONFIG_FILE_PATH);
     Files.delete(SCHEMA_FILE_PATH);

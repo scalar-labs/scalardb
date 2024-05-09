@@ -12,7 +12,7 @@ import javax.annotation.Nullable;
  * InsertBuilder}, {@link UpsertBuilder}, {@link UpdateBuilder}, {@link GetBuilder} and {@link
  * ScanBuilder}
  */
-class OperationBuilder {
+public class OperationBuilder {
   interface Namespace<T> {
     /**
      * Sets the specified target namespace for this operation
