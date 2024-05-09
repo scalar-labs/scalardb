@@ -18,7 +18,7 @@ For details on which databases ScalarDB supports, refer to [Supported Databases]
 
 ## Why ScalarDB?
 
-There are several solutions, such as global transaction managers, data federation engines, and HTAP systems, built towards similar goals, but they are limited in the following perspectives:
+Several solutions, such as global transaction managers, data federation engines, and HTAP systems, have similar goals, but they are limited in the following perspectives:
 
 - Global transaction managers (like Oracle MicroTx and Atomikos) are designed to run transactions across a limited set of heterogeneous databases (like only XA-compliant databases).
 - Data federation engines (like Denodo and Starburst) are designed to run analytical queries across heterogeneous databases.
