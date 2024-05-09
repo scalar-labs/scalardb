@@ -23,7 +23,8 @@ Several solutions, such as global transaction managers, data federation engines,
 - Data federation engines (like Denodo and Starburst) are designed to run analytical queries across heterogeneous databases.
 - HTAP systems (like TiDB and SingleStore) run both transactions and analytical queries only on homogeneous databases.
 
-In other words, they virtually unify databases in an incomplete way. For example, with data federation engines, users can run read-only analytical queries on a virtualized view across multiple databases. However, they often need to run update queries separately for each database.
+In other words, they virtually unify databases, but with limitations. For example, with data federation engines, users can run read-only analytical queries on a virtualized view across multiple databases. However, they often need to run update queries separately for each database.
+
 Unlike other solutions, ScalarDB stands out by offering the ability to run both transactional and analytical queries on heterogeneous databases, which can significantly simplify database management.
 
 The following table summarizes how ScalarDB is different from the other solutions.
