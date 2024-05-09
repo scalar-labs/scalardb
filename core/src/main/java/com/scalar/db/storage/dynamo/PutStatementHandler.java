@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
@@ -84,6 +85,7 @@ public class PutStatementHandler {
       expressionAttributeNameMap = dynamoMutation.getColumnMap();
       bindMap = dynamoMutation.getValueBindMap();
     } else {
+      assert put.getCondition().get() instanceof PutIf;
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
       expressionAttributeNameMap = dynamoMutation.getColumnMap();

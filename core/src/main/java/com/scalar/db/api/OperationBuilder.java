@@ -9,7 +9,8 @@ import javax.annotation.Nullable;
 
 /**
  * This class defines common interfaces used by {@link DeleteBuilder}, {@link PutBuilder}, {@link
- * GetBuilder} and {@link ScanBuilder}
+ * InsertBuilder}, {@link UpsertBuilder}, {@link UpdateBuilder}, {@link GetBuilder} and {@link
+ * ScanBuilder}
  */
 public class OperationBuilder {
   interface Namespace<T> {
