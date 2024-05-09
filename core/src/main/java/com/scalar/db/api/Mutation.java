@@ -5,16 +5,20 @@ import com.scalar.db.io.Key;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * An abstraction for mutation operations such as {@link Put} and {@link Delete}.
+ * An abstraction for mutation operations such as {@link Put}, {@link Delete}, {@link Insert},
+ * {@link Upsert}, and {@link Update}.
  *
  * @author Hiroyuki Yamada
  */
 @NotThreadSafe
 public abstract class Mutation extends Operation {
-  private Optional<MutationCondition> condition;
+
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated private Optional<MutationCondition> condition;
 
   /**
    * @param partitionKey a partition key
@@ -37,11 +41,23 @@ public abstract class Mutation extends Operation {
     condition = mutation.condition;
   }
 
+  Mutation(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Key clusteringKey,
+      @Nullable MutationCondition condition) {
+    super(namespace, tableName, partitionKey, clusteringKey);
+    this.condition = Optional.ofNullable(condition);
+  }
+
   /**
    * Returns the {@link MutationCondition}
    *
    * @return {@code MutationCondition}
+   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
    */
+  @Deprecated
   @Nonnull
   public Optional<MutationCondition> getCondition() {
     return condition;

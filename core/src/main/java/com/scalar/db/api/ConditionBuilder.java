@@ -84,6 +84,35 @@ public class ConditionBuilder {
   }
 
   /**
+   * Returns a builder object for an UpdateIf condition.
+   *
+   * @param conditionalExpression a condition expression for an UpdateIf condition
+   * @return a builder object
+   */
+  public static UpdateIfBuilder updateIf(ConditionalExpression conditionalExpression) {
+    return new UpdateIfBuilder(conditionalExpression);
+  }
+
+  /**
+   * Creates an UpdateIf condition with the specified conditional expressions.
+   *
+   * @param conditionalExpressions condition expressions for an UpdateIf condition
+   * @return an UpdateIf condition
+   */
+  public static UpdateIf updateIf(List<ConditionalExpression> conditionalExpressions) {
+    return new UpdateIf(conditionalExpressions);
+  }
+
+  /**
+   * Creates an UpdateIfExists condition.
+   *
+   * @return an UpdateIfExists condition
+   */
+  public static UpdateIfExists updateIfExists() {
+    return new UpdateIfExists();
+  }
+
+  /**
    * Builds a conditional expression with the specified column and operator.
    *
    * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
@@ -845,6 +874,47 @@ public class ConditionBuilder {
           || conditionalExpression.getOperator().equals(Operator.NOT_LIKE)) {
         throw new IllegalArgumentException(
             CoreError.CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_DELETE_IF.buildMessage(
+                conditionalExpression));
+      }
+    }
+  }
+
+  public static class UpdateIfBuilder {
+
+    private final List<ConditionalExpression> conditionalExpressions;
+
+    private UpdateIfBuilder(ConditionalExpression conditionalExpression) {
+      check(conditionalExpression);
+      conditionalExpressions = new ArrayList<>();
+      conditionalExpressions.add(conditionalExpression);
+    }
+
+    /**
+     * Adds a condition for an UpdateIf condition.
+     *
+     * @param conditionalExpression a condition for an UpdateIf condition
+     * @return a builder object
+     */
+    public UpdateIfBuilder and(ConditionalExpression conditionalExpression) {
+      check(conditionalExpression);
+      conditionalExpressions.add(conditionalExpression);
+      return this;
+    }
+
+    /**
+     * Builds an UpdateIf condition with the specified conditional expressions.
+     *
+     * @return an UpdateIf condition
+     */
+    public UpdateIf build() {
+      return new UpdateIf(conditionalExpressions);
+    }
+
+    private void check(ConditionalExpression conditionalExpression) {
+      if (conditionalExpression.getOperator().equals(Operator.LIKE)
+          || conditionalExpression.getOperator().equals(Operator.NOT_LIKE)) {
+        throw new IllegalArgumentException(
+            CoreError.CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_UPDATE_IF.buildMessage(
                 conditionalExpression));
       }
     }

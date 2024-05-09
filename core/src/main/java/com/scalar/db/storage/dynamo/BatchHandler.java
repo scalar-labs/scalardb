@@ -1,8 +1,10 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
@@ -142,6 +144,7 @@ public class BatchHandler {
       expressionAttributeNameMap = dynamoMutation.getColumnMap();
       bindMap = dynamoMutation.getValueBindMap();
     } else {
+      assert put.getCondition().get() instanceof PutIf;
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
       expressionAttributeNameMap = dynamoMutation.getColumnMap();
@@ -171,6 +174,7 @@ public class BatchHandler {
       if (delete.getCondition().get() instanceof DeleteIfExists) {
         condition = dynamoMutation.getIfExistsCondition();
       } else {
+        assert delete.getCondition().get() instanceof DeleteIf;
         condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
         deleteBuilder.expressionAttributeNames(dynamoMutation.getConditionColumnMap());
         Map<String, AttributeValue> bindMap = dynamoMutation.getConditionBindMap();
@@ -190,10 +194,9 @@ public class BatchHandler {
             m -> {
               if (m instanceof Put) {
                 return copyAndAppendNamespacePrefix((Put) m);
-              } else if (m instanceof com.scalar.db.api.Delete) {
-                return copyAndAppendNamespacePrefix((com.scalar.db.api.Delete) m);
               } else {
-                throw new AssertionError("Unexpected mutation type: " + m.getClass().getName());
+                assert m instanceof com.scalar.db.api.Delete;
+                return copyAndAppendNamespacePrefix((com.scalar.db.api.Delete) m);
               }
             })
         .collect(Collectors.toList());
