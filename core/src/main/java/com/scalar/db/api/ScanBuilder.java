@@ -499,7 +499,7 @@ public class ScanBuilder {
           Ordering<BuildableScanAllWithWhere>,
           Limit<BuildableScanAllWithWhere> {
 
-    protected BuildableScanAll buildableScanAll;
+    final BuildableScanAll buildableScanAll;
     final Where where;
 
     private BuildableScanAllWithWhere(BuildableScanAll buildable) {
@@ -519,13 +519,13 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithWhere projection(String projection) {
-      buildableScanAll = buildableScanAll.projection(projection);
+      buildableScanAll.projection(projection);
       return this;
     }
 
     @Override
     public BuildableScanAllWithWhere projections(Collection<String> projections) {
-      buildableScanAll = buildableScanAll.projections(projections);
+      buildableScanAll.projections(projections);
       return this;
     }
 
@@ -536,13 +536,13 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithWhere ordering(Scan.Ordering ordering) {
-      buildableScanAll = buildableScanAll.ordering(ordering);
+      buildableScanAll.ordering(ordering);
       return this;
     }
 
     @Override
     public BuildableScanAllWithWhere orderings(Collection<Scan.Ordering> orderings) {
-      buildableScanAll = buildableScanAll.orderings(orderings);
+      buildableScanAll.orderings(orderings);
       return this;
     }
 
@@ -553,13 +553,13 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanAllWithWhere limit(int limit) {
-      buildableScanAll = buildableScanAll.limit(limit);
+      buildableScanAll.limit(limit);
       return this;
     }
 
     @Override
     public BuildableScanAllWithWhere consistency(com.scalar.db.api.Consistency consistency) {
-      buildableScanAll = buildableScanAll.consistency(consistency);
+      buildableScanAll.consistency(consistency);
       return this;
     }
 
@@ -899,7 +899,7 @@ public class ScanBuilder {
           ClearOrderings<BuildableScanFromExistingWithWhere>,
           ClearNamespace<BuildableScanFromExistingWithWhere> {
 
-    private BuildableScanOrScanAllFromExisting buildableScanFromExisting;
+    private final BuildableScanOrScanAllFromExisting buildableScanFromExisting;
     final Where where;
 
     private BuildableScanFromExistingWithWhere(BuildableScanFromExistingWithWhere buildable) {
@@ -919,25 +919,25 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanFromExistingWithWhere namespace(String namespaceName) {
-      buildableScanFromExisting = buildableScanFromExisting.namespace(namespaceName);
+      buildableScanFromExisting.namespace(namespaceName);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere table(String tableName) {
-      buildableScanFromExisting = buildableScanFromExisting.table(tableName);
+      buildableScanFromExisting.table(tableName);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere projection(String projection) {
-      buildableScanFromExisting = buildableScanFromExisting.projections(projection);
+      buildableScanFromExisting.projections(projection);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere projections(Collection<String> projections) {
-      buildableScanFromExisting = buildableScanFromExisting.projections(projections);
+      buildableScanFromExisting.projections(projections);
       return this;
     }
 
@@ -948,13 +948,13 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanFromExistingWithWhere ordering(Scan.Ordering ordering) {
-      buildableScanFromExisting = buildableScanFromExisting.ordering(ordering);
+      buildableScanFromExisting.ordering(ordering);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere orderings(Collection<Scan.Ordering> orderings) {
-      buildableScanFromExisting = buildableScanFromExisting.orderings(orderings);
+      buildableScanFromExisting.orderings(orderings);
       return this;
     }
 
@@ -965,32 +965,32 @@ public class ScanBuilder {
 
     @Override
     public BuildableScanFromExistingWithWhere limit(int limit) {
-      buildableScanFromExisting = buildableScanFromExisting.limit(limit);
+      buildableScanFromExisting.limit(limit);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere consistency(
         com.scalar.db.api.Consistency consistency) {
-      buildableScanFromExisting = buildableScanFromExisting.consistency(consistency);
+      buildableScanFromExisting.consistency(consistency);
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere clearProjections() {
-      buildableScanFromExisting = buildableScanFromExisting.clearProjections();
+      buildableScanFromExisting.clearProjections();
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere clearOrderings() {
-      buildableScanFromExisting = buildableScanFromExisting.clearOrderings();
+      buildableScanFromExisting.clearOrderings();
       return this;
     }
 
     @Override
     public BuildableScanFromExistingWithWhere clearNamespace() {
-      buildableScanFromExisting = buildableScanFromExisting.clearNamespace();
+      buildableScanFromExisting.clearNamespace();
       return this;
     }
 
