@@ -110,6 +110,7 @@ The backup methods by database listed below are just examples of some of the dat
   <button class="tablinks" onclick="openTab(event, 'Cassandra2', 'tabset-2')" id="defaultOpen-2">Cassandra</button>
   <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL2', 'tabset-2')">Cosmos DB for NoSQL</button>
   <button class="tablinks" onclick="openTab(event, 'DynamoDB2', 'tabset-2')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'YugabyteDB_Managed2', 'tabset-2')">YugabyteDB Managed</button>
 </div>
 
 <div id="Cassandra2" class="tabcontent" markdown="1">
@@ -131,6 +132,12 @@ To specify a transactionally consistent restore point, pause your application th
 You must enable the PITR feature for DynamoDB tables. If you're using [ScalarDB Schema Loader](schema-loader.md) to create schemas, the tool enables the PITR feature for tables by default.
 
 To specify a transactionally consistent restore point, pause your application that is using ScalarDB with DynamoDB as described in [Back up with explicit pausing](#back-up-with-explicit-pausing).
+</div>
+<div id="YugabyteDB_Managed2" class="tabcontent" markdown="2">
+
+Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. See [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
+
+If you're using YugabyteDB with other databases, to ensure transactional consistency across databases, you'll need to pause the application using ScalarDB or [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/) during the backup process, as described in [Back up with explicit pausing](#back-up-with-explicit-pausing).
 </div>
 </div>
 
