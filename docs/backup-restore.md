@@ -133,7 +133,7 @@ You must enable the PITR feature for DynamoDB tables. If you're using [ScalarDB 
 
 To specify a transactionally consistent restore point, pause your application that is using ScalarDB with DynamoDB as described in [Back up with explicit pausing](#back-up-with-explicit-pausing).
 </div>
-<div id="YugabyteDB_Managed2" class="tabcontent" markdown="2">
+<div id="YugabyteDB_Managed2" class="tabcontent" markdown="1">
 
 Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. See [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 
