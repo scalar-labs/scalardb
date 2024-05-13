@@ -133,7 +133,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String[] sqls =
         rdbEngine.createTableInternalSqlsAfterCreateTable(
-            hasDescClusteringOrder, schema, table, metadata);
+            hasDifferentClusteringOrders(metadata), schema, table, metadata);
     execute(connection, sqls);
   }
 
@@ -601,9 +601,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private boolean hasDescClusteringOrder(TableMetadata metadata) {
+  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
     return metadata.getClusteringKeyNames().stream()
         .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
+  }
+
+  @VisibleForTesting
+  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
+    boolean hasAscOrder = false;
+    boolean hasDescOrder = false;
+    for (Order order : metadata.getClusteringOrders().values()) {
+      if (order == Order.ASC) {
+        hasAscOrder = true;
+      } else {
+        hasDescOrder = true;
+      }
+    }
+    return hasAscOrder && hasDescOrder;
   }
 
   @Override
