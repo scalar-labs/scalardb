@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,15 @@ public abstract class Operation {
     this.clusteringKey = Optional.ofNullable(clusteringKey);
     namespace = Optional.empty();
     tableName = Optional.empty();
+    consistency = Consistency.SEQUENTIAL;
+  }
+
+  public Operation(
+      @Nullable String namespace, String tableName, Key partitionKey, @Nullable Key clusteringKey) {
+    this.partitionKey = checkNotNull(partitionKey);
+    this.clusteringKey = Optional.ofNullable(clusteringKey);
+    this.namespace = Optional.ofNullable(namespace);
+    this.tableName = Optional.of(tableName);
     consistency = Consistency.SEQUENTIAL;
   }
 

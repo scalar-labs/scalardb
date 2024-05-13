@@ -3,9 +3,12 @@ package com.scalar.db.common;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
@@ -74,5 +77,17 @@ public abstract class AbstractDistributedTransaction implements DistributedTrans
 
   protected Delete copyAndSetTargetToIfNot(Delete delete) {
     return ScalarDbUtils.copyAndSetTargetToIfNot(delete, namespace, tableName);
+  }
+
+  protected Insert copyAndSetTargetToIfNot(Insert insert) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(insert, namespace, tableName);
+  }
+
+  protected Upsert copyAndSetTargetToIfNot(Upsert upsert) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(upsert, namespace, tableName);
+  }
+
+  protected Update copyAndSetTargetToIfNot(Update update) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(update, namespace, tableName);
   }
 }

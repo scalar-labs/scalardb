@@ -5,10 +5,13 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.AbortException;
@@ -122,12 +125,16 @@ public abstract class AbstractDistributedTransactionManager
       return super.scan(scan);
     }
 
+    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    @Deprecated
     @Override
     public void put(Put put) throws CrudException {
       checkIfActive();
       super.put(put);
     }
 
+    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    @Deprecated
     @Override
     public void put(List<Put> puts) throws CrudException {
       checkIfActive();
@@ -140,10 +147,30 @@ public abstract class AbstractDistributedTransactionManager
       super.delete(delete);
     }
 
+    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    @Deprecated
     @Override
     public void delete(List<Delete> deletes) throws CrudException {
       checkIfActive();
       super.delete(deletes);
+    }
+
+    @Override
+    public void insert(Insert insert) throws CrudException {
+      checkIfActive();
+      super.insert(insert);
+    }
+
+    @Override
+    public void upsert(Upsert upsert) throws CrudException {
+      checkIfActive();
+      super.upsert(upsert);
+    }
+
+    @Override
+    public void update(Update update) throws CrudException {
+      checkIfActive();
+      super.update(update);
     }
 
     @Override

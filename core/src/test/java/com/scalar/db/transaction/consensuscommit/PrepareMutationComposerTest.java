@@ -435,11 +435,11 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void add_SelectionOtherThanGetGiven_ShouldThrowIllegalArgumentException() {
+  public void add_SelectionOtherThanGetGiven_ShouldThrowAssertionError() {
     // Arrange
     Scan scan = prepareScan();
 
     // Act Assert
-    assertThatThrownBy(() -> composer.add(scan, null)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> composer.add(scan, null)).isInstanceOf(AssertionError.class);
   }
 }

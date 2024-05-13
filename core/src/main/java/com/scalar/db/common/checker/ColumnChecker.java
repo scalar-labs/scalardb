@@ -13,6 +13,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import javax.annotation.concurrent.NotThreadSafe;
 
+/** A checker for the columns of a table for the storage abstraction. */
 @NotThreadSafe
 public class ColumnChecker implements ColumnVisitor {
   private final TableMetadata tableMetadata;

@@ -12,6 +12,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
@@ -21,6 +22,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -1366,6 +1369,46 @@ public class OperationCheckerTest {
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingMutateOperationWithMutationsWithUnsupportedMutations_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val3");
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL1, 1)
+            .build();
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL1, 1)
+            .build();
+    Update update =
+        Update.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL1, 1)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(Collections.singletonList(insert)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(Collections.singletonList(upsert)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(Collections.singletonList(update)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

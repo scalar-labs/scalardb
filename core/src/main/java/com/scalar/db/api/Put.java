@@ -26,12 +26,14 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to put an entry to {@link DistributedStorage}.
+ * A command to put an entry in the underlying storage.
  *
  * @author Hiroyuki Yamada
  */
@@ -100,7 +102,7 @@ public class Put extends Mutation {
 
   /**
    * Build a {@code Put} operation from an existing {@code Put} object using a builder. The builder
-   * will be parametrized by default with all the existing {@code Put} object attributes
+   * will be parametrized by default with all the existing {@code Put} object attributes.
    *
    * @param put an existing {@code Put} operation
    * @return a {@code Put} operation builder
@@ -751,6 +753,12 @@ public class Put extends Mutation {
   @Deprecated
   public Put withCondition(MutationCondition condition) {
     return (Put) super.withCondition(condition);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<MutationCondition> getCondition() {
+    return super.getCondition();
   }
 
   /**

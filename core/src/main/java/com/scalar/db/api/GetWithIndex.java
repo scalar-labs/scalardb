@@ -3,7 +3,10 @@ package com.scalar.db.api;
 import com.scalar.db.io.Key;
 import java.util.Collection;
 import java.util.Objects;
+import javax.annotation.concurrent.NotThreadSafe;
 
+/** A command to retrieve an entry from the underlying storage by using an index. */
+@NotThreadSafe
 public class GetWithIndex extends Get {
 
   /**

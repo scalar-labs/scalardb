@@ -3,10 +3,13 @@ package com.scalar.db.common;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -73,11 +76,15 @@ public abstract class DecoratedDistributedTransaction implements DistributedTran
     return decoratedTransaction.scan(scan);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(Put put) throws CrudException {
     decoratedTransaction.put(put);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
     decoratedTransaction.put(puts);
@@ -88,9 +95,26 @@ public abstract class DecoratedDistributedTransaction implements DistributedTran
     decoratedTransaction.delete(delete);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
     decoratedTransaction.delete(deletes);
+  }
+
+  @Override
+  public void insert(Insert insert) throws CrudException {
+    decoratedTransaction.insert(insert);
+  }
+
+  @Override
+  public void update(Update update) throws CrudException {
+    decoratedTransaction.update(update);
+  }
+
+  @Override
+  public void upsert(Upsert upsert) throws CrudException {
+    decoratedTransaction.upsert(upsert);
   }
 
   @Override

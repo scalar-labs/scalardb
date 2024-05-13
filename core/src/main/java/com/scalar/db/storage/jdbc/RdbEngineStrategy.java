@@ -50,7 +50,7 @@ public interface RdbEngineStrategy {
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
   String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
+      boolean hasDifferentClusteringOrders,
       String schema,
       String table,
       TableMetadata metadata,

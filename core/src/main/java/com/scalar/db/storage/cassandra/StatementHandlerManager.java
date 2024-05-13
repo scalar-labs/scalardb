@@ -70,7 +70,7 @@ public class StatementHandlerManager {
       return delete();
     }
     // never comes here usually
-    throw new AssertionError("Unexpected operation was given");
+    throw new AssertionError("Unexpected operation was given: " + operation);
   }
 
   @Nonnull

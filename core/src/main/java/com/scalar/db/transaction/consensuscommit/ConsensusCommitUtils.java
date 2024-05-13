@@ -1,8 +1,18 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.MutationCondition;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashSet;
@@ -231,5 +241,62 @@ public final class ConsensusCommitUtils {
       return false;
     }
     return !isBeforeImageColumn(columnName, tableMetadata);
+  }
+
+  static Put createPutForInsert(Insert insert) {
+    PutBuilder.Buildable buildable =
+        Put.newBuilder()
+            .namespace(insert.forNamespace().orElse(null))
+            .table(insert.forTable().orElse(null))
+            .partitionKey(insert.getPartitionKey());
+    insert.getClusteringKey().ifPresent(buildable::clusteringKey);
+    insert.getColumns().values().forEach(buildable::value);
+    buildable.enableInsertMode();
+    return buildable.build();
+  }
+
+  static Put createPutForUpsert(Upsert upsert) {
+    PutBuilder.Buildable buildable =
+        Put.newBuilder()
+            .namespace(upsert.forNamespace().orElse(null))
+            .table(upsert.forTable().orElse(null))
+            .partitionKey(upsert.getPartitionKey());
+    upsert.getClusteringKey().ifPresent(buildable::clusteringKey);
+    upsert.getColumns().values().forEach(buildable::value);
+    buildable.enableImplicitPreRead();
+    return buildable.build();
+  }
+
+  static Put createPutForUpdate(Update update) {
+    PutBuilder.Buildable buildable =
+        Put.newBuilder()
+            .namespace(update.forNamespace().orElse(null))
+            .table(update.forTable().orElse(null))
+            .partitionKey(update.getPartitionKey());
+    update.getClusteringKey().ifPresent(buildable::clusteringKey);
+    update.getColumns().values().forEach(buildable::value);
+    if (update.getCondition().isPresent()) {
+      if (update.getCondition().get() instanceof UpdateIf) {
+        update
+            .getCondition()
+            .ifPresent(c -> buildable.condition(ConditionBuilder.putIf(c.getExpressions())));
+      } else {
+        assert update.getCondition().get() instanceof UpdateIfExists;
+        buildable.condition(ConditionBuilder.putIfExists());
+      }
+    } else {
+      buildable.condition(ConditionBuilder.putIfExists());
+    }
+    buildable.enableImplicitPreRead();
+    return buildable.build();
+  }
+
+  static String convertUnsatisfiedConditionExceptionMessageForUpdate(
+      UnsatisfiedConditionException e, MutationCondition condition) {
+    String message = e.getMessage();
+    if (message.contains("PutIf") || message.contains("PutIfExists")) {
+      return message.replaceFirst("PutIf|PutIfExists", condition.getClass().getSimpleName());
+    }
+    return message;
   }
 }

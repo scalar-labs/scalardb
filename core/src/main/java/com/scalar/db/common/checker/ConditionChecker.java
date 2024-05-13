@@ -10,9 +10,12 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
+/** A checker for the conditions of mutations for the storage abstraction. */
 @NotThreadSafe
 public class ConditionChecker implements MutationConditionVisitor {
   private final TableMetadata tableMetadata;
@@ -82,5 +85,15 @@ public class ConditionChecker implements MutationConditionVisitor {
         break;
       }
     }
+  }
+
+  @Override
+  public void visit(UpdateIf condition) {
+    isValid = false;
+  }
+
+  @Override
+  public void visit(UpdateIfExists condition) {
+    isValid = false;
   }
 }

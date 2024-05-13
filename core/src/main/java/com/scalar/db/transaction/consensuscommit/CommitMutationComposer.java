@@ -47,6 +47,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       // for usual commit
       add((Delete) base, result);
     } else { // Selection
+      assert base instanceof Selection;
       add((Selection) base, result);
     }
   }

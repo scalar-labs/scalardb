@@ -199,7 +199,7 @@ public interface AuthAdmin {
     /** The privilege for read (Get and Scan) operations. */
     READ,
 
-    /** The privilege for write (Put) operations. */
+    /** The privilege for write (Put, Insert, Upsert, and Update) operations. */
     WRITE,
 
     /** The privilege for delete (Delete) operations. */
