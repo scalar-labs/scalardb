@@ -162,7 +162,7 @@ The restore methods by database listed below are just examples of some of the da
   <button class="tablinks" onclick="openTab(event, 'MySQL3', 'tabset-3')">MySQL</button>
   <button class="tablinks" onclick="openTab(event, 'PostgreSQL3', 'tabset-3')">PostgreSQL</button>
   <button class="tablinks" onclick="openTab(event, 'SQLite3', 'tabset-3')">SQLite</button>
-  <button class="tablinks" onclick="openTab(event, 'YugabyteDB_Managed1', 'tabset-3')">YugabyteDB Managed</button>
+  <button class="tablinks" onclick="openTab(event, 'YugabyteDB_Managed3', 'tabset-3')">YugabyteDB Managed</button>
 </div>
 
 <div id="Amazon_RDS_or_Azure_Database_for_MySQL_or_PostgreSQL3" class="tabcontent" markdown="1">
@@ -218,8 +218,8 @@ If you used `pg_dump` to create the backup file, use the `psql` command to resto
 
 Use the `.restore` command as specified in [Special commands to sqlite3 (dot-commands)](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_).
 </div>
-<div id="YugabyteDB_Managed1" class="tabcontent" markdown="1">
+<div id="YugabyteDB_Managed3" class="tabcontent" markdown="1">
 
-You can restore from the scheduled backup within the backup retention period. See [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
+You can restore from the scheduled or on-demand backup within the backup retention period. See [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>
