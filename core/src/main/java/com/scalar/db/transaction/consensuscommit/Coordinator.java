@@ -74,11 +74,12 @@ public class Coordinator {
 
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
     if (keyManipulator.isFullKey(id)) {
-      // The following read operation order is important. It's likely getting a coordinator state
-      // occurs for lazy recovery. The possibility of lazy recovery would increase if a transaction
-      // scanned by another transaction executing lazy recovery is delayed. In the group commit,
-      // delayed transactions are specified with a full transaction ID. So, looking up with full
-      // transaction ID should be tried first.
+      // The following read operation order is important. Reading a coordinator state is likely to
+      // occur for lazy recovery. The likelihood of lazy recovery attempts would increase if a
+      // transaction scanned by another transaction executing lazy recovery is delayed. In the group
+      // commit, a delayed transaction is specified with a full transaction ID, not with a parent
+      // transaction ID. Therefore, looking up with the full transaction ID should be tried first
+      // to minimize read operations as much as possible.
 
       // Scan with the full ID for single transaction record.
       Optional<State> state = get(createGetWith(id));

@@ -141,9 +141,6 @@ public class TwoPhaseConsensusCommitManager
     return createNewTransaction(txId, isolation, strategy, true);
   }
 
-  // The group commit feature must not be used in a participant even if it's enabled in order to
-  // avoid writing different coordinator record images for the same transaction, which depends on
-  // group commit timing and the progresses of other transactions in the same group.
   @Override
   public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
@@ -158,6 +155,9 @@ public class TwoPhaseConsensusCommitManager
       return resume(txId);
     }
 
+    // Participant services don't use the group commit feature even if it's enabled. They simply use
+    // the passed transaction ID that is managed by the coordinator service, which utilizes the
+    // group commit feature.
     return createNewTransaction(txId, isolation, strategy, false);
   }
 
