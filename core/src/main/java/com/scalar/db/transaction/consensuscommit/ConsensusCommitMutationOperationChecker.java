@@ -48,7 +48,8 @@ public class ConsensusCommitMutationOperationChecker {
   public void check(Mutation mutation) throws ExecutionException {
     if (mutation instanceof Put) {
       check((Put) mutation);
-    } else if (mutation instanceof Delete) {
+    } else {
+      assert mutation instanceof Delete;
       check((Delete) mutation);
     }
   }

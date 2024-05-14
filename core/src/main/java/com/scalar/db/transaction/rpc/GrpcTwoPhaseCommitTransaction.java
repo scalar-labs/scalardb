@@ -2,10 +2,13 @@ package com.scalar.db.transaction.rpc;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -53,6 +56,9 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
     stream.mutate(put);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
     mutate(puts);
@@ -64,9 +70,27 @@ public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransac
     stream.mutate(delete);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
     mutate(deletes);
+  }
+
+  @Override
+  public void insert(Insert insert) throws CrudException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void upsert(Upsert upsert) throws CrudException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void update(Update update) throws CrudException {
+    throw new UnsupportedOperationException();
   }
 
   @Override

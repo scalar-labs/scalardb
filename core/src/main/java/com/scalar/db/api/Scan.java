@@ -17,11 +17,11 @@ import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to retrieve entries within a partition from {@link DistributedStorage}. The scan range
- * is defined with a starting clustering key and an ending clustering key. {@link Ordering} can also
- * be specified to return {@link Result}s in ascending order or descending order of clustering keys.
- * The number of {@link Result} can also be limited. If none of these are set, it will return all
- * the {@link Result}s with a specified partition key in default clustering orders.
+ * A command to retrieve entries from the underlying storage. The scan range is defined with a
+ * starting clustering key and an ending clustering key. {@link Ordering} can also be specified to
+ * return {@link Result}s in ascending order or descending order of clustering keys. The number of
+ * {@link Result} can also be limited. If none of these are set, it will return all the {@link
+ * Result}s with a specified partition key in default clustering orders.
  *
  * @author Hiroyuki Yamada
  */
