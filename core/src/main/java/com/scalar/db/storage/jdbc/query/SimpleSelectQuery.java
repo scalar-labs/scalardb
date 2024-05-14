@@ -4,7 +4,7 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Conjunction;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
