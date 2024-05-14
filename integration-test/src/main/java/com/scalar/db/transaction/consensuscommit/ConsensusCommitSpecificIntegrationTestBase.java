@@ -53,6 +53,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import javax.annotation.Nullable;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -94,7 +95,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private Coordinator coordinator;
   private RecoveryHandler recovery;
   private CommitHandler commit;
-  private CoordinatorGroupCommitter groupCommitter;
+  @Nullable private CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -158,10 +159,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
-    commit =
-        spy(
-            new CommitHandler(
-                storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter));
+    commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =
         new ConsensusCommitManager(
             storage,
@@ -173,6 +171,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             recovery,
             commit,
             groupCommitter);
+  }
+
+  private CommitHandler createCommitHandler(
+      TransactionTableMetadataManager tableMetadataManager,
+      @Nullable CoordinatorGroupCommitter groupCommitter) {
+    if (groupCommitter != null) {
+      return new CommitHandlerWithGroupCommit(
+          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    } else {
+      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    }
   }
 
   @AfterEach

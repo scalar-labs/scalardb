@@ -34,7 +34,7 @@ class DelayedGroupTest {
   @Test
   void fullKey_GivenFullKeyViaConstructor_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     DelayedGroup<String, String, String, String, Integer> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
 
@@ -46,7 +46,7 @@ class DelayedGroupTest {
   @Test
   void reserveNewSlot_GivenArbitrarySlot_ShouldStoreIt() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot = spy(new Slot<>("child-key", oldGroup));
@@ -69,7 +69,7 @@ class DelayedGroupTest {
   @Test
   void reserveNewSlot_GivenAlreadyReservedSlot_ShouldThrowException() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
@@ -87,7 +87,7 @@ class DelayedGroupTest {
   void putValueToSlotAndWait_WithSuccessfulEmitTask_ShouldExecuteTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> waitableEmitter =
@@ -138,7 +138,7 @@ class DelayedGroupTest {
   @Test
   void putValueToSlotAndWait_WithFailingEmitTask_ShouldFail() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> failingEmitter =
         (s, values) -> {
@@ -186,7 +186,7 @@ class DelayedGroupTest {
   @Test
   void removeSlot_GivenNoReadySlot_ShouldRemoveSlotAndGetDone() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
@@ -210,7 +210,7 @@ class DelayedGroupTest {
   @Test
   void removeSlot_GivenReadySlot_ShouldDoNothing() throws InterruptedException, ExecutionException {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> waitableEmitter =
@@ -277,7 +277,7 @@ class DelayedGroupTest {
   @Test
   void abort_ShouldAbortSlot() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot = spy(new Slot<>("child-key", oldGroup));

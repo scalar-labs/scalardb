@@ -19,6 +19,7 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +37,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
-  private final CoordinatorGroupCommitter groupCommitter;
+  @Nullable private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -53,9 +54,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit =
-        new CommitHandler(
-            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -74,9 +73,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit =
-        new CommitHandler(
-            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -108,6 +105,16 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+  }
+
+  // `groupCommitter` must be set before calling this method.
+  private CommitHandler createCommitHandler() {
+    if (isGroupCommitEnabled()) {
+      return new CommitHandlerWithGroupCommit(
+          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    } else {
+      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    }
   }
 
   @Override

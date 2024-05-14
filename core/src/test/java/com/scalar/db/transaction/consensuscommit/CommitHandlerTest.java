@@ -1,12 +1,8 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -26,14 +22,11 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -52,17 +45,13 @@ public class CommitHandlerTest {
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
 
-  @Mock private DistributedStorage storage;
-  @Mock private Coordinator coordinator;
-  @Mock private TransactionTableMetadataManager tableMetadataManager;
-  @Mock private ConsensusCommitConfig config;
+  @Mock protected DistributedStorage storage;
+  @Mock protected Coordinator coordinator;
+  @Mock protected TransactionTableMetadataManager tableMetadataManager;
+  @Mock protected ConsensusCommitConfig config;
 
   private CommitHandler handler;
-  private ParallelExecutor parallelExecutor;
-
-  protected Optional<CoordinatorGroupCommitter> groupCommitter() {
-    return Optional.empty();
-  }
+  protected ParallelExecutor parallelExecutor;
 
   protected String anyId() {
     return ANY_ID;
@@ -76,17 +65,14 @@ public class CommitHandlerTest {
 
   protected void extraCleanup() {}
 
+  protected CommitHandler createCommitHandler() {
+    return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+  }
+
   @BeforeEach
   void setUp() throws Exception {
     parallelExecutor = new ParallelExecutor(config);
-    handler =
-        spy(
-            new CommitHandler(
-                storage,
-                coordinator,
-                tableMetadataManager,
-                parallelExecutor,
-                groupCommitter().orElse(null)));
+    handler = spy(createCommitHandler());
 
     extraInitialize();
   }
@@ -623,47 +609,19 @@ public class CommitHandlerTest {
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
-  private void doThrowExceptionWhenCoordinatorPutState(
+  protected void doThrowExceptionWhenCoordinatorPutState(
       TransactionState targetState, Class<? extends Exception> exceptionClass)
       throws CoordinatorException {
-    if (groupCommitter().isPresent()) {
-      doThrow(exceptionClass)
-          .when(coordinator)
-          .putStateForGroupCommit(
-              eq(anyGroupCommitParentId()), anyList(), eq(targetState), anyLong());
-    } else {
-      doThrow(exceptionClass)
-          .when(coordinator)
-          .putState(new Coordinator.State(anyId(), targetState));
-    }
+
+    doThrow(exceptionClass).when(coordinator).putState(new Coordinator.State(anyId(), targetState));
   }
 
-  private void doNothingWhenCoordinatorPutState() throws CoordinatorException {
-    if (groupCommitter().isPresent()) {
-      doNothing()
-          .when(coordinator)
-          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
-    } else {
-      doNothing().when(coordinator).putState(any(Coordinator.State.class));
-    }
+  protected void doNothingWhenCoordinatorPutState() throws CoordinatorException {
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
   }
 
-  @Captor private ArgumentCaptor<List<String>> groupCommitFullIdsArgumentCaptor;
-
-  private void verifyCoordinatorPutState(TransactionState expectedTransactionState)
+  protected void verifyCoordinatorPutState(TransactionState expectedTransactionState)
       throws CoordinatorException {
-    if (groupCommitter().isPresent()) {
-      verify(coordinator)
-          .putStateForGroupCommit(
-              eq(anyGroupCommitParentId()),
-              groupCommitFullIdsArgumentCaptor.capture(),
-              eq(expectedTransactionState),
-              anyLong());
-      List<String> fullIds = groupCommitFullIdsArgumentCaptor.getValue();
-      assertThat(fullIds.size()).isEqualTo(1);
-      assertThat(fullIds.get(0)).isEqualTo(anyId());
-    } else {
-      verify(coordinator).putState(new Coordinator.State(anyId(), expectedTransactionState));
-    }
+    verify(coordinator).putState(new Coordinator.State(anyId(), expectedTransactionState));
   }
 }

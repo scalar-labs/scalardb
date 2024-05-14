@@ -51,9 +51,7 @@ public class TwoPhaseConsensusCommitManager
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit =
-        new CommitHandler(
-            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -72,9 +70,7 @@ public class TwoPhaseConsensusCommitManager
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit =
-        new CommitHandler(
-            storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -105,6 +101,16 @@ public class TwoPhaseConsensusCommitManager
     this.groupCommitter = groupCommitter;
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+  }
+
+  // `groupCommitter` must be set before calling this method.
+  private CommitHandler createCommitHandler() {
+    if (isGroupCommitEnabled()) {
+      return new CommitHandlerWithGroupCommit(
+          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    } else {
+      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    }
   }
 
   @Override
@@ -165,14 +171,16 @@ public class TwoPhaseConsensusCommitManager
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
 
     // If the group commit feature is enabled, only the coordinator service must manage the
-    // coordinator table state of a transaction since how a transaction is expressed in the
-    // coordinator table depends on whether the group commit is enabled or disabled. Therefore,
-    // TwoPhaseConsensusCommit must not commit or abort states if it's a participant with the group
-    // commit enabled.
-    boolean shouldManageState = isCoordinator || !isGroupCommitEnabled();
+    // coordinator table state of transactions. With the group commit feature enabled, transactions
+    // are grouped and managed in memory on a node based on various events (e.g., timeouts).  It's
+    // highly likely that the coordinator and participants in the two-phase commit interface will
+    // group and manage transactions differently, resulting in attempts to store different
+    // transaction groups in the coordinator table. Therefore, TwoPhaseConsensusCommit must not
+    // commit or abort states if it's a participant when the group commit feature is enabled.
+    boolean shouldManageCoordinatorState = isCoordinator || !isGroupCommitEnabled();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(
-            crud, commit, recovery, mutationOperationChecker, shouldManageState);
+            crud, commit, recovery, mutationOperationChecker, shouldManageCoordinatorState);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return decorate(transaction);

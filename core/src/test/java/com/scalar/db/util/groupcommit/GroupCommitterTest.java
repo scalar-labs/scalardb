@@ -575,7 +575,7 @@ class GroupCommitterTest {
     doReturn(true).when(groupCommitMetrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
         new TestableGroupCommitter(
-            new GroupCommitConfig(20, 100, 400, 60, 10), new TestableKeyManipulator());
+            new GroupCommitConfig(20, 100, 400, 60000, 10), new TestableKeyManipulator());
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     // Act

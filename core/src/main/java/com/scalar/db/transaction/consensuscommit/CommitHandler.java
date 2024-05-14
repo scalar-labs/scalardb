@@ -18,14 +18,10 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import com.scalar.db.util.groupcommit.GroupCommitConflictException;
-import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,10 +30,9 @@ import org.slf4j.LoggerFactory;
 public class CommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CommitHandler.class);
   private final DistributedStorage storage;
-  private final Coordinator coordinator;
+  protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-  @Nullable private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -45,27 +40,15 @@ public class CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
-    this(storage, coordinator, tableMetadataManager, parallelExecutor, null);
-  }
-
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public CommitHandler(
-      DistributedStorage storage,
-      Coordinator coordinator,
-      TransactionTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor,
-      @Nullable CoordinatorGroupCommitter groupCommitter) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
-
-    if (groupCommitter != null) {
-      // This method reference will be called via GroupCommitter.ready().
-      groupCommitter.setEmitter(this::groupCommitState);
-    }
-    this.groupCommitter = groupCommitter;
   }
+
+  protected void onPrepareFailure(Snapshot snapshot) {}
+
+  protected void onValidateFailure(Snapshot snapshot) {}
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
     try {
@@ -78,7 +61,7 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      cancelGroupCommitIfNeeded(snapshot.getId());
+      onPrepareFailure(snapshot);
       throw e;
     }
 
@@ -92,7 +75,7 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      cancelGroupCommitIfNeeded(snapshot.getId());
+      onValidateFailure(snapshot);
       throw e;
     }
 
@@ -100,7 +83,7 @@ public class CommitHandler {
     commitRecords(snapshot);
   }
 
-  private void handleCommitConflict(Snapshot snapshot, Exception cause)
+  protected void handleCommitConflict(Snapshot snapshot, Exception cause)
       throws CommitConflictException, UnknownTransactionStatusException {
     try {
       Optional<State> s = coordinator.getState(snapshot.getId());
@@ -124,42 +107,6 @@ public class CommitHandler {
     } catch (CoordinatorException ex) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), ex, snapshot.getId());
-    }
-  }
-
-  private void commitStateViaGroupCommit(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
-    String id = snapshot.getId();
-    try {
-      assert groupCommitter != null;
-      // Group commit the state by internally calling `groupCommitState()` via the emitter.
-      groupCommitter.ready(id, snapshot);
-      logger.debug(
-          "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
-    } catch (GroupCommitConflictException e) {
-      cancelGroupCommitIfNeeded(id);
-      // Throw a proper exception from this method if needed.
-      handleCommitConflict(snapshot, e);
-    } catch (GroupCommitException e) {
-      cancelGroupCommitIfNeeded(id);
-      Throwable cause = e.getCause();
-      if (cause instanceof CoordinatorConflictException) {
-        // Throw a proper exception from this method if needed.
-        handleCommitConflict(snapshot, (CoordinatorConflictException) cause);
-      } else {
-        // Failed to access the coordinator state. The state is unknown.
-        throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
-      }
-    } catch (Exception e) {
-      // This is an unexpected exception, but clean up resources just in case.
-      cancelGroupCommitIfNeeded(id);
-      throw new AssertionError("Group commit unexpectedly failed. TransactionID:" + id, e);
-    }
-  }
-
-  private void cancelGroupCommitIfNeeded(String id) {
-    if (groupCommitter != null) {
-      groupCommitter.remove(id);
     }
   }
 
@@ -207,11 +154,6 @@ public class CommitHandler {
 
   public void commitState(Snapshot snapshot)
       throws CommitException, UnknownTransactionStatusException {
-    if (groupCommitter != null) {
-      commitStateViaGroupCommit(snapshot);
-      return;
-    }
-
     String id = snapshot.getId();
     try {
       Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
@@ -224,23 +166,6 @@ public class CommitHandler {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(), e, id);
     }
-  }
-
-  private void groupCommitState(String parentId, List<Snapshot> snapshots)
-      throws CoordinatorException {
-    if (snapshots.isEmpty()) {
-      // This means all buffered transactions were manually rolled back. Nothing to do.
-      return;
-    }
-
-    List<String> transactionIds =
-        snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
-
-    coordinator.putStateForGroupCommit(
-        parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
-
-    logger.debug(
-        "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
   }
 
   public void commitRecords(Snapshot snapshot) {
@@ -263,7 +188,6 @@ public class CommitHandler {
 
   public TransactionState abortState(String id) throws UnknownTransactionStatusException {
     try {
-      cancelGroupCommitIfNeeded(id);
       Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);
       coordinator.putState(state);
       return TransactionState.ABORTED;

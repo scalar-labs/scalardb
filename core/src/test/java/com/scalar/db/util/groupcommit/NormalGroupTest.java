@@ -34,7 +34,7 @@ class NormalGroupTest {
   @Test
   void parentKey_WithKeyManipulator_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
 
@@ -46,7 +46,7 @@ class NormalGroupTest {
   @Test
   void fullKey_WithKeyManipulator_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
 
@@ -58,7 +58,7 @@ class NormalGroupTest {
   @Test
   void reserveNewSlot_GivenArbitrarySlot_ShouldStoreIt() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
@@ -83,7 +83,7 @@ class NormalGroupTest {
   void putValueToSlotAndWait_WithSuccessfulEmitTaskWithSingleSlot_ShouldExecuteTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> waitableEmitter =
@@ -133,7 +133,7 @@ class NormalGroupTest {
   void putValueToSlotAndWait_WithSuccessfulEmitTask_ShouldExecuteTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> waitableEmitter =
@@ -189,7 +189,7 @@ class NormalGroupTest {
   @Test
   void putValueToSlotAndWait_WithFailingEmitTask_ShouldFail() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> failingEmitter =
         (s, values) -> {
@@ -240,7 +240,7 @@ class NormalGroupTest {
   void removeNotReadySlots_WhenBothReadyAndNonReadySlotsExist_ShouldExecuteEmitTaskProperly()
       throws InterruptedException, ExecutionException {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2 + 1, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2 + 1, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, Integer> waitableEmitter =
@@ -307,7 +307,7 @@ class NormalGroupTest {
   @Test
   void removeNotReadySlots_WhenAllSlotsAreNotReady_ShouldRetainSlots() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
@@ -326,7 +326,7 @@ class NormalGroupTest {
   @Test
   void removeSlot_GivenNotReadySlot_ShouldRemoveSlotAndGetDone() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
@@ -351,7 +351,7 @@ class NormalGroupTest {
   @Test
   void removeSlot_GivenReadySlot_ShouldDoNothing() throws ExecutionException, InterruptedException {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
@@ -394,7 +394,7 @@ class NormalGroupTest {
   @Test
   void abort_ShouldAbortSlot() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     Slot<String, String, String, String, Integer> slot1 = spy(new Slot<>("child-key-1", group));
@@ -429,7 +429,7 @@ class NormalGroupTest {
   @Test
   void groupSizeFixTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
@@ -445,7 +445,7 @@ class NormalGroupTest {
   @Test
   void delayedSlotMoveTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldReturnProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
@@ -461,7 +461,7 @@ class NormalGroupTest {
   @Test
   void updateDelayedSlotMoveTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldUpdateProperly() {
     // Arrange
-    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60, 20);
+    GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     NormalGroup<String, String, String, String, Integer> group =
         new NormalGroup<>(config, emitter, keyManipulator);
 
