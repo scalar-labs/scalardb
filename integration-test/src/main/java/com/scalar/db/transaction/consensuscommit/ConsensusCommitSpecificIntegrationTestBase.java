@@ -63,6 +63,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private static final String BALANCE = "balance";
   private static final String SOME_COLUMN = "some_column";
   private static final int INITIAL_BALANCE = 1000;
+  private static final int NEW_BALANCE = 2000;
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
   private static final String ANY_ID_1 = "id1";
@@ -2945,11 +2946,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         new Put(partitionKey, clusteringKey)
             .forNamespace(namespace)
             .forTable(table)
-            .withValue(BALANCE, INITIAL_BALANCE)
+            .withValue(BALANCE, NEW_BALANCE)
             .withValue(Attribute.toIdValue(ANY_ID_2))
             .withValue(Attribute.toStateValue(recordState))
             .withValue(Attribute.toVersionValue(2))
             .withValue(Attribute.toPreparedAtValue(preparedAt))
+            .withValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
             .withValue(Attribute.toBeforeIdValue(ANY_ID_1))
             .withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED))
             .withValue(Attribute.toBeforeVersionValue(1))
