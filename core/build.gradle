@@ -3,8 +3,6 @@ plugins {
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'maven-publish'
     id 'signing'
-    // TODO: This is for replication test. Remove this.
-    id 'application'
 }
 
 sourceSets {
@@ -86,14 +84,6 @@ configurations {
 }
 
 dependencies {
-    // TODO: Delete this.
-    // For debug in Semi-Sync Replication development
-    // `logback-classic` is too slow to output a lot of debug logs...
-    // implementation 'ch.qos.logback:logback-classic:1.3.11'
-    implementation 'org.slf4j:slf4j-simple:2.0.7'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.3'
-
-
     implementation project(':rpc')
     implementation "com.google.guava:guava:${guavaVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
@@ -111,7 +101,6 @@ dependencies {
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteDriverVersion}"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
-    implementation "io.dropwizard.metrics:metrics-core:${dropwizardMetricsVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
@@ -297,21 +286,4 @@ publishing {
 signing {
     required { project.gradle.taskGraph.hasTask("publish") }
     sign publishing.publications.mavenJava
-}
-
-// TODO: This is for replication test. Remove this.
-application {
-    mainClassName = 'com.scalar.db.util.groupcommit.GroupCommitterBench'
-    // mainClassName = 'com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.groupcommit.GroupCommitterBenchWithReentrantLock'
-    applicationDefaultJvmArgs = [
-      '-Dorg.slf4j.simpleLogger.defaultLogLevel=INFO',
-      '-Dorg.slf4j.simpleLogger.showDateTime=true',
-      '-Dorg.slf4j.simpleLogger.dateTimeFormat=yyyy-MM-dd HH:mm:ss:SSS Z'
-      // '-XX:+FlightRecorder',
-      // '-XX:StartFlightRecording=duration=60s,filename=myrecording.jfr',
-      // '-XX:+UnlockDiagnosticVMOptions',
-      // '-XX:+LogCompilation',
-      // '-XX:+PrintGCDateStamps',
-      // '-Xloggc:gc.log'
-    ]
 }
