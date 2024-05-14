@@ -1199,9 +1199,9 @@ In the sample code, the transaction is retried three times maximum and sleeps fo
 
 ### Group commit for the Coordinator table
 
-The Coordinator table used for Consensus Commit transactions is a vital data store, and it is recommended to use a robust storage for it. However, utilizing more robust storage options, such as internally leveraging multi-AZ or multi-region replication, may lead to increased latency in writing records to the storage, resulting in poor throughput performance. ScalarDB provides a group commit feature for the Coordinator table, which groups multiple record writes into a single write operation.
+The Coordinator table used for Consensus Commit transactions is a vital data store, and it is recommended to use robust storage for it. However, utilizing more robust storage options, such as internally leveraging multi-AZ or multi-region replication, may lead to increased latency when writing records to the storage, resulting in poor throughput performance. ScalarDB provides a group commit feature for the Coordinator table that groups multiple record writes into a single write operation, improving write throughput. However, it may increase latency.
 
-By adding the following configuration, the group commit feature will be enabled:
+To enable the group commit feature, add the following configuration:
 
 #### Configurations
 
