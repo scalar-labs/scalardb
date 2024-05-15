@@ -45,15 +45,17 @@ public class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata) {
+      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata) {
     ArrayList<String> sqls = new ArrayList<>();
 
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
     // performance
     sqls.add("ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255");
 
-    if (hasDescClusteringOrder) {
-      // Create a unique index for the clustering orders
+    if (hasDifferentClusteringOrders) {
+      // Create a unique index for the clustering orders only when both ASC and DESC are contained
+      // in the clustering keys. If all the clustering key orders are DESC, the PRIMARY KEY index
+      // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
