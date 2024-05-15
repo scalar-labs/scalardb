@@ -7,16 +7,21 @@ import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetWithIndex;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
@@ -55,14 +60,7 @@ public final class ScalarDbUtils {
   public static <T extends Mutation> List<T> copyAndSetTargetToIfNot(
       List<T> mutations, Optional<String> namespace, Optional<String> tableName) {
     return mutations.stream()
-        .map(
-            m -> {
-              if (m instanceof Put) {
-                return (T) copyAndSetTargetToIfNot((Put) m, namespace, tableName);
-              } else { // Delete
-                return (T) copyAndSetTargetToIfNot((Delete) m, namespace, tableName);
-              }
-            })
+        .map(m -> (T) copyAndSetTargetToIfNot(m, namespace, tableName))
         .collect(Collectors.toList());
   }
 
@@ -91,9 +89,15 @@ public final class ScalarDbUtils {
       Mutation mutation, Optional<String> namespace, Optional<String> tableName) {
     if (mutation instanceof Put) {
       return copyAndSetTargetToIfNot((Put) mutation, namespace, tableName);
-    } else {
-      assert mutation instanceof Delete;
+    } else if (mutation instanceof Delete) {
       return copyAndSetTargetToIfNot((Delete) mutation, namespace, tableName);
+    } else if (mutation instanceof Insert) {
+      return copyAndSetTargetToIfNot((Insert) mutation, namespace, tableName);
+    } else if (mutation instanceof Upsert) {
+      return copyAndSetTargetToIfNot((Upsert) mutation, namespace, tableName);
+    } else {
+      assert mutation instanceof Update;
+      return copyAndSetTargetToIfNot((Update) mutation, namespace, tableName);
     }
   }
 
@@ -107,6 +111,27 @@ public final class ScalarDbUtils {
   public static Delete copyAndSetTargetToIfNot(
       Delete delete, Optional<String> namespace, Optional<String> tableName) {
     Delete ret = new Delete(delete); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  public static Insert copyAndSetTargetToIfNot(
+      Insert insert, Optional<String> namespace, Optional<String> tableName) {
+    Insert ret = Insert.newBuilder(insert).build(); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  public static Upsert copyAndSetTargetToIfNot(
+      Upsert upsert, Optional<String> namespace, Optional<String> tableName) {
+    Upsert ret = Upsert.newBuilder(upsert).build(); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  public static Update copyAndSetTargetToIfNot(
+      Update update, Optional<String> namespace, Optional<String> tableName) {
+    Update ret = Update.newBuilder(update).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }
@@ -255,6 +280,19 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  public static void checkUpdate(Update update) {
+    // check if the condition is UpdateIf
+    update
+        .getCondition()
+        .ifPresent(
+            c -> {
+              if (!(c instanceof UpdateIf) && !(c instanceof UpdateIfExists)) {
+                throw new IllegalArgumentException(
+                    CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(update));
+              }
+            });
   }
 
   public static Set<String> getColumnNamesUsedIn(Set<Conjunction> conjunctions) {

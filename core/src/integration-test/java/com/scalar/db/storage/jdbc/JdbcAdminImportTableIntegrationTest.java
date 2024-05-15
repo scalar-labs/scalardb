@@ -9,9 +9,13 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JdbcAdminImportTableIntegrationTest
     extends DistributedStorageAdminImportTableIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(JdbcAdminImportTableIntegrationTest.class);
 
   private JdbcAdminImportTestUtils testUtils;
 
@@ -23,9 +27,20 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @Override
-  protected void afterAll() throws Exception {
-    super.afterAll();
-    testUtils.close();
+  public void afterAll() {
+    try {
+      super.afterAll();
+    } catch (Exception e) {
+      logger.warn("Failed to call super.afterAll", e);
+    }
+
+    try {
+      if (testUtils != null) {
+        testUtils.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close test utils", e);
+    }
   }
 
   @Override

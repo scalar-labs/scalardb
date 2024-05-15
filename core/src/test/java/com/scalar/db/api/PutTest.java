@@ -442,7 +442,7 @@ public class PutTest {
   }
 
   @Test
-  public void setConsistency_ProperValueGiven_ShouldReturnWhatsSet() {
+  public void withConsistency_ProperValueGiven_ShouldReturnWhatsSet() {
     // Arrange
     Put put = preparePut();
     Consistency expected = Consistency.EVENTUAL;
@@ -452,6 +452,30 @@ public class PutTest {
 
     // Assert
     assertThat(expected).isEqualTo(put.getConsistency());
+  }
+
+  @Test
+  public void setImplicitPreReadEnabled_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    Put put = preparePut();
+
+    // Act
+    put.setImplicitPreReadEnabled(true);
+
+    // Assert
+    assertThat(put.isImplicitPreReadEnabled()).isTrue();
+  }
+
+  @Test
+  public void setInsertModeEnabled_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    Put put = preparePut();
+
+    // Act
+    put.setInsertModeEnabled(true);
+
+    // Assert
+    assertThat(put.isInsertModeEnabled()).isTrue();
   }
 
   @Test
@@ -546,6 +570,7 @@ public class PutTest {
 
     // Assert
     assertThat(ret).isFalse();
+    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
   }
 
   @Test
@@ -561,5 +586,36 @@ public class PutTest {
 
     // Assert
     assertThat(ret).isFalse();
+    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void equals_PutWithDifferentImplicitPreReadGiven_ShouldReturnFalse() {
+    // Arrange
+    Put put = preparePut();
+    Put another = preparePut();
+    another.setImplicitPreReadEnabled(true);
+
+    // Act
+    boolean ret = put.equals(another);
+
+    // Assert
+    assertThat(ret).isFalse();
+    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void equals_PutWithDifferentInsertModeGiven_ShouldReturnFalse() {
+    // Arrange
+    Put put = preparePut();
+    Put another = preparePut();
+    another.setInsertModeEnabled(true);
+
+    // Act
+    boolean ret = put.equals(another);
+
+    // Assert
+    assertThat(ret).isFalse();
+    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
   }
 }

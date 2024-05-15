@@ -30,9 +30,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(DistributedTransactionCrossPartitionScanIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_cpscan_tx_test_";
   protected static final String TABLE = "test_table";
@@ -107,9 +111,27 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
 
   @AfterAll
   public void afterAll() throws Exception {
-    dropTables();
-    admin.close();
-    manager.close();
+    try {
+      dropTables();
+    } catch (Exception e) {
+      logger.warn("Failed to drop tables", e);
+    }
+
+    try {
+      if (admin != null) {
+        admin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close admin", e);
+    }
+
+    try {
+      if (manager != null) {
+        manager.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close manager", e);
+    }
   }
 
   private void dropTables() throws ExecutionException {

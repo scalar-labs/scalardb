@@ -3,7 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.api.Scan.Conjunction;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.Collections;
@@ -60,19 +60,19 @@ public class ScanTest {
   }
 
   private Conjunction prepareConjunction() {
-    return Scan.Conjunction.of(
+    return Conjunction.of(
         ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
         ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1));
   }
 
   private Conjunction prepareAnotherConjunction() {
-    return Scan.Conjunction.of(
+    return Conjunction.of(
         ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1),
         ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_2));
   }
 
   private Conjunction prepareConjunctionWithDifferentConditionOrder() {
-    return Scan.Conjunction.of(
+    return Conjunction.of(
         ConditionBuilder.column(ANY_NAME_2).isEqualToText(ANY_TEXT_1),
         ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1));
   }

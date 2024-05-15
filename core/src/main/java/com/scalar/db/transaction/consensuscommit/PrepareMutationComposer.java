@@ -49,7 +49,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     } else if (base instanceof Get) {
       add((Get) base);
     } else {
-      throw new IllegalArgumentException("PrepareMutationComposer.add only accepts Put or Delete");
+      throw new AssertionError("PrepareMutationComposer.add only accepts Put, Delete, or Get");
     }
   }
 
@@ -67,7 +67,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     putBuilder.intValue(Attribute.STATE, TransactionState.PREPARED.get());
     putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
 
-    if (result != null) { // overwrite existing record
+    if (!base.isInsertModeEnabled() && result != null) { // overwrite existing record
       createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
       putBuilder.intValue(Attribute.VERSION, version + 1);
@@ -85,7 +85,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
                 .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
                 .build());
       }
-    } else { // initial record
+    } else { // initial record or insert mode enabled
       putBuilder.intValue(Attribute.VERSION, 1);
 
       // check if the record is not created by other conflicting transactions

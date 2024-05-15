@@ -135,7 +135,7 @@ public class CrudHandler {
     List<Snapshot.Key> keys = new ArrayList<>();
     Scanner scanner = null;
     try {
-      scanner = getFromStorage(scan);
+      scanner = scanFromStorage(scan);
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
@@ -213,6 +213,9 @@ public class CrudHandler {
 
   public void readIfImplicitPreReadEnabled() throws CrudException {
     List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
+
+    // For each put in the write set, if implicit pre-read is enabled and the record is not read
+    // yet, read the record
     for (Put put : snapshot.getPutsInWriteSet()) {
       if (put.isImplicitPreReadEnabled()) {
         Snapshot.Key key = new Snapshot.Key(put);
@@ -221,6 +224,8 @@ public class CrudHandler {
         }
       }
     }
+
+    // For each delete in the write set, if the record is not read yet, read the record
     for (Delete delete : snapshot.getDeletesInDeleteSet()) {
       Snapshot.Key key = new Snapshot.Key(delete);
       if (!snapshot.containsKeyInReadSet(key)) {
@@ -260,11 +265,13 @@ public class CrudHandler {
       return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_GET_OPERATION_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(),
+          e,
+          snapshot.getId());
     }
   }
 
-  private Scanner getFromStorage(Scan scan) throws CrudException {
+  private Scanner scanFromStorage(Scan scan) throws CrudException {
     try {
       scan.clearProjections();
       // Retrieve only the after images columns when including the metadata is disabled, otherwise
@@ -278,7 +285,9 @@ public class CrudHandler {
       return storage.scan(scan);
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCAN_OPERATION_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          e,
+          snapshot.getId());
     }
   }
 

@@ -264,6 +264,55 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
+  public void
+      add_PutWithInsertModeEnabledAndNullResultGiven_ShouldComposePutWithPutIfNotExistsCondition()
+          throws ExecutionException {
+    // Arrange
+    Put put = Put.newBuilder(preparePut()).enableInsertMode().build();
+
+    // Act
+    composer.add(put, null);
+
+    // Assert
+    Put actual = (Put) composer.get().get(0);
+    assertThat(actual)
+        .isEqualTo(
+            Put.newBuilder(preparePut())
+                .consistency(Consistency.LINEARIZABLE)
+                .condition(ConditionBuilder.putIfNotExists())
+                .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
+                .textValue(Attribute.ID, ANY_ID_3)
+                .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+                .intValue(Attribute.VERSION, 1)
+                .build());
+  }
+
+  @Test
+  public void
+      add_PutWithInsertModeEnabledAndResultGiven_ShouldComposePutWithPutIfNotExistsCondition()
+          throws ExecutionException {
+    // Arrange
+    Put put = Put.newBuilder(preparePut()).enableInsertMode().build();
+    TransactionResult result = prepareResult();
+
+    // Act
+    composer.add(put, result);
+
+    // Assert
+    Put actual = (Put) composer.get().get(0);
+    assertThat(actual)
+        .isEqualTo(
+            Put.newBuilder(preparePut())
+                .consistency(Consistency.LINEARIZABLE)
+                .condition(ConditionBuilder.putIfNotExists())
+                .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
+                .textValue(Attribute.ID, ANY_ID_3)
+                .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+                .intValue(Attribute.VERSION, 1)
+                .build());
+  }
+
+  @Test
   public void add_DeleteAndResultGiven_ShouldComposePutWithPutIfCondition()
       throws ExecutionException {
     // Arrange
@@ -386,11 +435,11 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void add_SelectionOtherThanGetGiven_ShouldThrowIllegalArgumentException() {
+  public void add_SelectionOtherThanGetGiven_ShouldThrowAssertionError() {
     // Arrange
     Scan scan = prepareScan();
 
     // Act Assert
-    assertThatThrownBy(() -> composer.add(scan, null)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> composer.add(scan, null)).isInstanceOf(AssertionError.class);
   }
 }

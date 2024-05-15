@@ -26,12 +26,14 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to put an entry to {@link DistributedStorage}.
+ * A command to put an entry in the underlying storage.
  *
  * @author Hiroyuki Yamada
  */
@@ -41,6 +43,8 @@ public class Put extends Mutation {
   private final Map<String, Column<?>> columns;
 
   private boolean implicitPreReadEnabled;
+
+  private boolean insertModeEnabled;
 
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
@@ -84,6 +88,7 @@ public class Put extends Mutation {
     super(put);
     columns = new LinkedHashMap<>(put.columns);
     implicitPreReadEnabled = put.implicitPreReadEnabled;
+    insertModeEnabled = put.insertModeEnabled;
   }
 
   /**
@@ -97,7 +102,7 @@ public class Put extends Mutation {
 
   /**
    * Build a {@code Put} operation from an existing {@code Put} object using a builder. The builder
-   * will be parametrized by default with all the existing {@code Put} object attributes
+   * will be parametrized by default with all the existing {@code Put} object attributes.
    *
    * @param put an existing {@code Put} operation
    * @return a {@code Put} operation builder
@@ -740,11 +745,6 @@ public class Put extends Mutation {
     return (Put) super.withConsistency(consistency);
   }
 
-  @Override
-  public void accept(OperationVisitor v) {
-    v.visit(this);
-  }
-
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
@@ -753,6 +753,12 @@ public class Put extends Mutation {
   @Deprecated
   public Put withCondition(MutationCondition condition) {
     return (Put) super.withCondition(condition);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<MutationCondition> getCondition() {
+    return super.getCondition();
   }
 
   /**
@@ -772,6 +778,30 @@ public class Put extends Mutation {
   Put setImplicitPreReadEnabled(boolean implicitPreReadEnabled) {
     this.implicitPreReadEnabled = implicitPreReadEnabled;
     return this;
+  }
+
+  /**
+   * Returns whether the insert mode is enabled for this Put.
+   *
+   * @return whether the insert mode is enabled for this Put
+   */
+  public boolean isInsertModeEnabled() {
+    return insertModeEnabled;
+  }
+
+  /**
+   * Sets whether the insert mode is enabled for this Put.
+   *
+   * @param insertModeEnabled whether the insert mode is enabled for this Put
+   */
+  Put setInsertModeEnabled(boolean insertModeEnabled) {
+    this.insertModeEnabled = insertModeEnabled;
+    return this;
+  }
+
+  @Override
+  public void accept(OperationVisitor v) {
+    v.visit(this);
   }
 
   /**
@@ -799,12 +829,14 @@ public class Put extends Mutation {
       return false;
     }
     Put other = (Put) o;
-    return columns.equals(other.columns) && implicitPreReadEnabled == other.implicitPreReadEnabled;
+    return columns.equals(other.columns)
+        && implicitPreReadEnabled == other.implicitPreReadEnabled
+        && insertModeEnabled == other.insertModeEnabled;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), columns, implicitPreReadEnabled);
+    return Objects.hash(super.hashCode(), columns, implicitPreReadEnabled, insertModeEnabled);
   }
 
   @Override
@@ -818,6 +850,7 @@ public class Put extends Mutation {
         .add("consistency", getConsistency())
         .add("condition", getCondition())
         .add("implicitPreReadEnabled", isImplicitPreReadEnabled())
+        .add("insertModeEnabled", isInsertModeEnabled())
         .toString();
   }
 }

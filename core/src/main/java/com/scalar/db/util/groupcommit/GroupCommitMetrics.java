@@ -5,14 +5,14 @@ import javax.annotation.concurrent.Immutable;
 
 // TODO: Remove after introducing a proper metrics.
 @Immutable
-class Metrics {
+class GroupCommitMetrics {
   private final int queueLengthOfGroupCloseWorker;
   private final int queueLengthOfDelayedSlotMoveWorker;
   private final int queueLengthOfGroupCleanupWorker;
   private final int sizeOfNormalGroupMap;
   private final int sizeOfDelayedGroupMap;
 
-  Metrics(
+  GroupCommitMetrics(
       int queueLengthOfGroupCloseWorker,
       int queueLengthOfDelayedSlotMoveWorker,
       int queueLengthOfGroupCleanupWorker,
