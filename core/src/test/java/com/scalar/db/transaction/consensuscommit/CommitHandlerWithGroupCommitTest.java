@@ -28,9 +28,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
   @Override
   protected void extraInitialize() {
-    // `groupCommitter` is instantiated separately since the timing of the instantiation and calling
-    // GroupCommitter.reserve() would be different.
-    createGroupCommitterIfNotExists();
     childKey = UUID.randomUUID().toString();
     String fullKey = groupCommitter.reserve(childKey);
     parentKey = keyManipulator.keysFromFullKey(fullKey).parentKey;
@@ -39,11 +36,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   protected String anyId() {
     return keyManipulator.fullKey(parentKey, childKey);
-  }
-
-  @Override
-  protected String anyGroupCommitParentId() {
-    return parentKey;
   }
 
   @Override
@@ -62,6 +54,10 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     createGroupCommitterIfNotExists();
     return new CommitHandlerWithGroupCommit(
         storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+  }
+
+  private String anyGroupCommitParentId() {
+    return parentKey;
   }
 
   @Override
