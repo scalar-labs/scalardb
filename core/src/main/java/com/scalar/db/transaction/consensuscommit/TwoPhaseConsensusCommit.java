@@ -44,7 +44,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private boolean validated;
   private boolean needRollback;
   // Whether to write to the coordinator table.
-  private final boolean shouldManageState;
+  @VisibleForTesting final boolean shouldManageState;
 
   // For test
   private Runnable beforeRecoveryHook = () -> {};

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -128,6 +129,7 @@ public class TwoPhaseConsensusCommitManagerTest {
                 .getOriginalTransaction();
 
     // Assert
+    assertThat(transaction.shouldManageState).isTrue();
     assertThat(transaction.getId()).isEqualTo(fullKey);
     Snapshot snapshot = transaction.getCrudHandler().getSnapshot();
     assertThat(snapshot.getId()).isEqualTo(fullKey);
@@ -253,6 +255,44 @@ public class TwoPhaseConsensusCommitManagerTest {
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void join_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    String parentKey = keyManipulator.generateParentKey();
+    String fullKey = keyManipulator.fullKey(parentKey, ANY_TX_ID);
+    doReturn(fullKey).when(groupCommitter).reserve(anyString());
+    TwoPhaseConsensusCommitManager managerWithGroupCommit =
+        new TwoPhaseConsensusCommitManager(
+            storage,
+            admin,
+            config,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recovery,
+            commit,
+            groupCommitter);
+
+    // Act
+    TwoPhaseConsensusCommit transaction =
+        (TwoPhaseConsensusCommit)
+            ((DecoratedTwoPhaseCommitTransaction) managerWithGroupCommit.join(ANY_TX_ID))
+                .getOriginalTransaction();
+
+    // Assert
+    assertThat(transaction.shouldManageState).isFalse();
+    assertThat(transaction.getId()).isEqualTo(ANY_TX_ID);
+    Snapshot snapshot = transaction.getCrudHandler().getSnapshot();
+    assertThat(snapshot.getId()).isEqualTo(ANY_TX_ID);
+    assertThat(keyManipulator.isFullKey(transaction.getId())).isFalse();
+    verify(groupCommitter, never()).reserve(anyString());
+    assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
   }
 
   @Test
