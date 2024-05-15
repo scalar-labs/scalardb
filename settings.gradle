@@ -6,6 +6,3 @@ include 'schema-loader'
 include 'integration-test'
 include 'data-loader:core'
 include 'data-loader:cli'
-
-//project(":data-loader:cli").name = 'data-loader-cli'
-//project(":data-loader:core").name = 'data-loader-core'
