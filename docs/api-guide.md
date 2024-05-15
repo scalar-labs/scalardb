@@ -1219,7 +1219,7 @@ scalar.db.consensus_commit.coordinator.group_commit.enabled=true
 
 #### Limitations
 
-##### Custom transaction ID
+##### Custom transaction ID passed by users
 
 The group commit feature implicitly generates an internal value and uses it as a part of transaction ID. Therefore, a custom transaction ID manually passed by users via `com.scalar.db.transaction.consensuscommit.ConsensusCommitManager.begin(String txId)` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager.begin(String txId)` can't be used as-is for later API calls. You need to use a transaction ID returned from`com.scalar.db.transaction.consensuscommit.ConsensusCommit.getId()` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.getId()` instead.
 
@@ -1240,7 +1240,7 @@ The group commit feature implicitly generates an internal value and uses it as a
 
 ##### Commit in Two-Phase Commit Interface
 
-The group commit feature manages all in-flight transactions in memory. When the feature is enabled with the two-phase commit interface, the information is solely maintained by the coordinator service to prevent conflicts with inconsistent write operations from participants. Consequently, `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.commit()` must be called first by the coordinator service before being called by participant services.
+The group commit feature manages all in-flight transactions in memory. When the feature is enabled with the two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the coordinator table, which may contain different transaction distributions over groups. Consequently, `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.commit()` must be called first by the coordinator service before being called by participant services.
 
 ```java
   AtomicBoolean globalCommitSuccess = new AtomicBoolean();
