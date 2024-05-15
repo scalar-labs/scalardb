@@ -153,7 +153,7 @@ public class CommitHandler {
   }
 
   public void commitState(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitConflictException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
       Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);

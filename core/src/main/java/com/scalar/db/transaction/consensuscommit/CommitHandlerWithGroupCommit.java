@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
@@ -46,7 +46,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   private void commitStateViaGroupCommit(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitConflictException, UnknownTransactionStatusException {
     String id = snapshot.getId();
     try {
       // Group commit the state by internally calling `groupCommitState()` via the emitter.
@@ -80,7 +80,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
 
   @Override
   public void commitState(Snapshot snapshot)
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitConflictException, UnknownTransactionStatusException {
     commitStateViaGroupCommit(snapshot);
   }
 
