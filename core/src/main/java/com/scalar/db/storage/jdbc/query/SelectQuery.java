@@ -2,7 +2,7 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Conjunction;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;

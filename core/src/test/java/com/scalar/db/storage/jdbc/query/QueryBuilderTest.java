@@ -9,6 +9,7 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -377,8 +378,7 @@ public class QueryBuilderTest {
         queryBuilder
             .select(Collections.emptyList())
             .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
-            .where(
-                ImmutableSet.of(Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1))))
+            .where(ImmutableSet.of(Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1))))
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE v1=?", rdbEngine));
     query.bind(preparedStatement);
@@ -391,7 +391,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isEqualToInt(1),
                         ConditionBuilder.column("v2").isEqualToInt(2))))
             .build();
@@ -408,8 +408,8 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1)),
-                    Scan.Conjunction.of(ConditionBuilder.column("v2").isEqualToInt(2))))
+                    Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1)),
+                    Conjunction.of(ConditionBuilder.column("v2").isEqualToInt(2))))
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE v1=? OR v2=?", rdbEngine));
@@ -424,10 +424,10 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isEqualToInt(1),
                         ConditionBuilder.column("v2").isEqualToInt(2)),
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v3").isEqualToInt(3),
                         ConditionBuilder.column("v4").isEqualToInt(4))))
             .build();
@@ -447,7 +447,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isGreaterThanInt(1),
                         ConditionBuilder.column("v1").isLessThanInt(2),
                         ConditionBuilder.column("v2").isGreaterThanOrEqualToInt(3),
@@ -472,7 +472,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, RELATIONAL_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isNullInt(),
                         ConditionBuilder.column("v2").isNotNullInt())))
             .build();
