@@ -48,7 +48,7 @@ public interface RdbEngineStrategy {
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
   String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder, String schema, String table, TableMetadata metadata);
+      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata);
 
   String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
