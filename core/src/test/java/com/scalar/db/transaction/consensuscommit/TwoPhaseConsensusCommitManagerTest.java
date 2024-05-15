@@ -94,6 +94,7 @@ public class TwoPhaseConsensusCommitManagerTest {
                 .getOriginalTransaction();
 
     // Assert
+    assertThat(transaction.shouldManageState).isTrue();
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
@@ -252,6 +253,7 @@ public class TwoPhaseConsensusCommitManagerTest {
             ((DecoratedTwoPhaseCommitTransaction) manager.join(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
+    assertThat(transaction.shouldManageState).isTrue();
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
     assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
         .isEqualTo(Isolation.SNAPSHOT);
