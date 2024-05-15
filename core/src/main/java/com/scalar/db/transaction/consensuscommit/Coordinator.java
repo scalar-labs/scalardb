@@ -81,13 +81,15 @@ public class Coordinator {
       // transaction ID. Therefore, looking up with the full transaction ID should be tried first
       // to minimize read operations as much as possible.
 
-      // Scan with the full ID for single transaction record.
+      // Scan with the full ID for a delayed group that contains only a single transaction.
+      // The normal lookup logic can be used here.
       Optional<State> state = get(createGetWith(id));
       if (state.isPresent()) {
         return state;
       }
 
-      // Scan with the parent ID for group committed record.
+      // Scan with the parent ID for a normal group that contains multiple transactions with
+      // a parent ID.
       return getStateForGroupCommit(id);
     }
 
@@ -97,13 +99,12 @@ public class Coordinator {
 
   @VisibleForTesting
   Optional<Coordinator.State> getStateForGroupCommit(String id) throws CoordinatorException {
-    if (!keyManipulator.isFullKey(id)) {
-      throw new IllegalArgumentException("This id format isn't for group commit. Id:" + id);
-    }
     Keys<String, String, String> idForGroupCommit = keyManipulator.keysFromFullKey(id);
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
+    // Scan with the parent ID for a normal group that contains multiple transactions with
+    // a parent ID.
     Get get = createGetWith(parentId);
     Optional<State> state = get(get);
     return state.flatMap(
@@ -125,18 +126,13 @@ public class Coordinator {
       throws CoordinatorException {
     State state;
     if (keyManipulator.isFullKey(id)) {
-      // In this case, this is same as normal commit and child_ids isn't needed.
+      // Put the state with the full ID for a delayed group that contains only a single transaction.
       state = new State(id, transactionState, createdAt);
     } else {
-      // Group commit with child_ids.
+      // Put the state with the parent ID for a normal group that contains multiple transactions,
+      // with a parent ID as a key and multiple child IDs.
       List<String> childIds = new ArrayList<>(fullIds.size());
       for (String fullId : fullIds) {
-        if (!keyManipulator.isFullKey(fullId)) {
-          throw new IllegalStateException(
-              String.format(
-                  "The full transaction ID for group commit is invalid format. ID:%s, FullIds:%s, State:%s, CreatedAt:%s",
-                  id, fullId, transactionState, createdAt));
-        }
         Keys<String, String, String> keys = keyManipulator.keysFromFullKey(fullId);
         childIds.add(keys.childKey);
       }
@@ -280,7 +276,8 @@ public class Coordinator {
       return createdAt;
     }
 
-    private List<String> getChildIds() {
+    @VisibleForTesting
+    List<String> getChildIds() {
       return childIds;
     }
 
