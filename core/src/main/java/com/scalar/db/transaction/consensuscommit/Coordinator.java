@@ -280,7 +280,7 @@ public class Coordinator {
       return createdAt;
     }
 
-    public List<String> getChildIds() {
+    private List<String> getChildIds() {
       return childIds;
     }
 

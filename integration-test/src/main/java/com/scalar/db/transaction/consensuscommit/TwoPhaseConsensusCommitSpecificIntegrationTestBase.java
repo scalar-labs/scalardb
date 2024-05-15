@@ -3198,6 +3198,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     return balance.get().getAsInt();
   }
 
+  @SuppressWarnings("unused")
   private boolean isGroupCommitEnabled() {
     return getProperties1(TEST_NAME)
             .getProperty(COORDINATOR_GROUP_COMMIT_ENABLED, "false")
