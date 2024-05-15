@@ -20,7 +20,7 @@ public class CoordinatorGroupCommitter
             config.getCoordinatorGroupCommitDelayedSlotMoveTimeoutMillis(),
             config.getCoordinatorGroupCommitOldGroupAbortTimeoutMillis(),
             config.getCoordinatorGroupCommitTimeoutCheckIntervalMillis(),
-            config.isCoordinatorGroupCommitMetricsConsoleReporterEnabled()));
+            config.isCoordinatorGroupCommitMetricsMonitorLogEnabled()));
   }
 
   public static Optional<CoordinatorGroupCommitter> from(ConsensusCommitConfig config) {

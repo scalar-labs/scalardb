@@ -54,8 +54,8 @@ public class ConsensusCommitConfig {
       COORDINATOR_GROUP_COMMIT_PREFIX + "old_group_abort_timeout_millis";
   public static final String COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS =
       COORDINATOR_GROUP_COMMIT_PREFIX + "timeout_check_interval_millis";
-  public static final String COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED =
-      COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_console_reporter_enabled";
+  public static final String COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED =
+      COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_monitor_log_enabled";
 
   public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY = 20;
   public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS = 40;
@@ -85,7 +85,7 @@ public class ConsensusCommitConfig {
   private final int coordinatorGroupCommitDelayedSlotMoveTimeoutMillis;
   private final int coordinatorGroupCommitOldGroupAbortTimeoutMillis;
   private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
-  private final boolean coordinatorGroupCommitMetricsConsoleReporterEnabled;
+  private final boolean coordinatorGroupCommitMetricsMonitorLogEnabled;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -182,10 +182,10 @@ public class ConsensusCommitConfig {
             databaseConfig.getProperties(),
             COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS,
             DEFAULT_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS);
-    coordinatorGroupCommitMetricsConsoleReporterEnabled =
+    coordinatorGroupCommitMetricsMonitorLogEnabled =
         getBoolean(
             databaseConfig.getProperties(),
-            COORDINATOR_GROUP_COMMIT_METRICS_CONSOLE_REPORTER_ENABLED,
+            COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED,
             false);
   }
 
@@ -265,8 +265,8 @@ public class ConsensusCommitConfig {
     return coordinatorGroupCommitTimeoutCheckIntervalMillis;
   }
 
-  public boolean isCoordinatorGroupCommitMetricsConsoleReporterEnabled() {
-    return coordinatorGroupCommitMetricsConsoleReporterEnabled;
+  public boolean isCoordinatorGroupCommitMetricsMonitorLogEnabled() {
+    return coordinatorGroupCommitMetricsMonitorLogEnabled;
   }
 
   private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {

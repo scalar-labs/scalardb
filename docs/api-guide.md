@@ -1214,7 +1214,7 @@ scalar.db.consensus_commit.coordinator.group_commit.enabled=true
 # scalar.db.consensus_commit.coordinator.group_commit.delayed_slot_move_timeout_millis=800
 # scalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=30000
 # scalar.db.consensus_commit.coordinator.group_commit.timeout_check_interval_millis=10
-# scalar.db.consensus_commit.coordinator.group_commit.metrics_console_reporter_enabled=true
+# scalar.db.consensus_commit.coordinator.group_commit.metrics_monitor_log_enabled=true
 ```
 
 #### Limitations
