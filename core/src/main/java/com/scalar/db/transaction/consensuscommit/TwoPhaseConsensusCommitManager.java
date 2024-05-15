@@ -138,6 +138,8 @@ public class TwoPhaseConsensusCommitManager
     if (isGroupCommitEnabled()) {
       txId = groupCommitter.reserve(txId);
     }
+    // The coordinator service always commits coordinator states regardless of whether the group
+    // commit feature is enabled.
     return createNewTransaction(txId, isolation, strategy, true);
   }
 
@@ -158,7 +160,9 @@ public class TwoPhaseConsensusCommitManager
     // Participant services don't use the group commit feature even if it's enabled. They simply use
     // the passed transaction ID that is managed by the coordinator service, which utilizes the
     // group commit feature.
-    return createNewTransaction(txId, isolation, strategy, false);
+    // Also, participant services don't commit coordinator states if the group commit feature is
+    // enabled.
+    return createNewTransaction(txId, isolation, strategy, !isGroupCommitEnabled());
   }
 
   private TwoPhaseCommitTransaction createNewTransaction(
