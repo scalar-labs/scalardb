@@ -70,7 +70,7 @@ For an example, see [BASH: SQLite3 .backup command](https://stackoverflow.com/qu
 </div>
 <div id="YugabyteDB_Managed1" class="tabcontent" markdown="1">
 
-Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. See [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
+Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>
 
@@ -135,9 +135,9 @@ To specify a transactionally consistent restore point, pause your application th
 </div>
 <div id="YugabyteDB_Managed2" class="tabcontent" markdown="1">
 
-Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. See [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
+Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 
-If you're using YugabyteDB with other databases, to ensure transactional consistency across databases, you'll need to pause the application using ScalarDB or [ScalarDB Cluster (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/) during the backup process, as described in [Back up with explicit pausing](#back-up-with-explicit-pausing).
+You can perform on-demand backups or scheduled backups during a paused duration. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>
 
@@ -220,6 +220,6 @@ Use the `.restore` command as specified in [Special commands to sqlite3 (dot-com
 </div>
 <div id="YugabyteDB_Managed3" class="tabcontent" markdown="1">
 
-You can restore from the scheduled or on-demand backup within the backup retention period. See [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
+You can restore from the scheduled or on-demand backup within the backup retention period. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>
