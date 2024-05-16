@@ -43,4 +43,14 @@ public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTest
     }
     super.waitForCreationIfNecessary();
   }
+
+  // Reading namespace information right after table deletion could fail with YugabyteDB.
+  // It should be retried.
+  @Override
+  protected boolean couldFailToReadNamespaceAfterDeletingTable() {
+    if (rdbEngine instanceof RdbEngineYugabyte) {
+      return true;
+    }
+    return super.couldFailToReadNamespaceAfterDeletingTable();
+  }
 }
