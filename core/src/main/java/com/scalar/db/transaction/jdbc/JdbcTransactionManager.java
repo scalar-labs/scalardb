@@ -84,7 +84,9 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       return decorate(transaction);
     } catch (SQLException e) {
       throw new TransactionException(
-          CoreError.JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED.buildMessage(), e, null);
+          CoreError.JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED.buildMessage(e.getMessage()),
+          e,
+          null);
     }
   }
 

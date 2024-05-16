@@ -7,6 +7,8 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.UpdateIf;
+import com.scalar.db.api.UpdateIfExists;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -132,5 +134,15 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
     index++;
 
     return String.join(" ", elements);
+  }
+
+  @Override
+  public void visit(UpdateIf condition) {
+    throw new AssertionError("UpdateIf is not supported");
+  }
+
+  @Override
+  public void visit(UpdateIfExists condition) {
+    throw new AssertionError("UpdateIfExists is not supported");
   }
 }

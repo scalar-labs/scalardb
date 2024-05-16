@@ -9,9 +9,10 @@ import javax.annotation.Nullable;
 
 /**
  * This class defines common interfaces used by {@link DeleteBuilder}, {@link PutBuilder}, {@link
- * GetBuilder} and {@link ScanBuilder}
+ * InsertBuilder}, {@link UpsertBuilder}, {@link UpdateBuilder}, {@link GetBuilder} and {@link
+ * ScanBuilder}
  */
-class OperationBuilder {
+public class OperationBuilder {
   interface Namespace<T> {
     /**
      * Sets the specified target namespace for this operation
@@ -468,7 +469,7 @@ class OperationBuilder {
      * @param orConditionSet a set of or-wise conditions
      * @return the operation builder
      */
-    T where(ScanBuilder.OrConditionSet orConditionSet);
+    T where(OrConditionSet orConditionSet);
 
     /**
      * Appends the specified sets of or-wise condition set.
@@ -476,7 +477,7 @@ class OperationBuilder {
      * @param orConditionSets sets of or-wise condition set
      * @return the operation builder
      */
-    T whereAnd(Set<ScanBuilder.OrConditionSet> orConditionSets);
+    T whereAnd(Set<OrConditionSet> orConditionSets);
   }
 
   interface WhereOr<T> {
@@ -486,7 +487,7 @@ class OperationBuilder {
      * @param andConditionSet a set of and-wise conditions
      * @return the operation builder
      */
-    T where(ScanBuilder.AndConditionSet andConditionSet);
+    T where(AndConditionSet andConditionSet);
 
     /**
      * Appends the specified sets of and-wise condition set.
@@ -494,7 +495,7 @@ class OperationBuilder {
      * @param andConditionSets sets of and-wise condition set
      * @return the operation builder
      */
-    T whereOr(Set<ScanBuilder.AndConditionSet> andConditionSets);
+    T whereOr(Set<AndConditionSet> andConditionSets);
   }
 
   interface And<T> {
@@ -512,7 +513,7 @@ class OperationBuilder {
      * @param conditions a set of conditions
      * @return the operation builder
      */
-    T and(ScanBuilder.OrConditionSet conditions);
+    T and(OrConditionSet conditions);
   }
 
   interface Or<T> {
@@ -530,7 +531,7 @@ class OperationBuilder {
      * @param conditions a set of conditions
      * @return the operation builder
      */
-    T or(ScanBuilder.AndConditionSet conditions);
+    T or(AndConditionSet conditions);
   }
 
   interface ClearConditions<T> {

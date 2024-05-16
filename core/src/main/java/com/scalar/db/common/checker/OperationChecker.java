@@ -8,9 +8,9 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.error.CoreError;
@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 
+/** A checker for the operations for the storage abstraction. */
 @ThreadSafe
 public class OperationChecker {
 
@@ -331,6 +332,10 @@ public class OperationChecker {
 
     Mutation first = mutations.get(0);
     for (Mutation mutation : mutations) {
+      // Check if each mutation is Put or Delete
+      checkMutationType(mutation);
+
+      // Check if all mutations are for the same partition
       if (!mutation.forNamespace().equals(first.forNamespace())
           || !mutation.forTable().equals(first.forTable())
           || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
@@ -346,6 +351,13 @@ public class OperationChecker {
         assert mutation instanceof Delete;
         check((Delete) mutation);
       }
+    }
+  }
+
+  private void checkMutationType(Mutation mutation) {
+    if (!(mutation instanceof Put) && !(mutation instanceof Delete)) {
+      throw new IllegalArgumentException(
+          CoreError.OPERATION_CHECK_ERROR_UNSUPPORTED_MUTATION_TYPE.buildMessage(mutation));
     }
   }
 

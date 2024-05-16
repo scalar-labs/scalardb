@@ -4,27 +4,24 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.ScanBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A command to retrieve entries within a partition from {@link DistributedStorage}. The scan range
- * is defined with a starting clustering key and an ending clustering key. {@link Ordering} can also
- * be specified to return {@link Result}s in ascending order or descending order of clustering keys.
- * The number of {@link Result} can also be limited. If none of these are set, it will return all
- * the {@link Result}s with a specified partition key in default clustering orders.
+ * A command to retrieve entries from the underlying storage. The scan range is defined with a
+ * starting clustering key and an ending clustering key. {@link Ordering} can also be specified to
+ * return {@link Result}s in ascending order or descending order of clustering keys. The number of
+ * {@link Result} can also be limited. If none of these are set, it will return all the {@link
+ * Result}s with a specified partition key in default clustering orders.
  *
  * @author Hiroyuki Yamada
  */
@@ -37,7 +34,6 @@ public class Scan extends Selection {
   private Optional<Key> endClusteringKey;
   private boolean endInclusive;
   private int limit;
-  private final Set<Conjunction> conjunctions;
 
   /**
    * Constructs a {@code Scan} with the specified partition {@link Key}.
@@ -54,7 +50,6 @@ public class Scan extends Selection {
     endClusteringKey = Optional.empty();
     orderings = new ArrayList<>();
     limit = 0;
-    conjunctions = new HashSet<>();
   }
 
   /**
@@ -74,7 +69,6 @@ public class Scan extends Selection {
     endInclusive = scan.endInclusive;
     orderings = new ArrayList<>(scan.orderings);
     limit = scan.limit;
-    conjunctions = new HashSet<>(scan.conjunctions);
   }
 
   /**
@@ -297,23 +291,9 @@ public class Scan extends Selection {
     return (Scan) super.withProjections(projections);
   }
 
+  @Override
   Scan withConjunctions(Collection<Conjunction> conjunctions) {
-    this.conjunctions.addAll(conjunctions);
-    return this;
-  }
-
-  /**
-   * Returns the set of {@code Conjunction}. We regard this set as a disjunction of conjunctions
-   * (i.e., a disjunctive normal form, DNF).
-   *
-   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
-   * this method. Users should not depend on it.
-   *
-   * @return set of {@code Conjunction}
-   */
-  @Nonnull
-  public Set<Conjunction> getConjunctions() {
-    return ImmutableSet.copyOf(conjunctions);
+    return (Scan) super.withConjunctions(conjunctions);
   }
 
   /**
@@ -346,8 +326,7 @@ public class Scan extends Selection {
         && endInclusive == other.endInclusive
         && endClusteringKey.equals(other.endClusteringKey)
         && orderings.equals(other.orderings)
-        && limit == other.limit
-        && conjunctions.equals(other.conjunctions));
+        && limit == other.limit);
   }
 
   @Override
@@ -359,8 +338,7 @@ public class Scan extends Selection {
         endClusteringKey,
         endInclusive,
         orderings,
-        limit,
-        conjunctions);
+        limit);
   }
 
   @Override
@@ -370,6 +348,7 @@ public class Scan extends Selection {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
         .add("consistency", getConsistency())
         .add("startClusteringKey", startClusteringKey)
         .add("startInclusive", startInclusive)
@@ -377,7 +356,6 @@ public class Scan extends Selection {
         .add("endInclusive", endInclusive)
         .add("orderings", orderings)
         .add("limit", limit)
-        .add("conjunctions", conjunctions)
         .toString();
   }
 
@@ -488,96 +466,6 @@ public class Scan extends Selection {
     public enum Order {
       ASC,
       DESC,
-    }
-  }
-
-  /**
-   * A conjunctive set of {@link ConditionalExpression}, and it is an internal representation of the
-   * optional parameter for a {@link Scan} command, which specifies arbitrary conditions with a
-   * disjunction of {@link Conjunction}s (i.e., a disjunctive normal form, DNF). Its functionality
-   * is similar to {@link ScanBuilder.AndConditionSet}, but unlike {@link
-   * ScanBuilder.AndConditionSet}, this class is primarily used for an internal purpose. Breaking
-   * changes can and will be introduced to this class. Users should not depend on it.
-   */
-  @Immutable
-  public static class Conjunction {
-    private final ImmutableSet<ConditionalExpression> conditions;
-
-    private Conjunction(ImmutableSet<ConditionalExpression> conditions) {
-      this.conditions = conditions;
-    }
-
-    /**
-     * Returns the set of {@code ConditionalExpression} which this conjunction is composed of.
-     *
-     * @return set of {@code ConditionalExpression} which this conjunction is composed of
-     */
-    public Set<ConditionalExpression> getConditions() {
-      return conditions;
-    }
-
-    /**
-     * Creates a {@code Conjunction} object with a single conditional expression.
-     *
-     * @param condition a conditional expression
-     * @return a {@code Conjunction} object
-     */
-    public static Conjunction of(ConditionalExpression condition) {
-      return new Conjunction(ImmutableSet.of(condition));
-    }
-
-    /**
-     * Creates a {@code Conjunction} object with a collection of conditional expressions.
-     *
-     * @param conditions a collection of conditional expressions
-     * @return a {@code Conjunction} object
-     */
-    public static Conjunction of(Collection<ConditionalExpression> conditions) {
-      return new Conjunction(ImmutableSet.copyOf(conditions));
-    }
-
-    /**
-     * Creates a {@code Conjunction} object with conditional expressions.
-     *
-     * @param conditions conditional expressions
-     * @return a {@code Conjunction} object
-     */
-    public static Conjunction of(ConditionalExpression... conditions) {
-      return new Conjunction(ImmutableSet.copyOf(conditions));
-    }
-
-    /**
-     * Indicates whether some other object is "equal to" this object. The other object is considered
-     * equal if:
-     *
-     * <ul>
-     *   <li>it is also an {@code Conjunction}
-     *   <li>both instances have the same set of {@code ConditionalExpression}
-     * </ul>
-     *
-     * @param o an object to be tested for equality
-     * @return {@code true} if the other object is "equal to" this object otherwise {@code false}
-     */
-    @Override
-    public boolean equals(Object o) {
-      if (o == this) {
-        return true;
-      }
-      if (!(o instanceof Conjunction)) {
-        return false;
-      }
-      Conjunction other = (Conjunction) o;
-      return conditions.equals(other.conditions);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(conditions);
-    }
-
-    @Override
-    public String toString() {
-      return conditions.toString();
     }
   }
 }

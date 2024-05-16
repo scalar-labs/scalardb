@@ -157,10 +157,11 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       Mutation mutation = mutations.get(0);
       if (mutation instanceof Put) {
         put((Put) mutation);
+        return;
       } else if (mutation instanceof Delete) {
         delete((Delete) mutation);
+        return;
       }
-      return;
     }
 
     mutations = copyAndSetTargetToIfNot(mutations);
