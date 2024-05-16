@@ -76,7 +76,8 @@ public abstract class JdbcAdminTestBase {
           RdbEngine.ORACLE, RdbEngineFactory.create("jdbc:oracle:"),
           RdbEngine.POSTGRESQL, RdbEngineFactory.create("jdbc:postgresql:"),
           RdbEngine.SQL_SERVER, RdbEngineFactory.create("jdbc:sqlserver:"),
-          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"));
+          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"),
+          RdbEngine.YUGABYTE, RdbEngineFactory.create("jdbc:yugabytedb:"));
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -109,6 +110,7 @@ public abstract class JdbcAdminTestBase {
         when(sqlException.getErrorCode()).thenReturn(1049);
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         when(sqlException.getSQLState()).thenReturn("42P01");
         break;
       case ORACLE:
@@ -2666,6 +2668,7 @@ public abstract class JdbcAdminTestBase {
     switch (rdbEngine) {
       case MYSQL:
       case POSTGRESQL:
+      case YUGABYTE:
       case SQL_SERVER:
         statements.add(
             "CREATE SCHEMA "

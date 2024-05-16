@@ -33,6 +33,7 @@ subprojects {
         oracleDriverVersion = '21.13.0.0'
         sqlserverDriverVersion = '11.2.3.jre8'
         sqliteDriverVersion = '3.45.3.0'
+        yugabyteDriverVersion = '42.3.5-yb-4'
         grpcVersion = '1.60.0'
         protobufVersion = '3.21.12'
         annotationVersion = '1.3.2'

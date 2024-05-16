@@ -172,6 +172,7 @@ scalar.db.storage=jdbc
 # scalar.db.contact_points=jdbc:postgresql://localhost:5432/
 # scalar.db.contact_points=jdbc:sqlserver://localhost:1433;
 # scalar.db.contact_points=jdbc:sqlite://localhost:3306.sqlite3?busy_timeout=10000
+# scalar.db.contact_points=jdbc:yugabytedb://127.0.0.1:5433\\,127.0.0.2:5433\\,127.0.0.3:5433/?load-balance=true
 
 # The username and password for connecting to the database.
 scalar.db.username=<USER_NAME>

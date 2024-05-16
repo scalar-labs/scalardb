@@ -73,6 +73,10 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
     return new HashSet<>(Arrays.asList(DataType.values()));
   }
 
+  protected boolean isFloatTypeKeySupported() {
+    return true;
+  }
+
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
@@ -143,6 +147,10 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   @Test
   public void getAndScanAndDelete_ShouldBehaveCorrectly() throws ExecutionException, IOException {
     for (DataType partitionKeyType : partitionKeyTypes) {
+      if (!isFloatTypeKeySupported()
+          && (partitionKeyType == DataType.FLOAT || partitionKeyType == DataType.DOUBLE)) {
+        continue;
+      }
       random.setSeed(seed);
 
       truncateTable(partitionKeyType);
