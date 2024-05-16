@@ -38,7 +38,7 @@ public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTest
       // future.
       // - Create a new method to wait for longer duration only for the method
       // - Create a new method to retry only for the method
-      Uninterruptibles.sleepUninterruptibly(4000, TimeUnit.MILLISECONDS);
+      Uninterruptibles.sleepUninterruptibly(10000, TimeUnit.MILLISECONDS);
       return;
     }
     super.waitForCreationIfNecessary();
