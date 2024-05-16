@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.cli.command;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
