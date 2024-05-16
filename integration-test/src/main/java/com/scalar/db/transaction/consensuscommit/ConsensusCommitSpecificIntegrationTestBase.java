@@ -61,7 +61,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private static final String ACCOUNT_ID = "account_id";
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";
+  private static final String SOME_COLUMN = "some_column";
   private static final int INITIAL_BALANCE = 1000;
+  private static final int NEW_BALANCE = 2000;
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
   private static final String ANY_ID_1 = "id1";
@@ -124,8 +126,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .addColumn(ACCOUNT_ID, DataType.INT)
             .addColumn(ACCOUNT_TYPE, DataType.INT)
             .addColumn(BALANCE, DataType.INT)
+            .addColumn(SOME_COLUMN, DataType.TEXT)
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
             .build();
     consensusCommitAdmin.createNamespace(namespace1, true, options);
     consensusCommitAdmin.createTable(namespace1, TABLE_1, tableMetadata, true, options);
@@ -2394,6 +2398,65 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  public void
+      scanWithIndex_OverlappingPutWithNonIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException()
+          throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .textValue(SOME_COLUMN, "aaa")
+            .build());
+
+    // Act
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.rollback();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      scanWithIndex_NonOverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException()
+          throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).intValue(BALANCE, 999).build());
+
+    // Act
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.rollback();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      scanWithIndex_OverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException()
+          throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).intValue(BALANCE, 999).build());
+
+    // Act
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, 999);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.rollback();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void scan_DeleteGivenBefore_ShouldScan() throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -2732,11 +2795,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         new Put(partitionKey, clusteringKey)
             .forNamespace(namespace)
             .forTable(table)
-            .withValue(BALANCE, INITIAL_BALANCE)
+            .withValue(BALANCE, NEW_BALANCE)
             .withValue(Attribute.toIdValue(ANY_ID_2))
             .withValue(Attribute.toStateValue(recordState))
             .withValue(Attribute.toVersionValue(2))
             .withValue(Attribute.toPreparedAtValue(preparedAt))
+            .withValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
             .withValue(Attribute.toBeforeIdValue(ANY_ID_1))
             .withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED))
             .withValue(Attribute.toBeforeVersionValue(1))
@@ -2786,6 +2850,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
+  }
+
+  private Scan prepareScanWithIndex(String namespace, String table, int balance) {
+    Key indexKey = new Key(BALANCE, balance);
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(table)
+        .indexKey(indexKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private ScanAll prepareScanAll(String namespace, String table) {
