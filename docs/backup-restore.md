@@ -135,8 +135,6 @@ To specify a transactionally consistent restore point, pause your application th
 </div>
 <div id="YugabyteDB_Managed2" class="tabcontent" markdown="1">
 
-Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
-
 You can perform on-demand backups or scheduled backups during a paused duration. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>
