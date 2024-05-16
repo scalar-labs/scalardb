@@ -645,7 +645,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.error("Failed to close the dataSource", e);
+      logger.warn("Failed to close the dataSource", e);
     }
   }
 

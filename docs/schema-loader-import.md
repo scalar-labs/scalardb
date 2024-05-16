@@ -80,7 +80,7 @@ The following table shows the supported data types in each JDBC database and the
 <div id="tabset-1">
 <div class="tab">
   <button class="tablinks" onclick="openTab(event, 'MySQL', 'tabset-1')" id="defaultOpen-1">MySQL</button>
-  <button class="tablinks" onclick="openTab(event, 'PostgreSQL', 'tabset-1')">PostgreSQL</button>
+  <button class="tablinks" onclick="openTab(event, 'PostgreSQL_YugabyteDB', 'tabset-1')">PostgreSQL and YugabyteDB</button>
   <button class="tablinks" onclick="openTab(event, 'Oracle', 'tabset-1')">Oracle</button>
   <button class="tablinks" onclick="openTab(event, 'SQLServer', 'tabset-1')">SQL Server</button>
 </div>
@@ -131,20 +131,20 @@ Data types not listed in the above are not supported. The following are some com
 
 </div>
 
-<div id="PostgreSQL" class="tabcontent" markdown="1">
+<div id="PostgreSQL_YugabyteDB" class="tabcontent" markdown="1">
 
-| PostgreSQL        | ScalarDB | Notes                 |
-|-------------------|----------|-----------------------|
-| bigint            | BIGINT   | [*1](#warn-data-size) |
-| boolean           | BOOLEAN  |                       |
-| bytea             | BLOB     |                       |
-| character         | TEXT     | [*2](#warn-data-size) |
-| character varying | TEXT     | [*2](#warn-data-size) |
-| double precision  | DOUBLE   |                       |
-| integer           | INT      |                       |
-| real              | FLOAT    |                       |
-| smallint          | INT      | [*2](#warn-data-size) |
-| text              | TEXT     |                       |
+| PostgreSQL/YugabyteDB | ScalarDB | Notes                 |
+|-----------------------|----------|-----------------------|
+| bigint                | BIGINT   | [*1](#warn-data-size) |
+| boolean               | BOOLEAN  |                       |
+| bytea                 | BLOB     |                       |
+| character             | TEXT     | [*2](#warn-data-size) |
+| character varying     | TEXT     | [*2](#warn-data-size) |
+| double precision      | DOUBLE   |                       |
+| integer               | INT      |                       |
+| real                  | FLOAT    |                       |
+| smallint              | INT      | [*2](#warn-data-size) |
+| text                  | TEXT     |                       |
 
 Data types not listed in the above are not supported. The following are some common data types that are not supported:
 

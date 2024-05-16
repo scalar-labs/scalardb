@@ -321,6 +321,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   @Test
   public void createTablesThenDeleteTables_ShouldExecuteProperly() throws Exception {
     createTables_ShouldCreateTables();
+    waitForCreationIfNecessary();
     deleteTables_ShouldDeleteTables();
   }
 
@@ -349,6 +350,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   @Test
   public void createTablesThenDeleteTablesWithCoordinator_ShouldExecuteProperly() throws Exception {
     createTables_ShouldCreateTablesWithCoordinator();
+    waitForCreationIfNecessary();
     deleteTables_ShouldDeleteTablesWithCoordinator();
   }
 

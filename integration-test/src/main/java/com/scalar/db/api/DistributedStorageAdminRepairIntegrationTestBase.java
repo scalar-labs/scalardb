@@ -128,6 +128,10 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     dropTable();
   }
 
+  protected void waitForDifferentSessionDdl() {
+    // No wait by default.
+  }
+
   @Test
   public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
     // Act
@@ -144,9 +148,11 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     adminTestUtils.dropMetadataTable();
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }
@@ -184,9 +190,11 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     adminTestUtils.dropTable(getNamespace(), getTable());
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }
@@ -208,9 +216,11 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     adminTestUtils.dropNamespacesTable();
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairNamespace(getNamespace(), getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
     assertThat(admin.namespaceExists(getNamespace())).isTrue();
   }
@@ -237,9 +247,11 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     adminTestUtils.dropNamespace(getNamespace());
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairNamespace(getNamespace(), getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
     assertThat(admin.namespaceExists(getNamespace())).isTrue();
   }
@@ -252,9 +264,11 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     admin.dropNamespace(getNamespace());
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairNamespace(getNamespace(), getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
     assertThat(admin.namespaceExists(getNamespace())).isTrue();
   }
