@@ -343,6 +343,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private void deleteTables_ShouldDeleteTables() throws Exception {
     // Act
     int exitCode = executeWithArgs(getCommandArgsForDeletion(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+    // This retry that is basically only for YugabyteDB is inconsistent with other test cases.
+    // But, without this, we need a very long wait, resulting in long duration in total.
+    // This workaround can be removed if the catalog version mismatch issue is mitigated in the
+    // future.
     if (exitCode != 0 && couldFailToReadNamespaceAfterDeletingTable()) {
       exitCode = executeWithArgs(getCommandArgsForDeletion(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
     }
