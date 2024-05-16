@@ -10,8 +10,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,12 +20,7 @@ class DirectoryValidationUtilTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryValidationUtilTest.class);
 
-  private Path testDirectory;
-
-  @BeforeEach
-  public void setup() throws IOException {
-    testDirectory = Files.createTempDirectory("testDir");
-  }
+  @TempDir Path tempDir;
 
   @AfterEach
   public void cleanup() throws IOException {
@@ -35,21 +30,20 @@ class DirectoryValidationUtilTest {
   @Test
   void validateTargetDirectory_ValidDirectory_NoExceptionThrown()
       throws DirectoryValidationException {
-    DirectoryValidationUtil.validateTargetDirectory(testDirectory.toString());
+    DirectoryValidationUtil.validateTargetDirectory(tempDir.toString());
   }
 
   @Test
   void validateTargetDirectory_DirectoryDoesNotExist_CreatesDirectory()
       throws DirectoryValidationException {
-    Path newDirectory = Paths.get(testDirectory.toString(), "newDir");
+    Path newDirectory = Paths.get(tempDir.toString(), "newDir");
     DirectoryValidationUtil.validateTargetDirectory(newDirectory.toString());
     assertTrue(Files.exists(newDirectory));
   }
 
   @Test
   void validateTargetDirectory_DirectoryNotWritable_ThrowsException() throws IOException {
-    Path readOnlyDirectory =
-        Files.createDirectory(Paths.get(testDirectory.toString(), "readOnlyDir"));
+    Path readOnlyDirectory = Files.createDirectory(Paths.get(tempDir.toString(), "readOnlyDir"));
     readOnlyDirectory.toFile().setWritable(false);
 
     assertThrows(
@@ -85,8 +79,7 @@ class DirectoryValidationUtilTest {
 
   @Test
   void validateWorkingDirectory_NotWritableDirectory_ThrowsException() throws IOException {
-    Path readOnlyDirectory =
-        Files.createDirectory(Paths.get(testDirectory.toString(), "readOnlyDir"));
+    Path readOnlyDirectory = Files.createDirectory(Paths.get(tempDir.toString(), "readOnlyDir"));
     readOnlyDirectory.toFile().setWritable(false);
 
     System.setProperty("user.dir", readOnlyDirectory.toString());
@@ -96,7 +89,7 @@ class DirectoryValidationUtilTest {
   }
 
   private void cleanUpTempDir() throws IOException {
-    try (Stream<Path> paths = Files.list(testDirectory)) {
+    try (Stream<Path> paths = Files.list(tempDir)) {
       paths.forEach(this::deleteFile);
     }
   }

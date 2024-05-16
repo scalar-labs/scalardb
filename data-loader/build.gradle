@@ -4,6 +4,7 @@ subprojects {
     ext {
         lombokVersion = '1.18.32'
         apacheCommonsLangVersion = '3.14.0'
+        apacheCommonsIoVersion = '2.16.1'
     }
     dependencies {
         // Lombok
@@ -22,7 +23,8 @@ subprojects {
         testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
         testImplementation("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
 
-        // Apache Commons Lang
+        // Apache Commons
         implementation("org.apache.commons:commons-lang3:${apacheCommonsLangVersion}")
+        implementation("commons-io:commons-io:${apacheCommonsIoVersion}")
     }
 }
