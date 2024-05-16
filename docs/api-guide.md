@@ -1199,7 +1199,9 @@ In the sample code, the transaction is retried three times maximum and sleeps fo
 
 ### Group commit for the Coordinator table
 
-The Coordinator table used for Consensus Commit transactions is a vital data store, and it is recommended to use robust storage for it. However, utilizing more robust storage options, such as internally leveraging multi-AZ or multi-region replication, may lead to increased latency when writing records to the storage, resulting in poor throughput performance. ScalarDB provides a group commit feature for the Coordinator table that groups multiple record writes into a single write operation, improving write throughput. However, it may increase latency.
+The Coordinator table that is used for Consensus Commit transactions is a vital data store, and using robust storage for it is recommended. However, utilizing more robust storage options, such as internally leveraging multi-AZ or multi-region replication, may lead to increased latency when writing records to the storage, resulting in poor throughput performance.
+
+ScalarDB provides a group commit feature for the Coordinator table that groups multiple record writes into a single write operation, improving write throughput. In this case, latency may increase or decrease, depending on the underlying database and the workload.
 
 To enable the group commit feature, add the following configuration:
 
@@ -1209,7 +1211,7 @@ To enable the group commit feature, add the following configuration:
 # By default, this configuration is set to `false`.
 scalar.db.consensus_commit.coordinator.group_commit.enabled=true
 
-# These properties are for the performance tuning of the group commit.
+# These properties are for tuning the performance of the group commit feature.
 # scalar.db.consensus_commit.coordinator.group_commit.group_size_fix_timeout_millis=40
 # scalar.db.consensus_commit.coordinator.group_commit.delayed_slot_move_timeout_millis=800
 # scalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=30000
@@ -1221,10 +1223,10 @@ scalar.db.consensus_commit.coordinator.group_commit.enabled=true
 
 ##### Custom transaction ID passed by users
 
-The group commit feature implicitly generates an internal value and uses it as a part of transaction ID. Therefore, a custom transaction ID manually passed by users via `com.scalar.db.transaction.consensuscommit.ConsensusCommitManager.begin(String txId)` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager.begin(String txId)` can't be used as-is for later API calls. You need to use a transaction ID returned from`com.scalar.db.transaction.consensuscommit.ConsensusCommit.getId()` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.getId()` instead.
+The group commit feature implicitly generates an internal value and uses it as a part of transaction ID. Therefore, a custom transaction ID manually passed by users via `com.scalar.db.transaction.consensuscommit.ConsensusCommitManager.begin(String txId)` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager.begin(String txId)` can't be used as is for later API calls. You need to use a transaction ID returned from`com.scalar.db.transaction.consensuscommit.ConsensusCommit.getId()` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.getId()` instead.
 
 ```java
-   // This custom transaction ID needs to be used for ScalarDB transactions for some reason...
+   // This custom transaction ID needs to be used for ScalarDB transactions.
    String myTxId = UUID.randomUUID().toString();
 
    ...
@@ -1240,7 +1242,7 @@ The group commit feature implicitly generates an internal value and uses it as a
 
 ##### Commit in Two-Phase Commit Interface
 
-The group commit feature manages all in-flight transactions in memory. When the feature is enabled with the two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the coordinator table, which may contain different transaction distributions over groups. Consequently, `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.commit()` must be called first by the coordinator service before being called by participant services.
+The group commit feature manages all ongoing transactions in memory. When the feature is enabled with the two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the Coordinator table, which may contain different transaction distributions over groups. Consequently, `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.commit()` must be called first by the coordinator service before being called by participant services.
 
 ```java
   AtomicBoolean globalCommitSuccess = new AtomicBoolean();

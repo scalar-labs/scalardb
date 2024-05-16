@@ -107,7 +107,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
     }
 
     throw new GroupCommitConflictException(
-        "The group for the reserved value slot is already removed. Keys:" + keys);
+        "The group for the reserved value slot has already been removed. Keys:" + keys);
   }
 
   // Remove the specified group from group map.
