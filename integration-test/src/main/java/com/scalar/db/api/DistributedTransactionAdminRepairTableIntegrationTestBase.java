@@ -69,6 +69,10 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
 
   protected abstract Properties getProperties(String testName);
 
+  protected void waitForDifferentSessionDdl() {
+    // No wait by default.
+  }
+
   protected String getNamespace() {
     return NAMESPACE;
   }
@@ -120,10 +124,12 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     adminTestUtils.dropMetadataTable();
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
     assertThat(admin.coordinatorTablesExist()).isTrue();
@@ -162,6 +168,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     admin.dropCoordinatorTables(true);
 
     // Act Assert
+    waitForDifferentSessionDdl();
     assertThatThrownBy(() -> admin.repairCoordinatorTables(getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
