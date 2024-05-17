@@ -31,7 +31,7 @@ public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTest
 
   @Override
   protected void waitForCreationIfNecessary() {
-    if (rdbEngine instanceof RdbEngineYugabyte) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       // This wait is longer than usual. This is because only the case of
       // `createTablesThenDeleteTables_ShouldExecuteProperly()` requires long wait.
       // The long wait may affect total duration. The following options might be better in the
