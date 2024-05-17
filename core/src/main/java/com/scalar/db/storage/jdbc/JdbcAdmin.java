@@ -266,7 +266,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String[] stmts =
         rdbEngine.createTableInternalSqlsAfterCreateTable(
-            hasDescClusteringOrder(metadata), schema, table, metadata, ifNotExists);
+            hasDifferentClusteringOrders(metadata), schema, table, metadata, ifNotExists);
     try {
       execute(connection, stmts);
     } catch (SQLException e) {
@@ -645,7 +645,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.error("Failed to close the dataSource", e);
+      logger.warn("Failed to close the dataSource", e);
     }
   }
 
@@ -674,9 +674,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private boolean hasDescClusteringOrder(TableMetadata metadata) {
+  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
     return metadata.getClusteringKeyNames().stream()
         .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
+  }
+
+  @VisibleForTesting
+  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
+    boolean hasAscOrder = false;
+    boolean hasDescOrder = false;
+    for (Order order : metadata.getClusteringOrders().values()) {
+      if (order == Order.ASC) {
+        hasAscOrder = true;
+      } else {
+        hasDescOrder = true;
+      }
+    }
+    return hasAscOrder && hasDescOrder;
   }
 
   @Override

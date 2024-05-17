@@ -30,6 +30,8 @@ public final class RdbEngineFactory {
       return new RdbEngineSqlServer();
     } else if (jdbcUrl.startsWith("jdbc:sqlite:")) {
       return new RdbEngineSqlite();
+    } else if (jdbcUrl.startsWith("jdbc:yugabytedb:")) {
+      return new RdbEngineYugabyte();
     } else {
       throw new IllegalArgumentException(
           CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(jdbcUrl));

@@ -5,6 +5,7 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_SIZE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DATA_TYPE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DECIMAL_DIGITS;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -75,7 +76,8 @@ public class JdbcAdminTest {
           RdbEngine.ORACLE, RdbEngineFactory.create("jdbc:oracle:"),
           RdbEngine.POSTGRESQL, RdbEngineFactory.create("jdbc:postgresql:"),
           RdbEngine.SQL_SERVER, RdbEngineFactory.create("jdbc:sqlserver:"),
-          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"));
+          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"),
+          RdbEngine.YUGABYTE, RdbEngineFactory.create("jdbc:yugabytedb:"));
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -104,6 +106,7 @@ public class JdbcAdminTest {
         when(sqlException.getErrorCode()).thenReturn(1049);
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         when(sqlException.getSQLState()).thenReturn("42P01");
         break;
       case ORACLE:
@@ -3376,6 +3379,7 @@ public class JdbcAdminTest {
         when(duplicateKeyException.getSQLState()).thenReturn("23000");
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         duplicateKeyException = mock(SQLException.class);
         when(duplicateKeyException.getSQLState()).thenReturn("23505");
         break;
@@ -3424,6 +3428,74 @@ public class JdbcAdminTest {
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
     verify(insertStatement).execute();
+  }
+
+  @Test
+  void hasDifferentClusteringOrders_GivenOnlyAscOrders_ShouldReturnFalse() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck1", Order.ASC)
+            .addClusteringKey("ck2", Order.ASC)
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck1", DataType.INT)
+            .addColumn("ck2", DataType.INT)
+            .addColumn("value", DataType.TEXT)
+            .build();
+
+    // Act
+    // Assert
+    assertThat(hasDifferentClusteringOrders(metadata)).isFalse();
+  }
+
+  @Test
+  void hasDifferentClusteringOrders_GivenOnlyDescOrders_ShouldReturnFalse() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck1", Order.DESC)
+            .addClusteringKey("ck2", Order.DESC)
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck1", DataType.INT)
+            .addColumn("ck2", DataType.INT)
+            .addColumn("value", DataType.TEXT)
+            .build();
+
+    // Act
+    // Assert
+    assertThat(hasDifferentClusteringOrders(metadata)).isFalse();
+  }
+
+  @Test
+  void hasDifferentClusteringOrders_GivenBothAscAndDescOrders_ShouldReturnTrue() {
+    // Arrange
+    TableMetadata metadata1 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck1", Order.ASC)
+            .addClusteringKey("ck2", Order.DESC)
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck1", DataType.INT)
+            .addColumn("ck2", DataType.INT)
+            .addColumn("value", DataType.TEXT)
+            .build();
+    TableMetadata metadata2 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck1", Order.DESC)
+            .addClusteringKey("ck2", Order.ASC)
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck1", DataType.INT)
+            .addColumn("ck2", DataType.INT)
+            .addColumn("value", DataType.TEXT)
+            .build();
+
+    // Act
+    // Assert
+    assertThat(hasDifferentClusteringOrders(metadata1)).isTrue();
+    assertThat(hasDifferentClusteringOrders(metadata2)).isTrue();
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table

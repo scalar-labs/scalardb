@@ -2,8 +2,8 @@ package com.scalar.db.common;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Conjunction;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;

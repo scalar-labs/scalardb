@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
@@ -10,7 +11,7 @@ import java.util.Random;
 public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -26,6 +27,22 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
       return 1;
     }
     return super.getThreadNum();
+  }
+
+  @Override
+  protected boolean isParallelDdlSupported() {
+    if (rdbEngine instanceof RdbEngineYugabyte) {
+      return false;
+    }
+    return super.isParallelDdlSupported();
+  }
+
+  @Override
+  protected boolean isFloatTypeKeySupported() {
+    if (rdbEngine instanceof RdbEngineYugabyte) {
+      return false;
+    }
+    return super.isFloatTypeKeySupported();
   }
 
   @Override

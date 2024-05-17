@@ -223,7 +223,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      logger.error("Failed to close the dataSource", e);
+      logger.warn("Failed to close the dataSource", e);
     }
     try {
       tableMetadataDataSource.close();
