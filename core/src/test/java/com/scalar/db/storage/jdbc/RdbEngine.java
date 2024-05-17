@@ -10,7 +10,8 @@ public enum RdbEngine {
   POSTGRESQL,
   ORACLE,
   SQL_SERVER,
-  SQLITE;
+  SQLITE,
+  YUGABYTE;
 
   public static RdbEngineStrategy createRdbEngineStrategy(RdbEngine rdbEngine) {
     switch (rdbEngine) {
@@ -24,6 +25,8 @@ public enum RdbEngine {
         return new RdbEngineSqlServer();
       case SQLITE:
         return new RdbEngineSqlite();
+      case YUGABYTE:
+        return new RdbEngineYugabyte();
       default:
         throw new AssertionError();
     }

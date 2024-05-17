@@ -154,15 +154,27 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
   protected abstract void dropNonImportableTable(String namespace, String table) throws Exception;
 
+  protected void waitForDifferentSessionDdl() {
+    // No wait by default.
+  }
+
   @Test
   public void importTables_ImportableTablesGiven_ShouldImportProperly() throws Exception {
     // Arrange
+    waitForDifferentSessionDdl();
     createExistingDatabase(namespace1);
+
+    waitForDifferentSessionDdl();
     createExistingDatabase(namespace2);
+
+    waitForDifferentSessionDdl();
     createImportableTable(namespace1, TABLE_1);
+
+    waitForDifferentSessionDdl();
     createImportableTable(namespace2, TABLE_2);
 
     // Act
+    waitForDifferentSessionDdl();
     int exitCode =
         executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
 
@@ -177,12 +189,20 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   public void importTables_NonImportableTablesGiven_ShouldThrowIllegalArgumentException()
       throws Exception {
     // Arrange
+    waitForDifferentSessionDdl();
     createExistingDatabase(namespace1);
+
+    waitForDifferentSessionDdl();
     createExistingDatabase(namespace2);
+
+    waitForDifferentSessionDdl();
     createNonImportableTable(namespace1, TABLE_1);
+
+    waitForDifferentSessionDdl();
     createNonImportableTable(namespace2, TABLE_2);
 
     // Act
+    waitForDifferentSessionDdl();
     int exitCode =
         executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
 

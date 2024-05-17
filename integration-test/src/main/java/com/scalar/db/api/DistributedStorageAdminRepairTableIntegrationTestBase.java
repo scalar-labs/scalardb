@@ -124,15 +124,21 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
     admin.close();
   }
 
+  protected void waitForDifferentSessionDdl() {
+    // No wait by default.
+  }
+
   @Test
   public void repairTable_ForDeletedMetadataTable_ShouldRepairProperly() throws Exception {
     // Arrange
     adminTestUtils.dropMetadataTable();
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
   }

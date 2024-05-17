@@ -1,10 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderImportIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
@@ -91,5 +93,15 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   @SuppressWarnings("unused")
   private boolean isSqlite() {
     return JdbcEnv.isSqlite();
+  }
+
+  @Override
+  protected void waitForDifferentSessionDdl() {
+    if (rdbEngine instanceof RdbEngineYugabyte) {
+      // This is needed to avoid schema or catalog version mismatch database errors.
+      Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
+      return;
+    }
+    super.waitForDifferentSessionDdl();
   }
 }
