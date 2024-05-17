@@ -12,6 +12,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
@@ -192,9 +193,7 @@ public class Snapshot {
   }
 
   public void verify(Scan scan) {
-    boolean isRelational = ScalarDbUtils.isRelational(scan);
-    if ((isRelational && isWriteSetOverlappedWithRelational(scan))
-        || (!isRelational && isWriteSetOverlappedWith(scan))) {
+    if (isWriteSetOverlappedWith(scan)) {
       throw new IllegalArgumentException("reading already written data is not allowed");
     }
   }
@@ -216,14 +215,14 @@ public class Snapshot {
   }
 
   private boolean isWriteSetOverlappedWith(Scan scan) {
+    if (scan instanceof ScanWithIndex) {
+      return isWriteSetOverlappedWith((ScanWithIndex) scan);
+    } else if (scan instanceof ScanAll) {
+      return isWriteSetOverlappedWith((ScanAll) scan);
+    }
+
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       Put put = entry.getValue();
-
-      if (scan instanceof ScanAll
-          && put.forNamespace().equals(scan.forNamespace())
-          && put.forTable().equals(scan.forTable())) {
-        return true;
-      }
 
       if (!put.forNamespace().equals(scan.forNamespace())
           || !put.forTable().equals(scan.forTable())
@@ -277,14 +276,37 @@ public class Snapshot {
     return false;
   }
 
-  private boolean isWriteSetOverlappedWithRelational(Scan scan) {
+  private boolean isWriteSetOverlappedWith(ScanWithIndex scan) {
+    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      if (scanSet.get(scan).contains(entry.getKey())) {
+        return true;
+      }
+
+      Put put = entry.getValue();
+      if (!put.forNamespace().equals(scan.forNamespace())
+          || !put.forTable().equals(scan.forTable())) {
+        continue;
+      }
+
+      Map<String, Column<?>> columns = getAllColumns(put);
+      Column<?> indexColumn = scan.getPartitionKey().getColumns().get(0);
+      String indexColumnName = indexColumn.getName();
+      if (columns.containsKey(indexColumnName)
+          && columns.get(indexColumnName).equals(indexColumn)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isWriteSetOverlappedWith(ScanAll scan) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       // We need to consider three cases here to prevent scan-after-write.
       //   1) A put operation overlaps the scan range regardless of the update (put) results.
       //   2) A put operation does not overlap the scan range as a result of the update.
       //   3) A put operation overlaps the scan range as a result of the update.
       // See the following examples. Assume that we have a table with two columns whose names are
-      // "key" and "value" and two records in the table: (key=1, value=2) and (key=2, key=3).
+      // "key" and "value" and two records in the table: (key=1, value=2) and (key=2, value=3).
       // Case 2 covers a transaction that puts (1, 4) and then scans "where value < 3". In this
       // case, there is no overlap, but we intentionally prohibit it due to the consistency and
       // simplicity of snapshot management. We can find case 2 using the scan results.
@@ -308,11 +330,7 @@ public class Snapshot {
         return true;
       }
 
-      Map<String, Column<?>> columns = new HashMap<>(put.getColumns());
-      put.getPartitionKey().getColumns().forEach(column -> columns.put(column.getName(), column));
-      put.getClusteringKey()
-          .ifPresent(
-              key -> key.getColumns().forEach(column -> columns.put(column.getName(), column)));
+      Map<String, Column<?>> columns = getAllColumns(put);
       for (Conjunction conjunction : scan.getConjunctions()) {
         boolean allMatched = true;
         for (ConditionalExpression condition : conjunction.getConditions()) {
@@ -328,6 +346,15 @@ public class Snapshot {
       }
     }
     return false;
+  }
+
+  private Map<String, Column<?>> getAllColumns(Put put) {
+    Map<String, Column<?>> columns = new HashMap<>(put.getColumns());
+    put.getPartitionKey().getColumns().forEach(column -> columns.put(column.getName(), column));
+    put.getClusteringKey()
+        .ifPresent(
+            key -> key.getColumns().forEach(column -> columns.put(column.getName(), column)));
+    return columns;
   }
 
   @SuppressWarnings("unchecked")
