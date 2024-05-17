@@ -24,6 +24,6 @@ public class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestWithCosmos
 
   @Test
   @Override
-  @Disabled
+  @Disabled("Cross partition scan with ordering is not supported in Cosmos DB")
   public void scan_ScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords() {}
 }

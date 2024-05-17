@@ -25,6 +25,6 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithCassandra
 
   @Test
   @Override
-  @Disabled
+  @Disabled("Cross partition scan with ordering is not supported in Cassandra")
   public void scan_CrossPartitionScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords() {}
 }

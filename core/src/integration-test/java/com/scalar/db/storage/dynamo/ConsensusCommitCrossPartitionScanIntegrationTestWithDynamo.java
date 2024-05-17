@@ -24,6 +24,6 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithDynamo
 
   @Test
   @Override
-  @Disabled
+  @Disabled("Cross partition scan with ordering is not supported in DynamoDB")
   public void scan_CrossPartitionScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords() {}
 }
