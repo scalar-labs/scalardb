@@ -14,7 +14,8 @@ class ColumnKeyValueConverterTest {
     String input = "name=John Doe";
     ColumnKeyValue expected = new ColumnKeyValue("name", "John Doe");
     ColumnKeyValue result = converter.convert(input);
-    assertEquals(expected, result);
+    assertEquals(expected.getColumnName(), result.getColumnName());
+    assertEquals(expected.getColumnValue(), result.getColumnValue());
   }
 
   @Test
@@ -22,7 +23,8 @@ class ColumnKeyValueConverterTest {
     String input = "  age  =  25  ";
     ColumnKeyValue expected = new ColumnKeyValue("age", "25");
     ColumnKeyValue result = converter.convert(input);
-    assertEquals(expected, result);
+    assertEquals(expected.getColumnName(), result.getColumnName());
+    assertEquals(expected.getColumnValue(), result.getColumnValue());
   }
 
   @Test
@@ -48,7 +50,8 @@ class ColumnKeyValueConverterTest {
     String input = "name=John=Doe";
     ColumnKeyValue expected = new ColumnKeyValue("name", "John=Doe");
     ColumnKeyValue result = converter.convert(input);
-    assertEquals(expected, result);
+    assertEquals(expected.getColumnName(), result.getColumnName());
+    assertEquals(expected.getColumnValue(), result.getColumnValue());
   }
 
   @Test
