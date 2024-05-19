@@ -1,0 +1,134 @@
+package com.scalar.db.dataloader.core.util;
+
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.exception.Base64Exception;
+import com.scalar.db.dataloader.core.exception.KeyParsingException;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Base64;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class KeyUtilsTest {
+
+  @Mock private TableMetadata tableMetadata;
+
+  @Test
+  void parseKeyValue_nullKeyValue_returnsNull() throws KeyParsingException {
+    assertNull(KeyUtils.parseKeyValue(null, tableMetadata));
+  }
+
+  @Test
+  void parseKeyValue_invalidColumnName_throwsKeyParsingException() {
+    String columnName = "invalidColumn";
+    ColumnKeyValue keyValue = new ColumnKeyValue(columnName, "value");
+    when(tableMetadata.getColumnDataType(columnName)).thenReturn(null);
+
+    KeyParsingException exception =
+        assertThrows(
+            KeyParsingException.class, () -> KeyUtils.parseKeyValue(keyValue, tableMetadata));
+    assertEquals(
+        "Invalid key: Column " + columnName + " does not exist in the table.",
+        exception.getMessage());
+  }
+
+  @Test
+  void parseKeyValue_validKeyValue_returnsKey() throws KeyParsingException, Base64Exception {
+    String columnName = "columnName";
+    String value = "value";
+    ColumnKeyValue keyValue = new ColumnKeyValue(columnName, value);
+    DataType dataType = DataType.TEXT;
+    when(tableMetadata.getColumnDataType(columnName)).thenReturn(dataType);
+
+    Key expected = Key.newBuilder().add(TextColumn.of(columnName, value)).build();
+    Key actual = KeyUtils.parseKeyValue(keyValue, tableMetadata);
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_boolean_returnsKey() throws Base64Exception {
+    String columnName = "booleanColumn";
+    String value = "true";
+    Key expected = Key.newBuilder().add(BooleanColumn.of(columnName, true)).build();
+    Key actual = KeyUtils.createKey(DataType.BOOLEAN, columnName, value);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_int_returnsKey() throws Base64Exception {
+    String columnName = "intColumn";
+    String value = "42";
+    Key expected = Key.newBuilder().add(IntColumn.of(columnName, 42)).build();
+    Key actual = KeyUtils.createKey(DataType.INT, columnName, value);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_bigint_returnsKey() throws Base64Exception {
+    String columnName = "bigintColumn";
+    String value = "123456789012345";
+    Key expected = Key.newBuilder().add(BigIntColumn.of(columnName, 123456789012345L)).build();
+    Key actual = KeyUtils.createKey(DataType.BIGINT, columnName, value);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_float_returnsKey() throws Base64Exception {
+    String columnName = "floatColumn";
+    String value = "3.14";
+    Key expected = Key.newBuilder().add(FloatColumn.of(columnName, 3.14f)).build();
+    Key actual = KeyUtils.createKey(DataType.FLOAT, columnName, value);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_double_returnsKey() throws Base64Exception {
+    String columnName = "doubleColumn";
+    String value = "2.71828";
+    Key expected = Key.newBuilder().add(DoubleColumn.of(columnName, 2.71828)).build();
+    Key actual = KeyUtils.createKey(DataType.DOUBLE, columnName, value);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_text_returnsKey() throws Base64Exception {
+    String columnName = "textColumn";
+    String value = "Hello, world!";
+    Key expected = Key.newBuilder().add(TextColumn.of(columnName, value)).build();
+    Key actual = KeyUtils.createKey(DataType.TEXT, columnName, value);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_blob_returnsKey() throws Base64Exception {
+    String columnName = "blobColumn";
+    String value = Base64.getEncoder().encodeToString("Hello, world!".getBytes());
+    Key expected =
+        Key.newBuilder().add(BlobColumn.of(columnName, "Hello, world!".getBytes())).build();
+    Key actual = KeyUtils.createKey(DataType.BLOB, columnName, value);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void createKey_invalidBase64_throwsBase64Exception() {
+    String columnName = "blobColumn";
+    String value = "invalidBase64";
+    assertThrows(Base64Exception.class, () -> KeyUtils.createKey(DataType.BLOB, columnName, value));
+  }
+}
