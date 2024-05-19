@@ -3,7 +3,9 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
+import com.scalar.db.service.StorageFactory;
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -23,6 +25,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   @Override
   public Integer call() throws Exception {
     validateOutputDirectory(outputFilePath);
+    StorageFactory storageFactory = createStorageFactory(configFilePath);
     return 0;
   }
 
@@ -59,5 +62,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     if (!ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
       throw new InvalidFileExtensionException("Invalid file extension: " + extension);
     }
+  }
+
+  protected StorageFactory createStorageFactory(String configFilePath) throws IOException {
+    return StorageFactory.create(configFilePath);
   }
 }

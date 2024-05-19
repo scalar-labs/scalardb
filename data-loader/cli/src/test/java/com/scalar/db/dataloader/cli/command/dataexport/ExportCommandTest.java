@@ -3,6 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
+import com.scalar.db.service.StorageFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -20,12 +22,20 @@ class ExportCommandTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ExportCommandTest.class);
   @TempDir Path tempDir;
+  @Mock StorageFactory storageFactory;
 
   private ExportCommand exportCommand;
 
   @BeforeEach
   void setUp() {
-    exportCommand = new ExportCommand();
+    exportCommand =
+        new ExportCommand() {
+          @Override
+          protected StorageFactory createStorageFactory(String configFilePath) {
+            return storageFactory;
+          }
+        };
+
     CommandLine cmd = new CommandLine(exportCommand);
     exportCommand.spec = cmd.getCommandSpec();
   }
