@@ -30,9 +30,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   public Integer call() throws Exception {
     validateOutputDirectory(outputFilePath);
     StorageFactory storageFactory = createStorageFactory(configFilePath);
-    TableMetadataService metaDataService =
-        new TableMetadataService(storageFactory.getStorageAdmin());
-    TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, tableName);
+    TableMetadataService metadataService = createTableMetadataService(storageFactory);
+    TableMetadata tableMetadata = metadataService.getTableMetadata(namespace, tableName);
 
     Key partitionKey = KeyUtils.parseKeyValue(partitionKeyValue, tableMetadata);
     Key scanStartKey = KeyUtils.parseKeyValue(scanStartKeyValue, tableMetadata);
@@ -83,5 +82,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   protected StorageFactory createStorageFactory(String configFilePath) throws IOException {
     return StorageFactory.create(configFilePath);
+  }
+
+  protected TableMetadataService createTableMetadataService(StorageFactory storageFactory) {
+    return new TableMetadataService(storageFactory.getStorageAdmin());
   }
 }
