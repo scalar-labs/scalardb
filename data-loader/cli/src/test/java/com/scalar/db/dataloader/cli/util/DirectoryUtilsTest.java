@@ -16,9 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** This class tests the DirectoryValidationUtil class. */
-class DirectoryValidationUtilTest {
+class DirectoryUtilsTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryValidationUtilTest.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryUtilsTest.class);
 
   @TempDir Path tempDir;
 
@@ -30,14 +30,14 @@ class DirectoryValidationUtilTest {
   @Test
   void validateTargetDirectory_ValidDirectory_NoExceptionThrown()
       throws DirectoryValidationException {
-    DirectoryValidationUtil.validateTargetDirectory(tempDir.toString());
+    DirectoryUtils.validateTargetDirectory(tempDir.toString());
   }
 
   @Test
   void validateTargetDirectory_DirectoryDoesNotExist_CreatesDirectory()
       throws DirectoryValidationException {
     Path newDirectory = Paths.get(tempDir.toString(), "newDir");
-    DirectoryValidationUtil.validateTargetDirectory(newDirectory.toString());
+    DirectoryUtils.validateTargetDirectory(newDirectory.toString());
     assertTrue(Files.exists(newDirectory));
   }
 
@@ -49,7 +49,7 @@ class DirectoryValidationUtilTest {
     assertThrows(
         DirectoryValidationException.class,
         () -> {
-          DirectoryValidationUtil.validateTargetDirectory(readOnlyDirectory.toString());
+          DirectoryUtils.validateTargetDirectory(readOnlyDirectory.toString());
         });
   }
 
@@ -58,7 +58,7 @@ class DirectoryValidationUtilTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> {
-          DirectoryValidationUtil.validateTargetDirectory(null);
+          DirectoryUtils.validateTargetDirectory(null);
         });
   }
 
@@ -67,25 +67,8 @@ class DirectoryValidationUtilTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> {
-          DirectoryValidationUtil.validateTargetDirectory("");
+          DirectoryUtils.validateTargetDirectory("");
         });
-  }
-
-  @Test
-  void validateWorkingDirectory_WritableDirectory_NoExceptionThrown()
-      throws DirectoryValidationException {
-    DirectoryValidationUtil.validateWorkingDirectory();
-  }
-
-  @Test
-  void validateWorkingDirectory_NotWritableDirectory_ThrowsException() throws IOException {
-    Path readOnlyDirectory = Files.createDirectory(Paths.get(tempDir.toString(), "readOnlyDir"));
-    readOnlyDirectory.toFile().setWritable(false);
-
-    System.setProperty("user.dir", readOnlyDirectory.toString());
-
-    assertThrows(
-        DirectoryValidationException.class, DirectoryValidationUtil::validateWorkingDirectory);
   }
 
   private void cleanUpTempDir() throws IOException {

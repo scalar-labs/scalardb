@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
-import com.scalar.db.dataloader.cli.util.DirectoryValidationUtil;
+import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -26,16 +26,16 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     return 0;
   }
 
-  private void validateOutputDirectory(String filePath)
+  private void validateOutputDirectory(String path)
       throws DirectoryValidationException, InvalidFileExtensionException {
-    if (filePath == null || filePath.isEmpty()) {
+    if (path == null || path.isEmpty()) {
       throw new IllegalArgumentException("Output file path cannot be null or empty");
     }
 
-    File file = new File(filePath);
+    File file = new File(path);
 
     if (file.isDirectory()) {
-      validateDirectory(filePath);
+      validateDirectory(path);
     } else {
       validateFileExtension(file.getName());
       validateDirectory(file.getParent());
@@ -45,9 +45,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   private void validateDirectory(String directoryPath) throws DirectoryValidationException {
     // If the directory path is null or empty, use the current working directory
     if (directoryPath == null || directoryPath.isEmpty()) {
-      DirectoryValidationUtil.validateWorkingDirectory();
+      DirectoryUtils.validateTargetDirectory(DirectoryUtils.getCurrentWorkingDirectory());
     } else {
-      DirectoryValidationUtil.validateTargetDirectory(directoryPath);
+      DirectoryUtils.validateTargetDirectory(directoryPath);
     }
   }
 

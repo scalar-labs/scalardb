@@ -12,12 +12,12 @@ import java.nio.file.Paths;
 import org.apache.commons.lang3.StringUtils;
 
 /** Utility class for validating and handling directories. */
-public class DirectoryValidationUtil {
+public class DirectoryUtils {
 
-    private DirectoryValidationUtil() {
-        // restrict instantiation
-    }
-    
+  private DirectoryUtils() {
+    // restrict instantiation
+  }
+
   /**
    * Validates the provided directory path. Ensures that the directory exists and is writable. If
    * the directory doesn't exist, a creation attempt is made.
@@ -51,17 +51,11 @@ public class DirectoryValidationUtil {
   }
 
   /**
-   * Validates the current working directory. Ensures that it is writable.
+   * Returns the current working directory.
    *
-   * @throws DirectoryValidationException if the current working directory is not writable
+   * @return the current working directory
    */
-  public static void validateWorkingDirectory() throws DirectoryValidationException {
-    Path workingDirectoryPath = Paths.get(System.getProperty("user.dir"));
-
-    // Check if the current working directory is writable
-    if (!Files.isWritable(workingDirectoryPath)) {
-      throw new DirectoryValidationException(
-          String.format(ERROR_DIRECTORY_WRITE_ACCESS, workingDirectoryPath.toAbsolutePath()));
-    }
+  public static String getCurrentWorkingDirectory() {
+    return Paths.get(System.getProperty("user.dir")).toAbsolutePath().toString();
   }
 }
