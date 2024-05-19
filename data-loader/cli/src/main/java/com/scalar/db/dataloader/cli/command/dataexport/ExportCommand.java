@@ -3,7 +3,6 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
 import com.scalar.db.dataloader.cli.util.DirectoryValidationUtil;
-import com.scalar.db.dataloader.cli.util.FileUtil;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -23,7 +22,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
-    FileUtil.validateFilePath(configFilePath);
     validateOutputDirectory(outputFilePath);
     return 0;
   }

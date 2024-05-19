@@ -9,14 +9,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
 /** Utility class for validating and handling directories. */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class DirectoryValidationUtil {
 
+    private DirectoryValidationUtil() {
+        // restrict instantiation
+    }
+    
   /**
    * Validates the provided directory path. Ensures that the directory exists and is writable. If
    * the directory doesn't exist, a creation attempt is made.
