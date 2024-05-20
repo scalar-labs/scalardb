@@ -89,29 +89,29 @@ The following table shows the supported data types in each JDBC database and the
 
 | MySQL        | ScalarDB | Notes                 |
 |--------------|----------|-----------------------|
-| bigint       | BIGINT   | [*1](#warn-data-size) |
+| bigint       | BIGINT   | See warning (1) below |
 | binary       | BLOB     |                       |
 | bit          | BOOLEAN  |                       |
-| blob         | BLOB     | [*2](#warn-data-size) |
-| char         | TEXT     | [*2](#warn-data-size) |
+| blob         | BLOB     | See warning (2) below |
+| char         | TEXT     | See warning (2) below |
 | double       | DOUBLE   |                       |
 | float        | FLOAT    |                       |
 | int          | INT      |                       |
-| int unsigned | BIGINT   | [*2](#warn-data-size) |
+| int unsigned | BIGINT   | See warning (2) below |
 | integer      | INT      |                       |
 | longblob     | BLOB     |                       |
 | longtext     | TEXT     |                       |
-| mediumblob   | BLOB     | [*2](#warn-data-size) |
-| mediumint    | INT      | [*2](#warn-data-size) |
-| mediumtext   | TEXT     | [*2](#warn-data-size) |
-| smallint     | INT      | [*2](#warn-data-size) |
-| text         | TEXT     | [*2](#warn-data-size) |
-| tinyblob     | BLOB     | [*2](#warn-data-size) |
-| tinyint      | INT      | [*2](#warn-data-size) |
+| mediumblob   | BLOB     | See warning (2) below |
+| mediumint    | INT      | See warning (2) below |
+| mediumtext   | TEXT     | See warning (2) below |
+| smallint     | INT      | See warning (2) below |
+| text         | TEXT     | See warning (2) below |
+| tinyblob     | BLOB     | See warning (2) below |
+| tinyint      | INT      | See warning (2) below |
 | tinyint(1)   | BOOLEAN  |                       |
-| tinytext     | TEXT     | [*2](#warn-data-size) |
-| varbinary    | BLOB     | [*2](#warn-data-size) |
-| varchar      | TEXT     | [*2](#warn-data-size) |
+| tinytext     | TEXT     | See warning (2) below |
+| varbinary    | BLOB     | See warning (2) below |
+| varchar      | TEXT     | See warning (2) below |
 
 Data types not listed in the above are not supported. The following are some common data types that are not supported:
 
@@ -135,15 +135,15 @@ Data types not listed in the above are not supported. The following are some com
 
 | PostgreSQL/YugabyteDB | ScalarDB | Notes                 |
 |-----------------------|----------|-----------------------|
-| bigint                | BIGINT   | [*1](#warn-data-size) |
+| bigint                | BIGINT   | See warning (1) below |
 | boolean               | BOOLEAN  |                       |
 | bytea                 | BLOB     |                       |
-| character             | TEXT     | [*2](#warn-data-size) |
-| character varying     | TEXT     | [*2](#warn-data-size) |
+| character             | TEXT     | See warning (2) below |
+| character varying     | TEXT     | See warning (2) below |
 | double precision      | DOUBLE   |                       |
 | integer               | INT      |                       |
 | real                  | FLOAT    |                       |
-| smallint              | INT      | [*2](#warn-data-size) |
+| smallint              | INT      | See warning (2) below |
 | text                  | TEXT     |                       |
 
 Data types not listed in the above are not supported. The following are some common data types that are not supported:
@@ -187,18 +187,18 @@ Data types not listed in the above are not supported. The following are some com
 |---------------|-----------------|-----------------------|
 | binary_double | DOUBLE          |                       |
 | binary_float  | FLOAT           |                       |
-| blob          | BLOB            | [*3](#warn-data-size) |
-| char          | TEXT            | [*2](#warn-data-size) |
+| blob          | BLOB            | See warning (3) below |
+| char          | TEXT            | See warning (2) below |
 | clob          | TEXT            |                       |
-| float         | DOUBLE          | [*4](#warn-data-size) |
+| float         | DOUBLE          | See warning (4) below |
 | long          | TEXT            |                       |
 | long raw      | BLOB            |                       |
-| nchar         | TEXT            | [*2](#warn-data-size) |
+| nchar         | TEXT            | See warning (2) below |
 | nclob         | TEXT            |                       |
-| number        | BIGINT / DOUBLE | [*5](#warn-data-size) |
-| nvarchar2     | TEXT            | [*2](#warn-data-size) |
-| raw           | BLOB            | [*2](#warn-data-size) |
-| varchar2      | TEXT            | [*2](#warn-data-size) |
+| number        | BIGINT / DOUBLE | See warning (5) below |
+| nvarchar2     | TEXT            | See warning (2) below |
+| raw           | BLOB            | See warning (2) below |
+| varchar2      | TEXT            | See warning (2) below |
 
 Data types not listed in the above are not supported. The following are some common data types that are not supported:
 
@@ -216,22 +216,22 @@ Data types not listed in the above are not supported. The following are some com
 
 | SQL Server | ScalarDB | Notes                 |
 |------------|----------|-----------------------|
-| bigint     | BIGINT   | [*1](#warn-data-size) |
-| binary     | BLOB     | [*2](#warn-data-size) |
+| bigint     | BIGINT   | See warning (1) below |
+| binary     | BLOB     | See warning (2) below |
 | bit        | BOOLEAN  |                       |
-| char       | TEXT     | [*2](#warn-data-size) |
+| char       | TEXT     | See warning (2) below |
 | float      | DOUBLE   |                       |
 | image      | BLOB     |                       |
 | int        | INT      |                       |
-| nchar      | TEXT     | [*2](#warn-data-size) |
+| nchar      | TEXT     | See warning (2) below |
 | ntext      | TEXT     |                       |
-| nvarchar   | TEXT     | [*2](#warn-data-size) |
+| nvarchar   | TEXT     | See warning (2) below |
 | real       | FLOAT    |                       |
-| smallint   | INT      | [*2](#warn-data-size) |
+| smallint   | INT      | See warning (2) below |
 | text       | TEXT     |                       |
-| tinyint    | INT      | [*2](#warn-data-size) |
-| varbinary  | BLOB     | [*2](#warn-data-size) |
-| varchar    | TEXT     | [*2](#warn-data-size) |
+| tinyint    | INT      | See warning (2) below |
+| varbinary  | BLOB     | See warning (2) below |
+| varchar    | TEXT     | See warning (2) below |
 
 Data types not listed in the above are not supported. The following are some common data types that are not supported:
 
