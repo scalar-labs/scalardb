@@ -110,6 +110,10 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
 
   protected abstract Properties getProperties(String testName);
 
+  protected void waitForDifferentSessionDdl() {
+    // No wait by default.
+  }
+
   protected String getNamespace() {
     return NAMESPACE;
   }
@@ -162,10 +166,12 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     adminTestUtils.dropMetadataTable();
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
@@ -217,9 +223,11 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     admin.dropCoordinatorTables();
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
@@ -230,9 +238,11 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     adminTestUtils.dropTable(getNamespace(), getTable());
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
@@ -256,10 +266,12 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     adminTestUtils.dropNamespacesTable();
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairNamespace(getNamespace(), getCreationOptions());
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
     assertThat(admin.namespaceExists(getNamespace())).isTrue();
     assertThat(coordinatorNamespaceMetadataExits()).isTrue();
@@ -289,9 +301,11 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     adminTestUtils.dropNamespace(getNamespace());
 
     // Act
+    waitForDifferentSessionDdl();
     admin.repairNamespace(getNamespace(), getCreationOptions());
 
     // Assert
+    waitForDifferentSessionDdl();
     assertThat(adminTestUtils.namespaceExists(getNamespace())).isTrue();
     assertThat(admin.namespaceExists(getNamespace())).isTrue();
   }
