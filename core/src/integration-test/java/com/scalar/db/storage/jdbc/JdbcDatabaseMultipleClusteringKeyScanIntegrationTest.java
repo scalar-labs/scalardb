@@ -25,7 +25,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       return 1;
     }
     return super.getThreadNum();
@@ -33,7 +33,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (rdbEngine instanceof RdbEngineYugabyte) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -43,12 +43,12 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   //       fix is released.
   @SuppressWarnings("unused")
   private boolean isYugabyteDb() {
-    return rdbEngine instanceof RdbEngineYugabyte;
+    return JdbcTestUtils.isYugabyte(rdbEngine);
   }
 
   @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
@@ -58,7 +58,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected Value<?> getMinValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
@@ -68,12 +68,12 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
       }
     }
-    if (rdbEngine instanceof RdbEngineSqlServer) {
+    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       if (dataType == DataType.TEXT) {
         return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }
