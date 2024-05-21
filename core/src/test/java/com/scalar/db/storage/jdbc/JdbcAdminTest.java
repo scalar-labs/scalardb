@@ -76,7 +76,8 @@ public class JdbcAdminTest {
           RdbEngine.ORACLE, RdbEngineFactory.create("jdbc:oracle:"),
           RdbEngine.POSTGRESQL, RdbEngineFactory.create("jdbc:postgresql:"),
           RdbEngine.SQL_SERVER, RdbEngineFactory.create("jdbc:sqlserver:"),
-          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"));
+          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"),
+          RdbEngine.YUGABYTE, RdbEngineFactory.create("jdbc:yugabytedb:"));
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -105,6 +106,7 @@ public class JdbcAdminTest {
         when(sqlException.getErrorCode()).thenReturn(1049);
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         when(sqlException.getSQLState()).thenReturn("42P01");
         break;
       case ORACLE:
@@ -3377,6 +3379,7 @@ public class JdbcAdminTest {
         when(duplicateKeyException.getSQLState()).thenReturn("23000");
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         duplicateKeyException = mock(SQLException.class);
         when(duplicateKeyException.getSQLState()).thenReturn("23505");
         break;

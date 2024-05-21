@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.cli.constant;
 
-
 public class ErrorMessage {
 
   public static final String ERROR_DIRECTORY_WRITE_ACCESS =
