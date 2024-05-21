@@ -22,7 +22,7 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
 
   @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
@@ -32,7 +32,7 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
 
   @Override
   protected Value<?> getMinValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
@@ -42,12 +42,12 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
 
   @Override
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
       }
     }
-    if (rdbEngine instanceof RdbEngineSqlServer) {
+    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       if (dataType == DataType.TEXT) {
         return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }
@@ -57,7 +57,7 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
 
   @Override
   protected boolean isFloatTypeKeySupported() {
-    if (rdbEngine instanceof RdbEngineYugabyte) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       return false;
     }
     return super.isFloatTypeKeySupported();
