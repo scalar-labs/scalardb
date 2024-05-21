@@ -915,6 +915,35 @@ jobs:
           name: mariadb_10_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 
+  integration-test-for-jdbc-yugabytedb-2:
+    name: YugabyteDB 2 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run YugabyteDB 2
+        run: |
+          docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.21.0.0-b545 bin/yugabyted start --background=false --master_flag="ysql_enable_db_catalog_version_mode=false" --tserver_flags="ysql_enable_db_catalog_version_mode=false"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/ -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yugabytedb_2_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
   integration-test-for-multi-storage:
     name: Multi-storage integration test
     runs-on: ubuntu-latest

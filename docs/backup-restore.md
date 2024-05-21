@@ -47,6 +47,7 @@ The backup methods by database listed below are just examples of some of the dat
   <button class="tablinks" onclick="openTab(event, 'MySQL1', 'tabset-1')">MySQL</button>
   <button class="tablinks" onclick="openTab(event, 'PostgreSQL1', 'tabset-1')">PostgreSQL</button>
   <button class="tablinks" onclick="openTab(event, 'SQLite1', 'tabset-1')">SQLite</button>
+  <button class="tablinks" onclick="openTab(event, 'YugabyteDB_Managed1', 'tabset-1')">YugabyteDB Managed</button>
 </div>
 
 <div id="Amazon_RDS_or_Azure_Database_for_MySQL_or_PostgreSQL1" class="tabcontent" markdown="1">
@@ -66,6 +67,10 @@ Use the `pg_dump` command.
 Use the `.backup` command with the `.timeout` command as specified in [Special commands to sqlite3 (dot-commands)](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_)
 
 For an example, see [BASH: SQLite3 .backup command](https://stackoverflow.com/questions/23164445/bash-sqlite3-backup-command).
+</div>
+<div id="YugabyteDB_Managed1" class="tabcontent" markdown="1">
+
+Clusters are backed up automatically based on the backup policy, and these backups are retained for a specific duration. You can also perform on-demand backups. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>
 
@@ -105,6 +110,7 @@ The backup methods by database listed below are just examples of some of the dat
   <button class="tablinks" onclick="openTab(event, 'Cassandra2', 'tabset-2')" id="defaultOpen-2">Cassandra</button>
   <button class="tablinks" onclick="openTab(event, 'Cosmos_DB_for_NoSQL2', 'tabset-2')">Cosmos DB for NoSQL</button>
   <button class="tablinks" onclick="openTab(event, 'DynamoDB2', 'tabset-2')">DynamoDB</button>
+  <button class="tablinks" onclick="openTab(event, 'YugabyteDB_Managed2', 'tabset-2')">YugabyteDB Managed</button>
 </div>
 
 <div id="Cassandra2" class="tabcontent" markdown="1">
@@ -126,6 +132,10 @@ To specify a transactionally consistent restore point, pause your application th
 You must enable the PITR feature for DynamoDB tables. If you're using [ScalarDB Schema Loader](schema-loader.md) to create schemas, the tool enables the PITR feature for tables by default.
 
 To specify a transactionally consistent restore point, pause your application that is using ScalarDB with DynamoDB as described in [Back up with explicit pausing](#back-up-with-explicit-pausing).
+</div>
+<div id="YugabyteDB_Managed2" class="tabcontent" markdown="1">
+
+You can perform on-demand backups or scheduled backups during a paused duration. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>
 
@@ -150,6 +160,7 @@ The restore methods by database listed below are just examples of some of the da
   <button class="tablinks" onclick="openTab(event, 'MySQL3', 'tabset-3')">MySQL</button>
   <button class="tablinks" onclick="openTab(event, 'PostgreSQL3', 'tabset-3')">PostgreSQL</button>
   <button class="tablinks" onclick="openTab(event, 'SQLite3', 'tabset-3')">SQLite</button>
+  <button class="tablinks" onclick="openTab(event, 'YugabyteDB_Managed3', 'tabset-3')">YugabyteDB Managed</button>
 </div>
 
 <div id="Amazon_RDS_or_Azure_Database_for_MySQL_or_PostgreSQL3" class="tabcontent" markdown="1">
@@ -204,5 +215,9 @@ If you used `pg_dump` to create the backup file, use the `psql` command to resto
 <div id="SQLite3" class="tabcontent" markdown="1">
 
 Use the `.restore` command as specified in [Special commands to sqlite3 (dot-commands)](https://www.sqlite.org/cli.html#special_commands_to_sqlite3_dot_commands_).
+</div>
+<div id="YugabyteDB_Managed3" class="tabcontent" markdown="1">
+
+You can restore from the scheduled or on-demand backup within the backup retention period. For details on performing backups, see [YugabyteDB Managed: Back up and restore clusters](https://docs.yugabyte.com/preview/yugabyte-cloud/cloud-clusters/backup-clusters/).
 </div>
 </div>

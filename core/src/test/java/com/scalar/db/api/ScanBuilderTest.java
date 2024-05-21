@@ -4,10 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableSet;
-import com.scalar.db.api.Scan.Conjunction;
-import com.scalar.db.api.ScanBuilder.AndConditionSet;
-import com.scalar.db.api.ScanBuilder.ConditionSetBuilder;
-import com.scalar.db.api.ScanBuilder.OrConditionSet;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;

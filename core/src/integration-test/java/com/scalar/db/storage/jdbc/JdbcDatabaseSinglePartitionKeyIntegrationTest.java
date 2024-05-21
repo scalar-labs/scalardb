@@ -54,4 +54,12 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
     }
     return super.getMaxValue(columnName, dataType);
   }
+
+  @Override
+  protected boolean isFloatTypeKeySupported() {
+    if (rdbEngine instanceof RdbEngineYugabyte) {
+      return false;
+    }
+    return super.isFloatTypeKeySupported();
+  }
 }

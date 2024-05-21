@@ -140,3 +140,14 @@ For recommendations when using JDBC databases, see [Recommendations](requirement
 | **ScalarDB 3.9**  | ✅        |
 | **ScalarDB 3.8**  | ❌        |
 | **ScalarDB 3.7**  | ❌        |
+
+### YugabyteDB
+
+| Version           | YugabyteDB 2 |
+|:------------------|:-------------|
+| **ScalarDB 3.12** | ❌           |
+| **ScalarDB 3.11** | ❌           |
+| **ScalarDB 3.10** | ❌           |
+| **ScalarDB 3.9**  | ❌           |
+| **ScalarDB 3.8**  | ❌           |
+| **ScalarDB 3.7**  | ❌           |
