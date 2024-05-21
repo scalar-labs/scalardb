@@ -29,7 +29,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   private void validateOutputDirectory(String path)
       throws DirectoryValidationException, InvalidFileExtensionException {
     if (path == null || path.isEmpty()) {
-      throw new IllegalArgumentException("Output file path cannot be null or empty");
+      // It is ok for the output file path to be null or empty as a default file name will be used
+      // if
+      // not provided
+      return;
     }
 
     File file = new File(path);
