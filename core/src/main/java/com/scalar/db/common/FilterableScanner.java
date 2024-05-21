@@ -1,5 +1,6 @@
 package com.scalar.db.common;
 
+import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
@@ -7,6 +8,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
@@ -22,9 +25,8 @@ public class FilterableScanner implements Scanner {
   private final Scanner scanner;
   private final List<String> projections;
   private final Set<Conjunction> conjunctions;
-  private int left;
-
-  private ScannerIterator scannerIterator;
+  @Nullable private Integer left = null;
+  @LazyInit private ScannerIterator scannerIterator;
 
   public FilterableScanner(Selection selection, Scanner scanner) {
     this.scanner = scanner;
@@ -32,22 +34,21 @@ public class FilterableScanner implements Scanner {
     this.conjunctions = selection.getConjunctions();
     if (selection instanceof Scan) {
       Scan scan = (Scan) selection;
-      this.left = scan.getLimit() > 0 ? scan.getLimit() : -1;
-    } else {
-      this.left = -1;
+      this.left = scan.getLimit() > 0 ? scan.getLimit() : null;
     }
   }
 
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
   @Override
   public Optional<Result> one() throws ExecutionException {
-    if (left == 0) {
+    if (left != null && left == 0) {
       return Optional.empty();
     }
     while (true) {
       Optional<Result> one = scanner.one();
       if (one.isPresent()) {
         if (ScalarDbUtils.columnsMatchAnyOfConjunctions(one.get().getColumns(), conjunctions)) {
-          if (left > 0) {
+          if (left != null) {
             left--;
           }
           return Optional.of(new ProjectedResult(one.get(), projections));
