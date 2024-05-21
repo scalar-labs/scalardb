@@ -7,6 +7,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcAdminTestUtils;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
+import com.scalar.db.storage.jdbc.JdbcTestUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
@@ -45,8 +46,7 @@ public class JdbcTransactionAdminRepairTableIntegrationTest
 
   @Override
   protected void waitForDifferentSessionDdl() {
-    // TODO: Revisit this naive workaround.
-    if (rdbEngine.toString().toLowerCase().contains("yugabyte")) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       // This is needed to avoid schema or catalog version mismatch database errors.
       Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
       return;
