@@ -7,6 +7,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
@@ -26,12 +27,11 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     return 0;
   }
 
-  private void validateOutputDirectory(String path)
+  private void validateOutputDirectory(@Nullable String path)
       throws DirectoryValidationException, InvalidFileExtensionException {
     if (path == null || path.isEmpty()) {
       // It is ok for the output file path to be null or empty as a default file name will be used
-      // if
-      // not provided
+      // if not provided
       return;
     }
 
@@ -60,7 +60,11 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       throw new InvalidFileExtensionException("File extension not found");
     }
     if (!ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
-      throw new InvalidFileExtensionException("Invalid file extension: " + extension);
+      throw new InvalidFileExtensionException(
+          "Invalid file extension: "
+              + extension
+              + ". Allowed extensions are: "
+              + String.join(", ", ALLOWED_EXTENSIONS));
     }
   }
 }
