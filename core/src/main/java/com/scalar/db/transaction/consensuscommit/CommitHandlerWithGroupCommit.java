@@ -84,7 +84,10 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     commitStateViaGroupCommit(snapshot);
   }
 
-  private void groupCommitState(String parentId, List<Snapshot> snapshots)
+  // TODO: Emitter interface should have `emitNormalGroup()` and `emitDelayedGroup()` separately and
+  //       this method should be separated into `groupCommitStateWithParentId()` and
+  //       `groupCommitStateWithFullId()` so whether the id is a parent ID or a full ID is clear.
+  private void groupCommitState(String parentIdOrFullId, List<Snapshot> snapshots)
       throws CoordinatorException {
     if (snapshots.isEmpty()) {
       // This means all buffered transactions were manually rolled back. Nothing to do.
@@ -94,11 +97,15 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     List<String> transactionIds =
         snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
 
+    // The id is either of a parent ID in the case of normal group commit or a full ID in the case
+    // of delayed commit.
     coordinator.putStateForGroupCommit(
-        parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
+        parentIdOrFullId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
 
     logger.debug(
-        "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
+        "Transaction {} is committed successfully at {}",
+        parentIdOrFullId,
+        System.currentTimeMillis());
   }
 
   @Override
