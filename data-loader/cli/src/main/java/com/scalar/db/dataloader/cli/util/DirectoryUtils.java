@@ -12,7 +12,7 @@ import java.nio.file.Paths;
 import org.apache.commons.lang3.StringUtils;
 
 /** Utility class for validating and handling directories. */
-public class DirectoryUtils {
+public final class DirectoryUtils {
 
   private DirectoryUtils() {
     // restrict instantiation
@@ -45,7 +45,9 @@ public class DirectoryUtils {
         Files.createDirectories(path);
       } catch (IOException e) {
         throw new DirectoryValidationException(
-            String.format(ERROR_CREATE_DIRECTORY_FAILED, path.toAbsolutePath()));
+            String.format(ERROR_CREATE_DIRECTORY_FAILED, path.toAbsolutePath())
+                + ": "
+                + e.getMessage());
       }
     }
   }
