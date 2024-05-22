@@ -7,7 +7,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -52,6 +51,7 @@ public class CoordinatorTest {
   @Mock private ConsensusCommitConfig config;
   private Coordinator coordinator;
   @Captor private ArgumentCaptor<State> stateArgumentCaptor;
+  @Captor private ArgumentCaptor<Get> getArgumentCaptor;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -211,6 +211,18 @@ public class CoordinatorTest {
 
   // For group commit
 
+  private void assertGetArgumentCaptorForGetState(
+      List<Get> gets, List<String> expectedPartitionIds) {
+    assertThat(gets).hasSize(expectedPartitionIds.size());
+    for (int i = 0; i < gets.size(); i++) {
+      Get get = gets.get(i);
+      String expectedPartitionId = expectedPartitionIds.get(i);
+      assertThat(get.getPartitionKey().size()).isEqualTo(1);
+      assertThat(get.getPartitionKey().getTextValue(0)).isEqualTo(expectedPartitionId);
+      assertThat(get.getClusteringKey()).isEmpty();
+    }
+  }
+
   @ParameterizedTest
   @EnumSource(
       value = TransactionState.class,
@@ -274,7 +286,9 @@ public class CoordinatorTest {
     assertThat(state1.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId2);
-    verify(storage, times(4)).get(any(Get.class));
+    verify(storage, times(4)).get(getArgumentCaptor.capture());
+    assertGetArgumentCaptorForGetState(
+        getArgumentCaptor.getAllValues(), Arrays.asList(fullId1, parentId, fullId2, parentId));
   }
 
   @ParameterizedTest
@@ -321,8 +335,10 @@ public class CoordinatorTest {
     assertThat(state.get().getChildIdsAsString()).isEqualTo(String.join(",", childIds));
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
-    verify(spiedCoordinator, never()).getStateForGroupCommit(fullId);
-    verify(storage, times(1)).get(any(Get.class));
+    verify(spiedCoordinator).getStateForGroupCommit(fullId);
+    verify(storage).get(getArgumentCaptor.capture());
+    assertGetArgumentCaptorForGetState(
+        getArgumentCaptor.getAllValues(), Collections.singletonList(fullId));
   }
 
   @ParameterizedTest
@@ -375,7 +391,9 @@ public class CoordinatorTest {
     // Assert
     assertThat(state).isEmpty();
     verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
-    verify(storage, times(2)).get(any(Get.class));
+    verify(storage, times(2)).get(getArgumentCaptor.capture());
+    assertGetArgumentCaptorForGetState(
+        getArgumentCaptor.getAllValues(), Arrays.asList(targetFullId, parentId));
   }
 
   @ParameterizedTest
@@ -425,8 +443,10 @@ public class CoordinatorTest {
     assertThat(state.get().getChildIdsAsString()).isEmpty();
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
-    verify(spiedCoordinator, never()).getStateForGroupCommit(targetFullId);
-    verify(storage, times(1)).get(any(Get.class));
+    verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
+    verify(storage).get(getArgumentCaptor.capture());
+    assertGetArgumentCaptorForGetState(
+        getArgumentCaptor.getAllValues(), Collections.singletonList(targetFullId));
   }
 
   @ParameterizedTest
@@ -474,7 +494,9 @@ public class CoordinatorTest {
     // Assert
     assertThat(state).isEmpty();
     verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
-    verify(storage, times(2)).get(any(Get.class));
+    verify(storage, times(2)).get(getArgumentCaptor.capture());
+    assertGetArgumentCaptorForGetState(
+        getArgumentCaptor.getAllValues(), Arrays.asList(targetFullId, parentId));
   }
 
   @Test
@@ -495,7 +517,7 @@ public class CoordinatorTest {
     // Act Assert
     assertThatThrownBy(() -> spiedCoordinator.getState(fullId))
         .isInstanceOf(CoordinatorException.class);
-    verify(spiedCoordinator, never()).getStateForGroupCommit(fullId);
+    verify(spiedCoordinator).getStateForGroupCommit(fullId);
   }
 
   @Test
