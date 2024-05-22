@@ -1,10 +1,7 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.common;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.AbstractResult;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -20,29 +17,19 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
-/**
- * An implementation of {@code Result} to filter out unprojected columns and transaction columns.
- */
+/** An implementation of {@code Result} that only includes projected columns. */
 @Immutable
-public class FilteredResult extends AbstractResult {
+public class ProjectedResult extends AbstractResult {
 
   private final Result original;
   private final ImmutableSet<String> containedColumnNames;
 
-  public FilteredResult(
-      Result original,
-      List<String> projections,
-      TableMetadata metadata,
-      boolean isIncludeMetadataEnabled) {
+  public ProjectedResult(Result original, List<String> projections) {
     this.original = Objects.requireNonNull(original);
 
     ImmutableSet.Builder<String> builder = ImmutableSet.builder();
     original.getContainedColumnNames().stream()
         .filter(c -> projections.isEmpty() || projections.contains(c))
-        .filter(
-            c ->
-                isIncludeMetadataEnabled
-                    || !ConsensusCommitUtils.isTransactionMetaColumn(c, metadata))
         .forEach(builder::add);
     containedColumnNames = builder.build();
   }
@@ -145,11 +132,6 @@ public class FilteredResult extends AbstractResult {
   @Override
   public Set<String> getContainedColumnNames() {
     return containedColumnNames;
-  }
-
-  @VisibleForTesting
-  Result getOriginalResult() {
-    return original;
   }
 
   @Override
