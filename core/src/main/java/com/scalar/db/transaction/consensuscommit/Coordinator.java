@@ -172,8 +172,9 @@ public class Coordinator {
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
     Put put = new Put(new Key(Attribute.toIdValue(state.getId())));
-    if (!state.getChildIds().isEmpty()) {
-      put.withValue(Attribute.toChildIdsValue(Joiner.on(',').join(state.getChildIds())));
+    String childIds = state.getChildIdsAsString();
+    if (!childIds.isEmpty()) {
+      put.withValue(Attribute.toChildIdsValue(childIds));
     }
     return put.withValue(Attribute.toStateValue(state.getState()))
         .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
@@ -279,6 +280,11 @@ public class Coordinator {
     @VisibleForTesting
     List<String> getChildIds() {
       return childIds;
+    }
+
+    @VisibleForTesting
+    String getChildIdsAsString() {
+      return Joiner.on(CHILD_IDS_DELIMITER).join(childIds);
     }
 
     @Override

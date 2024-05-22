@@ -80,6 +80,7 @@ public class CoordinatorTest {
     // Assert
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
     assertThat(state.get().getChildIds()).isEmpty();
+    assertThat(state.get().getChildIdsAsString()).isEmpty();
     Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
   }
@@ -180,6 +181,7 @@ public class CoordinatorTest {
 
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
     assertThat(state.get().getChildIds()).isEmpty();
+    assertThat(state.get().getChildIdsAsString()).isEmpty();
     Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
   }
@@ -267,6 +269,7 @@ public class CoordinatorTest {
     assertThat(state1).isEqualTo(state2);
     assertThat(state1.get().getId()).isEqualTo(parentId);
     assertThat(state1.get().getChildIds()).isEqualTo(childIds);
+    assertThat(state1.get().getChildIdsAsString()).isEqualTo(String.join(",", childIds));
     Assertions.assertThat(state1.get().getState()).isEqualTo(transactionState);
     assertThat(state1.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId1);
@@ -315,6 +318,7 @@ public class CoordinatorTest {
     // Assert
     assertThat(state.get().getId()).isEqualTo(fullId);
     assertThat(state.get().getChildIds()).isEqualTo(childIds);
+    assertThat(state.get().getChildIdsAsString()).isEqualTo(String.join(",", childIds));
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator, never()).getStateForGroupCommit(fullId);
@@ -418,6 +422,7 @@ public class CoordinatorTest {
     // Assert
     assertThat(state.get().getId()).isEqualTo(targetFullId);
     assertThat(state.get().getChildIds()).isEmpty();
+    assertThat(state.get().getChildIdsAsString()).isEmpty();
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator, never()).getStateForGroupCommit(targetFullId);
@@ -547,6 +552,7 @@ public class CoordinatorTest {
     assertThat(state.getChildIds()).hasSize(2);
     assertThat(state.getChildIds().get(0)).isEqualTo(childId1);
     assertThat(state.getChildIds().get(1)).isEqualTo(childId2);
+    assertThat(state.getChildIdsAsString()).isEqualTo(childId1 + "," + childId2);
     assertThat(state.getState()).isEqualTo(transactionState);
     assertThat(state.getCreatedAt()).isEqualTo(current);
   }
@@ -615,6 +621,7 @@ public class CoordinatorTest {
     assertThat(state.getChildIds()).hasSize(2);
     assertThat(state.getChildIds().get(0)).isEqualTo(childId1);
     assertThat(state.getChildIds().get(1)).isEqualTo(childId2);
+    assertThat(state.getChildIdsAsString()).isEqualTo(childId1 + "," + childId2);
     assertThat(state.getState()).isEqualTo(transactionState);
     assertThat(state.getCreatedAt()).isEqualTo(current);
   }
