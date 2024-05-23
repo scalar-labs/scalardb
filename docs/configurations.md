@@ -56,8 +56,6 @@ The following performance-related configurations are available for the Consensus
 | `scalar.db.consensus_commit.coordinator.group_commit.timeout_check_interval_millis`    | Interval for checking the group commit–related timeouts.                                                                                                                                                                                                                                  | `20`                                                              |
 | `scalar.db.consensus_commit.coordinator.group_commit.metrics_monitor_log_enabled`      | Whether or not the metrics of the group commit are logged periodically.                                                                                                                                                                                                                   | `false`                                                           |
 
-[^1]: It's worth benchmarking the performance with a few variations (e.g., 75% and 125% of the default value) on the same underlying storage that your application uses, considering your application's access pattern, to determine the optimal configuration as it really depends on those factors. Also, it's important to benchmark the combinations of these parameters (e.g., First, `slot_capacity:20` and `group_size_fix_timeout_millis:40`. Second, `slot_capacity:30` and `group_size_fix_timeout_millis:40`. Third, `slot_capacity:20` and `group_size_fix_timeout_millis:80`) in order to determine the optimal combination.
-
 #### Underlying storage or database configurations
 
 Consensus Commit has a storage abstraction layer and supports multiple underlying storages. You can specify the storage implementation by using the `scalar.db.storage` property.
@@ -280,3 +278,5 @@ scalar.db.contact_points=indirect:<SCALARDB_CLUSTER_CONTACT_POINT>
 ```
 
 For details about client configurations, see the ScalarDB Cluster [client configurations (redirects to the Enterprise docs site)](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/developer-guide-for-scalardb-cluster-with-java-api/#client-configurations).
+
+[^1]: It's worth benchmarking the performance with a few variations (e.g., 75% and 125% of the default value) on the same underlying storage that your application uses, considering your application's access pattern, to determine the optimal configuration as it really depends on those factors. Also, it's important to benchmark the combinations of these parameters (e.g., First, `slot_capacity:20` and `group_size_fix_timeout_millis:40`. Second, `slot_capacity:30` and `group_size_fix_timeout_millis:40`. Third, `slot_capacity:20` and `group_size_fix_timeout_millis:80`) in order to determine the optimal combination.
