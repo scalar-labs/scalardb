@@ -11,6 +11,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -2547,6 +2548,50 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
+      scan_NonOverlappingPutGivenButOverlappingPutExists_ShouldThrowIllegalArgumentException()
+          throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 9999));
+    Scan scan =
+        Scan.newBuilder(prepareScan(0, 1, 1, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isLessThanOrEqualToInt(INITIAL_BALANCE))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.rollback();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_OverlappingPutWithConjunctionsGivenBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        preparePut(0, 0, namespace1, TABLE_1)
+            .withValue(BALANCE, 999)
+            .withValue(SOME_COLUMN, false));
+    Scan scan =
+        Scan.newBuilder(prepareScan(0, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isLessThanInt(1000))
+            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToBoolean(false))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.rollback();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
       scanWithIndex_OverlappingPutWithNonIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException()
           throws TransactionException {
     // Arrange
@@ -2597,6 +2642,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, 999);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.rollback();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      scanWithIndex_OverlappingPutWithIndexedColumnAndConjunctionsGivenBefore_ShouldThrowIllegalArgumentException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        preparePut(0, 0, namespace1, TABLE_1)
+            .withValue(BALANCE, 999)
+            .withValue(SOME_COLUMN, false));
+    Scan scan =
+        Scan.newBuilder(prepareScanWithIndex(namespace1, TABLE_1, 999))
+            .where(ConditionBuilder.column(BALANCE).isLessThanInt(1000))
+            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToBoolean(false))
+            .build();
+
+    // Act
     Throwable thrown = catchThrowable(() -> transaction.scan(scan));
     transaction.rollback();
 
