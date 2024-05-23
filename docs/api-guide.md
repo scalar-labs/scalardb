@@ -1204,9 +1204,6 @@ The Coordinator table that is used for Consensus Commit transactions is a vital 
 ScalarDB provides a group commit feature for the Coordinator table that groups multiple record writes into a single write operation, improving write throughput. In this case, latency may increase or decrease, depending on the underlying database and the workload.
 
 To enable the group commit feature, add the following configuration:
-
-#### Configurations
-
 ```properties
 # By default, this configuration is set to `false`.
 scalar.db.consensus_commit.coordinator.group_commit.enabled=true
@@ -1220,6 +1217,8 @@ scalar.db.consensus_commit.coordinator.group_commit.enabled=true
 ```
 
 #### Limitations
+
+This section describes the limitations of the group commit feature.
 
 ##### Custom transaction ID passed by users
 
@@ -1240,7 +1239,7 @@ The group commit feature implicitly generates an internal value and uses it as a
    logger.info("The transaction state: {}", manager.getState(transaction.getId()));
 ```
 
-##### Commit in Two-Phase Commit Interface
+##### Commit in two-phase commit interface
 
 The group commit feature manages all ongoing transactions in memory. When the feature is enabled with the two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the Coordinator table, which may contain different transaction distributions over groups. Consequently, `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.commit()` must be called first by the coordinator service before being called by participant services.
 
