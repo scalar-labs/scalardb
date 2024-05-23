@@ -4,7 +4,7 @@ import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import com.scalar.db.util.groupcommit.GroupCommitter;
 import com.scalar.db.util.groupcommit.KeyManipulator;
 import java.util.Optional;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CoordinatorGroupCommitter
     extends GroupCommitter<String, String, String, String, Snapshot> {
@@ -61,14 +61,12 @@ public class CoordinatorGroupCommitter
       CHARS_FOR_PRIMARY_KEY_SIZE = CHARS_FOR_PRIMARY_KEY.length;
     }
 
-    // Use Random instead of ThreadLocalRandom in favor of global randomness.
-    private final Random random = new Random();
-
     @Override
     public String generateParentKey() {
       char[] chars = new char[PRIMARY_KEY_SIZE];
       for (int i = 0; i < PRIMARY_KEY_SIZE; i++) {
-        chars[i] = CHARS_FOR_PRIMARY_KEY[random.nextInt(CHARS_FOR_PRIMARY_KEY_SIZE)];
+        chars[i] =
+            CHARS_FOR_PRIMARY_KEY[ThreadLocalRandom.current().nextInt(CHARS_FOR_PRIMARY_KEY_SIZE)];
       }
       return new String(chars);
     }
