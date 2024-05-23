@@ -23,9 +23,14 @@ import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableFunction;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractDistributedTransactionManager
     implements DistributedTransactionManager {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(AbstractDistributedTransactionManager.class);
 
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -187,11 +192,11 @@ public abstract class AbstractDistributedTransactionManager
     }
   }
 
-  private void rollbackTransaction(DistributedTransaction transaction) throws CrudException {
+  private void rollbackTransaction(DistributedTransaction transaction) {
     try {
       transaction.rollback();
     } catch (RollbackException e) {
-      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+      logger.warn("Rolling back the transaction failed", e);
     }
   }
 
