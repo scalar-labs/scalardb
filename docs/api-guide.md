@@ -681,14 +681,14 @@ List<Result> results = transaction.scan(scan);
 {% capture notice--info %}
 **Note**
 
-You can't specify any filtering conditions and orderings in cross-partition `Scan` except for when using JDBC databases. For details on how to use cross-partition `Scan` with filtering or ordering for JDBC databases, see [Execute cross-partition `Scan` with filtering and ordering](#execute-cross-partition-scan-with-filtering-and-ordering).
+You can't specify any orderings in cross-partition `Scan` when using non-JDBC databases. For details on how to use cross-partition `Scan` with filtering or ordering, see [Execute cross-partition `Scan` with filtering and ordering](#execute-cross-partition-scan-with-filtering-and-ordering).
 {% endcapture %}
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
 ##### Execute cross-partition `Scan` with filtering and ordering
 
-By enabling the cross-partition scan option with filtering and ordering for JDBC databases as follows, you can execute a cross-partition `Scan` operation with flexible conditions and orderings:
+By enabling the cross-partition scan option with filtering and ordering as follows, you can execute a cross-partition `Scan` operation with flexible conditions and orderings:
 
 ```properties
 scalar.db.cross_partition_scan.enabled=true

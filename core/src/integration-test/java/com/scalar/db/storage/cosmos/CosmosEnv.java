@@ -29,7 +29,7 @@ public final class CosmosEnv {
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
 
     if (databasePrefix.isPresent()) {
