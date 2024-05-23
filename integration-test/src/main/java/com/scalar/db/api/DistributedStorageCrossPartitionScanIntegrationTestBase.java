@@ -10,11 +10,8 @@ import com.google.common.collect.ListMultimap;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.api.ScanBuilder.AndConditionSet;
 import com.scalar.db.api.ScanBuilder.BuildableScanAll;
 import com.scalar.db.api.ScanBuilder.BuildableScanAllWithOngoingWhereAnd;
-import com.scalar.db.api.ScanBuilder.ConditionSetBuilder;
-import com.scalar.db.api.ScanBuilder.OrConditionSet;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -132,6 +129,10 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     return namespaceBaseName + firstColumnType;
   }
 
+  protected boolean isParallelDdlSupported() {
+    return true;
+  }
+
   private void createTableForConditionTests() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(getNamespaceName(), true, options);
@@ -170,7 +171,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
       testCallables.add(testCallable);
     }
 
-    executeInParallel(testCallables);
+    executeDdls(testCallables);
   }
 
   private void createTable(
@@ -706,7 +707,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
       testCallables.add(testCallable);
     }
 
-    executeInParallel(testCallables);
+    executeDdls(testCallables);
   }
 
   @Test
@@ -1028,6 +1029,22 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
     // Assert
     assertScanResult(actual, expected, description);
+  }
+
+  private void executeDdls(List<Callable<Void>> ddls)
+      throws InterruptedException, java.util.concurrent.ExecutionException {
+    if (isParallelDdlSupported()) {
+      executeInParallel(ddls);
+    } else {
+      ddls.forEach(
+          ddl -> {
+            try {
+              ddl.call();
+            } catch (Exception e) {
+              throw new RuntimeException(e);
+            }
+          });
+    }
   }
 
   private void executeInParallel(List<Callable<Void>> testCallables)

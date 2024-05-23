@@ -46,15 +46,17 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
+      boolean hasDifferentClusteringOrders,
       String schema,
       String table,
       TableMetadata metadata,
       boolean ifNotExists) {
     ArrayList<String> sqls = new ArrayList<>();
 
-    if (hasDescClusteringOrder) {
-      // Create a unique index for the clustering orders
+    if (hasDifferentClusteringOrders) {
+      // Create a unique index for the clustering orders only when both ASC and DESC are contained
+      // in the clustering keys. If all the clustering key orders are DESC, the PRIMARY KEY index
+      // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
               + (ifNotExists ? "IF NOT EXISTS " : "")

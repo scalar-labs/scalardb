@@ -1,0 +1,14 @@
+subprojects {
+    group = "scalardb.dataloader"
+
+    dependencies {
+        // Assert J
+        testImplementation("org.assertj:assertj-core:${assertjVersion}")
+
+        // JUnit 5
+        testImplementation(platform("org.junit:junit-bom:$junitVersion"))
+        testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+        testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
+        testImplementation("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
+    }
+}

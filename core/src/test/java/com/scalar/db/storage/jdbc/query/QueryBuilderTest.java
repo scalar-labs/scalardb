@@ -9,6 +9,7 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -294,6 +295,7 @@ public class QueryBuilderTest {
     switch (rdbEngineType) {
       case MYSQL:
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery =
             "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
@@ -377,8 +379,7 @@ public class QueryBuilderTest {
         queryBuilder
             .select(Collections.emptyList())
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
-            .where(
-                ImmutableSet.of(Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1))))
+            .where(ImmutableSet.of(Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1))))
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE v1=?", rdbEngine));
     query.bind(preparedStatement);
@@ -391,7 +392,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isEqualToInt(1),
                         ConditionBuilder.column("v2").isEqualToInt(2))))
             .build();
@@ -408,8 +409,8 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1)),
-                    Scan.Conjunction.of(ConditionBuilder.column("v2").isEqualToInt(2))))
+                    Conjunction.of(ConditionBuilder.column("v1").isEqualToInt(1)),
+                    Conjunction.of(ConditionBuilder.column("v2").isEqualToInt(2))))
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE v1=? OR v2=?", rdbEngine));
@@ -424,10 +425,10 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isEqualToInt(1),
                         ConditionBuilder.column("v2").isEqualToInt(2)),
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v3").isEqualToInt(3),
                         ConditionBuilder.column("v4").isEqualToInt(4))))
             .build();
@@ -447,7 +448,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isGreaterThanInt(1),
                         ConditionBuilder.column("v1").isLessThanInt(2),
                         ConditionBuilder.column("v2").isGreaterThanOrEqualToInt(3),
@@ -472,7 +473,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("v1").isNullInt(),
                         ConditionBuilder.column("v2").isNotNullInt())))
             .build();
@@ -501,7 +502,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("c1").isLikeText("%text"),
                         ConditionBuilder.column("c2").isLikeText("text+%%", "+"),
                         ConditionBuilder.column("v1").isLikeText("text\\%", ""),
@@ -534,7 +535,7 @@ public class QueryBuilderTest {
   @ParameterizedTest
   @EnumSource(
       value = RdbEngine.class,
-      names = {"POSTGRESQL"},
+      names = {"POSTGRESQL", "YUGABYTE"},
       mode = EnumSource.Mode.INCLUDE)
   public void selectQueryWithLikeConditionsTestForPostgres(RdbEngine rdbEngineType)
       throws SQLException {
@@ -551,7 +552,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("c1").isLikeText("%text"),
                         ConditionBuilder.column("c2").isLikeText("text+%%", "+"),
                         ConditionBuilder.column("v1").isLikeText("text\\%", ""),
@@ -601,7 +602,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("c1").isLikeText("%text"),
                         ConditionBuilder.column("c2").isLikeText("text+%%", "+"),
                         ConditionBuilder.column("v1").isLikeText("text\\%", ""),
@@ -649,7 +650,7 @@ public class QueryBuilderTest {
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(
                 ImmutableSet.of(
-                    Scan.Conjunction.of(
+                    Conjunction.of(
                         ConditionBuilder.column("c1").isLikeText("%text[%]"),
                         ConditionBuilder.column("c2").isLikeText("[%]text+%%", "+"),
                         ConditionBuilder.column("v1").isLikeText("[%]text\\%", ""),
@@ -1179,6 +1180,7 @@ public class QueryBuilderTest {
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
@@ -1212,6 +1214,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case SQLITE:
+      case YUGABYTE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "v1Value");
         verify(preparedStatement).setString(3, "v2Value");
@@ -1241,6 +1244,7 @@ public class QueryBuilderTest {
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
                 + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
@@ -1276,6 +1280,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case SQLITE:
+      case YUGABYTE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         verify(preparedStatement).setString(3, "v1Value");
@@ -1309,6 +1314,7 @@ public class QueryBuilderTest {
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?";
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
@@ -1348,6 +1354,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case SQLITE:
+      case YUGABYTE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1391,6 +1398,7 @@ public class QueryBuilderTest {
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?,v5=?";
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
@@ -1431,6 +1439,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case SQLITE:
+      case YUGABYTE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1486,6 +1495,7 @@ public class QueryBuilderTest {
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1) VALUES (?)";
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery = "INSERT INTO n1.t1 (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
         break;
       case ORACLE:
@@ -1513,6 +1523,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case SQLITE:
+      case YUGABYTE:
         verify(preparedStatement).setString(1, "p1Value");
         break;
       case ORACLE:
@@ -1528,6 +1539,7 @@ public class QueryBuilderTest {
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,c1) VALUES (?,?)";
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery = "INSERT INTO n1.t1 (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
         break;
       case ORACLE:
@@ -1560,6 +1572,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case SQLITE:
+      case YUGABYTE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         break;
@@ -1578,6 +1591,7 @@ public class QueryBuilderTest {
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?)";
         break;
       case POSTGRESQL:
+      case YUGABYTE:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO NOTHING";
@@ -1614,6 +1628,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case SQLITE:
+      case YUGABYTE:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");

@@ -55,7 +55,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
+      boolean hasDifferentClusteringOrders,
       String schema,
       String table,
       TableMetadata metadata,
