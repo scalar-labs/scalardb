@@ -141,7 +141,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCassandra -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestCassandra -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -182,7 +182,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCassandra -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestCassandra -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -218,7 +218,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCosmos -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
+          arguments: integrationTestCosmos -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
 
       - name : Delete gradle daemon log files
         if: always()
@@ -262,7 +262,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestDynamo' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestDynamo -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestDynamo -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -298,7 +298,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -335,7 +335,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -371,7 +371,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -412,7 +412,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -453,7 +453,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -494,7 +494,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -535,7 +535,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -582,7 +582,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -629,7 +629,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -690,7 +690,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Stop Oracle 23 container
         if: always()
@@ -741,7 +741,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -788,7 +788,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -835,7 +835,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -870,7 +870,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
 
       - name: Upload Gradle test reports
         if: always()
@@ -906,7 +906,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestJdbc -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -951,7 +951,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestMultiStorage' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestMultiStorage -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestMultiStorage -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4
@@ -987,7 +987,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestScalarDbServer -PcompilationJavaVendor=temurin -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
+          arguments: integrationTestScalarDbServer -PintegrationTestJavaVersion=${{ env.INT_TEST_JAVA_VERSION }}  -PintegrationTestJavaVendor=${{ env.INT_TEST_JAVA_VENDOR }}
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4

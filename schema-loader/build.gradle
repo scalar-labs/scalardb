@@ -36,6 +36,7 @@ dependencies {
 javadoc {
     title = "ScalarDB Schema Loader"
 }
+
 task dockerfileLint(type: Exec) {
     description 'Lint the Dockerfile'
     commandLine "${project.rootDir}/ci/dockerfile_lint.sh"
