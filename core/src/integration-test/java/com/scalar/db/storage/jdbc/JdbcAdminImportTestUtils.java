@@ -125,13 +125,13 @@ public class JdbcAdminImportTestUtils {
   public Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes(String namespace)
       throws SQLException {
     execute(rdbEngine.createSchemaSqls(namespace));
-    if (rdbEngine instanceof RdbEngineMysql) {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
       return createExistingMysqlDatabaseWithAllDataTypes(namespace);
-    } else if (rdbEngine instanceof RdbEnginePostgresql) {
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       return createExistingPostgresDatabaseWithAllDataTypes(namespace);
-    } else if (rdbEngine instanceof RdbEngineOracle) {
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
       return createExistingOracleDatabaseWithAllDataTypes(namespace);
-    } else if (rdbEngine instanceof RdbEngineSqlServer) {
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       return createExistingSqlServerDatabaseWithAllDataTypes(namespace);
     } else {
       throw new RuntimeException();

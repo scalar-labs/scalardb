@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
@@ -295,7 +296,8 @@ public class FilteredResultTest {
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
 
-    assertThat(filteredResult.getClusteringKey()).isNotPresent();
+    assertThat(catchThrowable(filteredResult::getClusteringKey))
+        .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
     assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
@@ -359,7 +361,8 @@ public class FilteredResultTest {
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
 
-    assertThat(filteredResult.getClusteringKey()).isNotPresent();
+    assertThat(catchThrowable(filteredResult::getClusteringKey))
+        .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
     assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
@@ -432,7 +435,8 @@ public class FilteredResultTest {
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
 
-    assertThat(filteredResult.getClusteringKey()).isNotPresent();
+    assertThat(catchThrowable(filteredResult::getClusteringKey))
+        .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
     assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
@@ -484,7 +488,8 @@ public class FilteredResultTest {
         new FilteredResult(result, Collections.singletonList(ACCOUNT_TYPE), TABLE_METADATA, false);
 
     // Act Assert
-    assertThat(filteredResult.getPartitionKey()).isNotPresent();
+    assertThat(catchThrowable(filteredResult::getPartitionKey))
+        .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getClusteringKey()).isPresent();
     assertThat(filteredResult.getClusteringKey().get().size()).isEqualTo(1);
@@ -541,8 +546,10 @@ public class FilteredResultTest {
         new FilteredResult(result, Collections.singletonList(BALANCE), TABLE_METADATA, false);
 
     // Act Assert
-    assertThat(filteredResult.getPartitionKey()).isNotPresent();
-    assertThat(filteredResult.getClusteringKey()).isNotPresent();
+    assertThat(catchThrowable(filteredResult::getPartitionKey))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(catchThrowable(filteredResult::getClusteringKey))
+        .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID)).isNotPresent();
     assertThat(filteredResult.getValue(ACCOUNT_TYPE)).isNotPresent();

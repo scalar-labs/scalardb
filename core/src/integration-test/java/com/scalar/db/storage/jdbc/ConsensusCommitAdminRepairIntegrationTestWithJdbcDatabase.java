@@ -26,7 +26,7 @@ public class ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
 
   @Override
   protected void waitForDifferentSessionDdl() {
-    if (rdbEngine instanceof RdbEngineYugabyte) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       // This is needed to avoid schema or catalog version mismatch database errors.
       Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
       return;

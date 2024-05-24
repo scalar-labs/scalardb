@@ -403,7 +403,6 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
         .table(tableName)
         .all()
         .where(condition)
-        .ordering(Ordering.asc(ACCOUNT_ID))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -419,7 +418,6 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
         .table(tableName)
         .all()
         .where(condition)
-        .ordering(Ordering.asc(ACCOUNT_ID))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -454,6 +452,6 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
     for (Result actualResult : actualResults) {
       actual.add(actualResult.getInt(ACCOUNT_ID));
     }
-    assertThat(actual).isEqualTo(expected);
+    assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
   }
 }
