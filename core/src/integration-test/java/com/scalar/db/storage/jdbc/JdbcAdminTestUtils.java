@@ -105,16 +105,16 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @Override
   public boolean namespaceExists(String namespace) throws SQLException {
     String sql;
-    if (rdbEngine instanceof RdbEngineMysql) {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
       sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
-    } else if (rdbEngine instanceof RdbEngineOracle) {
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
       sql = "SELECT 1 FROM all_users WHERE username = ?";
-    } else if (rdbEngine instanceof RdbEnginePostgresql) {
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       sql = "SELECT 1 FROM pg_namespace WHERE nspname = ?";
-    } else if (rdbEngine instanceof RdbEngineSqlite) {
+    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
       // SQLite has no concept of namespace
       return true;
-    } else if (rdbEngine instanceof RdbEngineSqlServer) {
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       sql = "SELECT 1 FROM sys.schemas WHERE name = ?";
     } else {
       throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());

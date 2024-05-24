@@ -301,12 +301,6 @@ public enum CoreError implements ScalarDbError {
   STORAGE_NOT_FOUND(Category.USER_ERROR, "0065", "Storage '%s' is not found", "", ""),
   TRANSACTION_MANAGER_NOT_FOUND(
       Category.USER_ERROR, "0066", "Transaction manager '%s' is not found", "", ""),
-  CASSANDRA_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0067",
-      "Cross-partition scan with filtering or ordering is not supported in Cassandra",
-      "",
-      ""),
   GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION(
       Category.USER_ERROR,
       "0068",
@@ -325,12 +319,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0071",
       "The property 'scalar.db.contact_port' must be greater than or equal to zero",
-      "",
-      ""),
-  COSMOS_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0072",
-      "Cross-partition scan with filtering or ordering is not supported in Cosmos DB",
       "",
       ""),
   COSMOS_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
@@ -371,12 +359,6 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_ENCODER_CANNOT_ENCODE_TEXT_VALUE_CONTAINING_0X0000(
       Category.USER_ERROR, "0079", "Cannot encode a Text value that contains '\\u0000'", "", ""),
-  DYNAMO_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0080",
-      "Cross-partition scan with filtering or ordering is not supported in DynamoDB",
-      "",
-      ""),
   DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_NULL_OR_EMPTY(
       Category.USER_ERROR,
       "0081",
@@ -582,6 +564,50 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0127",
       "This condition is not allowed for the UpdateIf operation. Condition: %s",
+      "",
+      ""),
+  CASSANDRA_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0128",
+      "Cross-partition scan with ordering is not supported in Cassandra",
+      "",
+      ""),
+  COSMOS_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0129",
+      "Cross-partition scan with ordering is not supported in Cosmos DB",
+      "",
+      ""),
+  DYNAMO_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0130",
+      "Cross-partition scan with ordering is not supported in DynamoDB",
+      "",
+      ""),
+  DATA_LOADER_DIRECTORY_WRITE_ACCESS_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0131",
+      "The directory '%s' does not have write permissions. Please ensure that the current user has write access to the directory.",
+      "",
+      ""),
+  DATA_LOADER_DIRECTORY_CREATE_FAILED(
+      Category.USER_ERROR,
+      "0132",
+      "Failed to create the directory '%s'. Please check if you have sufficient permissions and if there are any file system restrictions. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_MISSING_DIRECTORY_NOT_ALLOWED(
+      Category.USER_ERROR, "0133", "Directory path cannot be null or empty.", "", ""),
+  DATA_LOADER_MISSING_FILE_EXTENSION(
+      Category.USER_ERROR,
+      "0134",
+      "No file extension was found on the provided file name %s.",
+      "",
+      ""),
+  DATA_LOADER_INVALID_FILE_EXTENSION(
+      Category.USER_ERROR,
+      "0135",
+      "Invalid file extension: %s. Allowed extensions are: %s",
       "",
       ""),
 

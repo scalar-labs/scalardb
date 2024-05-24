@@ -56,6 +56,7 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
