@@ -32,7 +32,7 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     implements TwoPhaseCommitTransactionManager {
 
   private static final Logger logger =
-      LoggerFactory.getLogger(AbstractDistributedTransactionManager.class);
+      LoggerFactory.getLogger(AbstractTwoPhaseCommitTransactionManager.class);
 
   private Optional<String> namespace;
   private Optional<String> tableName;
