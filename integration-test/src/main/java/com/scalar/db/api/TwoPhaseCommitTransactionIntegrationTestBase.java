@@ -252,6 +252,37 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
+  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Scan scan =
+        Scan.newBuilder(prepareScan(1, 0, 2, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(SOME_COLUMN).isGreaterThanOrEqualToInt(1))
+            .build();
+
+    // Act
+    List<Result> results = transaction.scan(scan);
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(2);
+
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(1);
+
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
+  }
+
+  @Test
   public void scan_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange

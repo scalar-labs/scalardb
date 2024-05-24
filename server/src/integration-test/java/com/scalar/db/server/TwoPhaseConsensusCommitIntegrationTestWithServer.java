@@ -118,4 +118,9 @@ public class TwoPhaseConsensusCommitIntegrationTestWithServer
   @Test
   public void
       update_withUpdateIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("ScalarDB Server doesn't support scan() with conjunctions")
+  @Override
+  @Test
+  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords() {}
 }
