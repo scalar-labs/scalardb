@@ -19,7 +19,7 @@ public abstract class ConsensusCommitCrossPartitionScanIntegrationTestBase
 
   @Override
   protected String getTestName() {
-    return "tx_cc";
+    return "tx_cross_scan";
   }
 
   @Override
