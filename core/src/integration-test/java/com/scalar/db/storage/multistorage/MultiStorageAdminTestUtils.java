@@ -11,6 +11,7 @@ import com.scalar.db.storage.cassandra.CassandraConfig;
 import com.scalar.db.storage.cassandra.ClusterManager;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.jdbc.JdbcTestUtils;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
@@ -155,24 +156,19 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   private boolean namespaceExistsOnJdbc(String namespace) throws SQLException {
     String sql;
     // RdbEngine classes are not publicly exposed, so we test the type using hard coded class name
-    switch (rdbEngine.getClass().getSimpleName()) {
-      case "RdbEngineMysql":
-        sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
-        break;
-      case "RdbEngineOracle":
-        sql = "SELECT 1 FROM all_users WHERE username = ?";
-        break;
-      case "RdbEnginePostgresql":
-        sql = "SELECT 1 FROM pg_namespace WHERE nspname = ?";
-        break;
-      case "RdbEngineSqlite":
-        // SQLite has no concept of namespace
-        return true;
-      case "RdbEngineSqlServer":
-        sql = "SELECT 1 FROM sys.schemas WHERE name = ?";
-        break;
-      default:
-        throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      sql = "SELECT 1 FROM pg_namespace WHERE nspname = ?";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      sql = "SELECT 1 FROM all_users WHERE username = ?";
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      sql = "SELECT 1 FROM sys.schemas WHERE name = ?";
+    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
+      // SQLite has no concept of namespace
+      return true;
+    } else {
+      throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
     }
 
     try (Connection connection = dataSource.getConnection();

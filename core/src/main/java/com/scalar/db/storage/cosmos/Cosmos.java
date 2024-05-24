@@ -14,11 +14,13 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -46,11 +48,9 @@ public class Cosmos extends AbstractDistributedStorage {
   public Cosmos(DatabaseConfig databaseConfig) {
     super(databaseConfig);
 
-    if (databaseConfig.isCrossPartitionScanFilteringEnabled()
-        || databaseConfig.isCrossPartitionScanOrderingEnabled()) {
+    if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
-          CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING_NOT_SUPPORTED
-              .buildMessage());
+          CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
 
     CosmosConfig config = new CosmosConfig(databaseConfig);
@@ -98,14 +98,30 @@ public class Cosmos extends AbstractDistributedStorage {
     get = copyAndSetTargetToIfNot(get);
     operationChecker.check(get);
 
-    Scanner scanner = selectStatementHandler.handle(get);
-    Optional<Result> ret = scanner.one();
-    if (scanner.one().isPresent()) {
-      throw new IllegalArgumentException(
-          CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
+    Scanner scanner = null;
+    try {
+      if (get.getConjunctions().isEmpty()) {
+        scanner = selectStatementHandler.handle(get);
+      } else {
+        scanner =
+            new FilterableScanner(
+                get, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)));
+      }
+      Optional<Result> ret = scanner.one();
+      if (scanner.one().isPresent()) {
+        throw new IllegalArgumentException(
+            CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
+      }
+      return ret;
+    } finally {
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          logger.warn("Failed to close the scanner", e);
+        }
+      }
     }
-
-    return ret;
   }
 
   @Override
@@ -113,7 +129,12 @@ public class Cosmos extends AbstractDistributedStorage {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
 
-    return selectStatementHandler.handle(scan);
+    if (scan.getConjunctions().isEmpty()) {
+      return selectStatementHandler.handle(scan);
+    } else {
+      return new FilterableScanner(
+          scan, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)));
+    }
   }
 
   @Override

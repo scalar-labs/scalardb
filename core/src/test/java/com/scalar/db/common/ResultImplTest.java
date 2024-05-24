@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
@@ -489,7 +490,7 @@ public class ResultImplTest {
   }
 
   @Test
-  public void getPartitionKey_NotRequiredValuesGiven_ShouldReturnPartitionKey() {
+  public void getPartitionKey_NotRequiredValuesGiven_ShouldThrowIllegalStateException() {
     // Arrange
     ResultImpl result =
         new ResultImpl(
@@ -499,10 +500,10 @@ public class ResultImplTest {
             TABLE_METADATA);
 
     // Act
-    Optional<Key> key = result.getPartitionKey();
+    Throwable thrown = catchThrowable(result::getPartitionKey);
 
     // Assert
-    assertThat(key).isNotPresent();
+    assertThat(thrown).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -520,7 +521,7 @@ public class ResultImplTest {
   }
 
   @Test
-  public void getClusteringKey_NotRequiredValuesGiven_ShouldReturnClusteringKey() {
+  public void getClusteringKey_NotRequiredValuesGiven_ShouldThrowIllegalStateException() {
     // Arrange
     ResultImpl result =
         new ResultImpl(
@@ -530,9 +531,9 @@ public class ResultImplTest {
             TABLE_METADATA);
 
     // Act
-    Optional<Key> key = result.getClusteringKey();
+    Throwable thrown = catchThrowable(result::getClusteringKey);
 
     // Assert
-    assertThat(key).isNotPresent();
+    assertThat(thrown).isInstanceOf(IllegalStateException.class);
   }
 }

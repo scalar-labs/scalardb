@@ -13,7 +13,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
@@ -22,7 +21,6 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -267,22 +265,6 @@ public class SnapshotTest {
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
-  }
-
-  private LikeExpression prepareLike(String pattern) {
-    return ConditionBuilder.column("col1").isLikeText(pattern);
-  }
-
-  private LikeExpression prepareLike(String pattern, String escape) {
-    return ConditionBuilder.column("col1").isLikeText(pattern, escape);
-  }
-
-  private LikeExpression prepareNotLike(String pattern) {
-    return ConditionBuilder.column("col1").isNotLikeText(pattern);
-  }
-
-  private LikeExpression prepareNotLike(String pattern, String escape) {
-    return ConditionBuilder.column("col1").isNotLikeText(pattern, escape);
   }
 
   private void configureBehavior() throws ExecutionException {
@@ -1674,164 +1656,5 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void isMatchedWith_SomePatternsWithoutEscapeGiven_ShouldReturnBooleanProperly() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    // The following tests are added referring to the similar tests in Spark.
-    // https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/expressions/RegexpExpressionsSuite.scala
-    // simple patterns
-    assertThat(snapshot.isMatched(prepareLike("abdef"), "abdef")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a\\__b"), "a_%b")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a_%b"), "addb")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a\\__b"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a%\\%b"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a%\\%b"), "a_%b")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a%"), "addb")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("**"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a%"), "abc")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("b%"), "abc")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("bc%"), "abc")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a_b"), "a\nb")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a%b"), "ab")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("a%b"), "a\nb")).isTrue();
-
-    // empty input
-    assertThat(snapshot.isMatched(prepareLike(""), "")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike(""), "a")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("a"), "")).isFalse();
-
-    // SI-17647 double-escaping backslash
-    assertThat(snapshot.isMatched(prepareLike("%\\\\%"), "\\\\\\\\")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("%%"), "%%")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("\\\\\\__"), "\\__")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("%\\\\%\\%"), "\\\\\\__")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("%\\\\"), "_\\\\\\%")).isFalse();
-
-    // unicode
-    assertThat(snapshot.isMatched(prepareLike("_\u20AC_"), "a\u20ACa")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("_€_"), "a€a")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("_\u20AC_"), "a€a")).isTrue();
-    assertThat(snapshot.isMatched(prepareLike("_€_"), "a\u20ACa")).isTrue();
-
-    // case
-    assertThat(snapshot.isMatched(prepareLike("a%"), "A")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("A%"), "a")).isFalse();
-    assertThat(snapshot.isMatched(prepareLike("_a_"), "AaA")).isTrue();
-
-    // example
-    assertThat(
-            snapshot.isMatched(
-                prepareLike("\\%SystemDrive\\%\\\\Users%"), "%SystemDrive%\\Users\\John"))
-        .isTrue();
-  }
-
-  @Test
-  public void isMatchedWith_SomePatternsWithEscapeGiven_ShouldReturnBooleanProperly() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    // The following tests are added referring to the similar tests in Spark.
-    // https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/catalyst/expressions/RegexpExpressionsSuite.scala
-    ImmutableList.of("/", "#", "\"")
-        .forEach(
-            escape -> {
-              // simple patterns
-              assertThat(snapshot.isMatched(prepareLike("abdef", escape), "abdef")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a" + escape + "__b", escape), "a_%b"))
-                  .isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a_%b", escape), "addb")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a" + escape + "__b", escape), "addb"))
-                  .isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a%" + escape + "%b", escape), "addb"))
-                  .isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a%" + escape + "%b", escape), "a_%b"))
-                  .isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a%", escape), "addb")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("**", escape), "addb")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a%", escape), "abc")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("b%", escape), "abc")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("bc%", escape), "abc")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a_b", escape), "a\nb")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a%b", escape), "ab")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("a%b", escape), "a\nb")).isTrue();
-
-              // empty input
-              assertThat(snapshot.isMatched(prepareLike("", escape), "")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("", escape), "a")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("a", escape), "")).isFalse();
-
-              // SI-17647 double-escaping backslash
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(String.format("%%%s%s%%", escape, escape), escape),
-                          String.format("%s%s%s%s", escape, escape, escape, escape)))
-                  .isTrue();
-              assertThat(snapshot.isMatched(prepareLike("%%", escape), "%%")).isTrue();
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(String.format("%s%s%s__", escape, escape, escape), escape),
-                          String.format("%s__", escape)))
-                  .isTrue();
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(
-                              String.format("%%%s%s%%%s%%", escape, escape, escape), escape),
-                          String.format("%s%s%s__", escape, escape, escape)))
-                  .isFalse();
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(String.format("%%%s%s", escape, escape), escape),
-                          String.format("_%s%s%s%%", escape, escape, escape)))
-                  .isFalse();
-
-              // unicode
-              assertThat(snapshot.isMatched(prepareLike("_\u20AC_", escape), "a\u20ACa")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("_€_", escape), "a€a")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("_\u20AC_", escape), "a€a")).isTrue();
-              assertThat(snapshot.isMatched(prepareLike("_€_", escape), "a\u20ACa")).isTrue();
-
-              // case
-              assertThat(snapshot.isMatched(prepareLike("a%", escape), "A")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("A%", escape), "a")).isFalse();
-              assertThat(snapshot.isMatched(prepareLike("_a_", escape), "AaA")).isTrue();
-
-              // example
-              assertThat(
-                      snapshot.isMatched(
-                          prepareLike(
-                              String.format(
-                                  "%s%%SystemDrive%s%%%s%sUsers%%", escape, escape, escape, escape),
-                              escape),
-                          String.format("%%SystemDrive%%%sUsers%sJohn", escape, escape)))
-                  .isTrue();
-            });
-  }
-
-  @Test
-  public void isMatchedWith_IsNotLikeOperatorWithSomePatternsGiven_ShouldReturnBooleanProperly() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    assertThat(snapshot.isMatched(prepareNotLike("abdef"), "abdef")).isFalse();
-    assertThat(snapshot.isMatched(prepareNotLike("a\\__b"), "a_%b")).isFalse();
-    assertThat(snapshot.isMatched(prepareNotLike("a_%b"), "addb")).isFalse();
-    assertThat(snapshot.isMatched(prepareNotLike("a\\__b"), "addb")).isTrue();
-    ImmutableList.of("/", "#", "\"")
-        .forEach(
-            escape -> {
-              assertThat(snapshot.isMatched(prepareNotLike("abdef", escape), "abdef")).isFalse();
-              assertThat(snapshot.isMatched(prepareNotLike("a" + escape + "__b", escape), "a_%b"))
-                  .isFalse();
-              assertThat(snapshot.isMatched(prepareNotLike("a_%b", escape), "addb")).isFalse();
-              assertThat(snapshot.isMatched(prepareNotLike("a" + escape + "__b", escape), "addb"))
-                  .isTrue();
-            });
   }
 }
