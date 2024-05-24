@@ -584,6 +584,32 @@ public enum CoreError implements ScalarDbError {
       "Cross-partition scan with ordering is not supported in DynamoDB",
       "",
       ""),
+  DATA_LOADER_DIRECTORY_WRITE_ACCESS_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0131",
+      "The directory '%s' does not have write permissions. Please ensure that the current user has write access to the directory.",
+      "",
+      ""),
+  DATA_LOADER_DIRECTORY_CREATE_FAILED(
+      Category.USER_ERROR,
+      "0132",
+      "Failed to create the directory '%s'. Please check if you have sufficient permissions and if there are any file system restrictions. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_MISSING_DIRECTORY_NOT_ALLOWED(
+      Category.USER_ERROR, "0133", "Directory path cannot be null or empty.", "", ""),
+  DATA_LOADER_MISSING_FILE_EXTENSION(
+      Category.USER_ERROR,
+      "0134",
+      "No file extension was found on the provided file name %s.",
+      "",
+      ""),
+  DATA_LOADER_INVALID_FILE_EXTENSION(
+      Category.USER_ERROR,
+      "0135",
+      "Invalid file extension: %s. Allowed extensions are: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
