@@ -1,9 +1,6 @@
 package com.scalar.db.dataloader.cli.util;
 
-import static com.scalar.db.dataloader.cli.constant.ErrorMessage.ERROR_CREATE_DIRECTORY_FAILED;
-import static com.scalar.db.dataloader.cli.constant.ErrorMessage.ERROR_DIRECTORY_WRITE_ACCESS;
-import static com.scalar.db.dataloader.cli.constant.ErrorMessage.ERROR_EMPTY_DIRECTORY;
-
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,7 +25,8 @@ public final class DirectoryUtils {
   public static void validateTargetDirectory(String directoryPath)
       throws DirectoryValidationException {
     if (StringUtils.isBlank(directoryPath)) {
-      throw new IllegalArgumentException(ERROR_EMPTY_DIRECTORY);
+      throw new IllegalArgumentException(
+          CoreError.DATA_LOADER_MISSING_DIRECTORY_NOT_ALLOWED.buildMessage());
     }
 
     Path path = Paths.get(directoryPath);
@@ -37,17 +35,18 @@ public final class DirectoryUtils {
       // Check if the provided directory is writable
       if (!Files.isWritable(path)) {
         throw new DirectoryValidationException(
-            String.format(ERROR_DIRECTORY_WRITE_ACCESS, path.toAbsolutePath()));
+            CoreError.DATA_LOADER_DIRECTORY_WRITE_ACCESS_NOT_ALLOWED.buildMessage(
+                path.toAbsolutePath()));
       }
+
     } else {
       // Create the directory if it doesn't exist
       try {
         Files.createDirectories(path);
       } catch (IOException e) {
         throw new DirectoryValidationException(
-            String.format(ERROR_CREATE_DIRECTORY_FAILED, path.toAbsolutePath())
-                + ": "
-                + e.getMessage());
+            CoreError.DATA_LOADER_DIRECTORY_CREATE_FAILED.buildMessage(
+                path.toAbsolutePath(), e.getMessage()));
       }
     }
   }

@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
@@ -57,14 +58,13 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   private void validateFileExtension(String filename) throws InvalidFileExtensionException {
     String extension = FilenameUtils.getExtension(filename);
     if (StringUtils.isBlank(extension)) {
-      throw new InvalidFileExtensionException("File extension not found");
+      throw new InvalidFileExtensionException(
+          CoreError.DATA_LOADER_MISSING_FILE_EXTENSION.buildMessage(filename));
     }
     if (!ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
       throw new InvalidFileExtensionException(
-          "Invalid file extension: "
-              + extension
-              + ". Allowed extensions are: "
-              + String.join(", ", ALLOWED_EXTENSIONS));
+          CoreError.DATA_LOADER_INVALID_FILE_EXTENSION.buildMessage(
+              extension, String.join(", ", ALLOWED_EXTENSIONS)));
     }
   }
 }
