@@ -37,7 +37,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     KeyUtils.parseKeyValue(partitionKeyValue, tableMetadata);
     KeyUtils.parseKeyValue(scanStartKeyValue, tableMetadata);
     KeyUtils.parseKeyValue(scanEndKeyValue, tableMetadata);
-
     return 0;
   }
 
