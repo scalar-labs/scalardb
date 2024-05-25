@@ -7,7 +7,6 @@ import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
-import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import java.io.File;
 import java.io.IOException;
@@ -35,14 +34,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     TableMetadataService metadataService = createTableMetadataService(storageFactory);
     TableMetadata tableMetadata = metadataService.getTableMetadata(namespace, tableName);
 
-    Key partitionKey = KeyUtils.parseKeyValue(partitionKeyValue, tableMetadata);
-    Key scanStartKey = KeyUtils.parseKeyValue(scanStartKeyValue, tableMetadata);
-    Key scanEndKey = KeyUtils.parseKeyValue(scanEndKeyValue, tableMetadata);
-
-    // Print out the values for now (to avoid spotbugs warnings)
-    System.out.println("partitionKey: " + partitionKey);
-    System.out.println("scanStartKey: " + scanStartKey);
-    System.out.println("scanEndKey: " + scanEndKey);
+    KeyUtils.parseKeyValue(partitionKeyValue, tableMetadata);
+    KeyUtils.parseKeyValue(scanStartKeyValue, tableMetadata);
+    KeyUtils.parseKeyValue(scanEndKeyValue, tableMetadata);
 
     return 0;
   }
