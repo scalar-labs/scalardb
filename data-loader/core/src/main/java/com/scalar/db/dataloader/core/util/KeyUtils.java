@@ -1,15 +1,17 @@
 package com.scalar.db.dataloader.core.util;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import javax.annotation.Nullable;
 
 /** Utility class for creating and dealing with ScalarDB keys. */
-public class KeyUtils {
+public final class KeyUtils {
 
   private KeyUtils() {
     // restrict instantiation
@@ -18,26 +20,29 @@ public class KeyUtils {
   /**
    * Convert a keyValue, in the format of <key>=<value>, to a ScalarDB Key instance.
    *
-   * @param keyValue A key value in the format of <key>=<value>
+   * @param columnKeyValue A key value in the format of <key>=<value>
    * @param tableMetadata Metadata for one ScalarDB table
    * @return A new ScalarDB Key instance formatted by data type
    * @throws KeyParsingException if there is an error parsing the key value
    */
-  public static Key parseKeyValue(ColumnKeyValue keyValue, TableMetadata tableMetadata)
+  public static Key parseKeyValue(
+      @Nullable ColumnKeyValue columnKeyValue, TableMetadata tableMetadata)
       throws KeyParsingException {
-    if (keyValue == null) {
+    if (columnKeyValue == null) {
       return null;
     }
-    String columnName = keyValue.getColumnName();
+    String columnName = columnKeyValue.getColumnName();
     DataType columnDataType = tableMetadata.getColumnDataType(columnName);
     if (columnDataType == null) {
       throw new KeyParsingException(
-          "Invalid key: Column " + columnName + " does not exist in the table.");
+          CoreError.DATA_LOADER_INVALID_COLUMN_KEY_PARSING_FAILED.buildMessage(columnName));
     }
     try {
-      return createKey(columnDataType, columnName, keyValue.getColumnValue());
+      return createKey(columnDataType, columnName, columnKeyValue.getColumnValue());
     } catch (Base64Exception e) {
-      throw new KeyParsingException("Invalid key value: " + e.getMessage(), e);
+      throw new KeyParsingException(
+          CoreError.DATA_LOADER_INVALID_VALUE_KEY_PARSING_FAILED.buildMessage(
+              columnKeyValue.getColumnValue(), e.getMessage()));
     }
   }
 

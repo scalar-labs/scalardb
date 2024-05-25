@@ -92,6 +92,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   protected TableMetadataService createTableMetadataService(StorageFactory storageFactory) {
-    return new TableMetadataService(storageFactory.getStorageAdmin());
+    return new TableMetadataService(storageFactory);
   }
 }

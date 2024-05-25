@@ -1,8 +1,6 @@
 package com.scalar.db.dataloader.core.util;
 
-import static com.scalar.db.dataloader.core.constant.ErrorMessages.ERROR_BASE64_ENCODING;
-import static com.scalar.db.dataloader.core.constant.ErrorMessages.ERROR_NUMBER_FORMAT_EXCEPTION;
-
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -16,7 +14,7 @@ import com.scalar.db.io.TextColumn;
 import java.util.Base64;
 
 /** Utility class for dealing and creating ScalarDB Columns */
-public class ColumnUtils {
+public final class ColumnUtils {
   private ColumnUtils() {
     // restrict instantiation
   }
@@ -66,9 +64,11 @@ public class ColumnUtils {
           throw new AssertionError();
       }
     } catch (NumberFormatException e) {
-      throw new NumberFormatException(String.format(ERROR_NUMBER_FORMAT_EXCEPTION, columnName));
+      throw new NumberFormatException(
+          CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(columnName));
     } catch (IllegalArgumentException e) {
-      throw new Base64Exception(String.format(ERROR_BASE64_ENCODING, columnName));
+      throw new Base64Exception(
+          CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(columnName));
     }
   }
 }

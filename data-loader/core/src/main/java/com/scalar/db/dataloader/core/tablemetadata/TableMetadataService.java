@@ -1,22 +1,21 @@
 package com.scalar.db.dataloader.core.tablemetadata;
 
-import static com.scalar.db.dataloader.core.constant.ErrorMessages.ERROR_MISSING_NAMESPACE_OR_TABLE;
-
-import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.service.StorageFactory;
 
 public class TableMetadataService {
 
-  private final DistributedStorageAdmin storageAdmin;
+  private final StorageFactory storageFactory;
 
   /**
    * Class constructor
    *
-   * @param storageAdmin a distributed storage admin
+   * @param storageFactory a distributed storage admin
    */
-  public TableMetadataService(DistributedStorageAdmin storageAdmin) {
-    this.storageAdmin = storageAdmin;
+  public TableMetadataService(StorageFactory storageFactory) {
+    this.storageFactory = storageFactory;
   }
 
   /**
@@ -30,15 +29,16 @@ public class TableMetadataService {
   public TableMetadata getTableMetadata(String namespace, String tableName)
       throws TableMetadataException {
     try {
-      TableMetadata tableMetadata = storageAdmin.getTableMetadata(namespace, tableName);
+      TableMetadata tableMetadata =
+          storageFactory.getStorageAdmin().getTableMetadata(namespace, tableName);
       if (tableMetadata == null) {
         throw new TableMetadataException(
-            String.format(ERROR_MISSING_NAMESPACE_OR_TABLE, namespace, tableName));
+            CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
       }
       return tableMetadata;
     } catch (ExecutionException e) {
       throw new TableMetadataException(
-          String.format(ERROR_MISSING_NAMESPACE_OR_TABLE, namespace, tableName), e.getCause());
+          CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
     }
   }
 }
