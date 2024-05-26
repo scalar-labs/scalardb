@@ -610,6 +610,14 @@ public enum CoreError implements ScalarDbError {
       "Invalid file extension: %s. Allowed extensions are: %s",
       "",
       ""),
+  DATA_LOADER_INVALID_COLUMN_KEY_PARSING_FAILED(
+      Category.USER_ERROR, "0136", "Invalid key: Column %s does not exist in the table.", "", ""),
+  DATA_LOADER_INVALID_VALUE_KEY_PARSING_FAILED(
+      Category.USER_ERROR, "0137", "Parsing of key value %s failed. Details:%s.", "", ""),
+  DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
+      Category.USER_ERROR, "0138", "Invalid base64 encoding for blob value for column %s", "", ""),
+  DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
+      Category.USER_ERROR, "0139", "Invalid number specified for column %s", "", ""),
 
   //
   // Errors for the concurrency error category
