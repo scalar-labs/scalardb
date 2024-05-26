@@ -618,6 +618,8 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0138", "Invalid base64 encoding for blob value for column %s", "", ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
       Category.USER_ERROR, "0139", "Invalid number specified for column %s", "", ""),
+  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
+      Category.USER_ERROR, "0140", "Missing namespace or table: %s, %s.", "", ""),
 
   //
   // Errors for the concurrency error category
