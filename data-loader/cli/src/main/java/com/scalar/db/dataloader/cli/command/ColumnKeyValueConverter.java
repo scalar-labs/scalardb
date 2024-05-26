@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command;
 
+import com.scalar.db.dataloader.core.ColumnKeyValue;
 import picocli.CommandLine;
 
 /**
