@@ -25,7 +25,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
     return new String[] {
-      "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"",
+      "CREATE USER " + fullNamespace + " IDENTIFIED BY \"Oracle1234!@#$\"",
       "ALTER USER " + fullNamespace + " quota unlimited on USERS",
     };
   }
@@ -77,7 +77,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
     return new String[] {
-      "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"",
+      "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"Oracle1234!@#$\"",
       "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS",
     };
   }
