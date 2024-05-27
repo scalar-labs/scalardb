@@ -3,23 +3,43 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -441,5 +461,477 @@ public class TwoPhaseConsensusCommitManagerTest {
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
+  }
+
+  @Test
+  public void get_ShouldGet() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+
+    Result result = mock(Result.class);
+    when(transaction.get(get)).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Result> actual = spied.get(get);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).get(get);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(Optional.of(result));
+  }
+
+  @Test
+  public void
+      get_TransactionNotFoundExceptionThrownByTransactionBegin_ShouldThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doThrow(TransactionNotFoundException.class).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin();
+  }
+
+  @Test
+  public void get_TransactionExceptionThrownByTransactionBegin_ShouldThrowCrudException()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doThrow(TransactionException.class).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+  }
+
+  @Test
+  public void get_CrudExceptionThrownByTransactionGet_ShouldThrowCrudException()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+    when(transaction.get(get)).thenThrow(CrudException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+    verify(transaction).get(get);
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      get_PreparationConflictExceptionThrownByTransactionPrepare_ShouldThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+    doThrow(PreparationConflictException.class).when(transaction).prepare();
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin();
+    verify(transaction).get(get);
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      get_ValidationConflictExceptionThrownByTransactionValidate_ShouldThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+    doThrow(ValidationConflictException.class).when(transaction).validate();
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin();
+    verify(transaction).get(get);
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      get_CommitConflictExceptionThrownByTransactionCommit_ShouldThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+    doThrow(CommitConflictException.class).when(transaction).commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin();
+    verify(transaction).get(get);
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      get_UnknownTransactionStatusExceptionThrownByTransactionCommit_ShouldThrowUnknownTransactionStatusException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+    doThrow(UnknownTransactionStatusException.class).when(transaction).commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(UnknownTransactionStatusException.class);
+
+    verify(spied).begin();
+    verify(transaction).get(get);
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void get_CommitExceptionThrownByTransactionCommit_ShouldThrowUCrudException()
+      throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+    doThrow(CommitException.class).when(transaction).commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+    verify(transaction).get(get);
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void scan_ShouldScan() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+
+    List<Result> results =
+        Arrays.asList(mock(Result.class), mock(Result.class), mock(Result.class));
+    when(transaction.scan(scan)).thenReturn(results);
+
+    // Act
+    List<Result> actual = spied.scan(scan);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).scan(scan);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(results);
+  }
+
+  @Test
+  public void put_ShouldPut() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    spied.put(put);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).put(put);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void put_MultiplePutsGiven_ShouldPut() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    List<Put> puts =
+        Arrays.asList(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 0))
+                .intValue("col", 0)
+                .build(),
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 1))
+                .intValue("col", 1)
+                .build(),
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 2))
+                .intValue("col", 2)
+                .build());
+    // Act
+    spied.put(puts);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).put(puts);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void insert_ShouldInsert() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Insert insert =
+        Insert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    spied.insert(insert);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).insert(insert);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void upsert_ShouldUpsert() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    spied.upsert(upsert);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).upsert(upsert);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void update_ShouldUpdate() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Update update =
+        Update.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    spied.update(update);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).update(update);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void delete_ShouldDelete() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Delete delete =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
+
+    // Act
+    spied.delete(delete);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).delete(delete);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void delete_MultipleDeletesGiven_ShouldDelete() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    List<Delete> deletes =
+        Arrays.asList(
+            Delete.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 0))
+                .build(),
+            Delete.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 1))
+                .build(),
+            Delete.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 2))
+                .build());
+    // Act
+    spied.delete(deletes);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).delete(deletes);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void mutate_ShouldMutate() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseCommitTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    List<Mutation> mutations =
+        Arrays.asList(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 0))
+                .intValue("col", 0)
+                .build(),
+            Insert.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 1))
+                .intValue("col", 1)
+                .build(),
+            Upsert.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 2))
+                .intValue("col", 2)
+                .build(),
+            Update.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 3))
+                .intValue("col", 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 4))
+                .build());
+
+    // Act
+    spied.mutate(mutations);
+
+    // Assert
+    verify(spied).begin();
+    verify(transaction).mutate(mutations);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
   }
 }
