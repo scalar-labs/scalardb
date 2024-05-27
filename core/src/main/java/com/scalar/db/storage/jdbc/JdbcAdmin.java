@@ -154,7 +154,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
       if (rdbEngine == RdbEngine.ORACLE) {
-        execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
+        execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"Oracle1234!@#$\"");
         execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
       } else if (rdbEngine == RdbEngine.MYSQL) {
         execute(
@@ -312,7 +312,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       case ORACLE:
         try {
           execute(
-              connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
+              connection,
+              "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"Oracle1234!@#$\"");
         } catch (SQLException e) {
           // Suppress the exception thrown when the user already exists
           if (e.getErrorCode() != 1920) {
