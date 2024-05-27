@@ -17,6 +17,7 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +25,7 @@ public abstract class DecoratedTwoPhaseCommitTransaction implements TwoPhaseComm
 
   private final TwoPhaseCommitTransaction decoratedTransaction;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DecoratedTwoPhaseCommitTransaction(TwoPhaseCommitTransaction decoratedTransaction) {
     this.decoratedTransaction = decoratedTransaction;
   }
@@ -149,6 +151,7 @@ public abstract class DecoratedTwoPhaseCommitTransaction implements TwoPhaseComm
     decoratedTransaction.abort();
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   public TwoPhaseCommitTransaction getOriginalTransaction() {
     if (decoratedTransaction instanceof DecoratedTwoPhaseCommitTransaction) {
       return ((DecoratedTwoPhaseCommitTransaction) decoratedTransaction).getOriginalTransaction();

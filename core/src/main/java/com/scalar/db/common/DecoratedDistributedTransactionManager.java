@@ -1,6 +1,5 @@
-package com.scalar.db.service;
+package com.scalar.db.common;
 
-import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -19,83 +18,79 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.concurrent.ThreadSafe;
 
-/** @deprecated As of release 3.5.0. Will be removed in release 5.0.0 */
-@Deprecated
-@ThreadSafe
-public class TransactionService implements DistributedTransactionManager {
-  private final DistributedTransactionManager manager;
+public abstract class DecoratedDistributedTransactionManager
+    implements DistributedTransactionManager {
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  @Inject
-  public TransactionService(DistributedTransactionManager manager) {
-    this.manager = manager;
+  private final DistributedTransactionManager decoratedTransactionManager;
+
+  public DecoratedDistributedTransactionManager(
+      DistributedTransactionManager decoratedTransactionManager) {
+    this.decoratedTransactionManager = decoratedTransactionManager;
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
-    manager.with(namespace, tableName);
+    decoratedTransactionManager.with(namespace, tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
-    manager.withNamespace(namespace);
+    decoratedTransactionManager.withNamespace(namespace);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
-    return manager.getNamespace();
+    return decoratedTransactionManager.getNamespace();
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
-    manager.withTable(tableName);
+    decoratedTransactionManager.withTable(tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
-    return manager.getTable();
+    return decoratedTransactionManager.getTable();
   }
 
   @Override
   public DistributedTransaction begin() throws TransactionException {
-    return manager.begin();
+    return decoratedTransactionManager.begin();
   }
 
   @Override
   public DistributedTransaction begin(String txId) throws TransactionException {
-    return manager.begin(txId);
+    return decoratedTransactionManager.begin(txId);
   }
 
   @Override
   public DistributedTransaction start() throws TransactionException {
-    return manager.start();
+    return decoratedTransactionManager.start();
   }
 
   @Override
   public DistributedTransaction start(String txId) throws TransactionException {
-    return manager.start(txId);
+    return decoratedTransactionManager.start(txId);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(Isolation isolation) throws TransactionException {
-    return manager.start(isolation);
+    return decoratedTransactionManager.start(isolation);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -103,7 +98,7 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction start(String txId, Isolation isolation)
       throws TransactionException {
-    return manager.start(txId, isolation);
+    return decoratedTransactionManager.start(txId, isolation);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -111,14 +106,14 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    return manager.start(isolation, strategy);
+    return decoratedTransactionManager.start(isolation, strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(SerializableStrategy strategy) throws TransactionException {
-    return manager.start(strategy);
+    return decoratedTransactionManager.start(strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -126,7 +121,7 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction start(String txId, SerializableStrategy strategy)
       throws TransactionException {
-    return manager.start(txId, strategy);
+    return decoratedTransactionManager.start(txId, strategy);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -134,82 +129,101 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction start(
       String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
-    return manager.start(txId, isolation, strategy);
+    return decoratedTransactionManager.start(txId, isolation, strategy);
   }
 
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
-    return manager.resume(txId);
+    return decoratedTransactionManager.resume(txId);
   }
 
   @Override
-  public TransactionState getState(String txId) throws TransactionException {
-    return manager.getState(txId);
-  }
-
-  @Override
-  public TransactionState rollback(String txId) throws TransactionException {
-    return manager.rollback(txId);
-  }
-
-  @Override
-  public TransactionState abort(String txId) throws TransactionException {
-    return manager.abort(txId);
+  public DistributedTransaction join(String txId) throws TransactionNotFoundException {
+    return decoratedTransactionManager.join(txId);
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return manager.get(get);
+    return decoratedTransactionManager.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return manager.scan(scan);
+    return decoratedTransactionManager.scan(scan);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
-    manager.put(put);
+    decoratedTransactionManager.put(put);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
-    manager.put(puts);
+    decoratedTransactionManager.put(puts);
   }
 
   @Override
   public void insert(Insert insert) throws CrudException, UnknownTransactionStatusException {
-    manager.insert(insert);
+    decoratedTransactionManager.insert(insert);
   }
 
   @Override
   public void upsert(Upsert upsert) throws CrudException, UnknownTransactionStatusException {
-    manager.upsert(upsert);
+    decoratedTransactionManager.upsert(upsert);
   }
 
   @Override
   public void update(Update update) throws CrudException, UnknownTransactionStatusException {
-    manager.update(update);
+    decoratedTransactionManager.update(update);
   }
 
   @Override
   public void delete(Delete delete) throws CrudException, UnknownTransactionStatusException {
-    manager.delete(delete);
+    decoratedTransactionManager.delete(delete);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
-    manager.delete(deletes);
+    decoratedTransactionManager.delete(deletes);
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations)
       throws CrudException, UnknownTransactionStatusException {
-    manager.mutate(mutations);
+    decoratedTransactionManager.mutate(mutations);
+  }
+
+  @Override
+  public TransactionState getState(String txId) throws TransactionException {
+    return decoratedTransactionManager.getState(txId);
+  }
+
+  @Override
+  public TransactionState rollback(String txId) throws TransactionException {
+    return decoratedTransactionManager.rollback(txId);
+  }
+
+  @Override
+  public TransactionState abort(String txId) throws TransactionException {
+    return decoratedTransactionManager.abort(txId);
   }
 
   @Override
   public void close() {
-    manager.close();
+    decoratedTransactionManager.close();
+  }
+
+  public DistributedTransactionManager getOriginalTransactionManager() {
+    if (decoratedTransactionManager instanceof DecoratedDistributedTransactionManager) {
+      return ((DecoratedDistributedTransactionManager) decoratedTransactionManager)
+          .getOriginalTransactionManager();
+    }
+    return decoratedTransactionManager;
   }
 }
