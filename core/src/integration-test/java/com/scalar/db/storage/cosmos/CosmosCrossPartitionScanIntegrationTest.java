@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,13 @@ public class CosmosCrossPartitionScanIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return CosmosEnv.getProperties(testName);
+  }
+
+  @Override
+  protected String getNamespaceBaseName() {
+    String namespaceBaseName = super.getNamespaceBaseName();
+    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
+    return databasePrefix.map(prefix -> prefix + namespaceBaseName).orElse(namespaceBaseName);
   }
 
   @Override
