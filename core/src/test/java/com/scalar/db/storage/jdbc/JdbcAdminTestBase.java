@@ -193,7 +193,7 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.ORACLE,
-        "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
+        "CREATE USER \"my_ns\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"my_ns\" quota unlimited on USERS");
   }
 
@@ -362,7 +362,7 @@ public abstract class JdbcAdminTestBase {
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + tableMetadataSchemaName
@@ -574,7 +574,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
-        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + tableMetadataSchemaName
@@ -1448,7 +1448,7 @@ public abstract class JdbcAdminTestBase {
         RdbEngine.ORACLE,
         "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
         "SELECT 1 FROM \"" + tableMetadataSchemaName + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
-        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"oracle\"",
+        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + tableMetadataSchemaName
