@@ -1,6 +1,5 @@
 package com.scalar.db.common;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -12,34 +11,35 @@ import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.transaction.AbortException;
-import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.util.ThrowableFunction;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractTwoPhaseCommitTransactionManager
-    implements TwoPhaseCommitTransactionManager, TwoPhaseCommitTransactionDecoratorAddable {
+    implements TwoPhaseCommitTransactionManager {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(AbstractTwoPhaseCommitTransactionManager.class);
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
-  private final List<TwoPhaseCommitTransactionDecorator> transactionDecorators =
-      new CopyOnWriteArrayList<>();
-
   public AbstractTwoPhaseCommitTransactionManager(DatabaseConfig config) {
     namespace = config.getDefaultNamespaceName();
     tableName = Optional.empty();
-
-    addTransactionDecorator(StateManagedTransaction::new);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
@@ -78,186 +78,163 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
     return tableName;
   }
 
-  protected TwoPhaseCommitTransaction decorate(TwoPhaseCommitTransaction transaction)
-      throws TransactionException {
-    TwoPhaseCommitTransaction decorated = transaction;
-    for (TwoPhaseCommitTransactionDecorator transactionDecorator : transactionDecorators) {
-      decorated = transactionDecorator.decorate(decorated);
-    }
-    return decorated;
+  @Override
+  public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)));
   }
 
   @Override
-  public void addTransactionDecorator(TwoPhaseCommitTransactionDecorator transactionDecorator) {
-    transactionDecorators.add(transactionDecorator);
+  public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
+    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
   }
 
-  /**
-   * This class is to unify the call sequence of the transaction object. It doesn't care about the
-   * potential inconsistency between the status field on JVM memory and the underlying persistent
-   * layer.
-   */
-  @VisibleForTesting
-  static class StateManagedTransaction extends DecoratedTwoPhaseCommitTransaction {
+  @Deprecated
+  @Override
+  public void put(Put put) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.put(copyAndSetTargetToIfNot(put));
+          return null;
+        });
+  }
 
-    private enum Status {
-      ACTIVE,
-      PREPARED,
-      PREPARE_FAILED,
-      VALIDATED,
-      VALIDATION_FAILED,
-      COMMITTED,
-      COMMIT_FAILED,
-      ROLLED_BACK
+  @Deprecated
+  @Override
+  public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.put(copyAndSetTargetToIfNot(puts));
+          return null;
+        });
+  }
+
+  @Override
+  public void insert(Insert insert) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.insert(copyAndSetTargetToIfNot(insert));
+          return null;
+        });
+  }
+
+  @Override
+  public void upsert(Upsert upsert) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.upsert(copyAndSetTargetToIfNot(upsert));
+          return null;
+        });
+  }
+
+  @Override
+  public void update(Update update) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.update(copyAndSetTargetToIfNot(update));
+          return null;
+        });
+  }
+
+  @Override
+  public void delete(Delete delete) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.delete(copyAndSetTargetToIfNot(delete));
+          return null;
+        });
+  }
+
+  @Deprecated
+  @Override
+  public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.delete(copyAndSetTargetToIfNot(deletes));
+          return null;
+        });
+  }
+
+  @Override
+  public void mutate(List<? extends Mutation> mutations)
+      throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.mutate(copyAndSetTargetToIfNot(mutations));
+          return null;
+        });
+  }
+
+  private <R> R executeTransaction(
+      ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction)
+      throws CrudException, UnknownTransactionStatusException {
+    TwoPhaseCommitTransaction transaction;
+    try {
+      transaction = begin();
+    } catch (TransactionNotFoundException e) {
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (TransactionException e) {
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
 
-    private Status status;
-
-    @VisibleForTesting
-    StateManagedTransaction(TwoPhaseCommitTransaction transaction) {
-      super(transaction);
-      status = Status.ACTIVE;
+    try {
+      R result = throwableFunction.apply(transaction);
+      transaction.prepare();
+      transaction.validate();
+      transaction.commit();
+      return result;
+    } catch (CrudException e) {
+      rollbackTransaction(transaction);
+      throw e;
+    } catch (PreparationConflictException
+        | ValidationConflictException
+        | CommitConflictException e) {
+      rollbackTransaction(transaction);
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (UnknownTransactionStatusException e) {
+      throw e;
+    } catch (TransactionException e) {
+      rollbackTransaction(transaction);
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
+  }
 
-    @Override
-    public Optional<Result> get(Get get) throws CrudException {
-      checkIfActive();
-      return super.get(get);
+  private void rollbackTransaction(TwoPhaseCommitTransaction transaction) {
+    try {
+      transaction.rollback();
+    } catch (RollbackException e) {
+      logger.warn("Rolling back the transaction failed", e);
     }
+  }
 
-    @Override
-    public List<Result> scan(Scan scan) throws CrudException {
-      checkIfActive();
-      return super.scan(scan);
-    }
+  protected <T extends Mutation> List<T> copyAndSetTargetToIfNot(List<T> mutations) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(mutations, namespace, tableName);
+  }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
-    @Deprecated
-    @Override
-    public void put(Put put) throws CrudException {
-      checkIfActive();
-      super.put(put);
-    }
+  protected Get copyAndSetTargetToIfNot(Get get) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(get, namespace, tableName);
+  }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
-    @Deprecated
-    @Override
-    public void put(List<Put> puts) throws CrudException {
-      checkIfActive();
-      super.put(puts);
-    }
+  protected Scan copyAndSetTargetToIfNot(Scan scan) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(scan, namespace, tableName);
+  }
 
-    @Override
-    public void delete(Delete delete) throws CrudException {
-      checkIfActive();
-      super.delete(delete);
-    }
+  protected Put copyAndSetTargetToIfNot(Put put) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(put, namespace, tableName);
+  }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
-    @Deprecated
-    @Override
-    public void delete(List<Delete> deletes) throws CrudException {
-      checkIfActive();
-      super.delete(deletes);
-    }
+  protected Delete copyAndSetTargetToIfNot(Delete delete) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(delete, namespace, tableName);
+  }
 
-    @Override
-    public void insert(Insert insert) throws CrudException {
-      checkIfActive();
-      super.insert(insert);
-    }
+  protected Insert copyAndSetTargetToIfNot(Insert insert) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(insert, namespace, tableName);
+  }
 
-    @Override
-    public void upsert(Upsert upsert) throws CrudException {
-      checkIfActive();
-      super.upsert(upsert);
-    }
+  protected Upsert copyAndSetTargetToIfNot(Upsert upsert) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(upsert, namespace, tableName);
+  }
 
-    @Override
-    public void update(Update update) throws CrudException {
-      checkIfActive();
-      super.update(update);
-    }
-
-    @Override
-    public void mutate(List<? extends Mutation> mutations) throws CrudException {
-      checkIfActive();
-      super.mutate(mutations);
-    }
-
-    @Override
-    public void prepare() throws PreparationException {
-      checkIfActive();
-      try {
-        super.prepare();
-        status = Status.PREPARED;
-      } catch (Exception e) {
-        status = Status.PREPARE_FAILED;
-        throw e;
-      }
-    }
-
-    @Override
-    public void validate() throws ValidationException {
-      if (status != Status.PREPARED) {
-        throw new IllegalStateException(CoreError.TRANSACTION_NOT_PREPARED.buildMessage(status));
-      }
-
-      try {
-        super.validate();
-        status = Status.VALIDATED;
-      } catch (Exception e) {
-        status = Status.VALIDATION_FAILED;
-        throw e;
-      }
-    }
-
-    @Override
-    public void commit() throws CommitException, UnknownTransactionStatusException {
-      if (status != Status.PREPARED && status != Status.VALIDATED) {
-        throw new IllegalStateException(
-            CoreError.TRANSACTION_NOT_PREPARED_OR_VALIDATED.buildMessage(status));
-      }
-
-      try {
-        super.commit();
-        status = Status.COMMITTED;
-      } catch (Exception e) {
-        status = Status.COMMIT_FAILED;
-        throw e;
-      }
-    }
-
-    @Override
-    public void rollback() throws RollbackException {
-      if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
-        throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
-      }
-      try {
-        super.rollback();
-      } finally {
-        status = Status.ROLLED_BACK;
-      }
-    }
-
-    @Override
-    public void abort() throws AbortException {
-      if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
-        throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
-      }
-      try {
-        super.abort();
-      } finally {
-        status = Status.ROLLED_BACK;
-      }
-    }
-
-    private void checkIfActive() {
-      if (status != Status.ACTIVE) {
-        throw new IllegalStateException(CoreError.TRANSACTION_NOT_ACTIVE.buildMessage(status));
-      }
-    }
+  protected Update copyAndSetTargetToIfNot(Update update) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(update, namespace, tableName);
   }
 }
