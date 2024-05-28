@@ -35,7 +35,7 @@ public final class KeyUtils {
     DataType columnDataType = tableMetadata.getColumnDataType(columnName);
     if (columnDataType == null) {
       throw new KeyParsingException(
-          CoreError.DATA_LOADER_INVALID_COLUMN_KEY_PARSING_FAILED.buildMessage(columnName));
+          CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(columnName));
     }
     try {
       return createKey(columnDataType, columnName, columnKeyValue.getColumnValue());

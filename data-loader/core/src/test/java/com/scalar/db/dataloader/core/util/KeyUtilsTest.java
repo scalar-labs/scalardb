@@ -44,7 +44,7 @@ class KeyUtilsTest {
         assertThrows(
             KeyParsingException.class, () -> KeyUtils.parseKeyValue(keyValue, tableMetadata));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_COLUMN_KEY_PARSING_FAILED.buildMessage(columnName),
+        CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(columnName),
         exception.getMessage());
   }
 
