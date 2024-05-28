@@ -18,16 +18,18 @@ public final class KeyUtils {
   }
 
   /**
-   * Convert a keyValue, in the format of <key>=<value>, to a ScalarDB Key instance.
+   * Convert a keyValue, in the format of <key>=<value>, to a ScalarDB Key instance for a specific
+   * ScalarDB table.
    *
    * @param columnKeyValue A key value in the format of <key>=<value>
+   * @param tableName Name of the ScalarDB table
    * @param tableMetadata Metadata for one ScalarDB table
    * @return A new ScalarDB Key instance formatted by data type
    * @throws KeyParsingException if there is an error parsing the key value
    */
   @Nullable
   public static Key parseKeyValue(
-      @Nullable ColumnKeyValue columnKeyValue, TableMetadata tableMetadata)
+      @Nullable ColumnKeyValue columnKeyValue, String tableName, TableMetadata tableMetadata)
       throws KeyParsingException {
     if (columnKeyValue == null) {
       return null;
@@ -43,7 +45,7 @@ public final class KeyUtils {
     } catch (Base64Exception e) {
       throw new KeyParsingException(
           CoreError.DATA_LOADER_INVALID_VALUE_KEY_PARSING_FAILED.buildMessage(
-              columnKeyValue.getColumnValue(), e.getMessage()));
+              columnKeyValue.getColumnValue(), tableName, e.getMessage()));
     }
   }
 

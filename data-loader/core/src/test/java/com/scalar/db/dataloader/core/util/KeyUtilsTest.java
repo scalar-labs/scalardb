@@ -31,7 +31,7 @@ class KeyUtilsTest {
 
   @Test
   void parseKeyValue_nullKeyValue_returnsNull() throws KeyParsingException {
-    assertNull(KeyUtils.parseKeyValue(null, tableMetadata));
+    assertNull(KeyUtils.parseKeyValue(null, null, tableMetadata));
   }
 
   @Test
@@ -42,7 +42,8 @@ class KeyUtilsTest {
 
     KeyParsingException exception =
         assertThrows(
-            KeyParsingException.class, () -> KeyUtils.parseKeyValue(keyValue, tableMetadata));
+            KeyParsingException.class,
+            () -> KeyUtils.parseKeyValue(keyValue, "table", tableMetadata));
     assertEquals(
         CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(columnName),
         exception.getMessage());
@@ -57,7 +58,7 @@ class KeyUtilsTest {
     when(tableMetadata.getColumnDataType(columnName)).thenReturn(dataType);
 
     Key expected = Key.newBuilder().add(TextColumn.of(columnName, value)).build();
-    Key actual = KeyUtils.parseKeyValue(keyValue, tableMetadata);
+    Key actual = KeyUtils.parseKeyValue(keyValue, "table", tableMetadata);
 
     assertEquals(expected, actual);
   }
