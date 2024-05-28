@@ -137,7 +137,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       // Failing to put a value to the slot can happen only when the slot is moved from the original
       // NormalGroup to a new DelayedGroup. So, only a single retry must be enough.
       if (failed) {
-        throw new GroupCommitException(
+        throw new GroupCommitConflictException(
             String.format(
                 "Failed to put a value to the slot. The slot might be already removed before this operation. Group: %s, Full key: %s, Value: %s",
                 group, fullKey, value));
@@ -189,6 +189,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
       Instant now = Instant.now();
       if (nextLoggingAt.isBefore(now)) {
         logger.info("Ongoing slot still remains. Metrics: {}", groupCommitMetrics);
+        nextLoggingAt = Instant.now().plusMillis(loggingIntervalMillis);
       }
     } while (true);
   }

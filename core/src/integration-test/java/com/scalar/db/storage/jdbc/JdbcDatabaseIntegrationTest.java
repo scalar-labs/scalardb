@@ -18,7 +18,7 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
 
   @Override
   protected int getLargeDataSizeInBytes() {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       // For Oracle, the max data size for BLOB is 2000 bytes
       return 2000;
     } else {

@@ -851,3 +851,38 @@ jobs:
         with:
           name: scalardb_server_integration_test_reports
           path: server/build/reports/tests/integrationTestScalarDbServer
+
+  integration-test-for-group-commit:
+    name: Integration test using group commit
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalar.db.consensus_commit.coordinator.group_commit.enabled=true -Dscalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000 --tests "**ConsensusCommit**"
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: group_commit_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+

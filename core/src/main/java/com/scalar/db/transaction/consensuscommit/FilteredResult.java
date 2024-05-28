@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.AbstractResult;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
@@ -18,15 +19,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@code Result} to filter out unprojected columns and transaction columns.
  */
 @Immutable
 public class FilteredResult extends AbstractResult {
-  private static final Logger logger = LoggerFactory.getLogger(FilteredResult.class);
 
   private final Result original;
   private final ImmutableSet<String> containedColumnNames;
@@ -69,8 +67,7 @@ public class FilteredResult extends AbstractResult {
     }
     for (Value<?> value : key.get()) {
       if (!containedColumnNames.contains(value.getName())) {
-        logger.warn("Full key doesn't seem to be projected into the result");
-        return Optional.empty();
+        throw new IllegalStateException(CoreError.COLUMN_NOT_FOUND.buildMessage(value.getName()));
       }
     }
     return key;

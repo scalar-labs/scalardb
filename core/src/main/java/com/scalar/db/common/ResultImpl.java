@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;
@@ -12,12 +13,9 @@ import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 public class ResultImpl extends AbstractResult {
-  private static final Logger logger = LoggerFactory.getLogger(ResultImpl.class);
 
   private final ImmutableMap<String, Column<?>> columns;
   private final TableMetadata metadata;
@@ -49,8 +47,7 @@ public class ResultImpl extends AbstractResult {
     for (String name : names) {
       Column<?> column = columns.get(name);
       if (column == null) {
-        logger.warn("Full key doesn't seem to be projected into the result");
-        return Optional.empty();
+        throw new IllegalStateException(CoreError.COLUMN_NOT_FOUND.buildMessage(name));
       }
       builder.add(column);
     }
