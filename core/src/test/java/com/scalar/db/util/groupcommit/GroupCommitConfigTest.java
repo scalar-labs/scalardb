@@ -33,12 +33,12 @@ class GroupCommitConfigTest {
   }
 
   @Test
-  void oldGroupAbortTimeoutSeconds_WithArbitraryValue_ShouldReturnProperly() {
+  void oldGroupAbortTimeoutMillis_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(10, 20, 30, 40, 50);
 
     // Act / Assert
-    assertThat(config.oldGroupAbortTimeoutSeconds()).isEqualTo(40);
+    assertThat(config.oldGroupAbortTimeoutMillis()).isEqualTo(40);
   }
 
   @Test

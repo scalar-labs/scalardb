@@ -60,13 +60,12 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator,
       int capacity,
-      long oldGroupAbortTimeoutSeconds) {
+      long oldGroupAbortTimeoutMillis) {
     this.emitter = emitter;
     this.keyManipulator = keyManipulator;
     this.capacity = capacity;
     this.slots = new HashMap<>(capacity);
-    this.oldGroupAbortTimeoutAtMillis =
-        System.currentTimeMillis() + oldGroupAbortTimeoutSeconds * 1000;
+    this.oldGroupAbortTimeoutAtMillis = System.currentTimeMillis() + oldGroupAbortTimeoutMillis;
   }
 
   private boolean noMoreSlot() {

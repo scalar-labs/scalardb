@@ -30,7 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class GroupCommitterTest {
-  private static final int OLD_GROUP_ABORT_TIMEOUT_SECONDS = 10;
+  private static final int OLD_GROUP_ABORT_TIMEOUT_MILLIS = 10000;
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
 
   @Mock private Emittable<String, Integer> emitter;
@@ -126,7 +126,7 @@ class GroupCommitterTest {
             slotCapacity,
             groupSizeFixTimeoutMillis,
             delayedSlotMoveTimeoutMillis,
-            OLD_GROUP_ABORT_TIMEOUT_SECONDS,
+            OLD_GROUP_ABORT_TIMEOUT_MILLIS,
             TIMEOUT_CHECK_INTERVAL_MILLIS),
         new TestableKeyManipulator());
   }
@@ -442,8 +442,8 @@ class GroupCommitterTest {
       // There should be no group at this moment.
 
       // The slots are already removed and these operations must fail.
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey1, 42));
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey2, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
       verify(emitter, never()).execute(any(), any());
     }
   }
@@ -470,8 +470,8 @@ class GroupCommitterTest {
       // There should be no group at this moment.
 
       // The slots are already removed and these operations must fail.
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey1, 42));
-      assertThrows(GroupCommitException.class, () -> groupCommitter.ready(fullKey2, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
+      assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
       verify(emitter, never()).execute(any(), any());
     }
   }
@@ -575,7 +575,7 @@ class GroupCommitterTest {
     doReturn(true).when(groupCommitMetrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
         new TestableGroupCommitter(
-            new GroupCommitConfig(20, 100, 400, 60, 10), new TestableKeyManipulator());
+            new GroupCommitConfig(20, 100, 400, 60000, 10), new TestableKeyManipulator());
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     // Act
