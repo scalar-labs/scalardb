@@ -43,8 +43,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   private boolean validated;
   private boolean needRollback;
-  // Whether to write to the coordinator table.
-  @VisibleForTesting final boolean shouldManageState;
 
   // For test
   private Runnable beforeRecoveryHook = () -> {};
@@ -54,13 +52,11 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       CrudHandler crud,
       CommitHandler commit,
       RecoveryHandler recovery,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker,
-      boolean shouldManageState) {
+      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
     this.crud = crud;
     this.commit = commit;
     this.recovery = recovery;
     this.mutationOperationChecker = mutationOperationChecker;
-    this.shouldManageState = shouldManageState;
   }
 
   @Override
@@ -247,9 +243,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      if (shouldManageState) {
-        commit.commitState(crud.getSnapshot());
-      }
+      commit.commitState(crud.getSnapshot());
     } catch (CommitConflictException | UnknownTransactionStatusException e) {
       // no need to rollback because the transaction has already been rolled back
       needRollback = false;
@@ -267,14 +261,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      if (shouldManageState) {
-        TransactionState state = commit.abortState(crud.getSnapshot().getId());
-        if (state == TransactionState.COMMITTED) {
-          throw new RollbackException(
-              CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED
-                  .buildMessage(),
-              getId());
-        }
+      TransactionState state = commit.abortState(crud.getSnapshot().getId());
+      if (state == TransactionState.COMMITTED) {
+        throw new RollbackException(
+            CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED
+                .buildMessage(),
+            getId());
       }
     } catch (UnknownTransactionStatusException e) {
       throw new RollbackException(

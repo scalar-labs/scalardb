@@ -610,6 +610,12 @@ public enum CoreError implements ScalarDbError {
       "Invalid file extension: %s. Allowed extensions are: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0136",
+      "The group commit feature for the coordinator table with a two-phase commit interface is not allowed",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
