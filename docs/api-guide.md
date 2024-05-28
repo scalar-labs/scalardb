@@ -1240,7 +1240,7 @@ The group commit feature implicitly generates an internal value and uses it as a
    logger.info("The transaction state: {}", manager.getState(transaction.getId()));
 ```
 
-#####  Prohibition of use with a two-phase commit interface
+##### Prohibition of use with a two-phase commit interface
 
 The group commit feature manages all ongoing transactions in memory. If this feature is enabled with a two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the Coordinator table, which may contain different transaction distributions over groups.
 
