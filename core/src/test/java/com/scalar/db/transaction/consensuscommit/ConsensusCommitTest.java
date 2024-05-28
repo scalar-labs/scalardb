@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -669,5 +671,39 @@ public class ConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitException.class);
+  }
+
+  @Test
+  public void rollback_WithoutGroupCommitter_ShouldDoNothing()
+      throws UnknownTransactionStatusException {
+    // Arrange
+
+    // Act
+    consensus.rollback();
+
+    // Assert
+    verify(commit, never()).rollbackRecords(any(Snapshot.class));
+    verify(commit, never()).abortState(anyString());
+  }
+
+  @Test
+  public void rollback_WithGroupCommitter_ShouldRemoveTxFromGroupCommitter()
+      throws UnknownTransactionStatusException {
+    // Arrange
+    String txId = "tx-id";
+    Snapshot snapshot = mock(Snapshot.class);
+    doReturn(txId).when(snapshot).getId();
+    doReturn(snapshot).when(crud).getSnapshot();
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
+
+    // Act
+    consensusWithGroupCommit.rollback();
+
+    // Assert
+    verify(groupCommitter).remove(txId);
+    verify(commit, never()).rollbackRecords(any(Snapshot.class));
+    verify(commit, never()).abortState(anyString());
   }
 }
