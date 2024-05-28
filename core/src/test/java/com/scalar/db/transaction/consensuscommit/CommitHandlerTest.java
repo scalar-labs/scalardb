@@ -23,15 +23,17 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 public class CommitHandlerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
-  private static final String ANY_ID = "id";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -39,25 +41,43 @@ public class CommitHandlerTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
+  private static final String ANY_ID = "id";
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
 
-  @Mock private DistributedStorage storage;
-  @Mock private Coordinator coordinator;
-  @Mock private TransactionTableMetadataManager tableMetadataManager;
-  @Mock private ConsensusCommitConfig config;
+  @Mock protected DistributedStorage storage;
+  @Mock protected Coordinator coordinator;
+  @Mock protected TransactionTableMetadataManager tableMetadataManager;
+  @Mock protected ConsensusCommitConfig config;
 
   private CommitHandler handler;
+  protected ParallelExecutor parallelExecutor;
+
+  protected String anyId() {
+    return ANY_ID;
+  }
+
+  protected void extraInitialize() {}
+
+  protected void extraCleanup() {}
+
+  protected CommitHandler createCommitHandler() {
+    return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+  }
 
   @BeforeEach
-  public void setUp() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
+  void setUp() throws Exception {
+    parallelExecutor = new ParallelExecutor(config);
+    handler = spy(createCommitHandler());
 
-    // Arrange
-    handler =
-        spy(
-            new CommitHandler(
-                storage, coordinator, tableMetadataManager, new ParallelExecutor(config)));
+    extraInitialize();
+  }
+
+  @AfterEach
+  void tearDown() {
+    extraCleanup();
+
+    parallelExecutor.close();
   }
 
   private Put preparePut1() {
@@ -90,7 +110,7 @@ public class CommitHandlerTest {
   private Snapshot prepareSnapshotWithDifferentPartitionPut() {
     Snapshot snapshot =
         new Snapshot(
-            ANY_ID,
+            anyId(),
             Isolation.SNAPSHOT,
             SerializableStrategy.EXTRA_WRITE,
             tableMetadataManager,
@@ -108,7 +128,7 @@ public class CommitHandlerTest {
   private Snapshot prepareSnapshotWithSamePartitionPut() {
     Snapshot snapshot =
         new Snapshot(
-            ANY_ID,
+            anyId(),
             Isolation.SNAPSHOT,
             SerializableStrategy.EXTRA_WRITE,
             tableMetadataManager,
@@ -130,14 +150,14 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothingWhenCoordinatorPutState();
 
     // Act
     handler.commit(snapshot);
 
     // Assert
     verify(storage, times(4)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
   }
 
   @Test
@@ -147,14 +167,14 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothingWhenCoordinatorPutState();
 
     // Act
     handler.commit(snapshot);
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
   }
 
   @Test
@@ -170,9 +190,12 @@ public class CommitHandlerTest {
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -189,9 +212,12 @@ public class CommitHandlerTest {
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -208,9 +234,12 @@ public class CommitHandlerTest {
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -223,20 +252,23 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.ABORTED)))
         .when(coordinator)
-        .getState(ANY_ID);
+        .getState(anyId());
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(coordinator).getState(anyId());
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -249,18 +281,21 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -273,18 +308,21 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doThrow(CoordinatorException.class).when(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -297,21 +335,24 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
     doThrow(CoordinatorException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
-  public void commit_ValidationConflictExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
+  public void commit_validationconflictexceptionthrowninvalidation_shouldabortandrollbackrecords()
       throws ExecutionException, CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
@@ -324,9 +365,12 @@ public class CommitHandlerTest {
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -344,9 +388,12 @@ public class CommitHandlerTest {
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -360,20 +407,23 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.ABORTED)))
         .when(coordinator)
-        .getState(ANY_ID);
+        .getState(anyId());
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(coordinator).getState(anyId());
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -387,18 +437,21 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -412,18 +465,21 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doThrow(CoordinatorException.class).when(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -437,16 +493,19 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
     doThrow(CoordinatorException.class)
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+
+    // An exception is thrown before group commit even when it's enabled. So, the normal
+    // `putState(ABORT)` must be called.
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -458,20 +517,19 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doThrow(CoordinatorConflictException.class)
+    doThrowExceptionWhenCoordinatorPutState(
+        TransactionState.COMMITTED, CoordinatorConflictException.class);
+    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.COMMITTED)))
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.COMMITTED)))
-        .when(coordinator)
-        .getState(ANY_ID);
+        .getState(anyId());
 
     // Act
     handler.commit(snapshot);
 
     // Assert
     verify(storage, times(4)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -482,20 +540,19 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doThrow(CoordinatorConflictException.class)
+    doThrowExceptionWhenCoordinatorPutState(
+        TransactionState.COMMITTED, CoordinatorConflictException.class);
+    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.ABORTED)))
         .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
-        .when(coordinator)
-        .getState(ANY_ID);
+        .getState(anyId());
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verify(coordinator).getState(anyId());
     verify(handler).rollbackRecords(snapshot);
   }
 
@@ -506,10 +563,9 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
+    doThrowExceptionWhenCoordinatorPutState(
+        TransactionState.COMMITTED, CoordinatorConflictException.class);
+    doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -517,8 +573,8 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -529,10 +585,9 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    doThrow(CoordinatorException.class).when(coordinator).getState(ANY_ID);
+    doThrowExceptionWhenCoordinatorPutState(
+        TransactionState.COMMITTED, CoordinatorConflictException.class);
+    doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -540,8 +595,8 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(coordinator).getState(ANY_ID);
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
@@ -551,9 +606,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doThrow(CoordinatorException.class)
-        .when(coordinator)
-        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    doThrowExceptionWhenCoordinatorPutState(TransactionState.COMMITTED, CoordinatorException.class);
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -561,7 +614,23 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(handler, never()).rollbackRecords(snapshot);
+  }
+
+  protected void doThrowExceptionWhenCoordinatorPutState(
+      TransactionState targetState, Class<? extends Exception> exceptionClass)
+      throws CoordinatorException {
+
+    doThrow(exceptionClass).when(coordinator).putState(new Coordinator.State(anyId(), targetState));
+  }
+
+  protected void doNothingWhenCoordinatorPutState() throws CoordinatorException {
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+  }
+
+  protected void verifyCoordinatorPutState(TransactionState expectedTransactionState)
+      throws CoordinatorException {
+    verify(coordinator).putState(new Coordinator.State(anyId(), expectedTransactionState));
   }
 }

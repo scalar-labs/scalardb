@@ -1164,6 +1164,92 @@ In the sample code, the transaction is retried three times maximum and sleeps fo
 
 <div class="notice--info">{{ notice--info | markdownify }}</div>
 
+### Group commit for the Coordinator table
+
+The Coordinator table that is used for Consensus Commit transactions is a vital data store, and using robust storage for it is recommended. However, utilizing more robust storage options, such as internally leveraging multi-AZ or multi-region replication, may lead to increased latency when writing records to the storage, resulting in poor throughput performance.
+
+ScalarDB provides a group commit feature for the Coordinator table that groups multiple record writes into a single write operation, improving write throughput. In this case, latency may increase or decrease, depending on the underlying database and the workload.
+
+To enable the group commit feature, add the following configuration:
+
+```properties
+# By default, this configuration is set to `false`.
+scalar.db.consensus_commit.coordinator.group_commit.enabled=true
+
+# These properties are for tuning the performance of the group commit feature.
+# scalar.db.consensus_commit.coordinator.group_commit.group_size_fix_timeout_millis=40
+# scalar.db.consensus_commit.coordinator.group_commit.delayed_slot_move_timeout_millis=800
+# scalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=30000
+# scalar.db.consensus_commit.coordinator.group_commit.timeout_check_interval_millis=10
+# scalar.db.consensus_commit.coordinator.group_commit.metrics_monitor_log_enabled=true
+```
+
+#### Limitations
+
+This section describes the limitations of the group commit feature.
+
+##### Custom transaction ID passed by users
+
+The group commit feature implicitly generates an internal value and uses it as a part of transaction ID. Therefore, a custom transaction ID manually passed by users via `com.scalar.db.transaction.consensuscommit.ConsensusCommitManager.begin(String txId)` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager.begin(String txId)` can't be used as is for later API calls. You need to use a transaction ID returned from`com.scalar.db.transaction.consensuscommit.ConsensusCommit.getId()` or `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.getId()` instead.
+
+```java
+   // This custom transaction ID needs to be used for ScalarDB transactions.
+   String myTxId = UUID.randomUUID().toString();
+
+   ...
+
+   DistributedTransaction transaction = manager.begin(myTxId);
+
+   ...
+
+   // When the group commit feature is enabled, a custom transaction ID passed by users can't be used as is.
+   // logger.info("The transaction state: {}", manager.getState(myTxId));
+   logger.info("The transaction state: {}", manager.getState(transaction.getId()));
+```
+
+##### Commit in two-phase commit interface
+
+The group commit feature manages all ongoing transactions in memory. When the feature is enabled with the two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the Coordinator table, which may contain different transaction distributions over groups. Consequently, `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.commit()` must be called first by the coordinator service before being called by participant services.
+
+```java
+  AtomicBoolean globalCommitSuccess = new AtomicBoolean();
+
+  // Only the coordinator service can commit the global transaction state.
+  // It must be executed before the participants.
+  /*
+  try {
+    Arrays.asList(coordinatorService, participantService1, participantService2)
+      .parallelStream()
+      .forEach(service -> {
+        service.commit();
+        globalCommitSuccess.set(true);
+      });
+  }
+  catch (Exception e) {
+    if (!globalCommitSuccess.get()) {
+      // Error handling...
+    }
+    ...
+  }
+  */
+
+  try {
+    // Commit the transaction state and related records of the coordinator service.
+    coordinatorService.commit();
+    globalCommitSuccess.set(true);
+    // Then, commit the transaction state and related records of the participant services.
+    Arrays.asList(participantService1, participantService2)
+      .parallelStream()
+      .forEach(Service::commit);
+  }
+  catch (Exception e) {
+    if (!globalCommitSuccess.get()) {
+      // Error handling...
+    }
+    ...
+  }
+```
+
 ## Investigating Consensus Commit transaction manager errors
 
 To investigate errors when using the Consensus Commit transaction manager, you can enable a configuration that will return table metadata augmented with transaction metadata columns, which can be helpful when investigating transaction-related issues. This configuration, which is only available when troubleshooting the Consensus Commit transaction manager, enables you to see transaction metadata column details for a given table by using the `DistributedTransactionAdmin.getTableMetadata()` method.
