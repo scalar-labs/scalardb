@@ -1,4 +1,4 @@
-package com.scalar.db.dataloader.cli.command;
+package com.scalar.db.dataloader.core;
 
 /** Represents a key-value pair for a column and its corresponding value. */
 public class ColumnKeyValue {
