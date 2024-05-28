@@ -18,5 +18,10 @@ subprojects {
         // Apache Commons
         implementation("org.apache.commons:commons-lang3:${apacheCommonsLangVersion}")
         implementation("commons-io:commons-io:${apacheCommonsIoVersion}")
+
+        // Mockito
+        testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+        testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
+        testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
     }
 }
