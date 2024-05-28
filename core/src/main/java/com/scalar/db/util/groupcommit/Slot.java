@@ -12,9 +12,10 @@ import javax.annotation.concurrent.ThreadSafe;
 
 // A container of value which is stored in a group.
 @ThreadSafe
-class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
-  private final AtomicReference<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> parentGroup =
-      new AtomicReference<>();
+class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> {
+  private final AtomicReference<
+          Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+      parentGroup = new AtomicReference<>();
   private final CHILD_KEY key;
   // If a result value is null, the value is already emitted.
   // Otherwise, the result lambda must be emitted by the receiver's thread.
@@ -29,14 +30,17 @@ class Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
   // This value changes only from false to true.
   private final AtomicBoolean isDone = new AtomicBoolean();
 
-  Slot(CHILD_KEY key, NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
+  Slot(
+      CHILD_KEY key,
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> parentGroup) {
     this.key = key;
     this.parentGroup.set(parentGroup);
   }
 
   // This is called only once when being moved from NormalGroup to DelayedGroup.
   void changeParentGroupToDelayedGroup(
-      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> parentGroup) {
+      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+          parentGroup) {
     this.parentGroup.set(parentGroup);
   }
 

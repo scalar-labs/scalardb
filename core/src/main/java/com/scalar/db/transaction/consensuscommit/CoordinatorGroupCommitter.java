@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class CoordinatorGroupCommitter
-    extends GroupCommitter<String, String, String, String, Snapshot> {
+    extends GroupCommitter<String, String, String, String, String, Snapshot> {
   CoordinatorGroupCommitter(GroupCommitConfig config) {
     super("coordinator", config, new CoordinatorGroupCommitKeyManipulator());
   }
@@ -32,7 +32,7 @@ public class CoordinatorGroupCommitter
   }
 
   static class CoordinatorGroupCommitKeyManipulator
-      implements KeyManipulator<String, String, String, String> {
+      implements KeyManipulator<String, String, String, String, String> {
     private static final int PRIMARY_KEY_SIZE = 24;
     private static final char DELIMITER = ':';
     private static final int MAX_FULL_KEY_SIZE = 64;
@@ -109,13 +109,13 @@ public class CoordinatorGroupCommitter
     }
 
     @Override
-    public String emitKeyFromFullKey(String s) {
+    public String emitFullKeyFromFullKey(String s) {
       // Return the string as is since the value is already String.
       return s;
     }
 
     @Override
-    public String emitKeyFromParentKey(String s) {
+    public String emitParentKeyFromParentKey(String s) {
       // Return the string as is since the value is already String.
       return s;
     }

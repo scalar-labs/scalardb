@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -31,7 +32,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
 
     checkNotNull(groupCommitter);
     // This method reference will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(this::groupCommitState);
+    groupCommitter.setEmitter(new Emitter(coordinator));
     this.groupCommitter = groupCommitter;
   }
 
@@ -112,5 +113,39 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   public TransactionState abortState(String id) throws UnknownTransactionStatusException {
     cancelGroupCommitIfNeeded(id);
     return super.abortState(id);
+  }
+
+  private static class Emitter implements Emittable<String, String, Snapshot> {
+    private final Coordinator coordinator;
+
+    public Emitter(Coordinator coordinator) {
+      this.coordinator = coordinator;
+    }
+
+    @Override
+    public void emitNormalGroup(String parentId, List<Snapshot> snapshots)
+        throws CoordinatorException {
+      if (snapshots.isEmpty()) {
+        // This means all buffered transactions were manually rolled back. Nothing to do.
+        return;
+      }
+
+      List<String> transactionIds =
+          snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
+
+      // The id is either of a parent ID in the case of normal group commit or a full ID in the case
+      // of delayed commit.
+      // FIXME
+      coordinator.putStateForGroupCommit(
+          parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
+
+      logger.debug(
+          "Transaction {} is committed successfully at {}", parentId, System.currentTimeMillis());
+    }
+
+    @Override
+    public void emitDelayedGroup(String fullId, Snapshot snapshot) throws CoordinatorException {
+      // FIXME
+    }
   }
 }
