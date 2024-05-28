@@ -9,7 +9,7 @@ public class GroupCommitConfig {
   private final int slotCapacity;
   private final int groupSizeFixTimeoutMillis;
   private final int delayedSlotMoveTimeoutMillis;
-  private final int oldGroupAbortTimeoutSeconds;
+  private final int oldGroupAbortTimeoutMillis;
   private final int timeoutCheckIntervalMillis;
   private final boolean metricsMonitorLogEnabled;
 
@@ -20,7 +20,7 @@ public class GroupCommitConfig {
    * @param groupSizeFixTimeoutMillis A timeout to close (or size-fix) a {@link NormalGroup}.
    * @param delayedSlotMoveTimeoutMillis A timeout to move a delayed slot from {@link NormalGroup}
    *     to {@link DelayedGroup}.
-   * @param oldGroupAbortTimeoutSeconds A timeout to abort too old {@link Group}.
+   * @param oldGroupAbortTimeoutMillis A timeout to abort too old {@link Group}.
    * @param timeoutCheckIntervalMillis An interval to check the queues.
    * @param metricsMonitorLogEnabled Whether to enable the metrics monitor logging.
    */
@@ -28,13 +28,13 @@ public class GroupCommitConfig {
       int slotCapacity,
       int groupSizeFixTimeoutMillis,
       int delayedSlotMoveTimeoutMillis,
-      int oldGroupAbortTimeoutSeconds,
+      int oldGroupAbortTimeoutMillis,
       int timeoutCheckIntervalMillis,
       boolean metricsMonitorLogEnabled) {
     this.slotCapacity = slotCapacity;
     this.groupSizeFixTimeoutMillis = groupSizeFixTimeoutMillis;
     this.delayedSlotMoveTimeoutMillis = delayedSlotMoveTimeoutMillis;
-    this.oldGroupAbortTimeoutSeconds = oldGroupAbortTimeoutSeconds;
+    this.oldGroupAbortTimeoutMillis = oldGroupAbortTimeoutMillis;
     this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
     this.metricsMonitorLogEnabled = metricsMonitorLogEnabled;
   }
@@ -46,20 +46,20 @@ public class GroupCommitConfig {
    * @param groupSizeFixTimeoutMillis A timeout to close (or size-fix) a {@link NormalGroup}.
    * @param delayedSlotMoveTimeoutMillis A timeout to move a delayed slot from {@link NormalGroup}
    *     to {@link DelayedGroup}.
-   * @param oldGroupAbortTimeoutSeconds A timeout to abort too old {@link Group}.
+   * @param oldGroupAbortTimeoutMillis A timeout to abort too old {@link Group}.
    * @param timeoutCheckIntervalMillis An interval to check the queues.
    */
   public GroupCommitConfig(
       int slotCapacity,
       int groupSizeFixTimeoutMillis,
       int delayedSlotMoveTimeoutMillis,
-      int oldGroupAbortTimeoutSeconds,
+      int oldGroupAbortTimeoutMillis,
       int timeoutCheckIntervalMillis) {
     this(
         slotCapacity,
         groupSizeFixTimeoutMillis,
         delayedSlotMoveTimeoutMillis,
-        oldGroupAbortTimeoutSeconds,
+        oldGroupAbortTimeoutMillis,
         timeoutCheckIntervalMillis,
         false);
   }
@@ -80,8 +80,8 @@ public class GroupCommitConfig {
     return delayedSlotMoveTimeoutMillis;
   }
 
-  public int oldGroupAbortTimeoutSeconds() {
-    return oldGroupAbortTimeoutSeconds;
+  public int oldGroupAbortTimeoutMillis() {
+    return oldGroupAbortTimeoutMillis;
   }
 
   public int timeoutCheckIntervalMillis() {
@@ -98,7 +98,7 @@ public class GroupCommitConfig {
         .add("slotCapacity", slotCapacity)
         .add("groupSizeFixTimeoutMillis", groupSizeFixTimeoutMillis)
         .add("delayedSlotMoveTimeoutMillis", delayedSlotMoveTimeoutMillis)
-        .add("oldGroupAbortTimeoutSeconds", oldGroupAbortTimeoutSeconds)
+        .add("oldGroupAbortTimeoutMillis", oldGroupAbortTimeoutMillis)
         .add("timeoutCheckIntervalMillis", timeoutCheckIntervalMillis)
         .add("metricsMonitorLogEnabled", metricsMonitorLogEnabled)
         .toString();
