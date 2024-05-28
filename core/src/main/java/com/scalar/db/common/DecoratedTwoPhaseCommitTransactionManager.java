@@ -1,6 +1,5 @@
-package com.scalar.db.service;
+package com.scalar.db.common;
 
-import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -17,156 +16,166 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.concurrent.Immutable;
 
-/** @deprecated As of release 3.5.0. Will be removed in release 5.0.0 */
-@Deprecated
-@Immutable
-public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransactionManager {
-  private final TwoPhaseCommitTransactionManager manager;
+public abstract class DecoratedTwoPhaseCommitTransactionManager
+    implements TwoPhaseCommitTransactionManager {
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  @Inject
-  public TwoPhaseCommitTransactionService(TwoPhaseCommitTransactionManager manager) {
-    this.manager = manager;
+  private final TwoPhaseCommitTransactionManager decoratedTransactionManager;
+
+  public DecoratedTwoPhaseCommitTransactionManager(
+      TwoPhaseCommitTransactionManager decoratedTransactionManager) {
+    this.decoratedTransactionManager = decoratedTransactionManager;
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
-    manager.with(namespace, tableName);
+    decoratedTransactionManager.with(namespace, tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
-    manager.withNamespace(namespace);
+    decoratedTransactionManager.withNamespace(namespace);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
-    return manager.getNamespace();
+    return decoratedTransactionManager.getNamespace();
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
-    manager.withTable(tableName);
+    decoratedTransactionManager.withTable(tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
-    return manager.getTable();
+    return decoratedTransactionManager.getTable();
   }
 
   @Override
   public TwoPhaseCommitTransaction begin() throws TransactionException {
-    return manager.start();
+    return decoratedTransactionManager.begin();
   }
 
   @Override
   public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
-    return manager.start(txId);
+    return decoratedTransactionManager.begin(txId);
   }
 
   @Override
   public TwoPhaseCommitTransaction start() throws TransactionException {
-    return manager.start();
+    return decoratedTransactionManager.start();
   }
 
   @Override
   public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
-    return manager.start(txId);
-  }
-
-  @Override
-  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
-    return manager.join(txId);
+    return decoratedTransactionManager.start(txId);
   }
 
   @Override
   public TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException {
-    return manager.resume(txId);
+    return decoratedTransactionManager.resume(txId);
   }
 
   @Override
-  public TransactionState getState(String txId) throws TransactionException {
-    return manager.getState(txId);
-  }
-
-  @Override
-  public TransactionState rollback(String txId) throws TransactionException {
-    return manager.rollback(txId);
-  }
-
-  @Override
-  public TransactionState abort(String txId) throws TransactionException {
-    return manager.abort(txId);
+  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
+    return decoratedTransactionManager.join(txId);
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return manager.get(get);
+    return decoratedTransactionManager.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return manager.scan(scan);
+    return decoratedTransactionManager.scan(scan);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
-    manager.put(put);
+    decoratedTransactionManager.put(put);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
-    manager.put(puts);
+    decoratedTransactionManager.put(puts);
   }
 
   @Override
   public void insert(Insert insert) throws CrudException, UnknownTransactionStatusException {
-    manager.insert(insert);
+    decoratedTransactionManager.insert(insert);
   }
 
   @Override
   public void upsert(Upsert upsert) throws CrudException, UnknownTransactionStatusException {
-    manager.upsert(upsert);
+    decoratedTransactionManager.upsert(upsert);
   }
 
   @Override
   public void update(Update update) throws CrudException, UnknownTransactionStatusException {
-    manager.update(update);
+    decoratedTransactionManager.update(update);
   }
 
   @Override
   public void delete(Delete delete) throws CrudException, UnknownTransactionStatusException {
-    manager.delete(delete);
+    decoratedTransactionManager.delete(delete);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
-    manager.delete(deletes);
+    decoratedTransactionManager.delete(deletes);
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations)
       throws CrudException, UnknownTransactionStatusException {
-    manager.mutate(mutations);
+    decoratedTransactionManager.mutate(mutations);
+  }
+
+  @Override
+  public TransactionState getState(String txId) throws TransactionException {
+    return decoratedTransactionManager.getState(txId);
+  }
+
+  @Override
+  public TransactionState rollback(String txId) throws TransactionException {
+    return decoratedTransactionManager.rollback(txId);
+  }
+
+  @Override
+  public TransactionState abort(String txId) throws TransactionException {
+    return decoratedTransactionManager.abort(txId);
   }
 
   @Override
   public void close() {
-    manager.close();
+    decoratedTransactionManager.close();
+  }
+
+  public TwoPhaseCommitTransactionManager getOriginalTransactionManager() {
+    if (decoratedTransactionManager instanceof DecoratedTwoPhaseCommitTransactionManager) {
+      return ((DecoratedTwoPhaseCommitTransactionManager) decoratedTransactionManager)
+          .getOriginalTransactionManager();
+    }
+    return decoratedTransactionManager;
   }
 }
