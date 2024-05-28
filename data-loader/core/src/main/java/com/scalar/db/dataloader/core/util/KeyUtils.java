@@ -25,6 +25,7 @@ public final class KeyUtils {
    * @return A new ScalarDB Key instance formatted by data type
    * @throws KeyParsingException if there is an error parsing the key value
    */
+  @Nullable
   public static Key parseKeyValue(
       @Nullable ColumnKeyValue columnKeyValue, TableMetadata tableMetadata)
       throws KeyParsingException {
