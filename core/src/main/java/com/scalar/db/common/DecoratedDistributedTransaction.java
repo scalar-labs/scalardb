@@ -15,6 +15,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,7 @@ public abstract class DecoratedDistributedTransaction implements DistributedTran
 
   private final DistributedTransaction decoratedTransaction;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DecoratedDistributedTransaction(DistributedTransaction decoratedTransaction) {
     this.decoratedTransaction = decoratedTransaction;
   }
@@ -137,6 +139,7 @@ public abstract class DecoratedDistributedTransaction implements DistributedTran
     decoratedTransaction.abort();
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP")
   public DistributedTransaction getOriginalTransaction() {
     if (decoratedTransaction instanceof DecoratedDistributedTransaction) {
       return ((DecoratedDistributedTransaction) decoratedTransaction).getOriginalTransaction();

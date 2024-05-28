@@ -1271,9 +1271,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    final TwoPhaseCommitTransactionManager manager1WithDefaultNamespace =
-        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager();
-    try {
+    try (TwoPhaseCommitTransactionManager manager1WithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1WithDefaultNamespace, namespace1, TABLE_1);
       Get get =
@@ -1289,6 +1288,28 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
+              .build();
+      Insert insert =
+          Insert.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Upsert upsert =
+          Upsert.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 5))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Update update =
+          Update.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
               .build();
       Delete delete =
           Delete.newBuilder()
@@ -1302,6 +1323,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
               .build();
       Mutation deleteAsMutation2 =
           Delete.newBuilder()
@@ -1317,6 +1339,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                 tx.get(get);
                 tx.scan(scan);
                 tx.put(put);
+                tx.insert(insert);
+                tx.upsert(upsert);
+                tx.update(update);
                 tx.delete(delete);
                 tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
                 tx.prepare();
@@ -1324,10 +1349,6 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
                 tx.commit();
               })
           .doesNotThrowAnyException();
-    } finally {
-      if (manager1WithDefaultNamespace != null) {
-        manager1WithDefaultNamespace.close();
-      }
     }
   }
 
@@ -1957,6 +1978,348 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(result.isNull(SOME_COLUMN)).isTrue();
   }
 
+  @Test
+  public void manager_get_GetGivenForCommittedRecord_ShouldReturnRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+
+    // Act
+    Optional<Result> result = manager1.get(get);
+
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get().getInt(SOME_COLUMN)).isEqualTo(0);
+  }
+
+  @Test
+  public void manager_scan_ScanGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
+
+    // Act
+    List<Result> results = manager1.scan(scan);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(0);
+
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(1);
+
+    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(2).getInt(SOME_COLUMN)).isEqualTo(2);
+  }
+
+  @Test
+  public void manager_put_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    // Act
+    manager1.put(put);
+
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Optional<Result> result = manager1.get(get);
+
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_put_PutGivenForExisting_ShouldUpdateRecord() throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
+            .build();
+    manager1.put(put);
+
+    // Assert
+    Optional<Result> actual = manager1.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_insert_InsertGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    // Act
+    manager1.insert(insert);
+
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Optional<Result> result = manager1.get(get);
+
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_insert_InsertGivenForExisting_ShouldThrowCrudConflictException()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+
+    int expected = INITIAL_BALANCE + 100;
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> manager1.insert(insert)).isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
+  public void manager_upsert_UpsertGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    // Act
+    manager1.upsert(upsert);
+
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Optional<Result> result = manager1.get(get);
+
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_upsert_UpsertGivenForExisting_ShouldUpdateRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+    manager1.upsert(upsert);
+
+    // Assert
+    Optional<Result> actual = manager1.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_update_UpdateGivenForNonExisting_ShouldDoNothing()
+      throws TransactionException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build();
+
+    // Act
+    assertThatCode(() -> manager1.update(update)).doesNotThrowAnyException();
+
+    // Assert
+    Optional<Result> actual = manager1.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void manager_update_UpdateGivenForExisting_ShouldUpdateRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+    manager1.update(update);
+
+    // Assert
+    Optional<Result> actual = manager1.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_delete_DeleteGivenForExisting_ShouldDeleteRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+
+    // Act
+    manager1.delete(delete);
+
+    // Assert
+    Optional<Result> result = manager1.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void manager_operation_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (TwoPhaseCommitTransactionManager manager1WithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
+      // Arrange
+      populateRecords(manager1WithDefaultNamespace, namespace1, TABLE_1);
+      Get get =
+          Get.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
+              .build();
+      Insert insert =
+          Insert.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Upsert upsert =
+          Upsert.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 5))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Update update =
+          Update.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Mutation putAsMutation1 =
+          Put.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
+              .build();
+      Mutation deleteAsMutation2 =
+          Delete.newBuilder()
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.get(get))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.scan(scan))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.put(put))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.insert(insert))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.upsert(upsert))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.update(update))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.delete(delete))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(
+              () ->
+                  manager1WithDefaultNamespace.mutate(
+                      ImmutableList.of(putAsMutation1, deleteAsMutation2)))
+          .doesNotThrowAnyException();
+    }
+  }
+
   private Optional<Result> get(Get get) throws TransactionException {
     TwoPhaseCommitTransaction tx = manager1.start();
     try {
@@ -1998,9 +2361,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   protected void populateRecords(
-      TwoPhaseCommitTransactionManager manager, String namespaceName, String tableName)
+      TwoPhaseCommitTransactionManager manager1, String namespaceName, String tableName)
       throws TransactionException {
-    TwoPhaseCommitTransaction transaction = manager.begin();
+    TwoPhaseCommitTransaction transaction = manager1.begin();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
             i ->
