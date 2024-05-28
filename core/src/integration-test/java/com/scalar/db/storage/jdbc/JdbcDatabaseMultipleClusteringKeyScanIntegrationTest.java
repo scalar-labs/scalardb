@@ -1,16 +1,19 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -22,15 +25,30 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       return 1;
     }
     return super.getThreadNum();
   }
 
   @Override
+  protected boolean isParallelDdlSupported() {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      return false;
+    }
+    return super.isParallelDdlSupported();
+  }
+
+  // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed and the
+  //       fix is released.
+  @SuppressWarnings("unused")
+  private boolean isYugabyteDb() {
+    return JdbcTestUtils.isYugabyte(rdbEngine);
+  }
+
+  @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
@@ -40,7 +58,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected Value<?> getMinValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
@@ -50,16 +68,34 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
       }
     }
-    if (rdbEngine instanceof RdbEngineSqlServer) {
+    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       if (dataType == DataType.TEXT) {
         return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }
     }
     return super.getMaxValue(columnName, dataType);
+  }
+
+  // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed and the
+  //       fix is released.
+  @DisabledIf("isYugabyteDb")
+  @Test
+  @Override
+  public void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    super.scan_WithSecondClusteringKeyRange_ShouldReturnProperResult();
+  }
+
+  @DisabledIf("isYugabyteDb")
+  @Test
+  @Override
+  public void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    super.scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult();
   }
 }

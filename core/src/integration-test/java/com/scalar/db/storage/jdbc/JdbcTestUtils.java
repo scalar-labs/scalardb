@@ -46,4 +46,28 @@ public final class JdbcTestUtils {
     IntStream.range(0, TestUtils.MAX_TEXT_COUNT).forEach(i -> builder.append('Z'));
     return new TextValue(columnName, builder.toString());
   }
+
+  public static boolean isPostgresql(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEnginePostgresql;
+  }
+
+  public static boolean isMysql(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineMysql;
+  }
+
+  public static boolean isOracle(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineOracle;
+  }
+
+  public static boolean isSqlServer(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineSqlServer;
+  }
+
+  public static boolean isSqlite(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineSqlite;
+  }
+
+  public static boolean isYugabyte(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineYugabyte;
+  }
 }

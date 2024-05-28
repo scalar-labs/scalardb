@@ -23,7 +23,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       return 1;
     }
     return super.getThreadNum();
@@ -31,11 +31,19 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected Column<?> getRandomColumn(Random random, String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return ScalarDbUtils.toColumn(JdbcTestUtils.getRandomOracleDoubleValue(random, columnName));
       }
     }
     return super.getRandomColumn(random, columnName, dataType);
+  }
+
+  @Override
+  protected boolean isParallelDdlSupported() {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      return false;
+    }
+    return super.isParallelDdlSupported();
   }
 }

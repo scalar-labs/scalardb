@@ -40,7 +40,7 @@ public final class DynamoEnv {
     properties.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
 
     // Add testName as a metadata namespace suffix

@@ -10,11 +10,8 @@ import com.google.common.collect.ListMultimap;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.api.ScanBuilder.AndConditionSet;
 import com.scalar.db.api.ScanBuilder.BuildableScanAll;
 import com.scalar.db.api.ScanBuilder.BuildableScanAllWithOngoingWhereAnd;
-import com.scalar.db.api.ScanBuilder.ConditionSetBuilder;
-import com.scalar.db.api.ScanBuilder.OrConditionSet;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -132,6 +129,10 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     return namespaceBaseName + firstColumnType;
   }
 
+  protected boolean isParallelDdlSupported() {
+    return true;
+  }
+
   private void createTableForConditionTests() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(getNamespaceName(), true, options);
@@ -170,7 +171,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
       testCallables.add(testCallable);
     }
 
-    executeInParallel(testCallables);
+    executeDdls(testCallables);
   }
 
   private void createTable(
@@ -564,7 +565,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         .table(CONDITION_TEST_TABLE)
         .all()
         .where(condition)
-        .ordering(Ordering.asc(PARTITION_KEY_NAME))
         .build();
   }
 
@@ -578,7 +578,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         .table(CONDITION_TEST_TABLE)
         .all()
         .where(condition)
-        .ordering(Ordering.asc(PARTITION_KEY_NAME))
         .build();
   }
 
@@ -588,7 +587,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     for (Result actualResult : actualResults) {
       actual.add(actualResult.getInt(PARTITION_KEY_NAME));
     }
-    assertThat(actual).describedAs(description).isEqualTo(expected);
+    assertThat(actual).describedAs(description).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   private void assertOrderedScanResult(
@@ -604,12 +603,40 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     assertThat(actual).describedAs(description).isEqualTo(expected);
   }
 
+  private void assertLimitedScanResult(
+      List<Result> actualResults, List<Integer> expected, int limit, String description) {
+    List<Integer> actual = new ArrayList<>();
+    for (Result actualResult : actualResults) {
+      actual.add(actualResult.getInt(PARTITION_KEY_NAME));
+    }
+    assertThat(actual.size()).describedAs(description).isLessThanOrEqualTo(limit);
+    assertThat(actual).describedAs(description).containsAnyElementsOf(expected);
+  }
+
+  private void assertProjectedResult(
+      List<Result> actualResults,
+      List<Integer> expected,
+      List<String> projections,
+      String description) {
+    List<Integer> actual = new ArrayList<>();
+    for (Result actualResult : actualResults) {
+      assertThat(actualResult.getContainedColumnNames())
+          .containsExactlyInAnyOrderElementsOf(projections);
+      actual.add(actualResult.getInt(PARTITION_KEY_NAME));
+    }
+    assertThat(actual).describedAs(description).containsExactlyInAnyOrderElementsOf(expected);
+  }
+
   private String description(Column<?> column, Operator operator) {
     return String.format("failed with column: %s, operator: %s", column, operator);
   }
 
   private String description(Column<?> column, Operator operator, int value) {
     return description(column, operator) + String.format(", value: %s", value);
+  }
+
+  private String descriptionForLimitTests(Column<?> column, Operator operator, int limit) {
+    return description(column, operator) + String.format(", limit: %s", limit);
   }
 
   private String description(
@@ -706,7 +733,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
       testCallables.add(testCallable);
     }
 
-    executeInParallel(testCallables);
+    executeDdls(testCallables);
   }
 
   @Test
@@ -761,7 +788,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
             .table(CONDITION_TEST_TABLE)
             .all()
             .where(ConditionBuilder.buildConditionalExpression(column, operator))
-            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .build();
 
     // Act
@@ -783,7 +809,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
             .table(CONDITION_TEST_TABLE)
             .all()
             .where(ConditionBuilder.buildConditionalExpression(column, operator))
-            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .build();
 
     // Act
@@ -815,14 +840,15 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
             .map(i -> prepareOrConditionSet(ImmutableList.of(columns1.get(i), columns2.get(i))))
             .collect(Collectors.toList());
     orConditionSets.forEach(builder::and);
-    builder.ordering(Ordering.asc(PARTITION_KEY_NAME));
 
     // Act
     List<Result> actual = scanAll(builder.build());
 
     // Assert
     assertScanResult(
-        actual, getExpectedResults(DataType.INT, Operator.LTE, 2), "failed with CNF conditions");
+        actual,
+        getExpectedResults(DataType.INT, Operator.LTE, CONDITION_TEST_PREDICATE_VALUE),
+        "failed with CNF conditions");
   }
 
   @Test
@@ -837,7 +863,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
             .all()
             .where(prepareAndConditionSet(prepareNonKeyColumns(1)))
             .or(prepareAndConditionSet(prepareNonKeyColumns(2)))
-            .ordering(Ordering.asc(PARTITION_KEY_NAME))
             .build();
 
     // Act
@@ -845,7 +870,9 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
     // Assert
     assertScanResult(
-        actual, getExpectedResults(DataType.INT, Operator.LTE, 2), "failed with DNF conditions");
+        actual,
+        getExpectedResults(DataType.INT, Operator.LTE, CONDITION_TEST_PREDICATE_VALUE),
+        "failed with DNF conditions");
   }
 
   @Test
@@ -1028,6 +1055,90 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
     // Assert
     assertScanResult(actual, expected, description);
+  }
+
+  @Test
+  public void scan_WithConditionAndLimit_ShouldReturnProperResult()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    prepareRecords();
+
+    List<Callable<Void>> testCallables = new ArrayList<>();
+    IntStream.range(1, CONDITION_TEST_TABLE_NUM_ROWS + 1)
+        .forEach(
+            limit -> {
+              testCallables.add(
+                  () -> {
+                    scan_WithConditionAndLimit_ShouldReturnProperResult(limit);
+                    return null;
+                  });
+            });
+
+    executeInParallel(testCallables);
+  }
+
+  private void scan_WithConditionAndLimit_ShouldReturnProperResult(int limit)
+      throws IOException, ExecutionException {
+    // Arrange
+    IntColumn column = IntColumn.of(COL_NAME1, CONDITION_TEST_PREDICATE_VALUE);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(getNamespaceName())
+            .table(CONDITION_TEST_TABLE)
+            .all()
+            .where(ConditionBuilder.buildConditionalExpression(column, Operator.LTE))
+            .limit(limit)
+            .build();
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertLimitedScanResult(
+        actual,
+        // expected full (not-limited) results
+        getExpectedResults(column.getDataType(), Operator.LTE, column.getIntValue()),
+        limit,
+        descriptionForLimitTests(column, Operator.LTE, limit));
+  }
+
+  @Test
+  public void scan_WithConditionButColumnsNotAppearedInProjections_ShouldReturnProjectedResult()
+      throws IOException, ExecutionException {
+    prepareRecords();
+    // Arrange
+    IntColumn column = IntColumn.of(COL_NAME1, CONDITION_TEST_PREDICATE_VALUE);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(getNamespaceName())
+            .table(CONDITION_TEST_TABLE)
+            .all()
+            .projections(PARTITION_KEY_NAME, COL_NAME2)
+            .where(ConditionBuilder.buildConditionalExpression(column, Operator.LTE))
+            .build();
+
+    // Act
+    List<Result> actual = scanAll(scan);
+    assertProjectedResult(
+        actual,
+        getExpectedResults(column.getDataType(), Operator.LTE, column.getIntValue()),
+        ImmutableList.of(PARTITION_KEY_NAME, COL_NAME2),
+        description(column, Operator.LTE));
+  }
+
+  private void executeDdls(List<Callable<Void>> ddls)
+      throws InterruptedException, java.util.concurrent.ExecutionException {
+    if (isParallelDdlSupported()) {
+      executeInParallel(ddls);
+    } else {
+      ddls.forEach(
+          ddl -> {
+            try {
+              ddl.call();
+            } catch (Exception e) {
+              throw new RuntimeException(e);
+            }
+          });
+    }
   }
 
   private void executeInParallel(List<Callable<Void>> testCallables)

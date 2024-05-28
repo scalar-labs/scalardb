@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
@@ -10,7 +11,7 @@ import java.util.Random;
 public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -22,15 +23,31 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       return 1;
     }
     return super.getThreadNum();
   }
 
   @Override
+  protected boolean isParallelDdlSupported() {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      return false;
+    }
+    return super.isParallelDdlSupported();
+  }
+
+  @Override
+  protected boolean isFloatTypeKeySupported() {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      return false;
+    }
+    return super.isFloatTypeKeySupported();
+  }
+
+  @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
@@ -40,7 +57,7 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
 
   @Override
   protected Value<?> getMinValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
@@ -50,12 +67,12 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
 
   @Override
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
       }
     }
-    if (rdbEngine instanceof RdbEngineSqlServer) {
+    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       if (dataType == DataType.TEXT) {
         return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }

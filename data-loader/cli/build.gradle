@@ -1,0 +1,59 @@
+plugins {
+    id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
+    id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
+    id 'application'
+}
+
+application {
+    mainClass = 'com.scalar.db.dataloader.cli.DataLoaderCli'
+}
+
+archivesBaseName = "scalardb-data-loader-cli"
+
+dependencies {
+    implementation project(':core')
+    implementation project(':data-loader:core')
+    implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
+    implementation "info.picocli:picocli:${picocliVersion}"
+
+    // for SpotBugs
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+
+    // for Error Prone
+    errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
+    errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+javadoc {
+    title = "ScalarDB Data Loader CLI"
+}
+
+// Build a fat jar
+shadowJar {
+    archiveClassifier.set("")
+    manifest {
+        attributes 'Main-Class': 'com.scalar.db.dataloader.DataLoaderCli'
+    }
+    mergeServiceFiles()
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat(googleJavaFormatVersion)
+    }
+}
+
+spotbugsMain.reports {
+    html.enabled = true
+}
+spotbugsMain.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
+
+spotbugsTest.reports {
+    html.enabled = true
+}
+spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")

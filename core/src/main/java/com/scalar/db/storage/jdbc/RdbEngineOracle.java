@@ -27,7 +27,7 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String[] createSchemaSqls(String fullSchema) {
     return new String[] {
-      "CREATE USER " + enclose(fullSchema) + " IDENTIFIED BY \"oracle\"",
+      "CREATE USER " + enclose(fullSchema) + " IDENTIFIED BY \"Oracle1234!@#$\"",
       "ALTER USER " + enclose(fullSchema) + " quota unlimited on USERS",
     };
   }
@@ -50,7 +50,7 @@ class RdbEngineOracle implements RdbEngineStrategy {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDescClusteringOrder,
+      boolean hasDifferentClusteringOrders,
       String schema,
       String table,
       TableMetadata metadata,
@@ -61,8 +61,10 @@ class RdbEngineOracle implements RdbEngineStrategy {
     // performance
     sqls.add("ALTER TABLE " + encloseFullTableName(schema, table) + " INITRANS 3 MAXTRANS 255");
 
-    if (hasDescClusteringOrder) {
-      // Create a unique index for the clustering orders
+    if (hasDifferentClusteringOrders) {
+      // Create a unique index for the clustering orders only when both ASC and DESC are contained
+      // in the clustering keys. If all the clustering key orders are DESC, the PRIMARY KEY index
+      // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")

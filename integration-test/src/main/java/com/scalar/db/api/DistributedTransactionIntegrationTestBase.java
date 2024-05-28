@@ -1025,9 +1025,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
-    final DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager();
-    try {
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
       // Arrange
       populateRecords();
       Get get =
@@ -1043,6 +1042,28 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
+              .build();
+      Insert insert =
+          Insert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Upsert upsert =
+          Upsert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 5))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Update update =
+          Update.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
               .build();
       Delete delete =
           Delete.newBuilder()
@@ -1056,6 +1077,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
               .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
               .build();
       Mutation deleteAsMutation2 =
           Delete.newBuilder()
@@ -1071,15 +1093,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
                 tx.get(get);
                 tx.scan(scan);
                 tx.put(put);
+                tx.insert(insert);
+                tx.upsert(upsert);
+                tx.update(update);
                 tx.delete(delete);
                 tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
                 tx.commit();
               })
           .doesNotThrowAnyException();
-    } finally {
-      if (managerWithDefaultNamespace != null) {
-        managerWithDefaultNamespace.close();
-      }
     }
   }
 
@@ -1664,6 +1685,348 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
     assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void manager_get_GetGivenForCommittedRecord_ShouldReturnRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    Get get = prepareGet(0, 0);
+
+    // Act
+    Optional<Result> result = manager.get(get);
+
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get().getInt(SOME_COLUMN)).isEqualTo(0);
+  }
+
+  @Test
+  public void manager_scan_ScanGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    Scan scan = prepareScan(1, 0, 2);
+
+    // Act
+    List<Result> results = manager.scan(scan);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(0);
+
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(1);
+
+    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(2).getInt(SOME_COLUMN)).isEqualTo(2);
+  }
+
+  @Test
+  public void manager_put_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    // Act
+    manager.put(put);
+
+    // Assert
+    Get get = prepareGet(0, 0);
+    Optional<Result> result = manager.get(get);
+
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_put_PutGivenForExisting_ShouldUpdateRecord() throws TransactionException {
+    // Arrange
+    populateRecords();
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
+            .build();
+    manager.put(put);
+
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0));
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_insert_InsertGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    // Act
+    manager.insert(insert);
+
+    // Assert
+    Get get = prepareGet(0, 0);
+    Optional<Result> result = manager.get(get);
+
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_insert_InsertGivenForExisting_ShouldThrowCrudConflictException()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+
+    // Act Assert
+    int expected = INITIAL_BALANCE + 100;
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    assertThatThrownBy(() -> manager.insert(insert)).isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
+  public void manager_upsert_UpsertGivenForNonExisting_ShouldCreateRecord()
+      throws TransactionException {
+    // Arrange
+    int expected = INITIAL_BALANCE;
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+
+    // Act
+    manager.upsert(upsert);
+
+    // Assert
+    Get get = prepareGet(0, 0);
+    Optional<Result> result = manager.get(get);
+
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_upsert_UpsertGivenForExisting_ShouldUpdateRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+    manager.upsert(upsert);
+
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0));
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_update_UpdateGivenForNonExisting_ShouldDoNothing()
+      throws TransactionException {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build();
+
+    // Act
+    assertThatCode(() -> manager.update(update)).doesNotThrowAnyException();
+
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0));
+
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void manager_update_UpdateGivenForExisting_ShouldUpdateRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+    manager.update(update);
+
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0));
+
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void manager_delete_DeleteGivenForExisting_ShouldDeleteRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    Delete delete = prepareDelete(0, 0);
+
+    // Act
+    manager.delete(delete);
+
+    // Assert
+    Optional<Result> result = manager.get(prepareGet(0, 0));
+
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void manager_operation_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
+      Get get =
+          Get.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE).all().build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Insert insert =
+          Insert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Upsert upsert =
+          Upsert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 5))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Update update =
+          Update.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Mutation putAsMutation1 =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .enableImplicitPreRead()
+              .build();
+      Mutation deleteAsMutation2 =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.get(get))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.scan(scan))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.put(put))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.insert(insert))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.upsert(upsert))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.update(update))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.delete(delete))
+          .doesNotThrowAnyException();
+      Assertions.assertThatCode(
+              () ->
+                  managerWithDefaultNamespace.mutate(
+                      ImmutableList.of(putAsMutation1, deleteAsMutation2)))
+          .doesNotThrowAnyException();
+    }
   }
 
   protected Optional<Result> get(Get get) throws TransactionException {
