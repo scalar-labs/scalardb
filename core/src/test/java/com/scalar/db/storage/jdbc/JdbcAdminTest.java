@@ -334,11 +334,11 @@ public class JdbcAdminTest {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.ORACLE,
         Arrays.asList(
-            "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
+            "CREATE USER \"my_ns\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"my_ns\" quota unlimited on USERS"),
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         Arrays.asList(
-            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
             + METADATA_SCHEMA
@@ -838,7 +838,7 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + METADATA_SCHEMA
@@ -1041,7 +1041,7 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + METADATA_SCHEMA
@@ -2926,11 +2926,11 @@ public class JdbcAdminTest {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.ORACLE,
         Arrays.asList(
-            "CREATE USER \"my_ns\" IDENTIFIED BY \"oracle\"",
+            "CREATE USER \"my_ns\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"my_ns\" quota unlimited on USERS"),
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         Arrays.asList(
-            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
             + METADATA_SCHEMA
@@ -3058,7 +3058,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         ImmutableList.of(
-            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
             + METADATA_SCHEMA
@@ -3280,7 +3280,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         Arrays.asList(
-            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"oracle\"",
+            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
             + METADATA_SCHEMA

@@ -19,6 +19,7 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  @Nullable private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -51,7 +53,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -69,7 +72,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -84,7 +88,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
-      CommitHandler commit) {
+      CommitHandler commit,
+      CoordinatorGroupCommitter groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
@@ -96,9 +101,20 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
+    this.groupCommitter = groupCommitter;
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+  }
+
+  // `groupCommitter` must be set before calling this method.
+  private CommitHandler createCommitHandler() {
+    if (isGroupCommitEnabled()) {
+      return new CommitHandlerWithGroupCommit(
+          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+    } else {
+      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    }
   }
 
   @Override
@@ -175,6 +191,9 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
       throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
+    if (isGroupCommitEnabled()) {
+      txId = groupCommitter.reserve(txId);
+    }
     if (!config.getIsolation().equals(isolation)
         || !config.getSerializableStrategy().equals(strategy)) {
       logger.warn(
@@ -187,7 +206,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
         new CrudHandler(
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
     ConsensusCommit consensus =
-        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker);
+        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
     getNamespace().ifPresent(consensus::withNamespace);
     getTable().ifPresent(consensus::withTable);
     return decorate(consensus);
@@ -218,10 +237,18 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     }
   }
 
+  @VisibleForTesting
+  boolean isGroupCommitEnabled() {
+    return groupCommitter != null;
+  }
+
   @Override
   public void close() {
     storage.close();
     admin.close();
     parallelExecutor.close();
+    if (isGroupCommitEnabled()) {
+      groupCommitter.close();
+    }
   }
 }

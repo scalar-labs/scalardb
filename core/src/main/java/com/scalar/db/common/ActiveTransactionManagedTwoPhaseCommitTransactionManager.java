@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
-    extends AbstractTwoPhaseCommitTransactionManager {
+    extends TransactionDecorationTwoPhaseCommitTransactionManager {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 

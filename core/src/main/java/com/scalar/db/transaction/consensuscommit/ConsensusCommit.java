@@ -26,6 +26,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private Runnable beforeRecoveryHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -57,11 +59,13 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       CrudHandler crud,
       CommitHandler commit,
       RecoveryHandler recovery,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
+      ConsensusCommitMutationOperationChecker mutationOperationChecker,
+      @Nullable CoordinatorGroupCommitter groupCommitter) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);
     this.mutationOperationChecker = mutationOperationChecker;
+    this.groupCommitter = groupCommitter;
     this.beforeRecoveryHook = () -> {};
   }
 
@@ -225,7 +229,9 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void rollback() {
-    // do nothing for this implementation
+    if (groupCommitter != null) {
+      groupCommitter.remove(crud.getSnapshot().getId());
+    }
   }
 
   @VisibleForTesting

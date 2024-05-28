@@ -13,7 +13,8 @@ import java.util.Optional;
  * join the transaction with {@link #join(String)} with the transaction ID. Also, participants can
  * resume the transaction with {@link #resume(String)} with the transaction ID.
  */
-public interface TwoPhaseCommitTransactionManager {
+public interface TwoPhaseCommitTransactionManager
+    extends TransactionManagerCrudOperable, AutoCloseable {
 
   /**
    * Sets the specified namespace and the table name as default values in the instance.
@@ -179,5 +180,6 @@ public interface TwoPhaseCommitTransactionManager {
    * Closes connections to the cluster. The connections are shared among multiple services such as
    * StorageService and TransactionService, thus this should only be used when closing applications.
    */
+  @Override
   void close();
 }

@@ -27,7 +27,7 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String[] createSchemaSqls(String fullSchema) {
     return new String[] {
-      "CREATE USER " + enclose(fullSchema) + " IDENTIFIED BY \"oracle\"",
+      "CREATE USER " + enclose(fullSchema) + " IDENTIFIED BY \"Oracle1234!@#$\"",
       "ALTER USER " + enclose(fullSchema) + " quota unlimited on USERS",
     };
   }
