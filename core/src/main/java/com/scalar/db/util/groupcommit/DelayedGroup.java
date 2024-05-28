@@ -17,7 +17,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       FULL_KEY fullKey,
       Emittable<EMIT_KEY, V> emitter,
       KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
-    super(emitter, keyManipulator, 1, config.oldGroupAbortTimeoutSeconds());
+    super(emitter, keyManipulator, 1, config.oldGroupAbortTimeoutMillis());
     this.fullKey = fullKey;
   }
 
