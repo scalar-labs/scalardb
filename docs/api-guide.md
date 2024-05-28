@@ -1244,7 +1244,7 @@ The group commit feature implicitly generates an internal value and uses it as a
 
 The group commit feature manages all ongoing transactions in memory. If this feature is enabled with a two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the Coordinator table, which may contain different transaction distributions over groups.
 
-This limitation introduces some complexity and burden to the development of applications. Therefore, the combination of the group commit feature and a two-phase commit interface is prohibited at the moment.
+This limitation introduces some complexities and inflexibilities related to application development. Therefore, combining the use of the group commit feature with a two-phase commit interface is currently prohibited.
 
 ## Investigating Consensus Commit transaction manager errors
 
