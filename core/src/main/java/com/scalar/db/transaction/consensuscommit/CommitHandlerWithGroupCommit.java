@@ -124,8 +124,8 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     @Override
     public void emitDelayedGroup(String fullId, Snapshot snapshot) throws CoordinatorException {
       // This transaction is contained in a delayed group that has only a single transaction.
-      // Therefore, the transaction state can be committed as if it's a normal (non group commit)
-      // transaction.
+      // Therefore, the transaction state can be committed as if it's a normal commit (not a
+      // group-commit).
       coordinator.putState(new State(fullId, TransactionState.COMMITTED));
 
       logger.debug(
