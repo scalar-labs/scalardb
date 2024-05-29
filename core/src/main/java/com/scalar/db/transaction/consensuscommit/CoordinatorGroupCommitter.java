@@ -109,15 +109,15 @@ public class CoordinatorGroupCommitter
     }
 
     @Override
-    public String emitFullKeyFromFullKey(String s) {
+    public String emitFullKeyFromFullKey(String fullKey) {
       // Return the string as is since the value is already String.
-      return s;
+      return fullKey;
     }
 
     @Override
-    public String emitParentKeyFromParentKey(String s) {
+    public String emitParentKeyFromParentKey(String parentKey) {
       // Return the string as is since the value is already String.
-      return s;
+      return parentKey;
     }
   }
 }

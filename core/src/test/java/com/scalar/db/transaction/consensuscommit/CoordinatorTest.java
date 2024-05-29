@@ -583,7 +583,7 @@ public class CoordinatorTest {
   @EnumSource(
       value = TransactionState.class,
       names = {"COMMITTED", "ABORTED"})
-  public void putStateForGroupCommit_FullIdGiven_ShouldPutWithCorrectValuesWithEmptyChildIds(
+  public void putStateForGroupCommit_FullIdGiven_ShouldThrowAssertionError(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
     Coordinator spiedCoordinator = spy(coordinator);
@@ -597,15 +597,11 @@ public class CoordinatorTest {
     doNothing().when(storage).put(any(Put.class));
 
     // Act
-    spiedCoordinator.putStateForGroupCommit(fullId, fullIds, transactionState, current);
-
     // Assert
-
-    // With a full ID as `tx_id`, it's basically same as normal commits and `tx_child_ids` value can
-    // be empty.
-    verify(spiedCoordinator)
-        .createPutWith(
-            new Coordinator.State(fullId, Collections.emptyList(), transactionState, current));
+    assertThatThrownBy(
+            () ->
+                spiedCoordinator.putStateForGroupCommit(fullId, fullIds, transactionState, current))
+        .isInstanceOf(AssertionError.class);
   }
 
   @ParameterizedTest

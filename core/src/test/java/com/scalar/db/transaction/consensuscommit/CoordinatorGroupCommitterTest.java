@@ -35,6 +35,7 @@ class CoordinatorGroupCommitterTest {
       new CoordinatorGroupCommitKeyManipulator();
   @Mock private Emittable<String, String, Snapshot> emitter;
   @Captor private ArgumentCaptor<List<Snapshot>> snapshotsArgumentCaptor;
+  @Captor private ArgumentCaptor<Snapshot> snapshotArgumentCaptor;
 
   @Test
   void reserve_GivenArbitraryChildTxId_ShouldReturnFullTxId() throws Exception {
@@ -179,14 +180,13 @@ class CoordinatorGroupCommitterTest {
       for (Future<Void> future : futures) {
         future.get(10, TimeUnit.SECONDS);
       }
-      verify(emitter, times(2)).emitNormalGroup(anyString(), anyList());
       verify(emitter)
           .emitNormalGroup(
               eq(keyManipulator.keysFromFullKey(fullTxId1).parentKey),
               snapshotsArgumentCaptor.capture());
       assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot1);
-      verify(emitter).emitNormalGroup(eq(fullTxId2), snapshotsArgumentCaptor.capture());
-      assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot2);
+      verify(emitter).emitDelayedGroup(eq(fullTxId2), snapshotArgumentCaptor.capture());
+      assertThat(snapshotArgumentCaptor.getValue()).isEqualTo(snapshot2);
     }
   }
 
