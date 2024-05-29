@@ -1,12 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
@@ -69,7 +67,13 @@ class CoordinatorGroupCommitterTest {
           .isEqualTo(keyManipulator.keysFromFullKey(fullTxId4).parentKey);
       assertThat(keyManipulator.keysFromFullKey(fullTxId1).parentKey)
           .isNotEqualTo(keyManipulator.keysFromFullKey(fullTxId3).parentKey);
-      verify(emitter, never()).emitNormalGroup(anyString(), anyList());
+      verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullTxId1);
+      groupCommitter.remove(fullTxId2);
+      groupCommitter.remove(fullTxId3);
+      groupCommitter.remove(fullTxId4);
     }
   }
 
@@ -127,7 +131,6 @@ class CoordinatorGroupCommitterTest {
       for (Future<Void> future : futures) {
         future.get(10, TimeUnit.SECONDS);
       }
-      verify(emitter, times(2)).emitNormalGroup(anyString(), anyList());
       verify(emitter)
           .emitNormalGroup(
               eq(keyManipulator.keysFromFullKey(fullTxId1).parentKey),
@@ -138,6 +141,7 @@ class CoordinatorGroupCommitterTest {
               eq(keyManipulator.keysFromFullKey(fullTxId3).parentKey),
               snapshotsArgumentCaptor.capture());
       assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot3, snapshot4);
+      verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
 
@@ -222,12 +226,12 @@ class CoordinatorGroupCommitterTest {
         // Short timeout is enough since there is no delayed transaction.
         future.get(1, TimeUnit.SECONDS);
       }
-      verify(emitter, times(1)).emitNormalGroup(anyString(), anyList());
       verify(emitter)
           .emitNormalGroup(
               eq(keyManipulator.keysFromFullKey(fullTxId2).parentKey),
               snapshotsArgumentCaptor.capture());
       assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot);
+      verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
 
@@ -249,7 +253,8 @@ class CoordinatorGroupCommitterTest {
       TimeUnit.MILLISECONDS.sleep(1000);
 
       // Assert
-      verify(emitter, never()).emitNormalGroup(anyString(), anyList());
+      verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
 

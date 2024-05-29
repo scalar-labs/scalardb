@@ -32,7 +32,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     super(storage, coordinator, tableMetadataManager, parallelExecutor);
 
     checkNotNull(groupCommitter);
-    // This method reference will be called via GroupCommitter.ready().
+    // The methods of this emitter will be called via GroupCommitter.ready().
     groupCommitter.setEmitter(new Emitter(coordinator));
     this.groupCommitter = groupCommitter;
   }

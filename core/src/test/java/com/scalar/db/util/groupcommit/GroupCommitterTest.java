@@ -3,7 +3,6 @@ package com.scalar.db.util.groupcommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -181,13 +180,21 @@ class GroupCommitterTest {
       groupCommitter.setEmitter(emitter);
 
       // Act
-      // Assert
+      String fullKey1 = groupCommitter.reserve("child-key-1");
+      String fullKey2 = groupCommitter.reserve("child-key-2");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
 
-      assertThat(groupCommitter.reserve("child-key-1")).isEqualTo("0000:child-key-1");
-      assertThat(groupCommitter.reserve("child-key-2")).isEqualTo("0000:child-key-2");
-      assertThat(groupCommitter.reserve("child-key-3")).isEqualTo("0001:child-key-3");
+      // Assert
+      assertThat(fullKey1).isEqualTo("0000:child-key-1");
+      assertThat(fullKey2).isEqualTo("0000:child-key-2");
+      assertThat(fullKey3).isEqualTo("0001:child-key-3");
 
       verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullKey1);
+      groupCommitter.remove(fullKey2);
+      groupCommitter.remove(fullKey3);
     }
   }
 
@@ -216,7 +223,7 @@ class GroupCommitterTest {
       // Reserve 3 slots.
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
-      groupCommitter.reserve("child-key-3");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
       // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
@@ -238,7 +245,9 @@ class GroupCommitterTest {
 
       // Assert
       verify(emitter).emitNormalGroup("0000", Arrays.asList(11, 22));
-      verify(emitter, never()).emitNormalGroup(eq("0001"), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullKey3);
     }
   }
 
@@ -267,7 +276,7 @@ class GroupCommitterTest {
       // Reserve 3 slots.
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
-      groupCommitter.reserve("child-key-3");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
       // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
@@ -291,7 +300,9 @@ class GroupCommitterTest {
 
       // Assert
       verify(failingEmitter).emitNormalGroup("0000", Arrays.asList(11, 22));
-      verify(failingEmitter, never()).emitNormalGroup(eq("0001"), any());
+      verify(failingEmitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullKey3);
     }
   }
 
@@ -307,8 +318,8 @@ class GroupCommitterTest {
 
       // Reserve 3 slots.
       String fullKey1 = groupCommitter.reserve("child-key-1");
-      groupCommitter.reserve("child-key-2");
-      groupCommitter.reserve("child-key-3");
+      String fullKey2 = groupCommitter.reserve("child-key-2");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
       // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
@@ -329,6 +340,11 @@ class GroupCommitterTest {
       // So, this timeout must happen.
       assertThrows(TimeoutException.class, () -> future.get(1000, TimeUnit.MILLISECONDS));
       verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullKey1);
+      groupCommitter.remove(fullKey2);
+      groupCommitter.remove(fullKey3);
     }
   }
 
@@ -357,7 +373,7 @@ class GroupCommitterTest {
       // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
       // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
       verify(emitter).emitNormalGroup("0000", Collections.singletonList(11));
-      verify(emitter, never()).emitNormalGroup(eq("0000:child-key-2"), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
 
       // Act
 
@@ -373,7 +389,7 @@ class GroupCommitterTest {
       // - DelayedGroup("0000:child-key-2", DONE, slots:[Slot("child-key-2")])
 
       // Assert
-      verify(emitter).emitNormalGroup("0000:child-key-2", Collections.singletonList(22));
+      verify(emitter).emitDelayedGroup("0000:child-key-2", 22);
     }
   }
 
@@ -415,7 +431,7 @@ class GroupCommitterTest {
       // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
       // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
       verify(failingEmitter).emitNormalGroup("0000", Collections.singletonList(11));
-      verify(failingEmitter, never()).emitNormalGroup(eq("0000:child-key-2"), any());
+      verify(failingEmitter, never()).emitDelayedGroup(any(), any());
 
       // Act
 
@@ -433,7 +449,7 @@ class GroupCommitterTest {
       // - DelayedGroup("0000:child-key-2", DONE, slots:[Slot("child-key-2")])
 
       // Assert
-      verify(failingEmitter).emitNormalGroup("0000:child-key-2", Collections.singletonList(22));
+      verify(failingEmitter).emitDelayedGroup("0000:child-key-2", 22);
     }
   }
 
@@ -463,6 +479,7 @@ class GroupCommitterTest {
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
       verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
 
@@ -491,6 +508,7 @@ class GroupCommitterTest {
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
       verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
 
@@ -550,6 +568,7 @@ class GroupCommitterTest {
       // There should be the following groups at this moment.
       // - NormalGroup("0000", DONE, slots:[Slot("child-key-1"), Slot("child-key-2")])
       verify(testableEmitter).emitNormalGroup("0000", Arrays.asList(11, 22));
+      verify(testableEmitter, never()).emitDelayedGroup(any(), any());
     }
   }
 
