@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -2957,16 +2958,21 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     failedTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
     failedTxn.put(preparePut(0, 0, namespace1, TABLE_1));
     successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+    CountDownLatch sync = new CountDownLatch(1);
     Future<?> future =
         executorService.submit(
             () -> {
               try {
+                // This transaction will be committed after the other transaction in the same group
+                // is moved to a delayed group.
                 successTxn.commit();
+                sync.countDown();
               } catch (CommitException | UnknownTransactionStatusException e) {
                 throw new RuntimeException(e);
               }
             });
     executorService.shutdown();
+    sync.await();
     assertThat(catchThrowable(failedTxn::commit)).isInstanceOf(CommitConflictException.class);
     future.get(10, TimeUnit.SECONDS);
 
