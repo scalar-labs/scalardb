@@ -175,7 +175,7 @@ For non-JDBC databases, we do not recommend enabling cross-partition scan with t
 
 | Name                                               | Description                                   | Default |
 |----------------------------------------------------|-----------------------------------------------|---------|
-| `scalar.db.cross_partition_scan.enabled`           | Enable cross-partition scan.                  | `false` |
+| `scalar.db.cross_partition_scan.enabled`           | Enable cross-partition scan.                  | `true`  |
 | `scalar.db.cross_partition_scan.filtering.enabled` | Enable filtering in cross-partition scan.     | `false` |
 | `scalar.db.cross_partition_scan.ordering.enabled`  | Enable ordering in cross-partition scan.      | `false` |
 
