@@ -19,7 +19,7 @@ public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBa
 
   @Override
   protected String getTestName() {
-    return "tx_2pcc";
+    return "2pcc_cross_scan";
   }
 
   @Override

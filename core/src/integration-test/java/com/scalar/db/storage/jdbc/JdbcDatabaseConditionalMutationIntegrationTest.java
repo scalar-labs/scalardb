@@ -23,7 +23,7 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (rdbEngine instanceof RdbEngineMysql) {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
       // Since Deadlock error sometimes happens in MySQL, change the concurrency to 1
       return 1;
     }
@@ -33,7 +33,7 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
   @Override
   protected Column<?> getColumnWithRandomValue(
       Random random, String columnName, DataType dataType) {
-    if (rdbEngine instanceof RdbEngineOracle) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleColumn(random, columnName);
       }
