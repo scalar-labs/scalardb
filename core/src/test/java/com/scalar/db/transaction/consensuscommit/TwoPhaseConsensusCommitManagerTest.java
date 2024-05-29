@@ -2,7 +2,6 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -87,18 +86,18 @@ public class TwoPhaseConsensusCommitManagerTest {
     when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
 
     // Act Assert
-    assertThrows(
-        IllegalArgumentException.class,
-        () ->
-            new TwoPhaseConsensusCommitManager(
-                storage,
-                admin,
-                config,
-                databaseConfig,
-                coordinator,
-                parallelExecutor,
-                recovery,
-                commit));
+    assertThatThrownBy(
+            () ->
+                new TwoPhaseConsensusCommitManager(
+                    storage,
+                    admin,
+                    config,
+                    databaseConfig,
+                    coordinator,
+                    parallelExecutor,
+                    recovery,
+                    commit))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
