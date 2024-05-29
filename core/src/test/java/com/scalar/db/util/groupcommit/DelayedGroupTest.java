@@ -88,7 +88,7 @@ class DelayedGroupTest {
     assertThat(group.isReady()).isFalse();
   }
 
-  private Emittable<String, String, Integer> createEmittable(ThrowableRunnable<Exception> task) {
+  private Emittable<String, String, Integer> createEmitter(ThrowableRunnable<Exception> task) {
     return new Emittable<String, String, Integer>() {
       @Override
       public void emitNormalGroup(String parentKey, List<Integer> values) {
@@ -114,7 +114,7 @@ class DelayedGroupTest {
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, String, Integer> waitableEmitter =
-        createEmittable(
+        createEmitter(
             () -> {
               wait.await();
               emitted.set(true);
@@ -166,7 +166,7 @@ class DelayedGroupTest {
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, String, Integer> failingEmitter =
-        createEmittable(
+        createEmitter(
             () -> {
               wait.await();
               throw new RuntimeException("Something is wrong");
@@ -240,7 +240,7 @@ class DelayedGroupTest {
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
     Emittable<String, String, Integer> waitableEmitter =
-        createEmittable(
+        createEmitter(
             () -> {
               wait.await();
               emitted.set(true);
