@@ -4,7 +4,8 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Optional;
 
-public interface DistributedTransactionManager {
+public interface DistributedTransactionManager
+    extends TransactionManagerCrudOperable, AutoCloseable {
 
   /**
    * Sets the specified namespace and the table name as default values in the instance.
@@ -251,5 +252,6 @@ public interface DistributedTransactionManager {
    * Closes connections to the cluster. The connections are shared among multiple services such as
    * StorageService and TransactionService, thus this should only be used when closing applications.
    */
+  @Override
   void close();
 }

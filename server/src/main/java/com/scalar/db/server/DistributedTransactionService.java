@@ -36,6 +36,7 @@ import com.scalar.db.rpc.TransactionResponse.ScanResponse;
 import com.scalar.db.rpc.TransactionResponse.StartResponse;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.Collections;
@@ -59,6 +60,7 @@ public class DistributedTransactionService
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DistributedTransactionService(
       DistributedTransactionManager manager,
       TableMetadataManager tableMetadataManager,

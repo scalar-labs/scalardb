@@ -3,6 +3,7 @@ package com.scalar.db.dataloader.cli.command;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.scalar.db.dataloader.core.ColumnKeyValue;
 import org.junit.jupiter.api.Test;
 
 class ColumnKeyValueConverterTest {

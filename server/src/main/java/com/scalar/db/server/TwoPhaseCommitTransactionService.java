@@ -41,6 +41,7 @@ import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.Collections;
@@ -65,6 +66,7 @@ public class TwoPhaseCommitTransactionService
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseCommitTransactionService(
       TwoPhaseCommitTransactionManager manager,
       TableMetadataManager tableMetadataManager,
