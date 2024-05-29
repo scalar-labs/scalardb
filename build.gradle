@@ -74,8 +74,6 @@ subprojects {
     group = "com.scalar-labs"
 
     java {
-        sourceCompatibility = JavaLanguageVersion.of(8)
-        targetCompatibility = JavaLanguageVersion.of(8)
         withJavadocJar()
         withSourcesJar()
     }
