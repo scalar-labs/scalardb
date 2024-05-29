@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name:  Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}

@@ -22,12 +22,12 @@ import org.slf4j.LoggerFactory;
  *   <li>`javaVersion` : configure all Java related tasks to use the given JDK version. The default
  *       java version 8.
  *   <li>`javaVendor` : configure all Java related tasks to use the given JDK vendor. The default
- *       java vendor is Adoptium (also known as Temurin)
+ *       java vendor is Adoptium (also known as Temurin).
  *   <li>`integrationTestJavaRuntimeVersion` : configure all test tasks name starting with
  *       "integrationTest" to run with the given JDK version. The default Java runtime version is 8.
  *   <li>`integrationTestJavaRuntimeVendor` : configure all test tasks name starting with
  *       "integrationTest" to run with the given JDK vendor. The default Java runtime vendor is
- *       Adoptium (also known as Temurin)
+ *       Adoptium (also known as Temurin).
  * </ul>
  *
  * <p>Usage example using the CLI:
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 public class JdkConfigurationPlugin implements Plugin<Project> {
 
   private static final Logger logger = LoggerFactory.getLogger(JdkConfigurationPlugin.class);
-  // JDK 8 (temurin) is used as the default compiler
+  // JDK 8 (temurin) is used as default for all tasks (compilation, tests, etc.)
   private static final JavaLanguageVersion DEFAULT_JAVA_VERSION = JavaLanguageVersion.of(8);
   private static final JvmVendorSpec DEFAULT_JAVA_VENDOR = JvmVendorSpec.ADOPTIUM;
 
