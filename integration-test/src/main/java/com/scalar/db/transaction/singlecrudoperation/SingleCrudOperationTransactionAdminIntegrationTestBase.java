@@ -82,7 +82,7 @@ public abstract class SingleCrudOperationTransactionAdminIntegrationTestBase
   }
 
   @Test
-  @Disabled("This case is not tested for Single CRUD operation transactions")
+  @Disabled("This case is not tested for single CRUD operation transactions")
   @Override
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
