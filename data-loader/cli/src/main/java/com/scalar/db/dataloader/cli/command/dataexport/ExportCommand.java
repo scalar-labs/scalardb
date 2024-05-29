@@ -1,10 +1,15 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
+import com.scalar.db.dataloader.core.util.KeyUtils;
+import com.scalar.db.service.StorageFactory;
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -25,6 +30,13 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   @Override
   public Integer call() throws Exception {
     validateOutputDirectory(outputFilePath);
+    StorageFactory storageFactory = createStorageFactory(configFilePath);
+    TableMetadataService metadataService = createTableMetadataService(storageFactory);
+    TableMetadata tableMetadata = metadataService.getTableMetadata(namespace, tableName);
+
+    KeyUtils.parseKeyValue(partitionKeyValue, tableMetadata);
+    KeyUtils.parseKeyValue(scanStartKeyValue, tableMetadata);
+    KeyUtils.parseKeyValue(scanEndKeyValue, tableMetadata);
     return 0;
   }
 
@@ -66,5 +78,13 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
           CoreError.DATA_LOADER_INVALID_FILE_EXTENSION.buildMessage(
               extension, String.join(", ", ALLOWED_EXTENSIONS)));
     }
+  }
+
+  protected StorageFactory createStorageFactory(String configFilePath) throws IOException {
+    return StorageFactory.create(configFilePath);
+  }
+
+  protected TableMetadataService createTableMetadataService(StorageFactory storageFactory) {
+    return new TableMetadataService(storageFactory);
   }
 }
