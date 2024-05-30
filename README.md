@@ -1,7 +1,5 @@
 # ScalarDB
 
-[![CI](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml)
-
 ScalarDB is a universal transaction manager that achieves:
 - database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
 - multi-storage/database/service ACID transactions that can span multiple (possibly different) databases, storages, and services.
