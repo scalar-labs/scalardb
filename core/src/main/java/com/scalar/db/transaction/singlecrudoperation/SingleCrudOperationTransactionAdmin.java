@@ -123,27 +123,57 @@ public class SingleCrudOperationTransactionAdmin implements DistributedTransacti
     distributedStorageAdmin.upgrade(options);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the single CRUD operation transactions don't have
+   * coordinator tables.
+   */
   @Override
   public void createCoordinatorTables(Map<String, String> options) {
     // Do nothing since the single CRUD operation transactions don't have coordinator tables
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the single CRUD operation transactions don't have
+   * coordinator tables.
+   */
   @Override
   public void dropCoordinatorTables() {
     // Do nothing since the single CRUD operation transactions don't have coordinator tables
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the single CRUD operation transactions don't have
+   * coordinator tables.
+   */
   @Override
   public void truncateCoordinatorTables() {
     // Do nothing since the single CRUD operation transactions don't have coordinator tables
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it always returns true since the single CRUD operation transactions don't have
+   * coordinator tables.
+   */
   @Override
   public boolean coordinatorTablesExist() {
     // Always return true since the single CRUD operation transactions don't have coordinator tables
     return true;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the single CRUD operation transactions don't have
+   * coordinator tables.
+   */
   @Override
   public void repairCoordinatorTables(Map<String, String> options) {
     // Do nothing since the single CRUD operation transactions don't have coordinator tables
