@@ -108,7 +108,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       }
 
       // These transactions are contained in a normal group that has multiple transactions.
-      // Therefore, the transaction states should be put together in a Coordinator.State.
+      // Therefore, the transaction states should be put together in Coordinator.State.
       List<String> transactionIds =
           snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
 
@@ -125,7 +125,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     public void emitDelayedGroup(String fullId, Snapshot snapshot) throws CoordinatorException {
       // This transaction is contained in a delayed group that has only a single transaction.
       // Therefore, the transaction state can be committed as if it's a normal commit (not a
-      // group-commit).
+      // group commit).
       coordinator.putState(new State(fullId, TransactionState.COMMITTED));
 
       logger.debug(
