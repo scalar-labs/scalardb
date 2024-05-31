@@ -16,6 +16,7 @@ subprojects {
 //    apply plugin: 'jacoco'
     apply plugin: 'java-library-distribution'
     apply plugin: 'com.diffplug.spotless'
+    apply plugin: 'com.scalar.db.jdk-configuration'
 
     project.version = '4.0.0-SNAPSHOT'
 
@@ -54,10 +55,9 @@ subprojects {
         log4jVersion = '2.23.1'
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'
-        errorpronePluginVersion = '2.0.2'
+        errorpronePluginVersion = '3.1.0'
         protobufPluginVersion = '0.8.19'
         shadowPluginVersion = '7.1.2'
-        dockerPluginVersion = '0.34.0'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
     }
@@ -70,9 +70,6 @@ subprojects {
         useJUnitPlatform()
         testLogging.showStandardStreams = true
     }
-
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
 
     group = "com.scalar-labs"
 
@@ -99,3 +96,4 @@ subprojects {
         duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 }
+
