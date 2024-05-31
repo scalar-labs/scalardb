@@ -2,6 +2,7 @@ plugins {
     id 'com.google.protobuf' version "${protobufPluginVersion}"
     id 'maven-publish'
     id 'signing'
+    id 'base'
 }
 
 dependencies {
@@ -27,7 +28,9 @@ protobuf {
     generatedFilesBaseDir = "$projectDir/src"
 }
 
-archivesBaseName = "scalardb-rpc"
+base {
+    archivesName = "scalardb-rpc"
+}
 
 // plugin com.google.protobuf generates tasks in runtime so that we have do declare dependencies dynamically
 tasks.whenTaskAdded { t ->

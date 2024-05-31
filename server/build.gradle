@@ -1,10 +1,10 @@
 plugins {
     id 'application'
-    id 'com.palantir.docker' version "${dockerPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'maven-publish'
     id 'signing'
+    id 'base'
 }
 
 sourceSets {
@@ -65,18 +65,33 @@ javadoc {
 }
 
 application {
-    mainClassName = 'com.scalar.db.server.ScalarDbServer'
+    mainClass = 'com.scalar.db.server.ScalarDbServer'
     startScripts.applicationName = 'scalardb-server'
-}
-
-docker {
-    name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
-    files tasks.distTar.outputs, 'conf/log4j2.properties.tmpl', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
 }
 
 task dockerfileLint(type: Exec) {
     description 'Lint the Dockerfile'
     commandLine "${project.rootDir}/ci/dockerfile_lint.sh"
+}
+
+task copyFilesToDockerBuildContextDir(type: Copy) {
+    description 'Copy files to a temporary folder to build the Docker image'
+    dependsOn distTar
+    from('Dockerfile')
+    from('conf') {
+        include 'log4j2.properties.tmpl'
+        include 'database.properties.tmpl'
+    }
+    from('docker-entrypoint.sh')
+    from(tasks.distTar.archiveFile)
+    into('build/docker')
+}
+
+task docker(type: Exec) {
+    description 'Build ScalarDB Server Docker image'
+    dependsOn copyFilesToDockerBuildContextDir
+    workingDir 'build/docker'
+    commandLine 'docker', 'build', "--tag=ghcr.io/scalar-labs/scalardb-server:${project.version}", "."
 }
 
 task integrationTestScalarDbServer(type: Test) {
@@ -87,7 +102,7 @@ task integrationTestScalarDbServer(type: Test) {
     classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
 }
 
@@ -115,11 +130,13 @@ spotbugsIntegrationTestScalarDbServer.reports {
 }
 spotbugsIntegrationTestScalarDbServer.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
-archivesBaseName = "scalardb-server"
+base {
+    archivesName = "scalardb-server"
+}
 
 // for release
 distZip {
-    archiveFileName = "${archivesBaseName}-${project.version}.zip"
+    archiveFileName = "${base.archivesName.get()}-${project.version}.zip"
 }
 
 // for docker
