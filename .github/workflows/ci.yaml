@@ -2,6 +2,7 @@ name: CI
 run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run integration test with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
 
 on:
+  # TODO: Add cron
   pull_request:
   workflow_dispatch:
     inputs:
@@ -37,11 +38,13 @@ env:
   JAVA_VENDOR: 'temurin'
   INT_TEST_JAVA_RUNTIME_VERSION: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
   INT_TEST_JAVA_RUNTIME_VENDOR: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
+  INT_TEST_ONLY_GROUP_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.INT_TEST_ONLY_GROUP_COMMIT }}
   INT_TEST_GRADLE_OPTIONS: "${{ (github.event_name == 'workflow_dispatch' && inputs.INT_TEST_ONLY_GROUP_COMMIT && '-Dscalar.db.consensus_commit.coordinator.group_commit.enabled=true -Dscalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000 --tests \"**ConsensusCommit**\"') || '' }}"
 
 jobs:
   check:
     name: Gradle check
+    if: !env.INT_TEST_ONLY_GROUP_COMMIT
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,6 +98,7 @@ jobs:
 
   dockerfile-lint:
     name: Lint dockerfiles
+    if: !env.INT_TEST_ONLY_GROUP_COMMIT
     runs-on: ubuntu-latest
 
     steps:
@@ -149,6 +153,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v3
         with:
+          # FIXME: Make integrationTestCassandra use the group commit properties
           arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} ${{ env.INT_TEST_GRADLE_OPTIONS }}
 
       - name: Upload Gradle test reports
