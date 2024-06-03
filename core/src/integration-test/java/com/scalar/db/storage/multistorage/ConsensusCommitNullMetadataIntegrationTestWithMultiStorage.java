@@ -1,5 +1,6 @@
 package com.scalar.db.storage.multistorage;
 
+import com.scalar.db.common.ConsensusCommitTestUtils;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitNullMetadataIntegrationTestBase;
@@ -19,8 +20,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
     // Define storages, cassandra and jdbc
     properties.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
 
-    Properties propertiesForCassandra =
-        ConsensusCommitMultiStorageEnv.getPropertiesForCassandra(testName);
+    Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(testName);
     for (String propertyName : propertiesForCassandra.stringPropertyNames()) {
       properties.setProperty(
           MultiStorageConfig.STORAGES
@@ -29,7 +29,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
           propertiesForCassandra.getProperty(propertyName));
     }
 
-    Properties propertiesForJdbc = ConsensusCommitMultiStorageEnv.getPropertiesForJdbc(testName);
+    Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(testName);
     for (String propertyName : propertiesForJdbc.stringPropertyNames()) {
       properties.setProperty(
           MultiStorageConfig.STORAGES
@@ -57,7 +57,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
-    return properties;
+    return ConsensusCommitTestUtils.loadConsensusCommitProperties(properties);
   }
 
   @Override
