@@ -67,7 +67,8 @@ public interface SelectQuery extends Query {
         Optional<Key> startClusteringKey,
         boolean startInclusive,
         Optional<Key> endClusteringKey,
-        boolean endInclusive) {
+        boolean endInclusive,
+        Set<Conjunction> conjunctions) {
       isConditionalQuery = true;
 
       this.partitionKey = Optional.of(partitionKey);
@@ -99,6 +100,8 @@ public interface SelectQuery extends Query {
             Optional.of(endClusteringKey.get().getColumns().get(endClusteringKey.get().size() - 1));
         this.endInclusive = endInclusive;
       }
+
+      this.conjunctions = ImmutableSet.copyOf(conjunctions);
 
       isRangeQuery = true;
       setIndexInfoIfUsed(partitionKey);

@@ -1,13 +1,16 @@
 plugins {
-    id 'com.palantir.docker' version "${dockerPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
     id 'maven-publish'
     id 'signing'
+    id 'base'
 }
 
-archivesBaseName = "scalardb-schema-loader"
+base {
+    archivesName = "scalardb-schema-loader"
+}
+
 
 dependencies {
     implementation project(':core')
@@ -34,15 +37,24 @@ javadoc {
     title = "ScalarDB Schema Loader"
 }
 
-docker {
-    dependsOn shadowJar
-    name "ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}"
-    files tasks.shadowJar.outputs
-}
-
 task dockerfileLint(type: Exec) {
     description 'Lint the Dockerfile'
     commandLine "${project.rootDir}/ci/dockerfile_lint.sh"
+}
+
+task copyFilesToDockerBuildContextDir(type: Copy) {
+    description 'Copy files to a temporary folder to build the Docker image'
+    dependsOn shadowJar
+    from("Dockerfile")
+    from(tasks.shadowJar.archiveFile)
+    into('build/docker')
+}
+
+task docker(type: Exec) {
+    description 'Build ScalarDB Schema Loader Docker image'
+    dependsOn copyFilesToDockerBuildContextDir
+    workingDir 'build/docker'
+    commandLine 'docker', 'build', "--tag=ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}", "."
 }
 
 // Build a fat jar
