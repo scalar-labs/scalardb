@@ -2,7 +2,6 @@ name: CI
 run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run integration test with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
 
 on:
-  # TODO: Add cron
   pull_request:
   workflow_dispatch:
     inputs:
@@ -31,15 +30,17 @@ on:
         type: boolean
         required: false
         default: false
-
+  schedule:
+    # For the integration test with the group commit
+    - cron: '0 18 * * *'    # UTC
 env:
   TERM: dumb
   JAVA_VERSION: '8'
   JAVA_VENDOR: 'temurin'
   INT_TEST_JAVA_RUNTIME_VERSION: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
   INT_TEST_JAVA_RUNTIME_VENDOR: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
-  INT_TEST_ONLY_GROUP_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.INT_TEST_ONLY_GROUP_COMMIT }}
-  INT_TEST_GRADLE_OPTIONS: "${{ (github.event_name == 'workflow_dispatch' && inputs.INT_TEST_ONLY_GROUP_COMMIT && '-Dscalar.db.consensus_commit.coordinator.group_commit.enabled=true -Dscalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000 --tests \"**ConsensusCommit**\"') || '' }}"
+  INT_TEST_ONLY_GROUP_COMMIT: ${{ (github.event_name == 'workflow_dispatch' && inputs.INT_TEST_ONLY_GROUP_COMMIT) || github.event_name == 'schedule' }}
+  INT_TEST_GRADLE_OPTIONS: "${{ (((github.event_name == 'workflow_dispatch' && inputs.INT_TEST_ONLY_GROUP_COMMIT) || github.event_name == 'schedule') && '-Dscalar.db.consensus_commit.coordinator.group_commit.enabled=true -Dscalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000 --tests \"**ConsensusCommit**\"') || '' }}"
 
 jobs:
   check:
@@ -1047,6 +1048,8 @@ jobs:
 
   integration-test-for-group-commit:
     name: Integration test using group commit
+    # This job is always executed by the regular CIs.
+    if: !env.INT_TEST_ONLY_GROUP_COMMIT
     runs-on: ubuntu-latest
 
     services:
