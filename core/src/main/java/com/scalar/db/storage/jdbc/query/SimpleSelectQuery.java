@@ -103,7 +103,16 @@ public class SimpleSelectQuery implements SelectQuery {
         c -> conditions.add(rdbEngine.enclose(c.getName()) + (startInclusive ? ">=?" : ">?")));
     endColumn.ifPresent(
         c -> conditions.add(rdbEngine.enclose(c.getName()) + (endInclusive ? "<=?" : "<?")));
-    return String.join(" AND ", conditions);
+
+    if (conjunctions.isEmpty()) {
+      return String.join(" AND ", conditions);
+    } else {
+      return "("
+          + String.join(" AND ", conditions)
+          + ") AND ("
+          + String.join(" OR ", conjunctionSqlStrings())
+          + ")";
+    }
   }
 
   private String crossPartitionConditionSqlString() {
@@ -111,19 +120,19 @@ public class SimpleSelectQuery implements SelectQuery {
       return "";
     }
 
-    List<String> conjunctionList =
-        conjunctions.stream()
-            .map(
-                conjunction ->
-                    conjunction.getConditions().stream()
-                        .map(
-                            condition ->
-                                rdbEngine.enclose(condition.getColumn().getName())
-                                    + convert(condition))
-                        .collect(Collectors.joining(" AND ")))
-            .collect(Collectors.toList());
+    return " WHERE " + String.join(" OR ", conjunctionSqlStrings());
+  }
 
-    return " WHERE " + String.join(" OR ", conjunctionList);
+  private List<String> conjunctionSqlStrings() {
+    return conjunctions.stream()
+        .map(
+            conjunction ->
+                conjunction.getConditions().stream()
+                    .map(
+                        condition ->
+                            rdbEngine.enclose(condition.getColumn().getName()) + convert(condition))
+                    .collect(Collectors.joining(" AND ")))
+        .collect(Collectors.toList());
   }
 
   private String convert(ConditionalExpression condition) {

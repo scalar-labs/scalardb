@@ -4,6 +4,8 @@ import com.scalar.db.api.DistributedStorageIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class DistributedStorageIntegrationTestWithServer
     extends DistributedStorageIntegrationTestBase {
@@ -32,4 +34,10 @@ public class DistributedStorageIntegrationTestWithServer
       server.shutdown();
     }
   }
+
+  @Disabled("ScalarDB Server doesn't support scan() with conjunctions")
+  @Override
+  @Test
+  public void
+      scan_ScanWithClusteringKeyRangeAndConjunctionsGiven_ShouldRetrieveResultsOfBothConditions() {}
 }

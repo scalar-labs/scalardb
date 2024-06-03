@@ -158,4 +158,9 @@ public class TwoPhaseConsensusCommitIntegrationTestWithServer
   @Override
   @Test
   public void manager_operation_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support scan() with conjunctions")
+  @Override
+  @Test
+  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords() {}
 }
