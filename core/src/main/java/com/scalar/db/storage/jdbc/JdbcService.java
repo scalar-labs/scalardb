@@ -135,7 +135,8 @@ public class JdbcService {
             scan.getStartClusteringKey(),
             scan.getStartInclusive(),
             scan.getEndClusteringKey(),
-            scan.getEndInclusive())
+            scan.getEndInclusive(),
+            scan.getConjunctions())
         .orderBy(scan.getOrderings())
         .limit(scan.getLimit())
         .build();

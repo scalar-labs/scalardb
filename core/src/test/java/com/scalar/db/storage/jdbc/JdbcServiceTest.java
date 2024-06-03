@@ -116,7 +116,7 @@ public class JdbcServiceTest {
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
-    when(selectQueryBuilder.where(any(), any(), anyBoolean(), any(), anyBoolean()))
+    when(selectQueryBuilder.where(any(), any(), anyBoolean(), any(), anyBoolean(), anySet()))
         .thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
@@ -200,7 +200,7 @@ public class JdbcServiceTest {
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
-    when(selectQueryBuilder.where(any(), any(), anyBoolean(), any(), anyBoolean()))
+    when(selectQueryBuilder.where(any(), any(), anyBoolean(), any(), anyBoolean(), anySet()))
         .thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
