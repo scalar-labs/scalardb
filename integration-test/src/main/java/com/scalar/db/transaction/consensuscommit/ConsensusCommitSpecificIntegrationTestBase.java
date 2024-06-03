@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -36,12 +38,12 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,10 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 import org.assertj.core.api.Assertions;
@@ -3024,25 +3022,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   @EnabledIf("isGroupCommitEnabled")
-  void put_WhenOneOfTransactionsIsDelayed_ShouldBeCommittedWithoutBlocked() throws Exception {
+  void put_WhenTheOtherTransactionsIsDelayed_ShouldBeCommittedWithoutBlocked() throws Exception {
     // Arrange
-    ExecutorService executorService = Executors.newCachedThreadPool();
 
     // Act
     DistributedTransaction slowTxn = manager.begin();
     DistributedTransaction fastTxn = manager.begin();
     fastTxn.put(preparePut(0, 0, namespace1, TABLE_1));
-    Future<?> future =
-        executorService.submit(
-            () -> {
-              try {
-                fastTxn.commit();
-              } catch (CommitException | UnknownTransactionStatusException e) {
-                throw new RuntimeException(e);
-              }
-            });
-    executorService.shutdown();
-    future.get(10, TimeUnit.SECONDS);
+
+    assertTimeout(Duration.ofSeconds(10), fastTxn::commit);
 
     slowTxn.put(preparePut(1, 0, namespace1, TABLE_1));
     slowTxn.commit();
@@ -3061,31 +3049,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   @EnabledIf("isGroupCommitEnabled")
-  void put_WhenTheOtherTransactionAbortDueToConflict_ShouldBeCommittedWithoutBlocked()
-      throws Exception {
+  void put_WhenTheOtherTransactionsFails_ShouldBeCommittedWithoutBlocked() throws Exception {
     // Arrange
-    ExecutorService executorService = Executors.newCachedThreadPool();
+    doThrow(PreparationConflictException.class).when(commit).prepare(any());
 
     // Act
-    DistributedTransaction failedTxn =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction successTxn =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    failedTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
-    failedTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    DistributedTransaction failingTxn = manager.begin();
+    DistributedTransaction successTxn = manager.begin();
+    failingTxn.put(preparePut(0, 0, namespace1, TABLE_1));
     successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
-    Future<?> future =
-        executorService.submit(
-            () -> {
-              try {
-                successTxn.commit();
-              } catch (CommitException | UnknownTransactionStatusException e) {
-                throw new RuntimeException(e);
-              }
-            });
-    executorService.shutdown();
-    assertThat(catchThrowable(failedTxn::commit)).isInstanceOf(CommitConflictException.class);
-    future.get(10, TimeUnit.SECONDS);
+
+    // This transaction will be committed after the other transaction in the same group is removed.
+    assertTimeout(
+        Duration.ofSeconds(10),
+        () -> {
+          try {
+            failingTxn.commit();
+            fail();
+          } catch (CommitConflictException e) {
+            // Expected
+          } finally {
+            reset(commit);
+          }
+        });
+    assertTimeout(Duration.ofSeconds(10), successTxn::commit);
 
     // Assert
     DistributedTransaction validationTxn = manager.begin();
@@ -3093,7 +3080,47 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
     validationTxn.commit();
 
-    assertThat(coordinator.getState(failedTxn.getId()).get().getState())
+    assertThat(coordinator.getState(failingTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinator.getState(successTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenTransactionFailsDueToConflict_ShouldBeAbortedWithoutBlocked() throws Exception {
+    // Arrange
+
+    // Act
+    DistributedTransaction failingTxn =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction successTxn =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    failingTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    failingTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+
+    // This transaction will be committed after the other transaction in the same group
+    // is moved to a delayed group.
+    assertTimeout(Duration.ofSeconds(10), successTxn::commit);
+    assertTimeout(
+        Duration.ofSeconds(10),
+        () -> {
+          try {
+            failingTxn.commit();
+            fail();
+          } catch (CommitConflictException e) {
+            // Expected
+          }
+        });
+
+    // Assert
+    DistributedTransaction validationTxn = manager.begin();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(failingTxn.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
     assertThat(coordinator.getState(successTxn.getId()).get().getState())
         .isEqualTo(TransactionState.COMMITTED);
@@ -3103,19 +3130,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnabledIf("isGroupCommitEnabled")
   void put_WhenAllTransactionsAbort_ShouldBeAbortedProperly() throws Exception {
     // Act
-    DistributedTransaction failedTxn1 =
+    DistributedTransaction failingTxn1 =
         manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction failedTxn2 =
+    DistributedTransaction failingTxn2 =
         manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
 
     doThrow(PreparationConflictException.class).when(commit).prepare(any());
 
-    failedTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
-    failedTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
+    failingTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
+    failingTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
 
     try {
-      assertThat(catchThrowable(failedTxn1::commit)).isInstanceOf(CommitConflictException.class);
-      assertThat(catchThrowable(failedTxn2::commit)).isInstanceOf(CommitConflictException.class);
+      assertThat(catchThrowable(failingTxn1::commit)).isInstanceOf(CommitConflictException.class);
+      assertThat(catchThrowable(failingTxn2::commit)).isInstanceOf(CommitConflictException.class);
     } finally {
       reset(commit);
     }
@@ -3126,9 +3153,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isEmpty();
     validationTxn.commit();
 
-    assertThat(coordinator.getState(failedTxn1.getId()).get().getState())
+    assertThat(coordinator.getState(failingTxn1.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
-    assertThat(coordinator.getState(failedTxn2.getId()).get().getState())
+    assertThat(coordinator.getState(failingTxn2.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
   }
 
