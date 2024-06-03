@@ -19,7 +19,8 @@ public class ConsensusCommitSpecificIntegrationTestWithMultiStorage
     // Define storages, cassandra and jdbc
     properties.setProperty(MultiStorageConfig.STORAGES, "cassandra,jdbc");
 
-    Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(testName);
+    Properties propertiesForCassandra =
+        ConsensusCommitMultiStorageEnv.getPropertiesForCassandra(testName);
     for (String propertyName : propertiesForCassandra.stringPropertyNames()) {
       properties.setProperty(
           MultiStorageConfig.STORAGES
@@ -28,7 +29,7 @@ public class ConsensusCommitSpecificIntegrationTestWithMultiStorage
           propertiesForCassandra.getProperty(propertyName));
     }
 
-    Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(testName);
+    Properties propertiesForJdbc = ConsensusCommitMultiStorageEnv.getPropertiesForJdbc(testName);
     for (String propertyName : propertiesForJdbc.stringPropertyNames()) {
       properties.setProperty(
           MultiStorageConfig.STORAGES
