@@ -51,6 +51,10 @@ public class ConditionalMutator implements MutationConditionVisitor {
     this.queryBuilder = queryBuilder;
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public boolean mutate() throws SQLException {
     mutation.getCondition().ifPresent(condition -> condition.accept(this));
     throwSQLExceptionIfOccurred();

@@ -68,6 +68,10 @@ public class TableSchema {
     this.options = buildOptions(tableDefinition, options);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   protected TableMetadata buildTableMetadata(JsonObject tableDefinition)
       throws SchemaLoaderException {
     TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
