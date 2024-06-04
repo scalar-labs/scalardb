@@ -157,7 +157,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cassandra_3.0_integration_test_reports_${{ matrix.mode.lable }}
+          name: cassandra_3.0_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCassandra
 
   integration-test-for-cassandra-3-11:
@@ -206,7 +206,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cassandra_3.11_integration_test_reports_${{ matrix.mode.lable }}
+          name: cassandra_3.11_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCassandra
 
   integration-test-for-cosmos:
@@ -257,7 +257,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cosmos_integration_test_reports_${{ matrix.mode.lable }}
+          name: cosmos_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCosmos
 
   integration-test-for-dynamo:
@@ -304,7 +304,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dynamo_integration_test_reports_${{ matrix.mode.lable }}
+          name: dynamo_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestDynamo
 
   integration-test-for-jdbc-mysql-5-7:
@@ -349,7 +349,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mysql_5.7_integration_test_reports_${{ matrix.mode.lable }}
+          name: mysql_5.7_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-mysql-8-0:
@@ -395,7 +395,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mysql_8.0_integration_test_reports_${{ matrix.mode.lable }}
+          name: mysql_8.0_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-mysql-8-1:
@@ -440,7 +440,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mysql_8.1_integration_test_reports_${{ matrix.mode.lable }}
+          name: mysql_8.1_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-postgresql-12:
@@ -490,7 +490,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: postgresql_12_integration_test_reports_${{ matrix.mode.lable }}
+          name: postgresql_12_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-postgresql-13:
@@ -540,7 +540,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: postgresql_13_integration_test_reports_${{ matrix.mode.lable }}
+          name: postgresql_13_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-postgresql-14:
@@ -590,7 +590,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: postgresql_14_integration_test_reports_${{ matrix.mode.lable }}
+          name: postgresql_14_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-postgresql-15:
@@ -640,7 +640,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: postgresql_15_integration_test_reports_${{ matrix.mode.lable }}
+          name: postgresql_15_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-oracle-18:
@@ -697,7 +697,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oracle_18_integration_test_reports_${{ matrix.mode.lable }}
+          name: oracle_18_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-oracle-21:
@@ -754,7 +754,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oracle_21_integration_test_reports_${{ matrix.mode.lable }}
+          name: oracle_21_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-oracle-23:
@@ -828,7 +828,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oracle_23_integration_test_reports_${{ matrix.mode.lable }}
+          name: oracle_23_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-sqlserver-2017:
@@ -884,7 +884,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sqlserver_2017_integration_test_reports_${{ matrix.mode.lable }}
+          name: sqlserver_2017_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-sqlserver-2019:
@@ -940,7 +940,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sqlserver_2019_integration_test_reports_${{ matrix.mode.lable }}
+          name: sqlserver_2019_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-sqlserver-2022:
@@ -996,7 +996,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sqlserver_2022_integration_test_reports_${{ matrix.mode.lable }}
+          name: sqlserver_2022_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-sqlite-3:
@@ -1040,7 +1040,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sqlite_3_integration_test_reports_${{ matrix.mode.lable }}
+          name: sqlite_3_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-mariadb-10:
@@ -1085,7 +1085,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mariadb_10_integration_test_reports_${{ matrix.mode.lable }}
+          name: mariadb_10_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-yugabytedb-2:
@@ -1130,7 +1130,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: yugabytedb_2_integration_test_reports_${{ matrix.mode.lable }}
+          name: yugabytedb_2_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-multi-storage:
@@ -1184,7 +1184,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if : always()
         with:
-          name: multi_storage_integration_test_reports_${{ matrix.mode.lable }}
+          name: multi_storage_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestMultiStorage
 
   integration-test-for-scalardb-server:
