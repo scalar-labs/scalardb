@@ -1098,6 +1098,25 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
+  public void put_withPutIfIsNullWhenRecordDoesNotExist_shouldThrowNoMutationException()
+      throws ExecutionException {
+    // Arrange
+    Put putIf =
+        Put.newBuilder(preparePuts().get(0))
+            .intValue(COL_NAME3, 100)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(COL_NAME3).isNullInt()).build())
+            .enableImplicitPreRead()
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.put(putIf)).isInstanceOf(NoMutationException.class);
+
+    Optional<Result> result = storage.get(prepareGet(0, 0));
+    assertThat(result).isNotPresent();
+  }
+
+  @Test
   public void delete_DeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
       throws IOException, ExecutionException {
     // Arrange

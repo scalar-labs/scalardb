@@ -30,10 +30,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedTransactionAdminIntegrationTestBase.class);
 
-  protected static final String TEST_NAME = "tx_admin";
-  protected static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
-  protected static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
-  protected static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
+  protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE1 = "test_table1";
   protected static final String TABLE2 = "test_table2";
   protected static final String TABLE3 = "test_table3";
@@ -78,29 +75,25 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize(TEST_NAME);
-    transactionFactory = TransactionFactory.create(getProperties(TEST_NAME));
+    String testName = getTestName();
+    initialize(testName);
+    Properties properties = getProperties(testName);
+    transactionFactory = TransactionFactory.create(properties);
     admin = transactionFactory.getTransactionAdmin();
-    namespace1 = getNamespace1();
-    namespace2 = getNamespace2();
-    namespace3 = getNamespace3();
+    namespace1 = getNamespaceBaseName() + testName + "1";
+    namespace2 = getNamespaceBaseName() + testName + "2";
+    namespace3 = getNamespaceBaseName() + testName + "3";
     createTables();
   }
+
+  protected abstract String getTestName();
 
   protected void initialize(String testName) throws Exception {}
 
   protected abstract Properties getProperties(String testName);
 
-  protected String getNamespace1() {
-    return NAMESPACE1;
-  }
-
-  protected String getNamespace2() {
-    return NAMESPACE2;
-  }
-
-  protected String getNamespace3() {
-    return NAMESPACE3;
+  protected String getNamespaceBaseName() {
+    return NAMESPACE_BASE_NAME;
   }
 
   private void createTables() throws ExecutionException {
@@ -390,8 +383,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
       Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
       manager = transactionFactory.getTransactionManager();
-      DistributedTransaction transaction = manager.start();
-      transaction.put(
+      manager.put(
           new Put(partitionKey, clusteringKey)
               .withValue(COL_NAME5, 3)
               .withValue(COL_NAME6, "ccc")
@@ -402,17 +394,14 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
               .forNamespace(namespace1)
               .forTable(TABLE1));
-      transaction.commit();
 
       // Act
       admin.truncateTable(namespace1, TABLE1);
 
       // Assert
-      transaction = manager.start();
       List<Result> results =
-          transaction.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+          manager.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
       assertThat(results).isEmpty();
-      transaction.commit();
     } finally {
       if (manager != null) {
         manager.close();
@@ -484,8 +473,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .build();
       admin.createTable(namespace1, TABLE4, metadata, options);
       transactionManager = transactionFactory.getTransactionManager();
-      DistributedTransaction tx = transactionManager.start();
-      tx.put(
+      transactionManager.put(
           Put.newBuilder()
               .namespace(namespace1)
               .table(TABLE4)
@@ -499,7 +487,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
               .build());
-      tx.commit();
 
       // Act
       admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
@@ -642,8 +629,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       }
       admin.createTable(namespace1, TABLE4, metadata, options);
       transactionManager = transactionFactory.getTransactionManager();
-      DistributedTransaction tx = transactionManager.start();
-      tx.put(
+      transactionManager.put(
           Put.newBuilder()
               .namespace(namespace1)
               .table(TABLE4)
@@ -657,7 +643,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
               .build());
-      tx.commit();
 
       // Act
       admin.dropIndex(namespace1, TABLE4, COL_NAME2);
