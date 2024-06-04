@@ -2,8 +2,6 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.scalar.db.api.OperationBuilder.All;
 import com.scalar.db.api.OperationBuilder.And;
 import com.scalar.db.api.OperationBuilder.Buildable;
@@ -36,7 +34,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
-public class ScanBuilder {
+public class ScanBuilder extends SelectionBuilder {
 
   public static class Namespace
       implements OperationBuilder.Namespace<Table>,
@@ -455,7 +453,7 @@ public class ScanBuilder {
 
     @Override
     public Scan build() {
-      return addConjunctionsTo(super.build(), where);
+      return (Scan) addConjunctionsTo(super.build(), where);
     }
   }
 
@@ -716,7 +714,7 @@ public class ScanBuilder {
     }
 
     public Scan build() {
-      return addConjunctionsTo(buildableScanWithIndex.build(), where);
+      return (Scan) addConjunctionsTo(buildableScanWithIndex.build(), where);
     }
   }
 
@@ -1014,7 +1012,7 @@ public class ScanBuilder {
     }
 
     public Scan build() {
-      return addConjunctionsTo(buildableScanAll.build(), where);
+      return (Scan) addConjunctionsTo(buildableScanAll.build(), where);
     }
   }
 
@@ -1458,7 +1456,7 @@ public class ScanBuilder {
     }
 
     public Scan build() {
-      return addConjunctionsTo(buildableScanFromExisting.build(), where);
+      return (Scan) addConjunctionsTo(buildableScanFromExisting.build(), where);
     }
   }
 
@@ -1581,84 +1579,5 @@ public class ScanBuilder {
       where.and(orConditionSet);
       return this;
     }
-  }
-
-  private static class Where {
-
-    @Nullable private ConditionalExpression condition;
-    private final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
-    private final Set<Set<ConditionalExpression>> disjunctions = new HashSet<>();
-
-    private Where(ConditionalExpression condition) {
-      this.condition = condition;
-    }
-
-    private void and(ConditionalExpression condition) {
-      checkNotNull(condition);
-      if (this.condition != null) {
-        disjunctions.add(ImmutableSet.of(this.condition));
-        this.condition = null;
-      }
-      disjunctions.add(ImmutableSet.of(condition));
-    }
-
-    private void and(OrConditionSet orConditionSet) {
-      checkNotNull(orConditionSet);
-      if (this.condition != null) {
-        disjunctions.add(ImmutableSet.of(this.condition));
-        this.condition = null;
-      }
-      disjunctions.add(orConditionSet.getConditions());
-    }
-
-    private void and(Set<OrConditionSet> orConditionSets) {
-      disjunctions.addAll(
-          orConditionSets.stream().map(OrConditionSet::getConditions).collect(Collectors.toSet()));
-    }
-
-    private void or(ConditionalExpression condition) {
-      if (this.condition != null) {
-        conjunctions.add(ImmutableSet.of(this.condition));
-        this.condition = null;
-      }
-      conjunctions.add(ImmutableSet.of(condition));
-    }
-
-    private void or(AndConditionSet andConditionSet) {
-      if (this.condition != null) {
-        conjunctions.add(ImmutableSet.of(this.condition));
-        this.condition = null;
-      }
-      conjunctions.add(andConditionSet.getConditions());
-    }
-
-    private void or(Set<AndConditionSet> andConditionSets) {
-      conjunctions.addAll(
-          andConditionSets.stream()
-              .map(AndConditionSet::getConditions)
-              .collect(Collectors.toSet()));
-    }
-  }
-
-  private static Scan addConjunctionsTo(Scan scan, Where where) {
-
-    if (where.condition != null) {
-      assert where.conjunctions.isEmpty() && where.disjunctions.isEmpty();
-      scan.withConjunctions(ImmutableSet.of(Conjunction.of(where.condition)));
-    } else if (where.conjunctions.isEmpty()) {
-      scan.withConjunctions(
-          Sets.cartesianProduct(new ArrayList<>(where.disjunctions)).stream()
-              .filter(conditions -> conditions.size() > 0)
-              .map(Conjunction::of)
-              .collect(Collectors.toSet()));
-    } else {
-      scan.withConjunctions(
-          where.conjunctions.stream()
-              .filter(conditions -> conditions.size() > 0)
-              .map(Conjunction::of)
-              .collect(Collectors.toSet()));
-    }
-
-    return scan;
   }
 }

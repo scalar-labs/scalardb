@@ -43,6 +43,8 @@ public class OperationChecker {
 
     checkProjections(get, metadata);
 
+    checkConjunctions(get, metadata);
+
     if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
       if (get.getPartitionKey().size() != 1) {
         throw new IllegalArgumentException(

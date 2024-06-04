@@ -604,6 +604,13 @@ public enum CoreError implements ScalarDbError {
       "Invalid file extension: %s. Allowed extensions are: %s",
       "",
       ""),
+  GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
+      Category.USER_ERROR,
+      "0136",
+      "This operation is supported only when no conditions are specified at all. "
+          + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

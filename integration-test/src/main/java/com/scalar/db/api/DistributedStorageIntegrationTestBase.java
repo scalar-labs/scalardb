@@ -300,6 +300,49 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
+  public void get_GetWithMatchedConjunctionsGiven_ShouldRetrieveSingleResult()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 1;
+    int cKey = 2;
+
+    // Act
+    Get get =
+        Get.newBuilder(prepareGet(pKey, cKey))
+            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("3"))
+            .and(ConditionBuilder.column(COL_NAME3).isEqualToInt(3))
+            .build();
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getInt(COL_NAME1)).isEqualTo(pKey);
+    assertThat(actual.get().getInt(COL_NAME4)).isEqualTo(cKey);
+    assertThat(actual.get().getText(COL_NAME2)).isEqualTo("3");
+    assertThat(actual.get().getInt(COL_NAME3)).isEqualTo(3);
+  }
+
+  @Test
+  public void get_GetWithUnmatchedConjunctionsGiven_ShouldReturnEmpty() throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 1;
+    int cKey = 2;
+
+    // Act
+    Get get =
+        Get.newBuilder(prepareGet(pKey, cKey))
+            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("a"))
+            .and(ConditionBuilder.column(COL_NAME3).isEqualToInt(3))
+            .build();
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
+  }
+
+  @Test
   public void scan_ScanWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
       throws IOException, ExecutionException {
     // Arrange
@@ -1439,6 +1482,54 @@ public abstract class DistributedStorageIntegrationTestBase {
         .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
 
     assertThat(actual2).isEqualTo(actual1);
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumnWithMatchedConjunctions_ShouldGet()
+      throws ExecutionException {
+    // Arrange
+    storage.put(preparePuts().get(0)); // (0,0)
+    int c3 = 0;
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("0"))
+            .and(ConditionBuilder.column(COL_NAME5).isEqualToBoolean(true))
+            .build();
+
+    // Act
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getInt(COL_NAME1)).isEqualTo(0);
+    assertThat(actual.get().getInt(COL_NAME4)).isEqualTo(0);
+    assertThat(actual.get().getText(COL_NAME2)).isEqualTo("0");
+    assertThat(actual.get().getBoolean(COL_NAME5)).isEqualTo(true);
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumnWithUnmatchedConjunctions_ShouldReturnEmpty()
+      throws ExecutionException {
+    // Arrange
+    storage.put(preparePuts().get(0)); // (0,0)
+    int c3 = 0;
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("a"))
+            .and(ConditionBuilder.column(COL_NAME5).isEqualToBoolean(true))
+            .build();
+
+    // Act
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
   }
 
   @Test
