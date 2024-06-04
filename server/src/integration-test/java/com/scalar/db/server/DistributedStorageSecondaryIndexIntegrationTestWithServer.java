@@ -4,6 +4,8 @@ import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class DistributedStorageSecondaryIndexIntegrationTestWithServer
     extends DistributedStorageSecondaryIndexIntegrationTestBase {
@@ -32,4 +34,9 @@ public class DistributedStorageSecondaryIndexIntegrationTestWithServer
       server.shutdown();
     }
   }
+
+  @Disabled("ScalarDB Server doesn't support scan() with conjunctions")
+  @Override
+  @Test
+  public void scan_WithSecondaryIndexValueAndConjunctions_ShouldReturnProperResult() {}
 }

@@ -1147,6 +1147,25 @@ public class SnapshotTest {
 
   @Test
   public void
+      verify_ScanGivenAndPutKeyAlreadyPresentInScanSet_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan = prepareScan();
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    snapshot.put(scan, Collections.singletonList(key));
+
+    // Act Assert
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
       verify_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
@@ -1154,6 +1173,7 @@ public class SnapshotTest {
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.put(putKey, put);
     Scan scan = prepareScan();
+    snapshot.put(scan, Collections.emptyList());
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1177,12 +1197,38 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
+    snapshot.put(scan, Collections.emptyList());
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verify_ScanWithNoRangeGivenButPutInWriteSetNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .consistency(Consistency.LINEARIZABLE)
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+            .build();
+    snapshot.put(scan, Collections.emptyList());
+
+    // Act Assert
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
@@ -1219,6 +1265,11 @@ public class SnapshotTest {
             // ["text1", "text2")
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
+    snapshot.put(scan1, Collections.emptyList());
+    snapshot.put(scan2, Collections.emptyList());
+    snapshot.put(scan3, Collections.emptyList());
+    snapshot.put(scan4, Collections.emptyList());
+    snapshot.put(scan5, Collections.emptyList());
 
     // Act Assert
     Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
@@ -1265,6 +1316,9 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
+    snapshot.put(scan1, Collections.emptyList());
+    snapshot.put(scan2, Collections.emptyList());
+    snapshot.put(scan3, Collections.emptyList());
 
     // Act Assert
     Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
@@ -1307,6 +1361,9 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
+    snapshot.put(scan1, Collections.emptyList());
+    snapshot.put(scan2, Collections.emptyList());
+    snapshot.put(scan3, Collections.emptyList());
 
     // Act Assert
     Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
@@ -1409,6 +1466,49 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verify_ScanWithIndexAndPutWithSameIndexKeyGivenButNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Put put1 =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_1))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_4)
+            .textValue(ANY_NAME_4, ANY_TEXT_4)
+            .build();
+    Snapshot.Key putKey1 = new Snapshot.Key(put1);
+    Snapshot.Key putKey2 = new Snapshot.Key(put2);
+    snapshot.put(putKey1, put1);
+    snapshot.put(putKey2, put2);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
+    snapshot.put(scan, Collections.singletonList(key));
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
