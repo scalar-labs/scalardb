@@ -106,7 +106,7 @@ public interface DistributedTransactionAdmin extends Admin, AuthAdmin {
   boolean coordinatorTablesExist() throws ExecutionException;
 
   /**
-   * Repair coordinator tables which may be in an unknown state.
+   * Repairs coordinator tables which may be in an unknown state.
    *
    * @param options options to repair
    * @throws IllegalArgumentException if the coordinator tables do not exist
