@@ -1,13 +1,13 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionAdminIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-public class ConsensusCommitAdminIntegrationTestWithDynamo
-    extends ConsensusCommitAdminIntegrationTestBase {
+public class SingleCrudOperationTransactionAdminIntegrationTestWithDynamo
+    extends SingleCrudOperationTransactionAdminIntegrationTestBase {
 
   @Override
   protected Properties getProps(String testName) {

@@ -96,21 +96,41 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
     jdbcAdmin.importTable(namespace, table, options);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the JDBC transactions don't have coordinator tables.
+   */
   @Override
   public void createCoordinatorTables(Map<String, String> options) {
     // Do nothing since JDBC transactions don't have coordinator tables
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the JDBC transactions don't have coordinator tables.
+   */
   @Override
   public void dropCoordinatorTables() {
     // Do nothing since JDBC transactions don't have coordinator tables
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the JDBC transactions don't have coordinator tables.
+   */
   @Override
   public void truncateCoordinatorTables() {
     // Do nothing since JDBC transactions don't have coordinator tables
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it always returns true since JDBC transactions don't have coordinator tables.
+   */
   @Override
   public boolean coordinatorTablesExist() {
     // Always return true since JDBC transactions don't have coordinator tables
@@ -124,6 +144,11 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
     jdbcAdmin.repairTable(namespace, table, metadata, options);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note that it does nothing since the JDBC transactions don't have coordinator tables.
+   */
   @Override
   public void repairCoordinatorTables(Map<String, String> options) {
     // Do nothing since JDBC transactions don't have coordinator tables

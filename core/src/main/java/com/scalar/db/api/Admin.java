@@ -361,7 +361,7 @@ public interface Admin {
   }
 
   /**
-   * Repair a table which may be in an unknown state.
+   * Repairs a table which may be in an unknown state.
    *
    * @param namespace an existing namespace
    * @param table an existing table
@@ -375,7 +375,7 @@ public interface Admin {
       throws ExecutionException;
 
   /**
-   * Add a new column to an existing table. The new column cannot be a partition or clustering key.
+   * Adds a new column to an existing table. The new column cannot be a partition or clustering key.
    * <br>
    * <br>
    * <strong>Warning :</strong> this should be executed with significant consideration as the
@@ -404,7 +404,7 @@ public interface Admin {
       throws ExecutionException;
 
   /**
-   * Import an existing table that is not managed by ScalarDB.
+   * Imports an existing table that is not managed by ScalarDB.
    *
    * @param namespace an existing namespace
    * @param table an existing table
