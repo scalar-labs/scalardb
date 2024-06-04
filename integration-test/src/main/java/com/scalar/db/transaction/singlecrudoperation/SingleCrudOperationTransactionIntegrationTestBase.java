@@ -400,4 +400,14 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Override
   @Test
   public void manager_mutate_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void scan_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords() {}
 }

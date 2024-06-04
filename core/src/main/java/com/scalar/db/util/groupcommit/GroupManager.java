@@ -106,8 +106,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
       lock.unlockWrite(stamp);
     }
 
-    throw new GroupCommitException(
-        "The group for the reserved value slot doesn't exist. Keys:" + keys);
+    throw new GroupCommitConflictException(
+        "The group for the reserved value slot has already been removed. Keys:" + keys);
   }
 
   // Remove the specified group from group map.

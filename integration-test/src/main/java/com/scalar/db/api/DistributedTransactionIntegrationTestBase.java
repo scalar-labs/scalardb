@@ -214,6 +214,35 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.start();
+    Scan scan =
+        Scan.newBuilder(prepareScan(1, 0, 2))
+            .where(ConditionBuilder.column(SOME_COLUMN).isGreaterThanOrEqualToInt(1))
+            .build();
+
+    // Act
+    List<Result> results = transaction.scan(scan);
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(2);
+
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(1);
+
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
+  }
+
+  @Test
   public void scan_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
@@ -419,6 +448,34 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Assert
     TestUtils.assertResultsContainsExactlyInAnyOrder(results1, expectedResults);
     TestUtils.assertResultsContainsExactlyInAnyOrder(results2, expectedResults);
+  }
+
+  @Test
+  public void scan_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.start();
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(SOME_COLUMN, 6))
+            .where(ConditionBuilder.column(ACCOUNT_TYPE).isEqualToInt(3))
+            .build();
+
+    // Act
+    List<Result> results = transaction.scan(scan);
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0).contains(ACCOUNT_ID)).isTrue();
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(2);
+    assertThat(results.get(0).contains(ACCOUNT_TYPE)).isTrue();
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(results.get(0).contains(SOME_COLUMN)).isTrue();
+    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(6);
   }
 
   @Test
@@ -932,8 +989,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
       scan_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
     // Arrange
-    DistributedTransaction transaction = manager.begin();
     populateSingleRecord();
+    DistributedTransaction transaction = manager.begin();
     Scan scan = prepareScan(0, 0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act

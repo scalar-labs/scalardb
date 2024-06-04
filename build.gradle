@@ -16,6 +16,7 @@ subprojects {
 //    apply plugin: 'jacoco'
     apply plugin: 'java-library-distribution'
     apply plugin: 'com.diffplug.spotless'
+    apply plugin: 'com.scalar.db.jdk-configuration'
 
     project.version = '4.0.0-SNAPSHOT'
 
@@ -24,15 +25,15 @@ subprojects {
         guavaVersion = '32.1.3-jre'
         slf4jVersion = '1.7.36'
         cassandraDriverVersion = '3.11.5'
-        azureCosmosVersion = '4.60.0'
+        azureCosmosVersion = '4.61.0'
         jooqVersion = '3.14.16'
         awssdkVersion = '2.25.1'
         commonsDbcp2Version = '2.12.0'
         mysqlDriverVersion = '8.0.33'
         postgresqlDriverVersion = '42.7.3'
-        oracleDriverVersion = '21.13.0.0'
+        oracleDriverVersion = '21.14.0.0'
         sqlserverDriverVersion = '11.2.3.jre8'
-        sqliteDriverVersion = '3.45.3.0'
+        sqliteDriverVersion = '3.46.0.0'
         yugabyteDriverVersion = '42.3.5-yb-4'
         grpcVersion = '1.60.0'
         protobufVersion = '3.21.12'
@@ -45,7 +46,7 @@ subprojects {
         jettyVersion = '9.4.54.v20240208'
         junitVersion = '5.10.2'
         commonsLangVersion = '3.14.0'
-        assertjVersion = '3.25.3'
+        assertjVersion = '3.26.0'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.5'
         errorproneVersion = '2.10.0'
@@ -54,10 +55,9 @@ subprojects {
         log4jVersion = '2.23.1'
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'
-        errorpronePluginVersion = '2.0.2'
+        errorpronePluginVersion = '3.1.0'
         protobufPluginVersion = '0.8.19'
         shadowPluginVersion = '7.1.2'
-        dockerPluginVersion = '0.34.0'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
     }
@@ -70,9 +70,6 @@ subprojects {
         useJUnitPlatform()
         testLogging.showStandardStreams = true
     }
-
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
 
     group = "com.scalar-labs"
 
@@ -99,3 +96,4 @@ subprojects {
         duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 }
+

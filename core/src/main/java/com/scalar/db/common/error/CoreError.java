@@ -187,12 +187,6 @@ public enum CoreError implements ScalarDbError {
       "This operation is not supported when scanning records of a database by using an index",
       "",
       ""),
-  SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_SCANNING_ALL_RECORDS_OF_DATABASE(
-      Category.USER_ERROR,
-      "0036",
-      "This operation is supported only when scanning all the records of a database",
-      "",
-      ""),
   SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
       Category.USER_ERROR,
       "0037",

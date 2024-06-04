@@ -1,11 +1,38 @@
 name: CI
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run integration test with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
 
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      INT_TEST_JAVA_RUNTIME_VERSION:
+        description: JDK version used to run the integration test
+        type: choice
+        required: false
+        default: '8'
+        options:
+          - '8'
+          - '11'
+          - '17'
+          - '21'
+      INT_TEST_JAVA_RUNTIME_VENDOR:
+        description: Vendor of the JDK used to run the integration test
+        type: choice
+        required: false
+        default: 'temurin'
+        options:
+          - 'corretto'
+          - 'microsoft'
+          - 'oracle'
+          - 'temurin'
 
 env:
   TERM: dumb
+  JAVA_VERSION: '8'
+  JAVA_VENDOR: 'temurin'
+  INT_TEST_JAVA_RUNTIME_VERSION: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
+  INT_TEST_JAVA_RUNTIME_VENDOR: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
+
 jobs:
   check:
     name: Gradle check
@@ -13,16 +40,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup and execute Gradle 'check' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: check
+          arguments: check buildSrc:check -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }}
 
       - name: Save Gradle test reports
         if: always()
@@ -67,11 +94,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Dockerfile Lint for ScalarDB Server
         uses: gradle/gradle-build-action@v3
@@ -100,16 +127,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCassandra
+          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -134,16 +168,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCassandra
+          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -159,11 +200,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Generate unique prefix using the epoch
         run: |
@@ -172,7 +220,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
+          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
 
       - name : Delete gradle daemon log files
         if: always()
@@ -200,16 +248,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestDynamo' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestDynamo
+          arguments: integrationTestDynamo -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -229,16 +284,23 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -258,16 +320,24 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -287,16 +357,23 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -321,16 +398,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -355,16 +439,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -389,16 +480,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -423,16 +521,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -463,16 +568,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -503,16 +615,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -557,16 +676,23 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Stop Oracle 23 container
         if: always()
@@ -597,11 +723,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3
@@ -610,7 +743,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -637,11 +770,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19 10 3
@@ -650,7 +790,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -677,11 +817,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22 10 3
@@ -690,7 +837,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -706,11 +853,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Set up SQLite3
         run: sudo apt-get install -y sqlite3
@@ -718,7 +872,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
 
       - name: Upload Gradle test reports
         if: always()
@@ -738,16 +892,23 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -767,16 +928,23 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/ -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/ -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
 
       - name: Upload Gradle test reports
         if: always()
@@ -805,16 +973,23 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestMultiStorage' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestMultiStorage
+          arguments: integrationTestMultiStorage -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4
@@ -834,16 +1009,23 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestScalarDbServer
+          arguments: integrationTestScalarDbServer -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4
@@ -851,3 +1033,45 @@ jobs:
         with:
           name: scalardb_server_integration_test_reports
           path: server/build/reports/tests/integrationTestScalarDbServer
+
+  integration-test-for-group-commit:
+    name: Integration test using group commit
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalar.db.consensus_commit.coordinator.group_commit.enabled=true -Dscalar.db.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000 --tests "**ConsensusCommit**"
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: group_commit_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbc
+
