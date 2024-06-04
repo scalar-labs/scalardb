@@ -88,6 +88,10 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
       add(this);
     }
 
+    // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+    @Override
+    protected final void finalize() {}
+
     @Override
     public String getId() {
       return transaction.getId();

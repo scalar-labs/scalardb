@@ -108,6 +108,10 @@ public class ConsensusCommitConfig {
         getBoolean(databaseConfig.getProperties(), INCLUDE_METADATA_ENABLED, false);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public Isolation getIsolation() {
     return isolation;
   }

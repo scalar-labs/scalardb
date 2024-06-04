@@ -60,6 +60,10 @@ public class ServerConfig {
     this(propertiesPath.toFile());
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public Properties getProperties() {
     Properties ret = new Properties();
     ret.putAll(props);

@@ -70,6 +70,10 @@ public class MultiStorageConfig {
     return builder.build();
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   private ImmutableMap<String, String> loadTableStorageMapping(Properties properties) {
     String[] tableMapping = getStringArray(properties, TABLE_MAPPING, null);
     if (tableMapping == null) {

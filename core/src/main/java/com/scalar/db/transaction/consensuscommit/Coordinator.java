@@ -145,6 +145,10 @@ public class Coordinator {
       createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
     }
 
+    // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+    @Override
+    protected final void finalize() {}
+
     public State(String id, TransactionState state) {
       this(id, state, System.currentTimeMillis());
     }

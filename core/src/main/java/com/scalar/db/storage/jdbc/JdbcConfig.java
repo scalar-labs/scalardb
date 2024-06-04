@@ -158,6 +158,10 @@ public class JdbcConfig {
             DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
   }
 
+  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
+  @Override
+  protected final void finalize() {}
+
   public String getJdbcUrl() {
     return jdbcUrl;
   }
