@@ -1,4 +1,7 @@
-FROM ghcr.io/scalar-labs/jre8:1.1.16
+FROM eclipse-temurin:8-jre-jammy
+
+RUN apt-get update && apt-get upgrade -y \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY scalardb-schema-loader-*.jar /app.jar
 
