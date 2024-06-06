@@ -16,18 +16,17 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Plugin configuring all tasks and integration test tasks to use a given JDK defined by the
- * following Gradle properties:
+ * following Gradle project properties:
  *
  * <ul>
- *   <li>`javaVersion` : configure all Java related tasks to use the given JDK version. The default
- *       java version 8.
- *   <li>`javaVendor` : configure all Java related tasks to use the given JDK vendor. The default
- *       java vendor is Adoptium (also known as Temurin).
+ *   <li>`javaVersion` : configure all Java-related tasks to use the given JDK version.
+ *   <li>`javaVendor` : configure all Java-related tasks to use the given JDK vendor. Setting this
+ *       property also requires setting the `javaVersion` property.
  *   <li>`integrationTestJavaRuntimeVersion` : configure all test tasks name starting with
- *       "integrationTest" to run with the given JDK version. The default Java runtime version is 8.
+ *       "integrationTest" to run with the given JDK version.
  *   <li>`integrationTestJavaRuntimeVendor` : configure all test tasks name starting with
- *       "integrationTest" to run with the given JDK vendor. The default Java runtime vendor is
- *       Adoptium (also known as Temurin).
+ *       "integrationTest" to run with the given JDK vendor. Setting this property also requires
+ *       setting the `integrationTestJavaRuntimeVersion` property.
  * </ul>
  *
  * <p>Usage example using the CLI:
@@ -38,7 +37,8 @@ import org.slf4j.LoggerFactory;
  *   gradle integrationTestJdbc -PjavaVersion=11 -PjavaVendor=amazon
  * </code></pre>
  *
- * 2. To use JDK 11 (amazon) for all Java tasks while having integration test use JDK 17 (microsoft)
+ * <p>2. To use JDK 11 (amazon) for all Java tasks while having integration test use JDK 17
+ * (microsoft)
  *
  * <pre><code>
  *   gradle integrationTestJdbc -PjavaVersion=11 -PjavaVendor=amazon -PintegrationTestJavaRuntimeVersion=17 -PintegrationTestJavaRuntimeVendor=microsoft
@@ -47,9 +47,6 @@ import org.slf4j.LoggerFactory;
 public class JdkConfigurationPlugin implements Plugin<Project> {
 
   private static final Logger logger = LoggerFactory.getLogger(JdkConfigurationPlugin.class);
-  // JDK 8 (temurin) is used as default for all tasks (compilation, tests, etc.)
-  private static final JavaLanguageVersion DEFAULT_JAVA_VERSION = JavaLanguageVersion.of(8);
-  private static final JvmVendorSpec DEFAULT_JAVA_VENDOR = JvmVendorSpec.ADOPTIUM;
 
   private static final String JAVA_VERSION_PROP = "javaVersion";
   private static final String JAVA_VENDOR_PROP = "javaVendor";
@@ -58,23 +55,34 @@ public class JdkConfigurationPlugin implements Plugin<Project> {
   private static final String INTEGRATION_TEST_JAVA_RUNTIME_VENDOR_PROP =
       "integrationTestJavaRuntimeVendor";
 
-  private JavaLanguageVersion javaVersion = DEFAULT_JAVA_VERSION;
-  private JvmVendorSpec javaVendor = DEFAULT_JAVA_VENDOR;
+  @Nullable private JavaLanguageVersion javaVersion;
+  @Nullable private JvmVendorSpec javaVendor;
   @Nullable private JavaLanguageVersion integrationTestJavaVersion;
   @Nullable private JvmVendorSpec integrationTestJavaVendor;
 
   @Override
   public void apply(@NotNull Project project) {
     parseIntegrationTestInputProperties(project);
+    validateInput();
     configureJdkForAllJavaTasks(project);
     configureJdkForIntegrationTestTasks(project);
   }
 
   private void configureJdkForAllJavaTasks(Project project) {
     JavaPluginExtension javaPlugin = project.getExtensions().getByType(JavaPluginExtension.class);
-    javaPlugin.getToolchain().getLanguageVersion().set(javaVersion);
-    javaPlugin.getToolchain().getVendor().set(javaVendor);
-    logger.debug("Configure JDK {} ({}) for Java tasks", javaVersion, javaVendor);
+    if (javaVersion == null) {
+      // When the JDK is not set explicitly with the `javaVersion` property, this ensures the
+      // project is compiled to Java 8 bytecode
+      javaPlugin.setSourceCompatibility(JavaLanguageVersion.of(8));
+      javaPlugin.setTargetCompatibility(JavaLanguageVersion.of(8));
+    } else {
+      javaPlugin.getToolchain().getLanguageVersion().set(javaVersion);
+      logger.debug("Configure to use JDK {} for Java tasks", javaVersion);
+    }
+    if (javaVendor != null) {
+      javaPlugin.getToolchain().getVendor().set(javaVendor);
+      logger.debug("Configure to use JDK from {} vendor for Java tasks", javaVendor);
+    }
   }
 
   private void configureJdkForIntegrationTestTasks(Project project) {
@@ -119,6 +127,25 @@ public class JdkConfigurationPlugin implements Plugin<Project> {
         project,
         INTEGRATION_TEST_JAVA_RUNTIME_VENDOR_PROP,
         (vendor) -> integrationTestJavaVendor = vendor);
+  }
+
+  private void validateInput() {
+    if (javaVersion == null && javaVendor != null) {
+      throw new IllegalArgumentException(
+          "Setting the '"
+              + JAVA_VENDOR_PROP
+              + "' Gradle project property also requires setting the '"
+              + JAVA_VERSION_PROP
+              + "' property.");
+    }
+    if (integrationTestJavaVersion == null && integrationTestJavaVendor != null) {
+      throw new IllegalArgumentException(
+          "Setting the '"
+              + INTEGRATION_TEST_JAVA_RUNTIME_VENDOR_PROP
+              + "' Gradle project property also requires setting the '"
+              + INTEGRATION_TEST_JAVA_RUNTIME_VERSION_PROP
+              + "' property.");
+    }
   }
 
   private void parseVersionInputProperty(
