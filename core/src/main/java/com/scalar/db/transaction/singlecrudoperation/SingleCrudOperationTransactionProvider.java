@@ -1,27 +1,27 @@
-package com.scalar.db.transaction.jdbc;
+package com.scalar.db.transaction.singlecrudoperation;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcConfig;
 import javax.annotation.Nullable;
 
-public class JdbcTransactionProvider implements DistributedTransactionProvider {
+public class SingleCrudOperationTransactionProvider implements DistributedTransactionProvider {
+
   @Override
   public String getName() {
-    return JdbcConfig.TRANSACTION_MANAGER_NAME;
+    return SingleCrudOperationTransactionConfig.TRANSACTION_MANAGER_NAME;
   }
 
   @Override
   public DistributedTransactionManager createDistributedTransactionManager(DatabaseConfig config) {
-    return new JdbcTransactionManager(config);
+    return new SingleCrudOperationTransactionManager(config);
   }
 
   @Override
   public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
-    return new JdbcTransactionAdmin(config);
+    return new SingleCrudOperationTransactionAdmin(config);
   }
 
   @Nullable

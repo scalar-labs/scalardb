@@ -1,34 +1,5 @@
 version: 2
-registries:
-  ghcr:
-    type: docker-registry
-    url: https://ghcr.io
-    username: ${{secrets.CR_USER}}
-    password: ${{secrets.CR_PAT}}
-    replaces-base: true
 updates:
-  # For the Schema Loader Docker image, only update the scalar-labs/jre8 container
-  - package-ecosystem: "docker"
-    directory: "/schema-loader/"
-    registries:
-      - ghcr
-    schedule:
-      interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
-    allow:
-      - dependency-name: "scalar-labs/jre8"
-  # For the Server Docker image, only update the scalar-labs/jre8 container
-  - package-ecosystem: "docker"
-    directory: "/server/"
-    registries:
-      - ghcr
-    schedule:
-      interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
-    allow:
-      - dependency-name: "scalar-labs/jre8"
   # For Gradle, update dependencies and plugins to the latest non-major version
   - package-ecosystem: "gradle"
     directory: "/"
