@@ -252,6 +252,37 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
+  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Scan scan =
+        Scan.newBuilder(prepareScan(1, 0, 2, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(SOME_COLUMN).isGreaterThanOrEqualToInt(1))
+            .build();
+
+    // Act
+    List<Result> results = transaction.scan(scan);
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(2);
+
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(1);
+
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
+  }
+
+  @Test
   public void scan_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
       throws TransactionException {
     // Arrange
@@ -1268,20 +1299,60 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+  public void get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (TwoPhaseCommitTransactionManager manager1WithDefaultNamespace =
-        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
       // Arrange
-      populateRecords(manager1WithDefaultNamespace, namespace1, TABLE_1);
+      populateRecords(manager1, namespace1, TABLE_1);
       Get get =
           Get.newBuilder()
               .table(TABLE_1)
               .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.get(get);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void scan_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.scan(scan);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void put_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Put put =
           Put.newBuilder()
               .table(TABLE_1)
@@ -1290,6 +1361,26 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .intValue(BALANCE, 300)
               .enableImplicitPreRead()
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.put(put);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void insert_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Insert insert =
           Insert.newBuilder()
               .table(TABLE_1)
@@ -1297,6 +1388,26 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.insert(insert);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void upsert_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Upsert upsert =
           Upsert.newBuilder()
               .table(TABLE_1)
@@ -1304,6 +1415,26 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.upsert(upsert);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void update_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Update update =
           Update.newBuilder()
               .table(TABLE_1)
@@ -1311,12 +1442,52 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.update(update);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void delete_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Delete delete =
           Delete.newBuilder()
               .table(TABLE_1)
               .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                tx.delete(delete);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void mutate_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Mutation putAsMutation1 =
           Put.newBuilder()
               .table(TABLE_1)
@@ -1335,17 +1506,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                TwoPhaseCommitTransaction tx = manager1WithDefaultNamespace.start();
-                tx.get(get);
-                tx.scan(scan);
-                tx.put(put);
-                tx.insert(insert);
-                tx.upsert(upsert);
-                tx.update(update);
-                tx.delete(delete);
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
                 tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
-                tx.prepare();
-                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -2232,21 +2394,50 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void manager_operation_DefaultNamespaceGiven_ShouldWorkProperly()
-      throws TransactionException {
+  public void manager_get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (TwoPhaseCommitTransactionManager manager1WithDefaultNamespace =
-        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
       // Arrange
-      populateRecords(manager1WithDefaultNamespace, namespace1, TABLE_1);
+      populateRecords(manager1, namespace1, TABLE_1);
       Get get =
           Get.newBuilder()
               .table(TABLE_1)
               .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.get(get))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_scan_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.scan(scan))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_put_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Put put =
           Put.newBuilder()
               .table(TABLE_1)
@@ -2255,6 +2446,22 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .intValue(BALANCE, 300)
               .enableImplicitPreRead()
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.put(put))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_insert_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Insert insert =
           Insert.newBuilder()
               .table(TABLE_1)
@@ -2262,6 +2469,22 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.insert(insert))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_upsert_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Upsert upsert =
           Upsert.newBuilder()
               .table(TABLE_1)
@@ -2269,6 +2492,22 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.upsert(upsert))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_update_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Update update =
           Update.newBuilder()
               .table(TABLE_1)
@@ -2276,12 +2515,44 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .intValue(BALANCE, 300)
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.update(update))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_delete_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Delete delete =
           Delete.newBuilder()
               .table(TABLE_1)
               .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
               .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
               .build();
+
+      // Act Assert
+      Assertions.assertThatCode(() -> managerWithDefaultNamespace.delete(delete))
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void manager_mutate_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
       Mutation putAsMutation1 =
           Put.newBuilder()
               .table(TABLE_1)
@@ -2298,23 +2569,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
               .build();
 
       // Act Assert
-      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.get(get))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.scan(scan))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.put(put))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.insert(insert))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.upsert(upsert))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.update(update))
-          .doesNotThrowAnyException();
-      Assertions.assertThatCode(() -> manager1WithDefaultNamespace.delete(delete))
-          .doesNotThrowAnyException();
       Assertions.assertThatCode(
               () ->
-                  manager1WithDefaultNamespace.mutate(
+                  managerWithDefaultNamespace.mutate(
                       ImmutableList.of(putAsMutation1, deleteAsMutation2)))
           .doesNotThrowAnyException();
     }

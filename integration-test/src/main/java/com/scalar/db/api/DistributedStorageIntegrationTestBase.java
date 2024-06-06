@@ -527,6 +527,37 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
+  public void
+      scan_ScanWithClusteringKeyRangeAndConjunctionsGiven_ShouldRetrieveResultsOfBothConditions()
+          throws IOException, ExecutionException {
+    // Arrange
+    populateRecords();
+
+    // Act
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(getNamespace())
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 0))
+            .start(Key.ofInt(COL_NAME4, 0))
+            .end(Key.ofInt(COL_NAME4, 2))
+            .where(ConditionBuilder.column(COL_NAME5).isEqualToBoolean(true))
+            .build();
+    List<Result> actual = scanAll(scan);
+
+    // verify
+    assertThat(actual.size()).isEqualTo(2);
+    assertThat(actual.get(0).contains(COL_NAME1)).isTrue();
+    assertThat(actual.get(0).getInt(COL_NAME1)).isEqualTo(0);
+    assertThat(actual.get(0).contains(COL_NAME4)).isTrue();
+    assertThat(actual.get(0).getInt(COL_NAME4)).isEqualTo(0);
+    assertThat(actual.get(1).contains(COL_NAME1)).isTrue();
+    assertThat(actual.get(1).getInt(COL_NAME1)).isEqualTo(0);
+    assertThat(actual.get(1).contains(COL_NAME4)).isTrue();
+    assertThat(actual.get(1).getInt(COL_NAME4)).isEqualTo(2);
+  }
+
+  @Test
   public void scannerIterator_ScanWithPartitionKeyGiven_ShouldRetrieveCorrectResults()
       throws ExecutionException, IOException {
     // Arrange
@@ -1064,6 +1095,25 @@ public abstract class DistributedStorageIntegrationTestBase {
     assertThat(result.isNull(COL_NAME6)).isTrue();
     assertThat(result.getBlob(COL_NAME6)).isNull();
     assertThat(result.getAsObject(COL_NAME6)).isNull();
+  }
+
+  @Test
+  public void put_withPutIfIsNullWhenRecordDoesNotExist_shouldThrowNoMutationException()
+      throws ExecutionException {
+    // Arrange
+    Put putIf =
+        Put.newBuilder(preparePuts().get(0))
+            .intValue(COL_NAME3, 100)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(COL_NAME3).isNullInt()).build())
+            .enableImplicitPreRead()
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.put(putIf)).isInstanceOf(NoMutationException.class);
+
+    Optional<Result> result = storage.get(prepareGet(0, 0));
+    assertThat(result).isNotPresent();
   }
 
   @Test

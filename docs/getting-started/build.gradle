@@ -6,7 +6,7 @@ repositories {
     mavenCentral()
 }
 
-mainClassName = "sample.ElectronicMoneyMain"
+mainClass = "sample.ElectronicMoneyMain"
 
 dependencies {
     implementation 'com.scalar-labs:scalardb:3.12.2'
