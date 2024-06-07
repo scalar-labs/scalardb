@@ -23,15 +23,18 @@ class GroupSizeFixWorkerTest {
   private static final int LONG_WAIT_MILLIS = 500;
 
   @Mock
-  private DelayedSlotMoveWorker<String, String, String, String, Integer> delayedSlotMoveWorker;
+  private DelayedSlotMoveWorker<String, String, String, String, String, Integer>
+      delayedSlotMoveWorker;
 
-  @Mock private GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
-  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup1;
-  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup2;
-  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup3;
-  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup4;
-  private GroupSizeFixWorker<String, String, String, String, Integer> worker;
-  private GroupSizeFixWorker<String, String, String, String, Integer> workerWithWait;
+  @Mock
+  private GroupCleanupWorker<String, String, String, String, String, Integer> groupCleanupWorker;
+
+  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup1;
+  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup2;
+  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup3;
+  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup4;
+  private GroupSizeFixWorker<String, String, String, String, String, Integer> worker;
+  private GroupSizeFixWorker<String, String, String, String, String, Integer> workerWithWait;
 
   @BeforeEach
   void setUp() {

@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -28,7 +29,8 @@ class GroupCommitterConcurrentTest {
     }
   }
 
-  private static class MyKeyManipulator implements KeyManipulator<String, String, String, String> {
+  private static class MyKeyManipulator
+      implements KeyManipulator<String, String, String, String, String> {
     @Override
     public String generateParentKey() {
       return UUID.randomUUID().toString();
@@ -55,12 +57,12 @@ class GroupCommitterConcurrentTest {
     }
 
     @Override
-    public String emitKeyFromFullKey(String s) {
+    public String emitFullKeyFromFullKey(String s) {
       return s;
     }
 
     @Override
-    public String emitKeyFromParentKey(String s) {
+    public String emitParentKeyFromParentKey(String s) {
       return s;
     }
   }
@@ -150,32 +152,44 @@ class GroupCommitterConcurrentTest {
     }
 
     // Returns a lambda that will be executed once the group is ready to group-commit.
-    private Emittable<String, Value> emitter() {
-      return (parentKey, values) -> {
-        if (maxEmitDurationInMillis > 0) {
-          int waitInMillis = rand.nextInt(maxEmitDurationInMillis);
-          Uninterruptibles.sleepUninterruptibly(waitInMillis, TimeUnit.MILLISECONDS);
-        }
-        if (errorAfterReadyPercentage > rand.nextInt(100)) {
+    private Emittable<String, String, Value> createEmitter() {
+      return new Emittable<String, String, Value>() {
+        private void emit(String ignored, List<Value> values) {
+          if (maxEmitDurationInMillis > 0) {
+            int waitInMillis = rand.nextInt(maxEmitDurationInMillis);
+            Uninterruptibles.sleepUninterruptibly(waitInMillis, TimeUnit.MILLISECONDS);
+          }
+          if (errorAfterReadyPercentage > rand.nextInt(100)) {
+            for (Value v : values) {
+              // Remember the value as a failure.
+              if (failedKeys.put(v.v, true) != null) {
+                throw new RuntimeException(v + " is already set");
+              }
+            }
+            throw new ExpectedException("Error after READY");
+          }
           for (Value v : values) {
-            // Remember the value as a failure.
-            if (failedKeys.put(v.v, true) != null) {
+            // Remember the value as a success.
+            if (emittedKeys.put(v.v, true) != null) {
               throw new RuntimeException(v + " is already set");
             }
           }
-          throw new ExpectedException("Error after READY");
         }
-        for (Value v : values) {
-          // Remember the value as a success.
-          if (emittedKeys.put(v.v, true) != null) {
-            throw new RuntimeException(v + " is already set");
-          }
+
+        @Override
+        public void emitNormalGroup(String parentKey, List<Value> values) throws Exception {
+          emit(parentKey, values);
+        }
+
+        @Override
+        public void emitDelayedGroup(String fullKey, Value value) throws Exception {
+          emit(fullKey, Collections.singletonList(value));
         }
       };
     }
 
     private Callable<Void> groupCommitterCaller(
-        GroupCommitter<String, String, String, String, Value> groupCommitter,
+        GroupCommitter<String, String, String, String, String, Value> groupCommitter,
         String childKey,
         Value value) {
       return () -> {
@@ -217,9 +231,9 @@ class GroupCommitterConcurrentTest {
 
     private void exec(GroupCommitConfig groupCommitConfig)
         throws ExecutionException, InterruptedException, TimeoutException {
-      try (GroupCommitter<String, String, String, String, Value> groupCommitter =
+      try (GroupCommitter<String, String, String, String, String, Value> groupCommitter =
           new GroupCommitter<>("test", groupCommitConfig, new MyKeyManipulator())) {
-        groupCommitter.setEmitter(emitter());
+        groupCommitter.setEmitter(createEmitter());
 
         List<KeyAndFuture> futures = new ArrayList<>();
 
@@ -294,7 +308,7 @@ class GroupCommitterConcurrentTest {
     }
 
     private void checkGarbage(
-        GroupCommitter<String, String, String, String, Value> groupCommitter) {
+        GroupCommitter<String, String, String, String, String, Value> groupCommitter) {
       boolean noGarbage = false;
       GroupCommitMetrics groupCommitMetrics = null;
       for (int i = 0; i < 60; i++) {
