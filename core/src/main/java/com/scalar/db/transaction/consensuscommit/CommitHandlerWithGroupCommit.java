@@ -6,6 +6,8 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -30,8 +32,8 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     super(storage, coordinator, tableMetadataManager, parallelExecutor);
 
     checkNotNull(groupCommitter);
-    // This method reference will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(this::groupCommitState);
+    // The methods of this emitter will be called via GroupCommitter.ready().
+    groupCommitter.setEmitter(new Emitter(coordinator));
     this.groupCommitter = groupCommitter;
   }
 
@@ -84,33 +86,50 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     commitStateViaGroupCommit(snapshot);
   }
 
-  // TODO: Emitter interface should have `emitNormalGroup()` and `emitDelayedGroup()` separately and
-  //       this method should be separated into `groupCommitStateWithParentId()` and
-  //       `groupCommitStateWithFullId()` so whether the id is a parent ID or a full ID is clear.
-  private void groupCommitState(String parentIdOrFullId, List<Snapshot> snapshots)
-      throws CoordinatorException {
-    if (snapshots.isEmpty()) {
-      // This means all buffered transactions were manually rolled back. Nothing to do.
-      return;
-    }
-
-    List<String> transactionIds =
-        snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
-
-    // The id is either of a parent ID in the case of normal group commit or a full ID in the case
-    // of delayed commit.
-    coordinator.putStateForGroupCommit(
-        parentIdOrFullId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
-
-    logger.debug(
-        "Transaction {} is committed successfully at {}",
-        parentIdOrFullId,
-        System.currentTimeMillis());
-  }
-
   @Override
   public TransactionState abortState(String id) throws UnknownTransactionStatusException {
     cancelGroupCommitIfNeeded(id);
     return super.abortState(id);
+  }
+
+  private static class Emitter implements Emittable<String, String, Snapshot> {
+    private final Coordinator coordinator;
+
+    public Emitter(Coordinator coordinator) {
+      this.coordinator = coordinator;
+    }
+
+    @Override
+    public void emitNormalGroup(String parentId, List<Snapshot> snapshots)
+        throws CoordinatorException {
+      if (snapshots.isEmpty()) {
+        // This means all buffered transactions were manually rolled back. Nothing to do.
+        return;
+      }
+
+      // These transactions are contained in a normal group that has multiple transactions.
+      // Therefore, the transaction states should be put together in Coordinator.State.
+      List<String> transactionIds =
+          snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
+
+      coordinator.putStateForGroupCommit(
+          parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
+
+      logger.debug(
+          "Transaction {} (parent ID) is committed successfully at {}",
+          parentId,
+          System.currentTimeMillis());
+    }
+
+    @Override
+    public void emitDelayedGroup(String fullId, Snapshot snapshot) throws CoordinatorException {
+      // This transaction is contained in a delayed group that has only a single transaction.
+      // Therefore, the transaction state can be committed as if it's a normal commit (not a
+      // group commit).
+      coordinator.putState(new State(fullId, TransactionState.COMMITTED));
+
+      logger.debug(
+          "Transaction {} is committed successfully at {}", fullId, System.currentTimeMillis());
+    }
   }
 }

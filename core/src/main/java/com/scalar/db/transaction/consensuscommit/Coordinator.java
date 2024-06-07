@@ -125,30 +125,23 @@ public class Coordinator {
     put(put);
   }
 
-  // TODO: This method should be separated into `putStateForGroupCommitWithParentId()` and
-  //       `putStateForGroupCommitWithFullId()` so whether the id is a parent ID or a full ID is
-  //       clear.
   void putStateForGroupCommit(
-      String parentIdOrFullId,
-      List<String> fullIds,
-      TransactionState transactionState,
-      long createdAt)
+      String parentId, List<String> fullIds, TransactionState transactionState, long createdAt)
       throws CoordinatorException {
-    State state;
-    // `id` can be either of a parent ID for normal group commit or a full ID for delayed commit.
-    if (keyManipulator.isFullKey(parentIdOrFullId)) {
-      // Put the state with the full ID for a delayed group that contains only a single transaction.
-      state = new State(parentIdOrFullId, transactionState, createdAt);
-    } else {
-      // Put the state with the parent ID for a normal group that contains multiple transactions,
-      // with a parent ID as a key and multiple child IDs.
-      List<String> childIds = new ArrayList<>(fullIds.size());
-      for (String fullId : fullIds) {
-        Keys<String, String, String> keys = keyManipulator.keysFromFullKey(fullId);
-        childIds.add(keys.childKey);
-      }
-      state = new State(parentIdOrFullId, childIds, transactionState, createdAt);
+
+    if (keyManipulator.isFullKey(parentId)) {
+      throw new AssertionError(
+          "This method is only for normal group commits that use a parent ID as the key");
     }
+
+    // Put the state that contains a parent ID as the key and multiple child transaction IDs.
+    List<String> childIds = new ArrayList<>(fullIds.size());
+    for (String fullId : fullIds) {
+      Keys<String, String, String> keys = keyManipulator.keysFromFullKey(fullId);
+      childIds.add(keys.childKey);
+    }
+    State state = new State(parentId, childIds, transactionState, createdAt);
+
     Put put = createPutWith(state);
     put(put);
   }

@@ -8,15 +8,18 @@ import org.slf4j.LoggerFactory;
 
 // A worker manages Group instances to removes completed ones.
 @ThreadSafe
-class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-    extends BackgroundWorker<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
+class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+    extends BackgroundWorker<
+        Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>> {
   private static final Logger logger = LoggerFactory.getLogger(GroupCleanupWorker.class);
-  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager;
+  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      groupManager;
 
   GroupCleanupWorker(
       String label,
       long queueCheckIntervalInMillis,
-      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager) {
+      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+          groupManager) {
     super(
         label + "-group-commit-group-cleanup",
         queueCheckIntervalInMillis,
@@ -26,7 +29,8 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Override
-  BlockingQueue<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+  BlockingQueue<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+      createQueue() {
     // Use a normal queue because:
     // - The timeout of the queued groups is large since it's for "just in case"
     // - In most cases a queued group gets DONE before it's timed-out
@@ -36,7 +40,8 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Override
-  boolean processItem(Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group) {
+  boolean processItem(
+      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> group) {
     if (group.oldGroupAbortTimeoutAtMillis() < System.currentTimeMillis()) {
       groupManager.removeGroupFromMap(group);
       group.abort();

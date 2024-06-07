@@ -11,10 +11,11 @@ import javax.annotation.concurrent.Immutable;
  * @param <CHILD_KEY> A key type to slot in NormalGroup which can contain a value ready to commit.
  * @param <FULL_KEY> A key type to DelayedGroup which contains a single slot and is
  *     singly-committed.
- * @param <EMIT_KEY> A key type that Emitter can interpret.
+ * @param <EMIT_PARENT_KEY> A parent-key type that Emitter can interpret.
+ * @param <EMIT_FULL_KEY> A full-key type that Emitter can interpret.
  */
 @Immutable
-public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> {
+public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY> {
   class Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> {
     public final PARENT_KEY parentKey;
     public final CHILD_KEY childKey;
@@ -44,7 +45,7 @@ public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> {
 
   Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keysFromFullKey(FULL_KEY fullKey);
 
-  EMIT_KEY emitKeyFromFullKey(FULL_KEY fullKey);
+  EMIT_FULL_KEY emitFullKeyFromFullKey(FULL_KEY fullKey);
 
-  EMIT_KEY emitKeyFromParentKey(PARENT_KEY parentKey);
+  EMIT_PARENT_KEY emitParentKeyFromParentKey(PARENT_KEY parentKey);
 }
