@@ -434,7 +434,7 @@ public class ScanBuilder extends SelectionBuilder {
 
   public static class BuildableScanWithWhere extends BuildableScan {
 
-    protected final Where where;
+    final Where where;
 
     private BuildableScanWithWhere(BuildableScan buildable) {
       this(buildable, null);
@@ -666,8 +666,8 @@ public class ScanBuilder extends SelectionBuilder {
           Projection<BuildableScanWithIndexWhere>,
           Limit<BuildableScanWithIndexWhere> {
 
-    protected BuildableScanWithIndex buildableScanWithIndex;
-    protected final Where where;
+    BuildableScanWithIndex buildableScanWithIndex;
+    final Where where;
 
     private BuildableScanWithIndexWhere(BuildableScanWithIndex buildable) {
       this(buildable, null);
@@ -1033,7 +1033,7 @@ public class ScanBuilder extends SelectionBuilder {
     private final boolean isScanWithIndex;
     private final boolean isScanAll;
     private Key indexKey;
-    protected final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
+    final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
 
     BuildableScanOrScanAllFromExisting(Scan scan) {
       super(scan.forNamespace().orElse(null), scan.forTable().orElse(null), scan.getPartitionKey());

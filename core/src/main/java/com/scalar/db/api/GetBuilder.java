@@ -322,7 +322,7 @@ public class GetBuilder extends SelectionBuilder {
 
   public static class BuildableGetWithWhere extends BuildableGet {
 
-    protected final SelectionBuilder.Where where;
+    final SelectionBuilder.Where where;
 
     private BuildableGetWithWhere(BuildableGet buildable) {
       this(buildable, null);
@@ -541,8 +541,8 @@ public class GetBuilder extends SelectionBuilder {
   public static class BuildableGetWithIndexWhere
       implements Consistency<BuildableGetWithIndexWhere>, Projection<BuildableGetWithIndexWhere> {
 
-    protected BuildableGetWithIndex buildableGetWithIndex;
-    protected final SelectionBuilder.Where where;
+    BuildableGetWithIndex buildableGetWithIndex;
+    final SelectionBuilder.Where where;
 
     private BuildableGetWithIndexWhere(BuildableGetWithIndex buildable) {
       this(buildable, null);
@@ -602,7 +602,7 @@ public class GetBuilder extends SelectionBuilder {
 
     private Key indexKey;
     private final boolean isGetWithIndex;
-    protected final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
+    final Set<Set<ConditionalExpression>> conjunctions = new HashSet<>();
 
     BuildableGetOrGetWithIndexFromExisting(Get get) {
       super(get.forNamespace().orElse(null), get.forTable().orElse(null), get.getPartitionKey());
