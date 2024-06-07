@@ -1207,48 +1207,11 @@ The group commit feature implicitly generates an internal value and uses it as a
    logger.info("The transaction state: {}", manager.getState(transaction.getId()));
 ```
 
-##### Commit in two-phase commit interface
+##### Prohibition of use with a two-phase commit interface
 
-The group commit feature manages all ongoing transactions in memory. When the feature is enabled with the two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the Coordinator table, which may contain different transaction distributions over groups. Consequently, `com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.commit()` must be called first by the coordinator service before being called by participant services.
+The group commit feature manages all ongoing transactions in memory. If this feature is enabled with a two-phase commit interface, the information must be solely maintained by the coordinator service to prevent conflicts caused by participant services' inconsistent writes to the Coordinator table, which may contain different transaction distributions over groups.
 
-```java
-  AtomicBoolean globalCommitSuccess = new AtomicBoolean();
-
-  // Only the coordinator service can commit the global transaction state.
-  // It must be executed before the participants.
-  /*
-  try {
-    Arrays.asList(coordinatorService, participantService1, participantService2)
-      .parallelStream()
-      .forEach(service -> {
-        service.commit();
-        globalCommitSuccess.set(true);
-      });
-  }
-  catch (Exception e) {
-    if (!globalCommitSuccess.get()) {
-      // Error handling...
-    }
-    ...
-  }
-  */
-
-  try {
-    // Commit the transaction state and related records of the coordinator service.
-    coordinatorService.commit();
-    globalCommitSuccess.set(true);
-    // Then, commit the transaction state and related records of the participant services.
-    Arrays.asList(participantService1, participantService2)
-      .parallelStream()
-      .forEach(Service::commit);
-  }
-  catch (Exception e) {
-    if (!globalCommitSuccess.get()) {
-      // Error handling...
-    }
-    ...
-  }
-```
+This limitation introduces some complexities and inflexibilities related to application development. Therefore, combining the use of the group commit feature with a two-phase commit interface is currently prohibited.
 
 ## Investigating Consensus Commit transaction manager errors
 
