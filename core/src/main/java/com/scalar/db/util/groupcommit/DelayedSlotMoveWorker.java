@@ -8,16 +8,21 @@ import javax.annotation.concurrent.ThreadSafe;
 // A worker manages NormalGroup instances to move delayed slots to a new DelayedGroup.
 // Ready NormalGroup is passed to GroupCleanupWorker.
 @ThreadSafe
-class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-    extends BackgroundWorker<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> {
-  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager;
-  private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
+class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+    extends BackgroundWorker<
+        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>> {
+  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      groupManager;
+  private final GroupCleanupWorker<
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      groupCleanupWorker;
 
   DelayedSlotMoveWorker(
       String label,
       long queueCheckIntervalInMillis,
-      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
-      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
+      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> groupManager,
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+          groupCleanupWorker) {
     super(
         label + "-group-commit-delayed-slot-move",
         queueCheckIntervalInMillis,
@@ -29,7 +34,8 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Override
-  BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> createQueue() {
+  BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+      createQueue() {
     // Use a priority queue to prioritize groups based on their timeout values, processing groups
     // with smaller timeout values first.
     return new PriorityBlockingQueue<>(
@@ -37,7 +43,8 @@ class DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Override
-  boolean processItem(NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> normalGroup) {
+  boolean processItem(
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> normalGroup) {
     if (normalGroup.isReady()) {
       groupCleanupWorker.add(normalGroup);
       // Already ready. Should remove the item.
