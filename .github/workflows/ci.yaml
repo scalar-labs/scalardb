@@ -111,8 +111,8 @@ jobs:
         with:
           arguments: ':schema-loader:dockerfileLint'
 
-  build-check-getting-started:
-    name: Build check for Getting Started project
+  build-check-example-project:
+    name: Build check for 'Getting Started' example project
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,8 +126,8 @@ jobs:
       - name: Build Getting Started project
         run: cd docs/getting-started && ./gradlew assemble
 
-  build-check-getting-started-using-kotlin:
-    name: Build check for Getting Started project using Kotlin
+  build-check-example-project-for-kotlin:
+    name: Build check for 'Getting Started' example project for Kotlin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
