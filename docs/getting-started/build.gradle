@@ -6,11 +6,13 @@ repositories {
     mavenCentral()
 }
 
-mainClass = "sample.ElectronicMoneyMain"
+application {
+    mainClass = "sample.ElectronicMoneyMain"
+}
 
 dependencies {
     implementation 'com.scalar-labs:scalardb:3.8.6'
 }
 
-sourceCompatibility = 1.8 
-targetCompatibility = 1.8 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
