@@ -24,11 +24,15 @@ public class CoordinatorGroupCommitter
   }
 
   public static Optional<CoordinatorGroupCommitter> from(ConsensusCommitConfig config) {
-    if (config.isCoordinatorGroupCommitEnabled()) {
+    if (isEnabled(config)) {
       return Optional.of(new CoordinatorGroupCommitter(config));
     } else {
       return Optional.empty();
     }
+  }
+
+  public static boolean isEnabled(ConsensusCommitConfig config) {
+    return config.isCoordinatorGroupCommitEnabled();
   }
 
   static class CoordinatorGroupCommitKeyManipulator
