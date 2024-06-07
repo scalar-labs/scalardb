@@ -230,11 +230,18 @@ public class Snapshot {
     }
 
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      Put put = entry.getValue();
+      if (scanSet.get(scan).contains(entry.getKey())) {
+        return true;
+      }
 
+      Put put = entry.getValue();
       if (!put.forNamespace().equals(scan.forNamespace())
           || !put.forTable().equals(scan.forTable())
           || !put.getPartitionKey().equals(scan.getPartitionKey())) {
+        continue;
+      }
+
+      if (!areConjunctionsOverlapped(put, scan)) {
         continue;
       }
 
@@ -296,6 +303,10 @@ public class Snapshot {
         continue;
       }
 
+      if (!areConjunctionsOverlapped(put, scan)) {
+        continue;
+      }
+
       Map<String, Column<?>> columns = getAllColumns(put);
       Column<?> indexColumn = scan.getPartitionKey().getColumns().get(0);
       String indexColumnName = indexColumn.getName();
@@ -334,16 +345,20 @@ public class Snapshot {
         continue;
       }
 
-      if (scan.getConjunctions().isEmpty()) {
-        return true;
-      }
-
-      Map<String, Column<?>> columns = getAllColumns(put);
-      if (ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, scan.getConjunctions())) {
+      if (areConjunctionsOverlapped(put, scan)) {
         return true;
       }
     }
     return false;
+  }
+
+  private boolean areConjunctionsOverlapped(Put put, Scan scan) {
+    if (scan.getConjunctions().isEmpty()) {
+      return true;
+    }
+
+    Map<String, Column<?>> columns = getAllColumns(put);
+    return ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, scan.getConjunctions());
   }
 
   private Map<String, Column<?>> getAllColumns(Put put) {

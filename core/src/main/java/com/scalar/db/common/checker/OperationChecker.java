@@ -85,6 +85,8 @@ public class OperationChecker {
 
     checkProjections(scan, metadata);
 
+    checkConjunctions(scan, metadata);
+
     if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
       if (scan.getPartitionKey().size() != 1) {
         throw new IllegalArgumentException(
@@ -258,8 +260,8 @@ public class OperationChecker {
     }
   }
 
-  private void checkConjunctions(ScanAll scan, TableMetadata metadata) {
-    for (Conjunction conjunction : scan.getConjunctions()) {
+  private void checkConjunctions(Selection selection, TableMetadata metadata) {
+    for (Conjunction conjunction : selection.getConjunctions()) {
       for (ConditionalExpression condition : conjunction.getConditions()) {
         boolean isValid;
         if (condition.getOperator() == Operator.IS_NULL
@@ -274,7 +276,7 @@ public class OperationChecker {
         }
         if (!isValid) {
           throw new IllegalArgumentException(
-              CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(scan));
+              CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(selection));
         }
       }
     }
