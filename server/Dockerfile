@@ -16,7 +16,10 @@ RUN set -x && \
     tar -xzvf "dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz" && \
     ./dockerize --version
 
-FROM ghcr.io/scalar-labs/jre8:1.1.16
+FROM eclipse-temurin:8-jre-jammy
+
+RUN apt-get update && apt-get upgrade -y \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY --from=tools dockerize /usr/local/bin/
 COPY --from=tools grpc_health_probe /usr/local/bin/
