@@ -21,9 +21,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SlotTest {
-  private Slot<String, String, String, String, Integer> slot;
-  @Mock private NormalGroup<String, String, String, String, Integer> parentGroup;
-  @Mock private DelayedGroup<String, String, String, String, Integer> newParentGroup;
+  private Slot<String, String, String, String, String, Integer> slot;
+  @Mock private NormalGroup<String, String, String, String, String, Integer> parentGroup;
+  @Mock private DelayedGroup<String, String, String, String, String, Integer> newParentGroup;
 
   @BeforeEach
   void setUp() {
@@ -33,7 +33,8 @@ class SlotTest {
   @Test
   void key_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    Slot<String, String, String, String, Integer> slot = new Slot<>("child-key", parentGroup);
+    Slot<String, String, String, String, String, Integer> slot =
+        new Slot<>("child-key", parentGroup);
 
     // Act
     // Assert

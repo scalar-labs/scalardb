@@ -3,7 +3,6 @@ package com.scalar.db.util.groupcommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -33,14 +32,19 @@ class GroupCommitterTest {
   private static final int OLD_GROUP_ABORT_TIMEOUT_MILLIS = 10000;
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
 
-  @Mock private Emittable<String, Integer> emitter;
-  @Mock private GroupManager<String, String, String, String, Integer> groupManager;
-  @Mock private GroupSizeFixWorker<String, String, String, String, Integer> groupSizeFixWorker;
+  @Mock private Emittable<String, String, Integer> emitter;
+  @Mock private GroupManager<String, String, String, String, String, Integer> groupManager;
 
   @Mock
-  private DelayedSlotMoveWorker<String, String, String, String, Integer> delayedSlotMoveWorker;
+  private GroupSizeFixWorker<String, String, String, String, String, Integer> groupSizeFixWorker;
 
-  @Mock private GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker;
+  @Mock
+  private DelayedSlotMoveWorker<String, String, String, String, String, Integer>
+      delayedSlotMoveWorker;
+
+  @Mock
+  private GroupCleanupWorker<String, String, String, String, String, Integer> groupCleanupWorker;
+
   @Mock private GroupCommitMonitor groupCommitMonitor;
   @Mock private GroupCommitMetrics groupCommitMetrics;
 
@@ -53,46 +57,51 @@ class GroupCommitterTest {
 
   // Use only a single instance at most in a test case.
   private class TestableGroupCommitter
-      extends GroupCommitter<String, String, String, String, Integer> {
+      extends GroupCommitter<String, String, String, String, String, Integer> {
 
     TestableGroupCommitter(
-        GroupCommitConfig config, KeyManipulator<String, String, String, String> keyManipulator) {
+        GroupCommitConfig config,
+        KeyManipulator<String, String, String, String, String> keyManipulator) {
       super("test", config, keyManipulator);
     }
 
     @Override
-    GroupManager<String, String, String, String, Integer> createGroupManager(
-        GroupCommitConfig config, KeyManipulator<String, String, String, String> keyManipulator) {
+    GroupManager<String, String, String, String, String, Integer> createGroupManager(
+        GroupCommitConfig config,
+        KeyManipulator<String, String, String, String, String> keyManipulator) {
       testableGroupCommitterGroupManagerCreated.set(true);
       return groupManager;
     }
 
     @Override
-    GroupSizeFixWorker<String, String, String, String, Integer> createGroupSizeFixWorker(
+    GroupSizeFixWorker<String, String, String, String, String, Integer> createGroupSizeFixWorker(
         String label,
         GroupCommitConfig config,
-        GroupManager<String, String, String, String, Integer> groupManager,
-        DelayedSlotMoveWorker<String, String, String, String, Integer> delayedSlotMoveWorker,
-        GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker) {
+        GroupManager<String, String, String, String, String, Integer> groupManager,
+        DelayedSlotMoveWorker<String, String, String, String, String, Integer>
+            delayedSlotMoveWorker,
+        GroupCleanupWorker<String, String, String, String, String, Integer> groupCleanupWorker) {
       testableGroupCommitterGroupSizeFixWorkerCreated.set(true);
       return groupSizeFixWorker;
     }
 
     @Override
-    DelayedSlotMoveWorker<String, String, String, String, Integer> createDelayedSlotMoveWorker(
-        String label,
-        GroupCommitConfig config,
-        GroupManager<String, String, String, String, Integer> groupManager,
-        GroupCleanupWorker<String, String, String, String, Integer> groupCleanupWorker) {
+    DelayedSlotMoveWorker<String, String, String, String, String, Integer>
+        createDelayedSlotMoveWorker(
+            String label,
+            GroupCommitConfig config,
+            GroupManager<String, String, String, String, String, Integer> groupManager,
+            GroupCleanupWorker<String, String, String, String, String, Integer>
+                groupCleanupWorker) {
       testableGroupCommitterDelayedSlotMoveWorkerCreated.set(true);
       return delayedSlotMoveWorker;
     }
 
     @Override
-    GroupCleanupWorker<String, String, String, String, Integer> createGroupCleanupWorker(
+    GroupCleanupWorker<String, String, String, String, String, Integer> createGroupCleanupWorker(
         String label,
         GroupCommitConfig config,
-        GroupManager<String, String, String, String, Integer> groupManager) {
+        GroupManager<String, String, String, String, String, Integer> groupManager) {
       testableGroupCommitterGroupCleanupWorkerCreated.set(true);
       return groupCleanupWorker;
     }
@@ -118,7 +127,7 @@ class GroupCommitterTest {
     testableGroupCommitterGroupCommitMonitorCreated.set(false);
   }
 
-  private GroupCommitter<String, String, String, String, Integer> createGroupCommitter(
+  private GroupCommitter<String, String, String, String, String, Integer> createGroupCommitter(
       int slotCapacity, int groupSizeFixTimeoutMillis, int delayedSlotMoveTimeoutMillis) {
     return new GroupCommitter<>(
         "test",
@@ -166,25 +175,33 @@ class GroupCommitterTest {
   @Test
   void reserve_GivenArbitraryChildKey_ShouldReturnFullKeyProperly() throws Exception {
     // Arrange
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
 
       // Act
+      String fullKey1 = groupCommitter.reserve("child-key-1");
+      String fullKey2 = groupCommitter.reserve("child-key-2");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
+
       // Assert
+      assertThat(fullKey1).isEqualTo("0000:child-key-1");
+      assertThat(fullKey2).isEqualTo("0000:child-key-2");
+      assertThat(fullKey3).isEqualTo("0001:child-key-3");
 
-      assertThat(groupCommitter.reserve("child-key-1")).isEqualTo("0000:child-key-1");
-      assertThat(groupCommitter.reserve("child-key-2")).isEqualTo("0000:child-key-2");
-      assertThat(groupCommitter.reserve("child-key-3")).isEqualTo("0001:child-key-3");
+      verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
 
-      verify(emitter, never()).execute(any(), any());
+      groupCommitter.remove(fullKey1);
+      groupCommitter.remove(fullKey2);
+      groupCommitter.remove(fullKey3);
     }
   }
 
   @Test
   void reserve_WhenAlreadyClosed_ShouldThrowException() {
     // Arrange
-    GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400);
     groupCommitter.setEmitter(emitter);
     groupCommitter.close();
@@ -198,7 +215,7 @@ class GroupCommitterTest {
   void ready_WhenTwoSlotsAreReadyInNormalGroup_WithSuccessfulEmitTask_ShouldEmitThem()
       throws Exception {
     // Arrange
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -206,7 +223,7 @@ class GroupCommitterTest {
       // Reserve 3 slots.
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
-      groupCommitter.reserve("child-key-3");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
       // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
@@ -227,25 +244,31 @@ class GroupCommitterTest {
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
       // Assert
-      verify(emitter).execute("0000", Arrays.asList(11, 22));
-      verify(emitter, never()).execute(eq("0001"), any());
+      verify(emitter).emitNormalGroup("0000", Arrays.asList(11, 22));
+      verify(emitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullKey3);
     }
   }
 
   @Test
   void ready_WhenTwoSlotsAreReadyInNormalGroup_WithFailingEmitTask_ShouldFail() throws Exception {
     // Arrange
-    Emittable<String, Integer> failingEmitter =
+    Emittable<String, String, Integer> failingEmitter =
         spy(
-            // This should be an anonymous class since `spy()` can't handle a lambda.
-            new Emittable<String, Integer>() {
+            new Emittable<String, String, Integer>() {
               @Override
-              public void execute(String key, List<Integer> values) {
+              public void emitNormalGroup(String parentKey, List<Integer> values) {
+                throw new RuntimeException("Something is wrong");
+              }
+
+              @Override
+              public void emitDelayedGroup(String fullKey, Integer value) throws Exception {
                 throw new RuntimeException("Something is wrong");
               }
             });
 
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(failingEmitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -253,7 +276,7 @@ class GroupCommitterTest {
       // Reserve 3 slots.
       String fullKey1 = groupCommitter.reserve("child-key-1");
       String fullKey2 = groupCommitter.reserve("child-key-2");
-      groupCommitter.reserve("child-key-3");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
       // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
@@ -276,8 +299,10 @@ class GroupCommitterTest {
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
 
       // Assert
-      verify(failingEmitter).execute("0000", Arrays.asList(11, 22));
-      verify(failingEmitter, never()).execute(eq("0001"), any());
+      verify(failingEmitter).emitNormalGroup("0000", Arrays.asList(11, 22));
+      verify(failingEmitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullKey3);
     }
   }
 
@@ -286,15 +311,15 @@ class GroupCommitterTest {
     // Arrange
 
     // `delayedSlotMoveTimeoutMillis` is enough long to wait `ready()`.
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 2000)) {
       groupCommitter.setEmitter(emitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
 
       // Reserve 3 slots.
       String fullKey1 = groupCommitter.reserve("child-key-1");
-      groupCommitter.reserve("child-key-2");
-      groupCommitter.reserve("child-key-3");
+      String fullKey2 = groupCommitter.reserve("child-key-2");
+      String fullKey3 = groupCommitter.reserve("child-key-3");
       // There should be the following groups at this moment.
       // - NormalGroup("0000", SIZE-FIXED, slots:[Slot("child-key-1"), Slot("child-key-2")])
       // - NormalGroup("0001", OPEN, slots:[Slot("child-key-3")])
@@ -314,7 +339,12 @@ class GroupCommitterTest {
       // yet.
       // So, this timeout must happen.
       assertThrows(TimeoutException.class, () -> future.get(1000, TimeUnit.MILLISECONDS));
-      verify(emitter, never()).execute(any(), any());
+      verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
+
+      groupCommitter.remove(fullKey1);
+      groupCommitter.remove(fullKey2);
+      groupCommitter.remove(fullKey3);
     }
   }
 
@@ -322,7 +352,7 @@ class GroupCommitterTest {
   void ready_WhenSlotIsReadyInDelayedGroup_WithSuccessfulEmitTask_ShouldEmitThem()
       throws Exception {
     // Arrange
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -342,8 +372,8 @@ class GroupCommitterTest {
       // There should be the following groups at this moment.
       // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
       // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
-      verify(emitter).execute("0000", Collections.singletonList(11));
-      verify(emitter, never()).execute(eq("0000:child-key-2"), any());
+      verify(emitter).emitNormalGroup("0000", Collections.singletonList(11));
+      verify(emitter, never()).emitDelayedGroup(any(), any());
 
       // Act
 
@@ -359,24 +389,28 @@ class GroupCommitterTest {
       // - DelayedGroup("0000:child-key-2", DONE, slots:[Slot("child-key-2")])
 
       // Assert
-      verify(emitter).execute("0000:child-key-2", Collections.singletonList(22));
+      verify(emitter).emitDelayedGroup("0000:child-key-2", 22);
     }
   }
 
   @Test
   void ready_WhenSlotIsReadyInDelayedGroup_WithFailingEmitTask_ShouldFail() throws Exception {
     // Arrange
-    Emittable<String, Integer> failingEmitter =
+    Emittable<String, String, Integer> failingEmitter =
         spy(
-            // This should be an anonymous class since `spy()` can't handle a lambda.
-            new Emittable<String, Integer>() {
+            new Emittable<String, String, Integer>() {
               @Override
-              public void execute(String key, List<Integer> values) {
+              public void emitNormalGroup(String parentKey, List<Integer> values) {
+                throw new RuntimeException("Something is wrong");
+              }
+
+              @Override
+              public void emitDelayedGroup(String fullKey, Integer value) throws Exception {
                 throw new RuntimeException("Something is wrong");
               }
             });
 
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(failingEmitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -396,8 +430,8 @@ class GroupCommitterTest {
       // There should be the following groups at this moment.
       // - NormalGroup("0000", DONE, slots:[Slot(READY, "child-key-1")])
       // - DelayedGroup("0000:child-key-2", SIZE-FIXED, slots:[Slot("child-key-2")])
-      verify(failingEmitter).execute("0000", Collections.singletonList(11));
-      verify(failingEmitter, never()).execute(eq("0000:child-key-2"), any());
+      verify(failingEmitter).emitNormalGroup("0000", Collections.singletonList(11));
+      verify(failingEmitter, never()).emitDelayedGroup(any(), any());
 
       // Act
 
@@ -415,7 +449,7 @@ class GroupCommitterTest {
       // - DelayedGroup("0000:child-key-2", DONE, slots:[Slot("child-key-2")])
 
       // Assert
-      verify(failingEmitter).execute("0000:child-key-2", Collections.singletonList(22));
+      verify(failingEmitter).emitDelayedGroup("0000:child-key-2", 22);
     }
   }
 
@@ -423,7 +457,7 @@ class GroupCommitterTest {
   void remove_GivenKeyForOpenGroup_ShouldRemoveIt() throws Exception {
     // Arrange
     // `slotCapacity` is 3 to prevent the group from being size-fixed.
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(3, 100, 400)) {
       groupCommitter.setEmitter(emitter);
 
@@ -444,14 +478,15 @@ class GroupCommitterTest {
       // The slots are already removed and these operations must fail.
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
-      verify(emitter, never()).execute(any(), any());
+      verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
 
   @Test
   void remove_GivenKeyForSizeFixedGroup_ShouldRemoveIt() throws Exception {
     // Arrange
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(emitter);
 
@@ -472,7 +507,8 @@ class GroupCommitterTest {
       // The slots are already removed and these operations must fail.
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey1, 42));
       assertThrows(GroupCommitConflictException.class, () -> groupCommitter.ready(fullKey2, 42));
-      verify(emitter, never()).execute(any(), any());
+      verify(emitter, never()).emitNormalGroup(any(), any());
+      verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
 
@@ -480,17 +516,21 @@ class GroupCommitterTest {
   void remove_GivenKeyForReadyGroup_ShouldFail() throws Exception {
     // Arrange
     CountDownLatch countDownLatch = new CountDownLatch(1);
-    Emittable<String, Integer> testableEmitter =
+    Emittable<String, String, Integer> testableEmitter =
         spy(
-            // This should be an anonymous class since `spy()` can't handle a lambda.
-            new Emittable<String, Integer>() {
+            new Emittable<String, String, Integer>() {
               @Override
-              public void execute(String key, List<Integer> values) throws Exception {
+              public void emitNormalGroup(String parentKey, List<Integer> values) throws Exception {
                 countDownLatch.await();
+              }
+
+              @Override
+              public void emitDelayedGroup(String fullKey, Integer value) {
+                throw new AssertionError();
               }
             });
 
-    try (GroupCommitter<String, String, String, String, Integer> groupCommitter =
+    try (GroupCommitter<String, String, String, String, String, Integer> groupCommitter =
         createGroupCommitter(2, 100, 400)) {
       groupCommitter.setEmitter(testableEmitter);
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -527,7 +567,8 @@ class GroupCommitterTest {
       }
       // There should be the following groups at this moment.
       // - NormalGroup("0000", DONE, slots:[Slot("child-key-1"), Slot("child-key-2")])
-      verify(testableEmitter).execute("0000", Arrays.asList(11, 22));
+      verify(testableEmitter).emitNormalGroup("0000", Arrays.asList(11, 22));
+      verify(testableEmitter, never()).emitDelayedGroup(any(), any());
     }
   }
 

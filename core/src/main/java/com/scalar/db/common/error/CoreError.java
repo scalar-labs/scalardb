@@ -634,6 +634,12 @@ public enum CoreError implements ScalarDbError {
       "Resuming a transaction is not allowed in single CRUD operation transactions",
       "",
       ""),
+  CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0141",
+      "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
