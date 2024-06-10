@@ -114,6 +114,11 @@ jobs:
   build-check-example-project:
     name: Build check for 'Getting Started' example project
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: docs/getting-started
+
     steps:
       - uses: actions/checkout@v4
 
@@ -123,12 +128,20 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Build Getting Started project
-        run: cd docs/getting-started && ./gradlew assemble
+        run: ./gradlew assemble
 
   build-check-example-project-for-kotlin:
     name: Build check for 'Getting Started' example project for Kotlin
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: docs/getting-started-kotlin
+
     steps:
       - uses: actions/checkout@v4
 
@@ -138,8 +151,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Build Getting Started project
-        run: cd docs/getting-started-kotlin && ./gradlew assemble
+        run: ./gradlew assemble
 
   integration-test-for-cassandra-3-0:
     name: Cassandra 3.0 integration test
