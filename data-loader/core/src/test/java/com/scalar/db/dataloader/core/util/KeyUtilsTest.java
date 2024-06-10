@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
-import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -31,7 +30,7 @@ class KeyUtilsTest {
 
   @Test
   void parseKeyValue_nullKeyValue_returnsNull() throws KeyParsingException {
-    assertNull(KeyUtils.parseKeyValue(null, null, tableMetadata));
+    assertNull(KeyUtils.parseKeyValue(null, null, null, tableMetadata));
   }
 
   @Test
@@ -43,14 +42,15 @@ class KeyUtilsTest {
     KeyParsingException exception =
         assertThrows(
             KeyParsingException.class,
-            () -> KeyUtils.parseKeyValue(keyValue, "table", tableMetadata));
+            () -> KeyUtils.parseKeyValue(keyValue, "namespace", "table", tableMetadata));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(columnName),
+        CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(
+            columnName, "table", "namespace"),
         exception.getMessage());
   }
 
   @Test
-  void parseKeyValue_validKeyValue_returnsKey() throws KeyParsingException, Base64Exception {
+  void parseKeyValue_validKeyValue_returnsKey() throws KeyParsingException {
     String columnName = "columnName";
     String value = "value";
     ColumnKeyValue keyValue = new ColumnKeyValue(columnName, value);
@@ -58,13 +58,13 @@ class KeyUtilsTest {
     when(tableMetadata.getColumnDataType(columnName)).thenReturn(dataType);
 
     Key expected = Key.newBuilder().add(TextColumn.of(columnName, value)).build();
-    Key actual = KeyUtils.parseKeyValue(keyValue, "table", tableMetadata);
+    Key actual = KeyUtils.parseKeyValue(keyValue, "namespace", "table", tableMetadata);
 
     assertEquals(expected, actual);
   }
 
   @Test
-  void createKey_boolean_returnsKey() throws Base64Exception {
+  void createKey_boolean_returnsKey() throws KeyParsingException {
     String columnName = "booleanColumn";
     String value = "true";
     Key expected = Key.newBuilder().add(BooleanColumn.of(columnName, true)).build();
@@ -73,7 +73,7 @@ class KeyUtilsTest {
   }
 
   @Test
-  void createKey_int_returnsKey() throws Base64Exception {
+  void createKey_int_returnsKey() throws KeyParsingException {
     String columnName = "intColumn";
     String value = "42";
     Key expected = Key.newBuilder().add(IntColumn.of(columnName, 42)).build();
@@ -82,7 +82,7 @@ class KeyUtilsTest {
   }
 
   @Test
-  void createKey_bigint_returnsKey() throws Base64Exception {
+  void createKey_bigint_returnsKey() throws KeyParsingException {
     String columnName = "bigintColumn";
     String value = "123456789012345";
     Key expected = Key.newBuilder().add(BigIntColumn.of(columnName, 123456789012345L)).build();
@@ -91,7 +91,7 @@ class KeyUtilsTest {
   }
 
   @Test
-  void createKey_float_returnsKey() throws Base64Exception {
+  void createKey_float_returnsKey() throws KeyParsingException {
     String columnName = "floatColumn";
     String value = "1.23";
     Key expected = Key.newBuilder().add(FloatColumn.of(columnName, 1.23f)).build();
@@ -100,7 +100,7 @@ class KeyUtilsTest {
   }
 
   @Test
-  void createKey_double_returnsKey() throws Base64Exception {
+  void createKey_double_returnsKey() throws KeyParsingException {
     String columnName = "doubleColumn";
     String value = "1.23";
     Key expected = Key.newBuilder().add(DoubleColumn.of(columnName, 1.23)).build();
@@ -109,7 +109,7 @@ class KeyUtilsTest {
   }
 
   @Test
-  void createKey_text_returnsKey() throws Base64Exception {
+  void createKey_text_returnsKey() throws KeyParsingException {
     String columnName = "textColumn";
     String value = "Hello, world!";
     Key expected = Key.newBuilder().add(TextColumn.of(columnName, value)).build();
@@ -118,7 +118,7 @@ class KeyUtilsTest {
   }
 
   @Test
-  void createKey_blob_returnsKey() throws Base64Exception {
+  void createKey_blob_returnsKey() throws KeyParsingException {
     String columnName = "blobColumn";
     String value =
         Base64.getEncoder().encodeToString("Hello, world!".getBytes(StandardCharsets.UTF_8));
@@ -134,6 +134,7 @@ class KeyUtilsTest {
   void createKey_invalidBase64_throwsBase64Exception() {
     String columnName = "blobColumn";
     String value = "invalidBase64";
-    assertThrows(Base64Exception.class, () -> KeyUtils.createKey(DataType.BLOB, columnName, value));
+    assertThrows(
+        KeyParsingException.class, () -> KeyUtils.createKey(DataType.BLOB, columnName, value));
   }
 }

@@ -3,8 +3,16 @@ package com.scalar.db.dataloader.core.util;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.dataloader.core.exception.Base64Exception;
-import com.scalar.db.io.*;
+import com.scalar.db.dataloader.core.exception.ColumnParsingException;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.stream.Stream;
@@ -59,7 +67,7 @@ class ColumnUtilsTest {
   @MethodSource("provideColumnsForCreateColumnFromValue")
   void createColumnFromValue_validInput_returnsColumn(
       DataType dataType, String columnName, String value, Column<?> expectedColumn)
-      throws Base64Exception {
+      throws ColumnParsingException {
     Column<?> actualColumn = ColumnUtils.createColumnFromValue(dataType, columnName, value);
     assertEquals(expectedColumn, actualColumn);
   }
@@ -81,9 +89,9 @@ class ColumnUtilsTest {
   void createColumnFromValue_invalidBase64_throwsBase64Exception() {
     String columnName = "blobColumn";
     String value = "invalid_base64";
-    Base64Exception exception =
+    ColumnParsingException exception =
         assertThrows(
-            Base64Exception.class,
+            ColumnParsingException.class,
             () -> ColumnUtils.createColumnFromValue(DataType.BLOB, columnName, value));
     assertEquals(
         CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(columnName),

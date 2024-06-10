@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.core.util;
 
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.dataloader.core.exception.Base64Exception;
+import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -12,12 +12,13 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import java.util.Base64;
+import javax.annotation.Nullable;
 
 /** Utility class for dealing and creating ScalarDB Columns */
 public final class ColumnUtils {
-  private ColumnUtils() {
-    // restrict instantiation
-  }
+
+  /** Restrict instantiation via private constructor */
+  private ColumnUtils() {}
 
   /**
    * Create a ScalarDB column from the given data type, column name, and value. Blob source values
@@ -27,10 +28,11 @@ public final class ColumnUtils {
    * @param columnName ScalarDB table column name
    * @param value Value for the ScalarDB column
    * @return ScalarDB column
-   * @throws Base64Exception if an error occurs while base64 decoding
+   * @throws ColumnParsingException if an error occurs while creating the column and parsing the
+   *     value
    */
-  public static Column<?> createColumnFromValue(DataType dataType, String columnName, String value)
-      throws Base64Exception {
+  public static Column<?> createColumnFromValue(
+      DataType dataType, String columnName, @Nullable String value) throws ColumnParsingException {
     try {
       switch (dataType) {
         case BOOLEAN:
@@ -64,11 +66,12 @@ public final class ColumnUtils {
           throw new AssertionError();
       }
     } catch (NumberFormatException e) {
-      throw new NumberFormatException(
-          CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(columnName));
+      throw new ColumnParsingException(
+          CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(columnName), e);
     } catch (IllegalArgumentException e) {
-      throw new Base64Exception(
-          CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(columnName));
+      throw new ColumnParsingException(
+          CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(columnName),
+          e);
     }
   }
 }
