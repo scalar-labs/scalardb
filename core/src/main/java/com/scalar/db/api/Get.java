@@ -169,6 +169,7 @@ public class Get extends Selection {
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
         .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
         .add("consistency", getConsistency())
         .toString();
   }
