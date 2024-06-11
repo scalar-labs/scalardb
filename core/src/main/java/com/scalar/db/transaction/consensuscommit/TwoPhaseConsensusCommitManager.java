@@ -60,7 +60,6 @@ public class TwoPhaseConsensusCommitManager
     StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
     storage = storageFactory.getStorage();
     admin = storageFactory.getStorageAdmin();
-
     config = new ConsensusCommitConfig(databaseConfig);
     tableMetadataManager =
         new TransactionTableMetadataManager(
