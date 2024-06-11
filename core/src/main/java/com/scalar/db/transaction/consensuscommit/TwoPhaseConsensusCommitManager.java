@@ -44,7 +44,6 @@ public class TwoPhaseConsensusCommitManager
     this.storage = storage;
     this.admin = admin;
     config = new ConsensusCommitConfig(databaseConfig);
-    throwIfGroupCommitIsEnabled(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -63,7 +62,6 @@ public class TwoPhaseConsensusCommitManager
     admin = storageFactory.getStorageAdmin();
 
     config = new ConsensusCommitConfig(databaseConfig);
-    throwIfGroupCommitIsEnabled(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -90,7 +88,6 @@ public class TwoPhaseConsensusCommitManager
     this.storage = storage;
     this.admin = admin;
     this.config = config;
-    throwIfGroupCommitIsEnabled(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -102,8 +99,8 @@ public class TwoPhaseConsensusCommitManager
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
-  private void throwIfGroupCommitIsEnabled(ConsensusCommitConfig config) {
-    if (CoordinatorGroupCommitter.isEnabled(config)) {
+  private void throwIfGroupCommitIsEnabled() {
+    if (config.isCoordinatorGroupCommitEnabled()) {
       throw new IllegalArgumentException(
           CoreError.CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED
               .buildMessage());
@@ -132,6 +129,7 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
+    throwIfGroupCommitIsEnabled();
     return createNewTransaction(txId, isolation, strategy);
   }
 
@@ -144,6 +142,7 @@ public class TwoPhaseConsensusCommitManager
   @VisibleForTesting
   TwoPhaseCommitTransaction join(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
+    throwIfGroupCommitIsEnabled();
     // If the transaction associated with the specified transaction ID is active, resume it
     if (isTransactionActive(txId)) {
       return resume(txId);

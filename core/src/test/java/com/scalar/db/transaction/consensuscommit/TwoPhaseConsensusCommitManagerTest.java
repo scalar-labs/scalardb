@@ -81,26 +81,6 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
-  public void constructor_GroupCommitEnabledGiven_ShouldThrowException() {
-    // Arrange
-    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
-
-    // Act Assert
-    assertThatThrownBy(
-            () ->
-                new TwoPhaseConsensusCommitManager(
-                    storage,
-                    admin,
-                    config,
-                    databaseConfig,
-                    coordinator,
-                    parallelExecutor,
-                    recovery,
-                    commit))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
   public void begin_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation()
       throws TransactionException {
     // Arrange
@@ -166,6 +146,24 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     manager.begin(ANY_TX_ID);
     assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void begin_NoArgumentGiven_WithGroupCommitEnabled_ShouldThrowException() {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.begin()).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void begin_TxIdGiven_WithGroupCommitEnabled_ShouldThrowException() {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -237,6 +235,24 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
+  public void start_NoArgumentGiven_WithGroupCommitEnabled_ShouldThrowException() {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.start()).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void start_TxIdGiven_WithGroupCommitEnabled_ShouldThrowException() {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.start(ANY_TX_ID)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void join_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
       throws TransactionException {
     // Arrange
@@ -263,6 +279,15 @@ public class TwoPhaseConsensusCommitManagerTest {
 
     // Assert
     assertThat(transaction1).isEqualTo(transaction2);
+  }
+
+  @Test
+  public void join_TxIdGiven_WithGroupCommitEnabled_ShouldThrowException() {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.join(ANY_TX_ID)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
