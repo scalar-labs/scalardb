@@ -100,7 +100,7 @@ public class TwoPhaseConsensusCommitManager
   }
 
   private void throwIfGroupCommitIsEnabled() {
-    if (config.isCoordinatorGroupCommitEnabled()) {
+    if (CoordinatorGroupCommitter.isEnabled(config)) {
       throw new IllegalArgumentException(
           CoreError.CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED
               .buildMessage());
