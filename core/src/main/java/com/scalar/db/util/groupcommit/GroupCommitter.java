@@ -22,26 +22,35 @@ import org.slf4j.LoggerFactory;
  * @param <CHILD_KEY> A key type to slot in NormalGroup which can contain a value ready to commit.
  * @param <FULL_KEY> A key type to DelayedGroup which contains a single slot and is
  *     singly-committed.
- * @param <EMIT_KEY> A key type that Emitter can interpret.
+ * @param <EMIT_PARENT_KEY> A parent-key type that Emitter can interpret.
+ * @param <EMIT_FULL_KEY> A full-key type that Emitter can interpret.
  * @param <V> A value type to be set to a slot.
  */
 @ThreadSafe
-public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implements Closeable {
+public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+    implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(GroupCommitter.class);
 
   // Background workers
-  private final GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupSizeFixWorker;
-  private final DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
+  private final GroupSizeFixWorker<
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      groupSizeFixWorker;
+  private final DelayedSlotMoveWorker<
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
       delayedSlotMoveWorker;
-  private final GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker;
+  private final GroupCleanupWorker<
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      groupCleanupWorker;
 
   // Monitor
   @Nullable private final GroupCommitMonitor groupCommitMonitor;
 
   // This contains logics of how to treat keys.
-  private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator;
+  private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+      keyManipulator;
 
-  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager;
+  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      groupManager;
 
   private final AtomicBoolean closing = new AtomicBoolean();
 
@@ -53,7 +62,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   public GroupCommitter(
       String label,
       GroupCommitConfig config,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+          keyManipulator) {
     logger.info("Starting GroupCommitter. Label: {}, Config: {}", label, config);
     this.keyManipulator = keyManipulator;
     this.groupManager = createGroupManager(config, keyManipulator);
@@ -87,7 +97,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
    *
    * @param emitter An emitter.
    */
-  public void setEmitter(Emittable<EMIT_KEY, V> emitter) {
+  public void setEmitter(Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter) {
     groupManager.setEmitter(emitter);
   }
 
@@ -130,7 +140,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
     Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys = keyManipulator.keysFromFullKey(fullKey);
     boolean failed = false;
     while (true) {
-      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> group = groupManager.getGroup(keys);
+      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> group =
+          groupManager.getGroup(keys);
       if (group.putValueToSlotAndWait(keys.childKey, value)) {
         return;
       }
@@ -195,41 +206,52 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> implem
   }
 
   @VisibleForTesting
-  GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createGroupManager(
-      GroupCommitConfig config,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+  GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      createGroupManager(
+          GroupCommitConfig config,
+          KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+              keyManipulator) {
     return new GroupManager<>(config, keyManipulator);
   }
 
   @VisibleForTesting
-  GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createGroupCleanupWorker(
-      String label,
-      GroupCommitConfig config,
-      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager) {
-    GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> worker =
+  GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      createGroupCleanupWorker(
+          String label,
+          GroupCommitConfig config,
+          GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+              groupManager) {
+    GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> worker =
         new GroupCleanupWorker<>(label, config.timeoutCheckIntervalMillis(), groupManager);
     groupManager.setGroupCleanupWorker(worker);
     return worker;
   }
 
   @VisibleForTesting
-  DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createDelayedSlotMoveWorker(
-      String label,
-      GroupCommitConfig config,
-      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
-      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
+  DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      createDelayedSlotMoveWorker(
+          String label,
+          GroupCommitConfig config,
+          GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+              groupManager,
+          GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+              groupCleanupWorker) {
     return new DelayedSlotMoveWorker<>(
         label, config.timeoutCheckIntervalMillis(), groupManager, groupCleanupWorker);
   }
 
   @VisibleForTesting
-  GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> createGroupSizeFixWorker(
-      String label,
-      GroupCommitConfig config,
-      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupManager,
-      DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> delayedSlotMoveWorker,
-      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> groupCleanupWorker) {
-    GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> worker =
+  GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      createGroupSizeFixWorker(
+          String label,
+          GroupCommitConfig config,
+          GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+              groupManager,
+          DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+              delayedSlotMoveWorker,
+          GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+              groupCleanupWorker) {
+    GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> worker =
         new GroupSizeFixWorker<>(
             label, config.timeoutCheckIntervalMillis(), delayedSlotMoveWorker, groupCleanupWorker);
     groupManager.setGroupSizeFixWorker(worker);

@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 
 // A group for multiple slots that will be group-committed at once.
 @ThreadSafe
-class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
-    extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> {
+class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+    extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> {
   private static final Logger logger = LoggerFactory.getLogger(NormalGroup.class);
 
   private final PARENT_KEY parentKey;
@@ -26,8 +26,9 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   NormalGroup(
       GroupCommitConfig config,
-      Emittable<EMIT_KEY, V> emitter,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY> keyManipulator) {
+      Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter,
+      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+          keyManipulator) {
     super(emitter, keyManipulator, config.slotCapacity(), config.oldGroupAbortTimeoutMillis());
     this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
     this.groupSizeFixTimeoutAtMillis =
@@ -52,7 +53,8 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   }
 
   @Nullable
-  synchronized List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> removeNotReadySlots() {
+  synchronized List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+      removeNotReadySlots() {
     if (!isSizeFixed()) {
       logger.info(
           "No need to remove any slot since the size isn't fixed yet. Too early. Group: {}", this);
@@ -61,10 +63,12 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
     // Lazy instantiation might be better, but it's likely there is a not-ready value slot since
     // it's already timed-out.
-    List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> removed = new ArrayList<>();
-    for (Entry<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> entry :
-        slots.entrySet()) {
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot = entry.getValue();
+    List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>> removed =
+        new ArrayList<>();
+    for (Entry<CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+        entry : slots.entrySet()) {
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot =
+          entry.getValue();
       if (!slot.isReady()) {
         removed.add(slot);
       }
@@ -78,7 +82,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
       return null;
     }
 
-    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : removed) {
+    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot : removed) {
       removeSlot(slot.key());
       logger.debug(
           "Removed a value slot from group to move it to delayed group. Group: {}, Slot: {}",
@@ -90,12 +94,13 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
   @Override
   public synchronized void delegateEmitTaskToWaiter() {
-    final AtomicReference<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>> emitterSlot =
-        new AtomicReference<>();
+    final AtomicReference<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+        emitterSlot = new AtomicReference<>();
 
     boolean isFirst = true;
     List<V> values = new ArrayList<>(slots.size());
-    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
+    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot :
+        slots.values()) {
       // Use the first slot as an emitter.
       if (isFirst) {
         isFirst = false;
@@ -113,12 +118,13 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
               logger.info("This group is already done, but trying to emit. Group: {}", this);
               return;
             }
-            emitter.execute(keyManipulator.emitKeyFromParentKey(parentKey), values);
+            emitter.emitNormalGroup(keyManipulator.emitParentKeyFromParentKey(parentKey), values);
 
             synchronized (this) {
               // Wake up the other waiting threads.
               // Pass null since the value is already emitted by the thread of `firstSlot`.
-              for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
+              for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot :
+                  slots.values()) {
                 if (slot != emitterSlot.get()) {
                   slot.markAsSuccess();
                 }
@@ -130,7 +136,8 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
 
             // Let other threads know the exception.
             synchronized (this) {
-              for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V> slot : slots.values()) {
+              for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot :
+                  slots.values()) {
                 if (slot != emitterSlot.get()) {
                   slot.markAsFailed(exception);
                 }
@@ -161,7 +168,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_KEY, V>
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof NormalGroup)) return false;
-    NormalGroup<?, ?, ?, ?, ?> that = (NormalGroup<?, ?, ?, ?, ?>) o;
+    NormalGroup<?, ?, ?, ?, ?, ?> that = (NormalGroup<?, ?, ?, ?, ?, ?>) o;
     return Objects.equal(parentKey, that.parentKey);
   }
 

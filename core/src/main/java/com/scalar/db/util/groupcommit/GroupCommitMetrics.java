@@ -3,7 +3,6 @@ package com.scalar.db.util.groupcommit;
 import com.google.common.base.MoreObjects;
 import javax.annotation.concurrent.Immutable;
 
-// TODO: Remove after introducing a proper metrics.
 @Immutable
 class GroupCommitMetrics {
   private final int queueLengthOfGroupCloseWorker;

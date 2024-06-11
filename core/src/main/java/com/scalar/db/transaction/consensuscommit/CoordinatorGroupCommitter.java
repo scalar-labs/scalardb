@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class CoordinatorGroupCommitter
-    extends GroupCommitter<String, String, String, String, Snapshot> {
+    extends GroupCommitter<String, String, String, String, String, Snapshot> {
   CoordinatorGroupCommitter(GroupCommitConfig config) {
     super("coordinator", config, new CoordinatorGroupCommitKeyManipulator());
   }
@@ -24,15 +24,19 @@ public class CoordinatorGroupCommitter
   }
 
   public static Optional<CoordinatorGroupCommitter> from(ConsensusCommitConfig config) {
-    if (config.isCoordinatorGroupCommitEnabled()) {
+    if (isEnabled(config)) {
       return Optional.of(new CoordinatorGroupCommitter(config));
     } else {
       return Optional.empty();
     }
   }
 
-  static class CoordinatorGroupCommitKeyManipulator
-      implements KeyManipulator<String, String, String, String> {
+  public static boolean isEnabled(ConsensusCommitConfig config) {
+    return config.isCoordinatorGroupCommitEnabled();
+  }
+
+  public static class CoordinatorGroupCommitKeyManipulator
+      implements KeyManipulator<String, String, String, String, String> {
     private static final int PRIMARY_KEY_SIZE = 24;
     private static final char DELIMITER = ':';
     private static final int MAX_FULL_KEY_SIZE = 64;
@@ -109,15 +113,15 @@ public class CoordinatorGroupCommitter
     }
 
     @Override
-    public String emitKeyFromFullKey(String s) {
+    public String emitFullKeyFromFullKey(String fullKey) {
       // Return the string as is since the value is already String.
-      return s;
+      return fullKey;
     }
 
     @Override
-    public String emitKeyFromParentKey(String s) {
+    public String emitParentKeyFromParentKey(String parentKey) {
       // Return the string as is since the value is already String.
-      return s;
+      return parentKey;
     }
   }
 }

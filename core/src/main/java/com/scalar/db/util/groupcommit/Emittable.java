@@ -5,10 +5,12 @@ import java.util.List;
 /**
  * An emittable interface to emit multiple values at once.
  *
- * @param <EMIT_KEY> A key type that Emitter can interpret.
+ * @param <FULL_KEY> A full-key type that Emitter can interpret.
+ * @param <PARENT_KEY> A parent-key type that Emitter can interpret.
  * @param <V> A value type to be set to a slot.
  */
-@FunctionalInterface
-public interface Emittable<EMIT_KEY, V> {
-  void execute(EMIT_KEY key, List<V> values) throws Exception;
+public interface Emittable<PARENT_KEY, FULL_KEY, V> {
+  void emitNormalGroup(PARENT_KEY parentKey, List<V> values) throws Exception;
+
+  void emitDelayedGroup(FULL_KEY fullKey, V value) throws Exception;
 }

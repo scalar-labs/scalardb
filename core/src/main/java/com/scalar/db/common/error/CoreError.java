@@ -634,9 +634,15 @@ public enum CoreError implements ScalarDbError {
       "Resuming a transaction is not allowed in single CRUD operation transactions",
       "",
       ""),
-  GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
+  CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED(
       Category.USER_ERROR,
       "0141",
+      "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
+      "",
+      ""),
+  GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
+      Category.USER_ERROR,
+      "0142",
       "This operation is supported only when no conditions are specified at all. "
           + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first",
       "",

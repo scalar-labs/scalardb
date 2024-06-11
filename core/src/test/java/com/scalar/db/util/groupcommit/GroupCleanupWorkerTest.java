@@ -21,13 +21,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class GroupCleanupWorkerTest {
   private static final int LONG_WAIT_MILLIS = 500;
-  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup1;
-  @Mock private NormalGroup<String, String, String, String, Integer> normalGroup2;
-  @Mock private DelayedGroup<String, String, String, String, Integer> delayedGroup1;
-  @Mock private DelayedGroup<String, String, String, String, Integer> delayedGroup2;
-  @Mock private GroupManager<String, String, String, String, Integer> groupManager;
-  private GroupCleanupWorker<String, String, String, String, Integer> worker;
-  private GroupCleanupWorker<String, String, String, String, Integer> workerWithWait;
+  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup1;
+  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup2;
+  @Mock private DelayedGroup<String, String, String, String, String, Integer> delayedGroup1;
+  @Mock private DelayedGroup<String, String, String, String, String, Integer> delayedGroup2;
+  @Mock private GroupManager<String, String, String, String, String, Integer> groupManager;
+  private GroupCleanupWorker<String, String, String, String, String, Integer> worker;
+  private GroupCleanupWorker<String, String, String, String, String, Integer> workerWithWait;
 
   @BeforeEach
   void setUp() {
@@ -42,7 +42,7 @@ class GroupCleanupWorkerTest {
   }
 
   private void doReturnOldGroupAbortTimeoutAtMillis(
-      Group<String, String, String, String, Integer> group) {
+      Group<String, String, String, String, String, Integer> group) {
     long oldGroupAbortMillis = System.currentTimeMillis() + 60 * 1000;
     doReturn(oldGroupAbortMillis).when(group).oldGroupAbortTimeoutAtMillis();
   }
