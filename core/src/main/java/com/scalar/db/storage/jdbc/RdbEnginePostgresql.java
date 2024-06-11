@@ -141,6 +141,16 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isDuplicateColumnError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
+    // FIXME
+    // 23505: unique_violation
+    return e.getSQLState().equals("42701");
+  }
+
+  @Override
   public boolean isUndefinedTableError(SQLException e) {
     if (e.getSQLState() == null) {
       return false;

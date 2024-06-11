@@ -21,6 +21,8 @@ public interface RdbEngineStrategy {
 
   boolean isDuplicateKeyError(SQLException e);
 
+  boolean isDuplicateColumnError(SQLException e);
+
   boolean isUndefinedTableError(SQLException e);
 
   boolean isConflict(SQLException e);

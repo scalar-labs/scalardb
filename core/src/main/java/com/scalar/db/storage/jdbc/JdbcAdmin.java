@@ -853,6 +853,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       execute(connection, addNewColumnStatement);
     } catch (SQLException e) {
+      if (rdbEngine.isDuplicateColumnError(e)) {
+        return;
+      }
+      // FIXME Remove this
+      System.out.printf(
+          "EXCEPTION! Class:%s, Message:%s, SQLState:%s, ErrorCode:%s\n",
+          e.getClass(), e.getMessage(), e.getSQLState(), e.getErrorCode());
       throw new ExecutionException(
           String.format(
               "Adding the new %s column to the %s table failed",

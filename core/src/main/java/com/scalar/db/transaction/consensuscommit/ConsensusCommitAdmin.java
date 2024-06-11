@@ -278,6 +278,29 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     admin.upgrade(options);
+    upgradeCoordinatorTables(options);
+  }
+
+  private void upgradeCoordinatorTables(Map<String, String> options) throws ExecutionException {
+    repairCoordinatorTables(options);
+
+    TableMetadata tableMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+    if (tableMetadata == null) {
+      // TODO: Does this take place right after repairCoordinatorTables()?
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(
+              ScalarDbUtils.getFullTableName(coordinatorNamespace, Coordinator.TABLE)));
+    }
+
+    for (String columnName : Coordinator.TABLE_METADATA.getColumnNames()) {
+      if (tableMetadata.getPartitionKeyNames().contains(columnName)
+          || tableMetadata.getClusteringKeyNames().contains(columnName)) {
+        return;
+      }
+      DataType columnDataType = Coordinator.TABLE_METADATA.getColumnDataType(columnName);
+      admin.addRawColumnToTable(
+          coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
+    }
   }
 
   @Override

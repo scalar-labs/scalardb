@@ -1358,9 +1358,26 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in DynamoDB");
+      String nonPrefixedNamespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(nonPrefixedNamespace, table);
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
+
+      upsertTableMetadata(namespace, table, updatedTableMetadata);
+    } catch (ExecutionException e) {
+      // FIXME Remove this
+      System.out.printf(
+          "EXCEPTION! Class:%s, Message:%s\n", e.getCause().getClass(), e.getCause().getMessage());
+
+      throw new ExecutionException(
+          String.format(
+              "Adding the new %s column to the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
   }
 
   @Override

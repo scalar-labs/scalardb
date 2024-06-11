@@ -634,8 +634,23 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType) {
-    throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
+      upsertTableMetadata(namespace, table, updatedTableMetadata);
+    } catch (ExecutionException e) {
+      // FIXME Remove this
+      System.out.printf("EXCEPTION! Class:%s, Message:%s\n", e.getClass(), e.getMessage());
+
+      throw new ExecutionException(
+          String.format(
+              "Adding the new %s column to the %s container failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
   }
 
   @Override

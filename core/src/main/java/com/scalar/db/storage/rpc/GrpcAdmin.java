@@ -335,6 +335,7 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType) {
+    // FIXME
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in ScalarDB Server");
   }

@@ -124,6 +124,14 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isDuplicateColumnError(SQLException e) {
+    // FIXME
+    // SQLState:S0004, ErrorCode:2705
+    // Column names in each table must be unique.
+    return e.getErrorCode() == 2705;
+  }
+
+  @Override
   public boolean isUndefinedTableError(SQLException e) {
     // 208: Invalid object name '%.*ls'.
     return e.getErrorCode() == 208;

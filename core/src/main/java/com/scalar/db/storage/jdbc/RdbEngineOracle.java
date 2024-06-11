@@ -162,6 +162,14 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isDuplicateColumnError(SQLException e) {
+    // FIXME
+    // ORA-01430: column being added already exists in table
+    // SQLState:72000, ErrorCode:1430
+    return e.getErrorCode() == 1430;
+  }
+
+  @Override
   public boolean isUndefinedTableError(SQLException e) {
     // ORA-00942: Table or view does not exist
     return e.getErrorCode() == 942;

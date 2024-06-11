@@ -26,6 +26,7 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -276,9 +277,40 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType) {
-    throw new UnsupportedOperationException(
-        CoreError.CASSANDRA_IMPORT_NOT_SUPPORTED.buildMessage());
+      String namespace, String table, String columnName, DataType columnType)
+      throws ExecutionException {
+    // Check if the column exists.
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    if (tableMetadata.getColumnNames().contains(columnName)
+        && tableMetadata.getColumnDataType(columnName) == columnType) {
+      // The column already exists. Nothing to do.
+      return;
+    }
+
+    try {
+      String alterTableQuery =
+          SchemaBuilder.alterTable(namespace, table)
+              .addColumn(columnName)
+              .type(toCassandraDataType(columnType))
+              .getQueryString();
+
+      clusterManager.getSession().execute(alterTableQuery);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      // FIXME Remove this
+      System.out.printf("EXCEPTION! Class:%s, Message:%s\n", e.getClass(), e.getMessage());
+
+      throw new ExecutionException(
+          String.format(
+              "Adding the new %s column to the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
   }
 
   @Override

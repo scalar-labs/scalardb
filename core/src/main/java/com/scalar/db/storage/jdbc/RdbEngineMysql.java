@@ -145,6 +145,13 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isDuplicateColumnError(SQLException e) {
+    // FIXME
+    // Message:Duplicate column name, SQLState:42S21, ErrorCode:1060
+    return e.getErrorCode() == 1060;
+  }
+
+  @Override
   public boolean isUndefinedTableError(SQLException e) {
     // Error number: 1049; Symbol: ER_BAD_DB_ERROR; SQLSTATE: 42000
     // Message: Unknown database '%s'

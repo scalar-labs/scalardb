@@ -54,6 +54,13 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
+  public boolean isDuplicateColumnError(SQLException e) {
+    // FIXME
+    // SQL error or missing database (duplicate column name: c1), SQLState:null, ErrorCode:1
+    return e.getErrorCode() == 1 && e.getMessage().contains("duplicate column name:");
+  }
+
+  @Override
   public boolean isUndefinedTableError(SQLException e) {
     // Error code: SQLITE_ERROR (1)
     // Message: SQL error or missing database (no such table: XXX)
