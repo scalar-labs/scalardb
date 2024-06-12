@@ -78,8 +78,8 @@ jobs:
             sleep 5
           done
           sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
-          # sudo rm $JAVA_HOME/jre/lib/security/cacerts
-          # sudo ln -s /etc/ssl/certs/java/cacerts $JAVA_HOME/jre/lib/security/cacerts
+          sudo rm $JAVA_HOME/jre/lib/security/cacerts
+          sudo ln -s /etc/ssl/certs/java/cacerts $JAVA_HOME/jre/lib/security/cacerts
           sudo update-ca-certificates -f
 
       - name: Generate unique prefix using the epoch
