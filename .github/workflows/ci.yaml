@@ -71,7 +71,8 @@ jobs:
             curl -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
             tail_of_cert=$(tail -1 ~/emulatorcert.crt)
             echo "tail_of_cert: $tail_of_cert"
-            if [[ $tail_of_cert == "-----END CERTIFICATE-----" ]]; then
+            if grep 'END CERTIFICATE' ~/emulatorcert.crt > /dev/null
+            then
               break
             fi
             echo 'Retrying since the file is broken...'
