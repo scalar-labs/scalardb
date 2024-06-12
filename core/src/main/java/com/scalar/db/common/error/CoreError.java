@@ -616,16 +616,10 @@ public enum CoreError implements ScalarDbError {
       "Invalid key: Column %s does not exist in the table %s in namespace %s.",
       "",
       ""),
-  DATA_LOADER_INVALID_VALUE_KEY_PARSING_FAILED(
-      Category.USER_ERROR,
-      "0137",
-      "Parsing of key value %s failed for table %s in namespace %s. Details:%s.",
-      "",
-      ""),
   DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
-      Category.USER_ERROR, "0138", "Invalid base64 encoding for blob value for column %s", "", ""),
+      Category.USER_ERROR, "0137", "Invalid base64 encoding for blob value for column %s", "", ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
-      Category.USER_ERROR, "0139", "Invalid number specified for column %s", "", ""),
+      Category.USER_ERROR, "0138", "Invalid number specified for column %s", "", ""),
 
   //
   // Errors for the concurrency error category
