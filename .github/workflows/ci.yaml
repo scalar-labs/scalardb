@@ -61,6 +61,12 @@ jobs:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Install TLS/SSL certificate
+        run: |
+          curl -k https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
+          sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
+          sudo update-ca-certificates
+
       - name: Generate unique prefix using the epoch
         run: |
           echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
