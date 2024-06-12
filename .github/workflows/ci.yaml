@@ -78,14 +78,13 @@ jobs:
             sleep 5
           done
           sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
-          update-ca-certificates -h
           sudo update-ca-certificates -f
-          echo '$$$$ ls -l $JAVA_HOME/jre/lib/security/'
-          ls -l $JAVA_HOME/jre/lib/security/
-          echo '$$$$ ls -l /etc/ssl/certs/adoptium/'
-          ls -l /etc/ssl/certs/adoptium/
-          echo '$$$$ ls -l /etc/ssl/certs/java/'
-          ls -l /etc/ssl/certs/java/
+          # echo '$$$$ ls -l $JAVA_HOME/jre/lib/security/'
+          # ls -l $JAVA_HOME/jre/lib/security/
+          # echo '$$$$ ls -l /etc/ssl/certs/adoptium/'
+          # ls -l /etc/ssl/certs/adoptium/
+          # echo '$$$$ ls -l /etc/ssl/certs/java/'
+          # ls -l /etc/ssl/certs/java/
           # sudo rm $JAVA_HOME/jre/lib/security/cacerts
           # sudo ln -s /etc/ssl/certs/adoptium/cacerts $JAVA_HOME/jre/lib/security/cacerts
           # sudo rm /etc/ssl/certs/java/cacerts
