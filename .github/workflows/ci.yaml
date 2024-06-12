@@ -75,6 +75,8 @@ jobs:
           sudo ls -ltr $JAVA_HOME/
           echo '[ls -ltr $JAVA_HOME/jre]'
           sudo ls -ltr $JAVA_HOME/jre
+          echo '[ls -ltr $JAVA_HOME/jre/lib]'
+          sudo ls -ltr $JAVA_HOME/jre/lib
           echo '[ls -ltr $JAVA_HOME/lib]'
           sudo ls -ltr $JAVA_HOME/lib
 
