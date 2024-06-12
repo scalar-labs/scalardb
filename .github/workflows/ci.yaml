@@ -69,16 +69,12 @@ jobs:
           curl -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
           sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
           sudo update-ca-certificates -f
-          echo '[ls -ltr /etc/ssl/certs]'
-          sudo ls -ltr /etc/ssl/certs
+          echo '[ls -ltr /etc/ssl/certs/java]'
+          sudo ls -ltr /etc/ssl/certs/java
           echo '[ls -ltr $JAVA_HOME]'
           sudo ls -ltr $JAVA_HOME
           echo '[ls -ltr $JAVA_HOME/lib]'
           sudo ls -ltr $JAVA_HOME/lib
-          echo '[ls -ltr $JAVA_HOME/lib/security]'
-          sudo ls -ltr $JAVA_HOME/lib/security
-          echo '[ls -ltr $JAVA_HOME/lib/security/cacerts]'
-          sudo ls -ltr $JAVA_HOME/lib/security/cacerts
 
       - name: Generate unique prefix using the epoch
         run: |
