@@ -88,6 +88,8 @@ jobs:
           ls -l /etc/ssl/certs/java/
           # sudo rm $JAVA_HOME/jre/lib/security/cacerts
           # sudo ln -s /etc/ssl/certs/adoptium/cacerts $JAVA_HOME/jre/lib/security/cacerts
+          sudo rm /etc/ssl/certs/java/cacerts
+          sudo ln -s /etc/ssl/certs/adoptium/cacerts /etc/ssl/certs/java/cacerts
 
       - name: Generate unique prefix using the epoch
         run: |
