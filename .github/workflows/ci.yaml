@@ -68,10 +68,14 @@ jobs:
           sudo update-ca-certificates
           echo '[ls -ltr /etc/ssl/certs]'
           sudo ls -ltr /etc/ssl/certs
-          echo '[ls -ltr /etc/ssl/certs/java/cacerts]'
-          sudo ls -ltr /etc/ssl/certs/java/cacerts
-          echo '[JAVA_HOME]'
-          echo $JAVA_HOME
+          echo '[ls -ltr $JAVA_HOME]'
+          sudo ls -ltr $JAVA_HOME
+          echo '[ls -ltr $JAVA_HOME/lib]'
+          sudo ls -ltr $JAVA_HOME/lib
+          echo '[ls -ltr $JAVA_HOME/lib/security]'
+          sudo ls -ltr $JAVA_HOME/lib/security
+          echo '[ls -ltr $JAVA_HOME/lib/security/cacerts]'
+          sudo ls -ltr $JAVA_HOME/lib/security/cacerts
 
       - name: Generate unique prefix using the epoch
         run: |
