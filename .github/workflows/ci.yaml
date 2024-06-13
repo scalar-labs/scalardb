@@ -67,56 +67,59 @@ jobs:
       - name: Run Cosmos DB Emulator
         run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest /usr/local/bin/cosmos/start.sh Consistency=Strong
 
-      - name: Install TLS/SSL certificate
-        run: |
-          # These retries are needed since the downloaded file may be a JSON response.
-          while true;
-          do
-            curl -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
-            if grep 'END CERTIFICATE' ~/emulatorcert.crt > /dev/null
-            then
-              break
-            fi
-            echo 'Retrying since the file is broken...'
-            sleep 5
-          done
-          sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
-          sudo update-ca-certificates -f
-          # echo '$$$$ ls -l $JAVA_HOME/jre/lib/security/'
-          # ls -l $JAVA_HOME/jre/lib/security/
-          # echo '$$$$ ls -l /etc/ssl/certs/adoptium/'
-          # ls -l /etc/ssl/certs/adoptium/
-          # echo '$$$$ ls -l /etc/ssl/certs/java/'
-          # ls -l /etc/ssl/certs/java/
-          # sudo rm $JAVA_HOME/jre/lib/security/cacerts
-          # sudo ln -s /etc/ssl/certs/adoptium/cacerts $JAVA_HOME/jre/lib/security/cacerts
-          # sudo rm /etc/ssl/certs/java/cacerts
-          # sudo ln -s /etc/ssl/certs/adoptium/cacerts /etc/ssl/certs/java/cacerts
-          # echo '$$$$$$$$$$$$$$$$$$$$$ /etc/ssl/certs/adoptium/cacerts $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
-          # sudo keytool -v -list -keystore /etc/ssl/certs/adoptium/cacerts # This doesn't contain `emulatorcert`
-          # echo '$$$$$$$$$$$$$$$$$$$$$ /etc/ssl/certs/java/cacerts $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
-          # sudo keytool -v -list -keystore /etc/ssl/certs/java/cacerts # This contains `emulatorcert`
-          sudo rm $JAVA_HOME/jre/lib/security/cacerts
-          sudo ln -s /etc/ssl/certs/java/cacerts $JAVA_HOME/jre/lib/security/cacerts
+      - name: Explore Cosmos DB Emulator
+        run: docker exec -it $(docker ps --no-trunc -a | grep azure-cosmos-emulator | head -1 | awk '{print $1}') cat /usr/local/bin/cosmos/start.sh
 
-      - name: Generate unique prefix using the epoch
-        run: |
-          echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
+#     - name: Install TLS/SSL certificate
+#       run: |
+#         # These retries are needed since the downloaded file may be a JSON response.
+#         while true;
+#         do
+#           curl -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
+#           if grep 'END CERTIFICATE' ~/emulatorcert.crt > /dev/null
+#           then
+#             break
+#           fi
+#           echo 'Retrying since the file is broken...'
+#           sleep 5
+#         done
+#         sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
+#         sudo update-ca-certificates -f
+#         # echo '$$$$ ls -l $JAVA_HOME/jre/lib/security/'
+#         # ls -l $JAVA_HOME/jre/lib/security/
+#         # echo '$$$$ ls -l /etc/ssl/certs/adoptium/'
+#         # ls -l /etc/ssl/certs/adoptium/
+#         # echo '$$$$ ls -l /etc/ssl/certs/java/'
+#         # ls -l /etc/ssl/certs/java/
+#         # sudo rm $JAVA_HOME/jre/lib/security/cacerts
+#         # sudo ln -s /etc/ssl/certs/adoptium/cacerts $JAVA_HOME/jre/lib/security/cacerts
+#         # sudo rm /etc/ssl/certs/java/cacerts
+#         # sudo ln -s /etc/ssl/certs/adoptium/cacerts /etc/ssl/certs/java/cacerts
+#         # echo '$$$$$$$$$$$$$$$$$$$$$ /etc/ssl/certs/adoptium/cacerts $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
+#         # sudo keytool -v -list -keystore /etc/ssl/certs/adoptium/cacerts # This doesn't contain `emulatorcert`
+#         # echo '$$$$$$$$$$$$$$$$$$$$$ /etc/ssl/certs/java/cacerts $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
+#         # sudo keytool -v -list -keystore /etc/ssl/certs/java/cacerts # This contains `emulatorcert`
+#         sudo rm $JAVA_HOME/jre/lib/security/cacerts
+#         sudo ln -s /etc/ssl/certs/java/cacerts $JAVA_HOME/jre/lib/security/cacerts
 
-      - name: Setup and execute Gradle 'integrationTestCosmos' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
+#     - name: Generate unique prefix using the epoch
+#       run: |
+#         echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
 
-      - name : Delete gradle daemon log files
-        if: always()
+#     - name: Setup and execute Gradle 'integrationTestCosmos' task
+#       uses: gradle/gradle-build-action@v3
+#       with:
+#         arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
+
+#     - name : Delete gradle daemon log files
+#       if: always()
 #       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
 #       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
-        run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
+#       run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
 
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cosmos_integration_test_reports
-          path: core/build/reports/tests/integrationTestCosmos
+#     - name: Upload Gradle test reports
+#       if: always()
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: cosmos_integration_test_reports
+#         path: core/build/reports/tests/integrationTestCosmos
