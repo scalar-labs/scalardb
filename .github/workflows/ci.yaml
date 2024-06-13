@@ -36,8 +36,7 @@ env:
 jobs:
   integration-test-for-cosmos:
     name: Cosmos DB integration test
-    # runs-on: ubuntu-latest
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     services:
       dynamodb:
