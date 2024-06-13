@@ -55,7 +55,7 @@ jobs:
           - 10350:10350
         env:
           AZURE_COSMOS_EMULATOR_ARGS: /Consistency=Strong
-          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 4
+          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 2
 
     steps:
       - uses: actions/checkout@v4
