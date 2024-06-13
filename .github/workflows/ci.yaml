@@ -65,7 +65,7 @@ jobs:
         run: sudo apt-get install ca-certificates-java
 
       - name: Run Cosmos DB Emulator
-        run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest Consistency=Strong
+        run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest /usr/local/bin/cosmos/start.sh Consistency=Strong
 
       - name: Install TLS/SSL certificate
         run: |
