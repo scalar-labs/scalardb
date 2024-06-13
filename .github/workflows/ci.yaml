@@ -44,6 +44,7 @@ jobs:
         ports:
           - 8081:8081
           - 10250-10255:10250-10255
+        options: Consistency=Strong
 
     steps:
       - uses: actions/checkout@v4
