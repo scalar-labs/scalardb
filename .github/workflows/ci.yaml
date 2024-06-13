@@ -43,9 +43,19 @@ jobs:
         image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
         ports:
           - 8081:8081
-          - 10250-10255:10250-10255
+          - 8900:8900
+          - 8901:8901
+          - 8902:8902
+          - 10250:10250
+          - 10251:10251
+          - 10252:10252
+          - 10253:10253
+          - 10254:10254
+          - 10255:10255
+          - 10350:10350
         env:
           AZURE_COSMOS_EMULATOR_ARGS: /Consistency=Strong
+          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 4
 
     steps:
       - uses: actions/checkout@v4
@@ -113,12 +123,11 @@ jobs:
         with:
           arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
 
-# FIXME
-#     - name : Delete gradle daemon log files
-#       if: always()
+      - name : Delete gradle daemon log files
+        if: always()
 #       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
 #       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
-#       run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
+        run : find $HOME/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
 
       - name: Upload Gradle test reports
         if: always()
