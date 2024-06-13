@@ -107,13 +107,12 @@ public class CrudHandler {
   public List<Result> scan(Scan scan) throws CrudException {
     List<Result> results = scanInternal(scan);
 
-    // We verify if this scan does not overlap previous writes after the actual scan. For a
-    // cross-partition scan, this must be done here, using the obtained keys in the scan set and
-    // scan condition. This is because the condition (i.e., where clause) is arbitrary in the
-    // cross-partition scan, and thus, the write command may not have columns used in the condition,
-    // which are necessary to determine overlaps. For a scan with clustering keys, we can determine
-    // overlaps without the actual scan, but we also check it here for consistent logic and
-    // readability.
+    // We verify if this scan does not overlap previous writes using the actual scan result. Because
+    // we support arbitrary conditions in the where clause of a scan (not only ScanAll, but also
+    // Scan and ScanWithIndex), we cannot determine whether the scan results will include a record
+    // whose key is the same as the key specified in the previous writes, without knowing the
+    // obtained keys in the actual scan. With this check, users can avoid seeing unexpected scan
+    // results that have not included previous writes yet.
     snapshot.verify(scan);
 
     return results;

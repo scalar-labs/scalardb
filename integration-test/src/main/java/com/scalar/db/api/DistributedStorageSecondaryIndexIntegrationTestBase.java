@@ -212,6 +212,39 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     }
   }
 
+  @Test
+  public void scan_WithSecondaryIndexValueAndConjunctions_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    DataType secondaryIndexType = DataType.INT;
+    truncateTable(secondaryIndexType);
+
+    // Arrange
+    Value<?> secondaryIndexValue = getRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
+    prepareRecords(secondaryIndexType, secondaryIndexValue);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(getNamespace())
+            .table(getTableName(secondaryIndexType))
+            .indexKey(Key.ofInt(INDEX_COL_NAME, secondaryIndexValue.getAsInt()))
+            .where(ConditionBuilder.column(PARTITION_KEY).isEqualToInt(1))
+            .or(ConditionBuilder.column(PARTITION_KEY).isEqualToInt(2))
+            .build();
+
+    // Act
+    List<Result> results = scanAll(scan);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).contains(PARTITION_KEY)).isTrue();
+    assertThat(results.get(0).getInt(PARTITION_KEY)).isEqualTo(1);
+    assertThat(results.get(0).contains(INDEX_COL_NAME)).isTrue();
+    assertThat(results.get(0).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getAsInt());
+    assertThat(results.get(1).contains(PARTITION_KEY)).isTrue();
+    assertThat(results.get(1).getInt(PARTITION_KEY)).isEqualTo(2);
+    assertThat(results.get(1).contains(INDEX_COL_NAME)).isTrue();
+    assertThat(results.get(1).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getAsInt());
+  }
+
   private void prepareRecords(DataType secondaryIndexType, Value<?> secondaryIndexValue)
       throws ExecutionException {
     for (int i = 0; i < DATA_NUM; i++) {

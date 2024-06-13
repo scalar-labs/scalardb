@@ -3,6 +3,7 @@ plugins {
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'maven-publish'
     id 'signing'
+    id 'base'
 }
 
 dependencies {
@@ -52,7 +53,9 @@ spotbugsTest.reports {
 }
 spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
-archivesBaseName = "scalardb-integration-test"
+base {
+    archivesName = "scalardb-integration-test"
+}
 
 // for archiving and uploading to maven central
 publishing {

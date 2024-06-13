@@ -15,23 +15,10 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
   }
 
   @Override
-  protected String getNamespace1() {
-    return getNamespace(super.getNamespace1());
-  }
-
-  @Override
-  protected String getNamespace2() {
-    return getNamespace(super.getNamespace2());
-  }
-
-  @Override
-  protected String getNamespace3() {
-    return getNamespace(super.getNamespace3());
-  }
-
-  private String getNamespace(String namespace) {
+  protected String getNamespaceBaseName() {
+    String namespaceBaseName = super.getNamespaceBaseName();
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
+    return databasePrefix.map(prefix -> prefix + namespaceBaseName).orElse(namespaceBaseName);
   }
 
   @Override

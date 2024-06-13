@@ -1,7 +1,5 @@
 # ScalarDB
 
-[![CI](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/scalar-labs/scalardb/actions/workflows/ci.yaml)
-
 ScalarDB is a universal transaction manager that achieves:
 - database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
 - multi-storage/database/service ACID transactions that can span multiple (possibly different) databases, storages, and services.
@@ -27,19 +25,24 @@ To add a dependency using Maven:
 ```
 
 ## Docs
-* [Getting started](docs/getting-started-with-scalardb.md)
-* [Java API Guide](docs/api-guide.md)
-* [ScalarDB Samples](https://github.com/scalar-labs/scalardb-samples)
-* [ScalarDB Server](docs/scalardb-server.md)
-* [Multi-storage Transactions](docs/multi-storage-transactions.md)
-* [Two-phase Commit Transactions](docs/two-phase-commit-transactions.md)
-* [Design document](docs/design.md)
-* [Schema Loader](docs/schema-loader.md)
-* [Requirements and Recommendations for the Underlying Databases of ScalarDB](docs/requirements.md)
-* [How to Back up and Restore](docs/backup-restore.md)
-* [ScalarDB supported databases](docs/scalardb-supported-databases.md)
-* [Configurations](docs/configurations.md)
-* [Storage abstraction](docs/storage-abstraction.md)
+
+* [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/latest/)
+  * [ScalarDB Overview](https://scalardb.scalar-labs.com/docs/latest/overview)
+  * [ScalarDB Design Document](https://scalardb.scalar-labs.com/docs/latest/design/)
+  * [Getting Started with ScalarDB](https://scalardb.scalar-labs.com/docs/latest/getting-started-with-scalardb/)
+  * [Getting Started with ScalarDB by Using Kotlin](https://scalardb.scalar-labs.com/docs/latest/getting-started-with-scalardb-by-using-kotlin/)
+  * [Add ScalarDB to Your Build](https://scalardb.scalar-labs.com/docs/latest/add-scalardb-to-your-build/)
+  * [ScalarDB Java API Guide](https://scalardb.scalar-labs.com/docs/latest/api-guide/)
+  * [Multi-Storage Transactions](https://scalardb.scalar-labs.com/docs/latest/multi-storage-transactions/)
+  * [Transactions with a Two-Phase Commit Interface](https://scalardb.scalar-labs.com/docs/latest/two-phase-commit-transactions/)
+  * [ScalarDB Schema Loader](https://scalardb.scalar-labs.com/docs/latest/schema-loader/)
+  * [Importing Existing Tables to ScalarDB by Using ScalarDB Schema Loader](https://scalardb.scalar-labs.com/docs/latest/schema-loader-import/)
+  * [Requirements and Recommendations for the Underlying Databases of ScalarDB](https://scalardb.scalar-labs.com/docs/latest/requirements/)
+  * [How to Back Up and Restore Databases Used Through ScalarDB](https://scalardb.scalar-labs.com/docs/latest/backup-restore/)
+  * [ScalarDB Supported Databases](https://scalardb.scalar-labs.com/docs/latest/scalardb-supported-databases/)
+  * [ScalarDB Configurations](https://scalardb.scalar-labs.com/docs/latest/configurations/)
+  * [Storage Abstraction and API Guide](https://scalardb.scalar-labs.com/docs/latest/storage-abstraction/)
+  * [ScalarDB Error Codes](https://scalardb.scalar-labs.com/docs/latest/scalardb-core-status-codes/)
 * Slides
     * [Making Cassandra more capable, faster, and more reliable](https://speakerdeck.com/scalar/making-cassandra-more-capable-faster-and-more-reliable-at-apachecon-at-home-2020) at ApacheCon@Home 2020
     * [Scalar DB: A library that makes non-ACID databases ACID-compliant](https://speakerdeck.com/scalar/scalar-db-a-library-that-makes-non-acid-databases-acid-compliant) at Database Lounge Tokyo #6 2020
@@ -72,7 +75,7 @@ $ ls -a .pre-commit-config.yaml
 $ pre-commit install
 ```
 
-The code formatter is automatically executed when commiting files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
+The code formatter is automatically executed when committing files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
 
 ### Exception and log message guidelines
 
