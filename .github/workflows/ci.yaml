@@ -65,9 +65,7 @@ jobs:
         run: sudo apt-get install ca-certificates-java
 
       - name: Run Cosmos DB Emulator
-        run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest /usr/local/bin/cosmos/start.sh
-        env:
-          AZURE_COSMOS_EMULATOR_ARGS: /Consistency=Strong
+        run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -e AZURE_COSMOS_EMULATOR_ARGS=/Consistency=Strong -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest /usr/local/bin/cosmos/start.sh
 
 #     - name: Explore Cosmos DB Emulator
 #       run: docker exec $(docker ps --no-trunc -a | grep azure-cosmos-emulator | head -1 | awk '{print $1}') cat /usr/local/bin/cosmos/start.sh
