@@ -38,12 +38,14 @@ jobs:
     name: Cosmos DB integration test
     runs-on: ubuntu-latest
 
-#   services:
-#     dynamodb:
-#       image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-#       ports:
-#         - 8081:8081
-#         - 10250-10255:10250-10255
+    services:
+      dynamodb:
+        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+        ports:
+          - 8081:8081
+          - 10250-10255:10250-10255
+        env:
+          AZURE_COSMOS_EMULATOR_ARGS: /Consistency=Strong
 
     steps:
       - uses: actions/checkout@v4
@@ -64,9 +66,9 @@ jobs:
       - name: Install 'ca-certificates-java'
         run: sudo apt-get install ca-certificates-java
 
-      - name: Run Cosmos DB Emulator
-        run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -e AZURE_COSMOS_EMULATOR_ARGS=/Consistency=Strong -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest /usr/local/bin/cosmos/start.sh
-
+#     - name: Run Cosmos DB Emulator
+#       run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -e AZURE_COSMOS_EMULATOR_ARGS=/Consistency=Strong -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest /usr/local/bin/cosmos/start.sh
+#
 #     - name: Explore Cosmos DB Emulator
 #       run: docker exec $(docker ps --no-trunc -a | grep azure-cosmos-emulator | head -1 | awk '{print $1}') cat /usr/local/bin/cosmos/start.sh
 
