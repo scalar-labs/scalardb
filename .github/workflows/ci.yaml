@@ -54,10 +54,22 @@ jobs:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Debug0
+        run: echo %JAVA_HOME%
+
       - name: Debug1
-        run: ls -l %JAVA_HOME%/jre/lib/security
+        run: ls -l %JAVA_HOME%
+
+      - name: Debug0-2
+        run: echo $JAVA_HOME
+
+      - name: Debug1-2
+        run: ls -l $JAVA_HOME
 
       - name: Debug2
+        run: ls -l %JAVA_HOME%/jre/lib/security
+
+      - name: Debug3
         run: ls -l %JAVA_HOME%/lib/security
 
       - name: Install TLS/SSL certificate
