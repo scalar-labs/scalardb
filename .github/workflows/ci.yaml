@@ -75,10 +75,12 @@ jobs:
           while ($true) {
             curl.exe -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
             $success = Select-String -Quiet -Path ~/emulatorcert.crt 'END CERTIFICATE'
+            echo $success
             if ($success) {
               break
             }
             echo 'Retrying since the file is broken...'
+            cat ~/emulatorcert.crt
             Start-Sleep -Seconds 5
           }
 
