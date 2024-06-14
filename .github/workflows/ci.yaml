@@ -82,9 +82,9 @@ jobs:
           certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
           Remove-Item $home/tmp-cert.cer
           # Delete the cert if it already exists
-          $env:JAVA_HOME/bin/keytool -cacerts -delete -alias cosmos_emulator
+          ${env:JAVA_HOME}/bin/keytool -cacerts -delete -alias cosmos_emulator
           # Import the cert
-          $env:JAVA_HOME/bin/keytool -cacerts -importcert -alias cosmos_emulator -file $home/cosmosdbcert.cer
+          ${env:JAVA_HOME}/bin/keytool -cacerts -importcert -alias cosmos_emulator -file $home/cosmosdbcert.cer
 #         # These retries are needed since the downloaded file may be a JSON response.
 #         while ($true) {
 #           curl.exe -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
@@ -112,7 +112,7 @@ jobs:
         if: always()
 #       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
 #       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
-        run : find $HOME/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
+        run : find $home/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
 
       - name: Upload Gradle test reports
         if: always()
