@@ -86,10 +86,10 @@ jobs:
           Remove-Item $home/tmp-cert.cer
           # Delete the cert if it already exists
           # & ${env:JAVA_HOME}/bin/keytool.exe -cacerts -delete -alias cosmos_emulator
-          & ${env:JAVA_HOME}/bin/keytool.exe -delete -alias cosmos_emulator
+          & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -delete -alias cosmos_emulator
           # Import the cert
           # & ${env:JAVA_HOME}/bin/keytool.exe -cacerts -importcert -alias cosmos_emulator -file $home/cosmosdbcert.cer
-          & ${env:JAVA_HOME}/bin/keytool.exe -importcert -alias cosmos_emulator -file $home/cosmosdbcert.cer
+          & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
 #         # These retries are needed since the downloaded file may be a JSON response.
 #         while ($true) {
 #           curl.exe -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
