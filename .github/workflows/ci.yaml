@@ -38,26 +38,26 @@ jobs:
     name: Cosmos DB integration test
     runs-on: ubuntu-latest
 
-    services:
-      dynamodb:
-        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-        ports:
-          - 8081:8081
-          - 8900:8900
-          - 8901:8901
-          - 8902:8902
-          - 10250:10250
-          - 10251:10251
-          - 10252:10252
-          - 10253:10253
-          - 10254:10254
-          - 10255:10255
-          - 10350:10350
-        env:
-          AZURE_COSMOS_EMULATOR_ARGS: /Consistency=Strong
-          # These configuration cause 503 errors.
-          # AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 2
-          # AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 4
+#   services:
+#     dynamodb:
+#       image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+#       ports:
+#         - 8081:8081
+#         - 8900:8900
+#         - 8901:8901
+#         - 8902:8902
+#         - 10250:10250
+#         - 10251:10251
+#         - 10252:10252
+#         - 10253:10253
+#         - 10254:10254
+#         - 10255:10255
+#         - 10350:10350
+#       env:
+#         AZURE_COSMOS_EMULATOR_ARGS: /Consistency=Strong
+#         # These configuration cause 503 errors.
+#         # AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 2
+#         # AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 4
 
     steps:
       - uses: actions/checkout@v4
@@ -78,11 +78,11 @@ jobs:
       - name: Install 'ca-certificates-java'
         run: sudo apt-get install ca-certificates-java
 
-#     - name: Run Cosmos DB Emulator
-#       run: docker run -p 8081:8081 -p 10250-10255:10250-10255 -e AZURE_COSMOS_EMULATOR_ARGS=/Consistency=Strong -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest /usr/local/bin/cosmos/start.sh
-#
-#     - name: Explore Cosmos DB Emulator
-#       run: docker exec $(docker ps --no-trunc -a | grep azure-cosmos-emulator | head -1 | awk '{print $1}') cat /usr/local/bin/cosmos/start.sh
+      - name: Run Cosmos DB Emulator
+        run: docker run -p 8081:8081 -p 8900-8902:8900-8902 -p 10250-10255:10250-10255 -p 10350:10350 -e AZURE_COSMOS_EMULATOR_ARGS=/Consistency=Strong -e AZURE_COSMOS_EMULATOR_PARTITION_COUNT=2 -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+
+      - name: Explore Cosmos DB Emulator
+        run: docker exec $(docker ps --no-trunc -a | grep azure-cosmos-emulator | head -1 | awk '{print $1}') cat /usr/local/bin/cosmos/start.sh
 
       - name: Install TLS/SSL certificate
         run: |
