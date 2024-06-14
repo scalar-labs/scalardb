@@ -150,7 +150,7 @@ task integrationTestCosmos(type: Test) {
         systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
     maxParallelForks = 1
-    jvmArgs '-XX:MaxDirectMemorySize=4g', '-Xmx6g', '-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT'
+    jvmArgs '-XX:MaxDirectMemorySize=4g', '-Xmx6g', '-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT', '-Dfile.encoding=UTF-8'
 }
 
 task integrationTestDynamo(type: Test) {
