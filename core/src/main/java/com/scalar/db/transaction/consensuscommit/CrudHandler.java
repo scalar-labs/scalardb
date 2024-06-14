@@ -86,7 +86,8 @@ public class CrudHandler {
   private void read(Snapshot.Key key, Get get) throws CrudException {
     Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
-      snapshot.put(key, result);
+      snapshot.put(key, result); // for read set
+      snapshot.put(get, key); // for extra-read using Get
       return;
     }
     throw new UncommittedRecordException(

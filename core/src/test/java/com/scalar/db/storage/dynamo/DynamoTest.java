@@ -1,19 +1,24 @@
 package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Key;
 import com.scalar.db.storage.cassandra.ScannerImpl;
+import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,20 +39,93 @@ public class DynamoTest {
   @Mock private BatchHandler batchHandler;
   @Mock private OperationChecker operationChecker;
   @Mock private ScannerImpl scanner;
+  @Mock private Key partitionKey;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    Properties cosmosConfigProperties = new Properties();
+    Properties dynamoConfigProperties = new Properties();
     dynamo =
         new Dynamo(
-            new DatabaseConfig(cosmosConfigProperties),
+            new DatabaseConfig(dynamoConfigProperties),
             dynamoDbClient,
             selectStatementHandler,
             putStatementHandler,
             deleteStatementHandler,
             batchHandler,
             operationChecker);
+  }
+
+  @Test
+  public void get_WithoutConjunction_ShouldHandledWithOriginalGet() throws ExecutionException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(partitionKey)
+            .projection("col1")
+            .build();
+    when(selectStatementHandler.handle(any(Get.class))).thenReturn(scanner);
+
+    // Act
+    Optional<Result> actual = dynamo.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(selectStatementHandler).handle(captor.capture());
+    Get actualGet = captor.getValue();
+    assertThat(actualGet).isEqualTo(get);
+  }
+
+  @Test
+  public void get_WithConjunctionWithoutProjections_ShouldHandledWithoutProjections()
+      throws ExecutionException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(partitionKey)
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
+    when(selectStatementHandler.handle(any(Get.class))).thenReturn(scanner);
+
+    // Act
+    Optional<Result> actual = dynamo.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(selectStatementHandler).handle(captor.capture());
+    Get actualGet = captor.getValue();
+    assertThat(actualGet.getProjections()).isEmpty();
+  }
+
+  @Test
+  public void get_WithConjunctionAndProjections_ShouldHandledWithExtendedProjections()
+      throws ExecutionException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(partitionKey)
+            .projections("col1")
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
+    when(selectStatementHandler.handle(any(Get.class))).thenReturn(scanner);
+
+    // Act
+    Optional<Result> actual = dynamo.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(selectStatementHandler).handle(captor.capture());
+    Get actualGet = captor.getValue();
+    assertThat(actualGet.getProjections()).containsExactlyInAnyOrder("col1", "col2");
   }
 
   @Test

@@ -62,6 +62,16 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
+  public void get_GetWithMatchedConjunctionsGivenForCommittedRecord_ShouldReturnRecord() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void get_GetWithUnmatchedConjunctionsGivenForCommittedRecord_ShouldReturnEmpty() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
   public void scan_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")

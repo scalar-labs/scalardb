@@ -51,6 +51,7 @@ public class Snapshot {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
+  private final Map<Get, Key> getSet;
   private final Map<Scan, List<Key>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
@@ -67,6 +68,7 @@ public class Snapshot {
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     readSet = new ConcurrentHashMap<>();
+    getSet = new HashMap<>();
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
@@ -80,6 +82,7 @@ public class Snapshot {
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
+      Map<Get, Key> getSet,
       Map<Scan, List<Key>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
@@ -89,6 +92,7 @@ public class Snapshot {
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.readSet = readSet;
+    this.getSet = getSet;
     this.scanSet = scanSet;
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
@@ -109,6 +113,10 @@ public class Snapshot {
   // is a concurrent map
   public void put(Key key, Optional<TransactionResult> result) {
     readSet.put(key, result);
+  }
+
+  public void put(Get get, Key key) {
+    getSet.put(get, key);
   }
 
   public void put(Scan scan, List<Key> keys) {
@@ -480,8 +488,9 @@ public class Snapshot {
     }
 
     // Read set by get is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Key, Optional<TransactionResult>> entry : readSet.entrySet()) {
-      Key key = entry.getKey();
+    for (Map.Entry<Get, Key> entry : getSet.entrySet()) {
+      Get get = entry.getKey();
+      Key key = entry.getValue();
       if (writeSet.containsKey(key)
           || deleteSet.containsKey(key)
           || validatedReadSetByScan.contains(key)) {
@@ -491,17 +500,11 @@ public class Snapshot {
       tasks.add(
           () -> {
             // only get tx_id and tx_version columns because we use only them to compare
-            Get get =
-                new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
-                    .withProjection(Attribute.ID)
-                    .withProjection(Attribute.VERSION)
-                    .withConsistency(Consistency.LINEARIZABLE)
-                    .forNamespace(key.getNamespace())
-                    .forTable(key.getTable());
-
+            get.clearProjections();
+            get.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
             Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
             // Check if a read record is not changed
-            if (isChanged(latestResult, entry.getValue())) {
+            if (isChanged(latestResult, readSet.get(key))) {
               throwExceptionDueToAntiDependency();
             }
           });
