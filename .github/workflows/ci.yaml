@@ -84,11 +84,7 @@ jobs:
           Export-Certificate @params
           certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
           Remove-Item $home/tmp-cert.cer
-          # Delete the cert if it already exists
-          # & ${env:JAVA_HOME}/bin/keytool.exe -cacerts -delete -alias cosmos_emulator
           # & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -storepass 'changeit' -delete -alias cosmos_emulator
-          # Import the cert
-          # & ${env:JAVA_HOME}/bin/keytool.exe -cacerts -importcert -alias cosmos_emulator -file $home/cosmosdbcert.cer
           & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
           & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -storepass 'changeit' -list -alias cosmos_emulator
 #         # These retries are needed since the downloaded file may be a JSON response.
@@ -108,11 +104,11 @@ jobs:
         run: |
           echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
 
-#     - name: Setup and execute Gradle 'integrationTestCosmos' task
-#       uses: gradle/gradle-build-action@v3
-#       with:
-#         # arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_ --tests **.ConsensusCommitIntegrationTestWithCosmos.get_GetGivenForCommittedRecord_ShouldReturnRecord
-#         arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_ --tests **.ConsensusCommitIntegrationTestWithCosmos
+      - name: Setup and execute Gradle 'integrationTestCosmos' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          # arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_ --tests **.ConsensusCommitIntegrationTestWithCosmos.get_GetGivenForCommittedRecord_ShouldReturnRecord
+          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_ --tests **.ConsensusCommitIntegrationTestWithCosmos
 
       - name : Delete gradle daemon log files
         if: always()
