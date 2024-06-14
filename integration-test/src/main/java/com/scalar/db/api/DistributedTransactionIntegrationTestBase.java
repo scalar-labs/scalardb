@@ -185,6 +185,50 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void get_GetWithMatchedConjunctionsGivenForCommittedRecord_ShouldReturnRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.start();
+    Get get =
+        Get.newBuilder(prepareGet(1, 1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToInt(1))
+            .build();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.commit();
+
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get().getInt(SOME_COLUMN)).isEqualTo(1);
+  }
+
+  @Test
+  public void get_GetWithUnmatchedConjunctionsGivenForCommittedRecord_ShouldReturnEmpty()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.start();
+    Get get =
+        Get.newBuilder(prepareGet(1, 1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToInt(0))
+            .build();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.commit();
+
+    // Assert
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
   public void scan_ScanGivenForCommittedRecord_ShouldReturnRecords() throws TransactionException {
     // Arrange
     populateRecords();

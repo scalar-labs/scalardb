@@ -190,8 +190,8 @@ public enum CoreError implements ScalarDbError {
   SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
       Category.USER_ERROR,
       "0037",
-      "This operation is supported only when no conditions are specified at all. "
-          + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first",
+      "This operation is supported only when no conditions are specified. "
+          + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
   TABLE_METADATA_BUILD_ERROR_NO_COLUMNS_SPECIFIED(
@@ -638,6 +638,13 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0141",
       "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
+      "",
+      ""),
+  GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
+      Category.USER_ERROR,
+      "0142",
+      "This operation is supported only when no conditions are specified. "
+          + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
 
