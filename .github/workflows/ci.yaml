@@ -36,28 +36,7 @@ env:
 jobs:
   integration-test-for-cosmos:
     name: Cosmos DB integration test
-    runs-on: ubuntu-latest
-
-#   services:
-#     dynamodb:
-#       image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-#       ports:
-#         - 8081:8081
-#         - 8900:8900
-#         - 8901:8901
-#         - 8902:8902
-#         - 10250:10250
-#         - 10251:10251
-#         - 10252:10252
-#         - 10253:10253
-#         - 10254:10254
-#         - 10255:10255
-#         - 10350:10350
-#       env:
-#         AZURE_COSMOS_EMULATOR_ARGS: /Consistency=Strong
-#         # These configuration cause 503 errors.
-#         # AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 2
-#         # AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 4
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -75,47 +54,11 @@ jobs:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Install 'ca-certificates-java'
-        run: sudo apt-get install ca-certificates-java
-
-      - name: Run Cosmos DB Emulator
-        # run: docker run -p 8081:8081 -p 8900-8902:8900-8902 -p 10250-10255:10250-10255 -p 10350:10350 -e AZURE_COSMOS_EMULATOR_ARGS=/Consistency=Strong -e AZURE_COSMOS_EMULATOR_PARTITION_COUNT=2 -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-        run: docker run -p 8081:8081 -p 8900-8902:8900-8902 -p 10250-10255:10250-10255 -p 10350:10350 -e AZURE_COSMOS_EMULATOR_ARGS=/Consistency=Strong -d mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-
-      - name: Explore Cosmos DB Emulator
-        run: docker exec $(docker ps --no-trunc -a | grep azure-cosmos-emulator | head -1 | awk '{print $1}') cat /usr/local/bin/cosmos/start.sh
-
-      - name: Install TLS/SSL certificate
+      - name: Start Azure Cosmos DB emulator
         run: |
-          # These retries are needed since the downloaded file may be a JSON response.
-          while true;
-          do
-            curl -k --retry 20 --retry-delay 5 --retry-all-errors https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
-            if grep 'END CERTIFICATE' ~/emulatorcert.crt > /dev/null
-            then
-              break
-            fi
-            echo 'Retrying since the file is broken...'
-            sleep 5
-          done
-          sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
-          sudo update-ca-certificates -f
-          # echo '$$$$ ls -l $JAVA_HOME/jre/lib/security/'
-          # ls -l $JAVA_HOME/jre/lib/security/
-          # echo '$$$$ ls -l /etc/ssl/certs/adoptium/'
-          # ls -l /etc/ssl/certs/adoptium/
-          # echo '$$$$ ls -l /etc/ssl/certs/java/'
-          # ls -l /etc/ssl/certs/java/
-          # sudo rm $JAVA_HOME/jre/lib/security/cacerts
-          # sudo ln -s /etc/ssl/certs/adoptium/cacerts $JAVA_HOME/jre/lib/security/cacerts
-          # sudo rm /etc/ssl/certs/java/cacerts
-          # sudo ln -s /etc/ssl/certs/adoptium/cacerts /etc/ssl/certs/java/cacerts
-          # echo '$$$$$$$$$$$$$$$$$$$$$ /etc/ssl/certs/adoptium/cacerts $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
-          # sudo keytool -v -list -keystore /etc/ssl/certs/adoptium/cacerts # This doesn't contain `emulatorcert`
-          # echo '$$$$$$$$$$$$$$$$$$$$$ /etc/ssl/certs/java/cacerts $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
-          # sudo keytool -v -list -keystore /etc/ssl/certs/java/cacerts # This contains `emulatorcert`
-          sudo rm $JAVA_HOME/jre/lib/security/cacerts
-          sudo ln -s /etc/ssl/certs/java/cacerts $JAVA_HOME/jre/lib/security/cacerts
+          Write-Host "Launching Cosmos DB Emulator"
+          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+          Start-CosmosDbEmulator
 
       - name: Generate unique prefix using the epoch
         run: |
