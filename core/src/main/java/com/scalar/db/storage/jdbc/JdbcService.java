@@ -62,7 +62,7 @@ public class JdbcService {
         queryBuilder
             .select(get.getProjections())
             .from(get.forNamespace().get(), get.forTable().get(), tableMetadata)
-            .where(get.getPartitionKey(), get.getClusteringKey())
+            .where(get.getPartitionKey(), get.getClusteringKey(), get.getConjunctions())
             .build();
 
     try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql())) {
