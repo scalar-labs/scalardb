@@ -25,13 +25,15 @@ public class TableMetadata {
   private final ImmutableLinkedHashSet<String> clusteringKeyNames;
   private final ImmutableMap<String, Order> clusteringOrders;
   private final ImmutableSet<String> secondaryIndexNames;
+  private final ImmutableSet<String> encryptedColumnNames;
 
   private TableMetadata(
       LinkedHashMap<String, DataType> columns,
       LinkedHashSet<String> partitionKeyNames,
       LinkedHashSet<String> clusteringKeyNames,
       Map<String, Order> clusteringOrders,
-      Set<String> secondaryIndexNames) {
+      Set<String> secondaryIndexNames,
+      Set<String> encryptedColumnNames) {
     columnNames = new ImmutableLinkedHashSet<>(Objects.requireNonNull(columns.keySet()));
     columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columns));
     this.partitionKeyNames =
@@ -40,6 +42,7 @@ public class TableMetadata {
         new ImmutableLinkedHashSet<>(Objects.requireNonNull(clusteringKeyNames));
     this.clusteringOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringOrders));
     this.secondaryIndexNames = ImmutableSet.copyOf(Objects.requireNonNull(secondaryIndexNames));
+    this.encryptedColumnNames = ImmutableSet.copyOf(Objects.requireNonNull(encryptedColumnNames));
   }
 
   /**
@@ -62,9 +65,9 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the column names
+   * Returns the column names of the table
    *
-   * @return an {@code LinkedHashSet} of column names
+   * @return an {@code LinkedHashSet} of the column names
    */
   public LinkedHashSet<String> getColumnNames() {
     return columnNames;
@@ -74,7 +77,7 @@ public class TableMetadata {
    * Returns the data type of the specified column
    *
    * @param columnName a column name to retrieve the data type
-   * @return an {@code DataType} of the specified column
+   * @return the {@code DataType} of the specified column
    */
   public DataType getColumnDataType(String columnName) {
     return columnDataTypes.get(columnName);
@@ -90,7 +93,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the partition key names
+   * Returns the partition key column names
    *
    * @return an {@code LinkedHashSet} of partition key names
    */
@@ -99,7 +102,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the clustering key names
+   * Returns the clustering key column names
    *
    * @return an {@code LinkedHashSet} of clustering key names
    */
@@ -108,31 +111,40 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the specified clustering order
+   * Returns the clustering order of the specified clustering key column
    *
-   * @param clusteringKeyName a clustering key name to retrieve the order
-   * @return an {@code Scan.Ordering.Order} of the specified clustering key
+   * @param clusteringKeyName a clustering key column name to retrieve the order
+   * @return the clustering order of the specified clustering key column
    */
   public Scan.Ordering.Order getClusteringOrder(String clusteringKeyName) {
     return clusteringOrders.get(clusteringKeyName);
   }
 
   /**
-   * Returns the map of the clustering key names and the clustering orders
+   * Returns the map of the clustering key column names and the clustering orders
    *
-   * @return the map of the clustering key names and the clustering orders
+   * @return the map of the clustering key column names and the clustering orders
    */
   public Map<String, Scan.Ordering.Order> getClusteringOrders() {
     return clusteringOrders;
   }
 
   /**
-   * Returns the secondary index names
+   * Returns the secondary index column names
    *
-   * @return an {@code Set} of secondary index names
+   * @return an {@code Set} of the secondary index column names
    */
   public Set<String> getSecondaryIndexNames() {
     return secondaryIndexNames;
+  }
+
+  /**
+   * Returns the encrypted column names
+   *
+   * @return an {@code Set} of the encrypted column names
+   */
+  public Set<String> getEncryptedColumnNames() {
+    return encryptedColumnNames;
   }
 
   @Override
@@ -171,6 +183,7 @@ public class TableMetadata {
     private final LinkedHashSet<String> clusteringKeyNames = new LinkedHashSet<>();
     private final Map<String, Order> clusteringOrders = new HashMap<>();
     private final Set<String> secondaryIndexNames = new HashSet<>();
+    private final Set<String> encryptedColumnNames = new HashSet<>();
 
     private Builder() {}
 
@@ -183,7 +196,14 @@ public class TableMetadata {
     }
 
     public Builder addColumn(String name, DataType type) {
+      return addColumn(name, type, false);
+    }
+
+    public Builder addColumn(String name, DataType type, boolean encrypted) {
       columns.put(name, type);
+      if (encrypted) {
+        encryptedColumnNames.add(name);
+      }
       return this;
     }
 
@@ -256,7 +276,12 @@ public class TableMetadata {
             }
           });
       return new TableMetadata(
-          columns, partitionKeyNames, clusteringKeyNames, clusteringOrders, secondaryIndexNames);
+          columns,
+          partitionKeyNames,
+          clusteringKeyNames,
+          clusteringOrders,
+          secondaryIndexNames,
+          encryptedColumnNames);
     }
   }
 }

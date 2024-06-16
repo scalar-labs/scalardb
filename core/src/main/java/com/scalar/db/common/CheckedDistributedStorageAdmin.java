@@ -56,6 +56,12 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
               ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
+    if (!metadata.getEncryptedColumnNames().isEmpty()) {
+      throw new UnsupportedOperationException(
+          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
     try {
       admin.createTable(namespace, table, metadata, options);
     } catch (ExecutionException e) {
