@@ -162,6 +162,16 @@ public class ConsensusCommitIntegrationTestWithServer extends ConsensusCommitInt
   @Test
   public void manager_update_DefaultNamespaceGiven_ShouldWorkProperly() {}
 
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetWithMatchedConjunctionsGivenForCommittedRecord_ShouldReturnRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetWithUnmatchedConjunctionsGivenForCommittedRecord_ShouldReturnEmpty() {}
+
   @Disabled("ScalarDB Server doesn't support scan() with conjunctions")
   @Override
   @Test

@@ -133,6 +133,11 @@ public class Get extends Selection {
     return (Get) super.withProjections(projections);
   }
 
+  @Override
+  Get withConjunctions(Collection<Conjunction> conjunctions) {
+    return (Get) super.withConjunctions(conjunctions);
+  }
+
   /**
    * Indicates whether some other object is "equal to" this object. The other object is considered
    * equal if:
@@ -164,6 +169,7 @@ public class Get extends Selection {
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
         .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
         .add("consistency", getConsistency())
         .toString();
   }

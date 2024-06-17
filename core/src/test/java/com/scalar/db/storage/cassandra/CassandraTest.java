@@ -10,6 +10,8 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
@@ -18,6 +20,8 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Key;
+import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +43,7 @@ public class CassandraTest {
   @Mock private OperationChecker operationChecker;
   @Mock private TableMetadata tableMetadata;
   @Mock private ResultSet resultSet;
+  @Mock private Key partitionKey;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -54,6 +59,84 @@ public class CassandraTest {
             null,
             metadataManager,
             operationChecker);
+  }
+
+  @Test
+  public void get_WithoutConjunction_ShouldHandledWithOriginalGet() throws ExecutionException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(partitionKey)
+            .projection("col1")
+            .build();
+    when(handlers.select()).thenReturn(handler);
+    when(handler.handle(any(Get.class))).thenReturn(resultSet);
+    when(metadataManager.getTableMetadata(any(Get.class))).thenReturn(tableMetadata);
+
+    // Act
+    Optional<Result> actual = cassandra.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(handler).handle(captor.capture());
+    Get actualGet = captor.getValue();
+    assertThat(actualGet).isEqualTo(get);
+  }
+
+  @Test
+  public void get_WithConjunctionWithoutProjections_ShouldHandledWithoutProjections()
+      throws ExecutionException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(partitionKey)
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
+    when(handlers.select()).thenReturn(handler);
+    when(handler.handle(any(Get.class))).thenReturn(resultSet);
+    when(metadataManager.getTableMetadata(any(Get.class))).thenReturn(tableMetadata);
+
+    // Act
+    Optional<Result> actual = cassandra.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(handler).handle(captor.capture());
+    Get actualGet = captor.getValue();
+    assertThat(actualGet.getProjections()).isEmpty();
+  }
+
+  @Test
+  public void get_WithConjunctionAndProjections_ShouldHandledWithExtendedProjections()
+      throws ExecutionException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(partitionKey)
+            .projections("col1")
+            .where(ConditionBuilder.column("col2").isLessThanInt(0))
+            .build();
+    when(handlers.select()).thenReturn(handler);
+    when(handler.handle(any(Get.class))).thenReturn(resultSet);
+    when(metadataManager.getTableMetadata(any(Get.class))).thenReturn(tableMetadata);
+
+    // Act
+    Optional<Result> actual = cassandra.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isFalse();
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(handler).handle(captor.capture());
+    Get actualGet = captor.getValue();
+    assertThat(actualGet.getProjections()).containsExactlyInAnyOrder("col1", "col2");
   }
 
   @Test
