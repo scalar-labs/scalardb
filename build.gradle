@@ -96,3 +96,4 @@ subprojects {
         duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 }
+
