@@ -150,11 +150,18 @@ task integrationTestCosmos(type: Test) {
         systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
         systemProperty("file.encoding", "UTF-8")
         systemProperty("encoding", "UTF-8")
+        defaultCharacterEncoding('UTF-8')
+        setDefaultCharacterEncoding('UTF-8')
     }
     // For testing on Windows OS.
+    setDefaultCharacterEncoding('UTF-8')
+    defaultCharacterEncoding('UTF-8')
+    compileJava.options.encoding('UTF-8')
     compileJava.options.encoding = 'UTF-8'
     compileTestJava.options.encoding = 'UTF-8'
+    compileTestJava.options.encoding('UTF-8')
     compileIntegrationTestCosmosJava.options.encoding = 'UTF-8'
+    compileIntegrationTestCosmosJava.options.encoding('UTF-8')
     maxParallelForks = 1
     jvmArgs '-XX:MaxDirectMemorySize=4g', '-Xmx6g', '-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT', '-Dfile.encoding=UTF-8', '-Dencoding=UTF-8'
 }
