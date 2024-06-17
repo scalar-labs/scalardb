@@ -149,8 +149,11 @@ task integrationTestCosmos(type: Test) {
     options {
         systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
+    // For testing on Windows OS.
+    compileJava.options.encoding = 'UTF-8'
+    compileTestJava.options.encoding = 'UTF-8'
     maxParallelForks = 1
-    jvmArgs '-XX:MaxDirectMemorySize=4g', '-Xmx6g', '-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT', '-Dfile.encoding=UTF-8'
+    jvmArgs '-XX:MaxDirectMemorySize=4g', '-Xmx6g', '-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT'
 }
 
 task integrationTestDynamo(type: Test) {
