@@ -140,10 +140,6 @@ task integrationTestCassandra(type: Test) {
     }
 }
 
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
-}
-
 task integrationTestCosmos(type: Test) {
     description = 'Runs the integration tests for Cosmos DB.'
     group = 'verification'
