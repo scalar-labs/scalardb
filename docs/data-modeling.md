@@ -5,6 +5,7 @@ This page first explains the ScalarDB data model and then describes how to desig
 
 ## ScalarDB data model
 ScalarDB’s data model is an extended key-value model inspired by the Bigtable data model. It is similar to the relational model but differs in several ways, as described below.
+The data model is chosen to abstract various databases, such as relational databases, NoSQL databases, and NewSQL databases.
 
 The following diagram shows an example of ScalarDB tables, each a collection of records. This section first explains what objects, such as tables and records, ScalarDB defines and then describes how to locate records.
 
@@ -30,7 +31,7 @@ A record or row is a set of columns that is uniquely identifiable among all of t
 A column is a fundamental data element and does not need to be broken down any further. Each record is composed of one or more columns. Each column has a data type. For details about the data type, refer to [Data-type mapping between ScalarDB and other databases](https://scalardb.scalar-labs.com/docs/latest/schema-loader#data-type-mapping-between-scalardb-and-other-databases).
 
 #### Secondary index
-A secondary index is a sorted copy of a column of a single base table. Each entry of an index is linked to a corresponding table partition. ScalarDB currently doesn't support multi-column indexes so that it can create indexes with one column.
+A secondary index is a sorted copy of a column in a single base table. Each index entry is linked to a corresponding table partition. ScalarDB currently doesn't support multi-column indexes, so it can create indexes with only one column.
 
 ### How to locate records
 This section discusses how to locate records from a table.
@@ -43,7 +44,7 @@ A partition key uniquely identifies a partition. A partition key comprises a set
 
 #### Clustering key
 A clustering key uniquely identifies a record within a partition. It comprises a set of columns called clustering key columns. When you want to specify a clustering key, you should specify a partition key for efficient lookups. When you specify a clustering key without a partition key,
-you end up scanning all the partitions if you don’t have proper indexes. Scanning all the partitions is very time-consuming, so please do it only when you know what you are doing.
+you end up scanning all the partitions. Scanning all the partitions is very time-consuming, especially when the data is large, so please do it only when you know what you are doing.
 
 Records within a partition are assumed to be sorted by clustering key columns, specified as a clustering order. Therefore, you can specify a part of clustering key columns in the defined order to narrow down the results to be returned. 
 
