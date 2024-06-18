@@ -2,7 +2,6 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 
 public class CosmosMultiplePartitionKeyIntegrationTest
@@ -10,13 +9,6 @@ public class CosmosMultiplePartitionKeyIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return CosmosEnv.getProperties(testName);
-  }
-
-  @Override
-  protected String getNamespaceBaseName() {
-    String namespaceBaseName = super.getNamespaceBaseName();
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + namespaceBaseName).orElse(namespaceBaseName);
   }
 
   @Override
