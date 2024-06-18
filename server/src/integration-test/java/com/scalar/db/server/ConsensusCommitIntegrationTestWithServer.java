@@ -46,7 +46,17 @@ public class ConsensusCommitIntegrationTestWithServer extends ConsensusCommitInt
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override
   @Test
-  public void operation_DefaultNamespaceGiven_ShouldWorkProperly() {}
+  public void insert_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void upsert_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void update_DefaultNamespaceGiven_ShouldWorkProperly() {}
 
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override
@@ -140,7 +150,27 @@ public class ConsensusCommitIntegrationTestWithServer extends ConsensusCommitInt
   @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
   @Override
   @Test
-  public void manager_operation_DefaultNamespaceGiven_ShouldWorkProperly() {}
+  public void manager_insert_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_upsert_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void manager_update_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetWithMatchedConjunctionsGivenForCommittedRecord_ShouldReturnRecord() {}
+
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetWithUnmatchedConjunctionsGivenForCommittedRecord_ShouldReturnEmpty() {}
 
   @Disabled("ScalarDB Server doesn't support scan() with conjunctions")
   @Override

@@ -65,8 +65,7 @@ public class TwoPhaseConsensusCommitTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker, true);
+    transaction = new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
   }
 
   private Get prepareGet() {
@@ -736,25 +735,6 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void commit_WithShouldManageStateDisabled_ShouldCommitRecordsButNotCommitState()
-      throws CommitException, UnknownTransactionStatusException, PreparationException {
-    // Arrange
-
-    // Assuming this is on a participant side with group commit.
-    TwoPhaseConsensusCommit transactionWithManageStateDisabled =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker, false);
-    transactionWithManageStateDisabled.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-
-    // Act
-    transactionWithManageStateDisabled.commit();
-
-    // Assert
-    verify(this.commit, never()).commitState(snapshot);
-    verify(this.commit).commitRecords(snapshot);
-  }
-
-  @Test
   public void rollback_ShouldAbortStateAndRollbackRecords()
       throws RollbackException, UnknownTransactionStatusException, PreparationException {
     // Arrange
@@ -830,23 +810,5 @@ public class TwoPhaseConsensusCommitTest {
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
 
     verify(commit, never()).rollbackRecords(snapshot);
-  }
-
-  @Test
-  public void rollback_WithShouldManageStateDisabled_ShouldRollbackRecordsButNotRollbackState()
-      throws RollbackException, UnknownTransactionStatusException, PreparationException {
-    // Arrange
-    // Assuming this is on a participant side with group commit.
-    TwoPhaseConsensusCommit transactionWithManageStateDisabled =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker, false);
-    transactionWithManageStateDisabled.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-
-    // Act
-    transactionWithManageStateDisabled.rollback();
-
-    // Assert
-    verify(commit, never()).abortState(snapshot.getId());
-    verify(commit).rollbackRecords(snapshot);
   }
 }

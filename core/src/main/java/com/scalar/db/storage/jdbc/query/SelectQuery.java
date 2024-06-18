@@ -51,10 +51,12 @@ public interface SelectQuery extends Query {
     /*
      * Assumes this is called by get operations
      */
-    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
+    public Builder where(
+        Key partitionKey, Optional<Key> clusteringKey, Set<Conjunction> conjunctions) {
       isConditionalQuery = true;
       this.partitionKey = Optional.of(partitionKey);
       this.clusteringKey = clusteringKey;
+      this.conjunctions = ImmutableSet.copyOf(conjunctions);
       setIndexInfoIfUsed(partitionKey);
       return this;
     }

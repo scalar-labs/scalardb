@@ -95,7 +95,7 @@ public class JdbcServiceTest {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
-    when(selectQueryBuilder.where(any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any(), any(), anySet())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeQuery()).thenReturn(resultSet);

@@ -424,6 +424,7 @@ public class CrudHandlerTest {
             readSet,
             new HashMap<>(),
             new HashMap<>(),
+            new HashMap<>(),
             deleteSet);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());

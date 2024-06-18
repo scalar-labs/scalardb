@@ -3021,6 +3021,52 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  public void get_GetWithMatchedConjunctionsGivenForCommittedRecord_ShouldReturnRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get =
+        Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .and(ConditionBuilder.column(SOME_COLUMN).isNullText())
+            .build();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.commit();
+
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get().getText(SOME_COLUMN)).isNull();
+  }
+
+  @Test
+  public void get_GetWithUnmatchedConjunctionsGivenForCommittedRecord_ShouldReturnEmpty()
+      throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction =
+        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get =
+        Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToText("aaa"))
+            .build();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.commit();
+
+    // Assert
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
   @EnabledIf("isGroupCommitEnabled")
   void put_WhenTheOtherTransactionsIsDelayed_ShouldBeCommittedWithoutBlocked() throws Exception {
     // Arrange

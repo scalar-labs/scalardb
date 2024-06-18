@@ -190,8 +190,8 @@ public enum CoreError implements ScalarDbError {
   SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
       Category.USER_ERROR,
       "0037",
-      "This operation is supported only when no conditions are specified at all. "
-          + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first",
+      "This operation is supported only when no conditions are specified. "
+          + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
   TABLE_METADATA_BUILD_ERROR_NO_COLUMNS_SPECIFIED(
@@ -604,6 +604,49 @@ public enum CoreError implements ScalarDbError {
       "Invalid file extension: %s. Allowed extensions are: %s",
       "",
       ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_GETTING_TRANSACTION_STATE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0136",
+      "Getting a transaction state is not supported in single CRUD operation transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_ROLLING_BACK_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0137",
+      "Rolling back a transaction is not supported in single CRUD operation transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_MULTIPLE_MUTATIONS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0138",
+      "Multiple mutations are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0139",
+      "Beginning a transaction is not allowed in single CRUD operation transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_RESUMING_TRANSACTION_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0140",
+      "Resuming a transaction is not allowed in single CRUD operation transactions",
+      "",
+      ""),
+  CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0141",
+      "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
+      "",
+      ""),
+  GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
+      Category.USER_ERROR,
+      "0142",
+      "This operation is supported only when no conditions are specified. "
+          + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -700,6 +743,18 @@ public enum CoreError implements ScalarDbError {
   JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_INSERT(
       Category.CONCURRENCY_ERROR,
       "0023",
+      "A transaction conflict occurred in the Insert operation",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_CONDITION_NOT_SATISFIED(
+      Category.CONCURRENCY_ERROR,
+      "0024",
+      "The %s condition of the %s operation is not satisfied. Targeting column(s): %s",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_CONFLICT_OCCURRED_IN_INSERT(
+      Category.CONCURRENCY_ERROR,
+      "0025",
       "A transaction conflict occurred in the Insert operation",
       "",
       ""),

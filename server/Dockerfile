@@ -8,7 +8,10 @@ RUN set -x && \
     wget -q -O grpc_health_probe "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64" && \
     chmod +x grpc_health_probe
 
-FROM ghcr.io/scalar-labs/jre8:1.1.16
+FROM eclipse-temurin:8-jre-jammy
+
+RUN apt-get update && apt-get upgrade -y \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY --from=tools grpc_health_probe /usr/local/bin/
 

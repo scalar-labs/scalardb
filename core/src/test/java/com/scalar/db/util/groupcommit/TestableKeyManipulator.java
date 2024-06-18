@@ -4,7 +4,7 @@ import com.google.common.base.Splitter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-class TestableKeyManipulator implements KeyManipulator<String, String, String, String> {
+class TestableKeyManipulator implements KeyManipulator<String, String, String, String, String> {
   private final AtomicInteger counter = new AtomicInteger();
 
   @Override
@@ -33,12 +33,12 @@ class TestableKeyManipulator implements KeyManipulator<String, String, String, S
   }
 
   @Override
-  public String emitKeyFromFullKey(String s) {
+  public String emitFullKeyFromFullKey(String s) {
     return s;
   }
 
   @Override
-  public String emitKeyFromParentKey(String s) {
+  public String emitParentKeyFromParentKey(String s) {
     return s;
   }
 }

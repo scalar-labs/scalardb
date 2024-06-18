@@ -92,6 +92,7 @@ public class SnapshotTest {
 
   private Snapshot snapshot;
   private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
+  private Map<Get, Snapshot.Key> getSet;
   private Map<Scan, List<Snapshot.Key>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
@@ -119,6 +120,7 @@ public class SnapshotTest {
 
   private Snapshot prepareSnapshot(Isolation isolation, SerializableStrategy strategy) {
     readSet = new ConcurrentHashMap<>();
+    getSet = new HashMap<>();
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
@@ -131,6 +133,7 @@ public class SnapshotTest {
             tableMetadataManager,
             new ParallelExecutor(config),
             readSet,
+            getSet,
             scanSet,
             writeSet,
             deleteSet));
@@ -689,6 +692,7 @@ public class SnapshotTest {
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
     snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.put(get, new Snapshot.Key(get));
     snapshot.put(new Snapshot.Key(put), put);
 
     // Act Assert
@@ -715,6 +719,7 @@ public class SnapshotTest {
     Get get = prepareAnotherGet();
     Put put = preparePut();
     snapshot.put(new Snapshot.Key(get), Optional.empty());
+    snapshot.put(get, new Snapshot.Key(get));
     snapshot.put(new Snapshot.Key(put), put);
 
     // Act Assert
@@ -758,6 +763,7 @@ public class SnapshotTest {
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
     snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.put(get, new Snapshot.Key(get));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
@@ -780,6 +786,7 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
     snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.put(get, new Snapshot.Key(get));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
@@ -803,6 +810,7 @@ public class SnapshotTest {
     Get get = prepareAnotherGet();
     Put put = preparePut();
     snapshot.put(new Snapshot.Key(get), Optional.empty());
+    snapshot.put(get, new Snapshot.Key(get));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
@@ -1002,6 +1010,7 @@ public class SnapshotTest {
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult txResult = new TransactionResult(result);
     snapshot.put(new Snapshot.Key(get), Optional.of(result));
+    snapshot.put(get, new Snapshot.Key(get));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
@@ -1026,6 +1035,7 @@ public class SnapshotTest {
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult changedResult = prepareResult(ANY_ID);
     snapshot.put(new Snapshot.Key(get), Optional.of(result));
+    snapshot.put(get, new Snapshot.Key(get));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
