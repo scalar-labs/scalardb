@@ -29,7 +29,7 @@ public class CosmosCrossPartitionScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    return 3;
+    return 1;
   }
 
   @Test
