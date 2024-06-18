@@ -114,10 +114,6 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     return THREAD_NUM;
   }
 
-  protected boolean isParallelDdlSupported() {
-    return true;
-  }
-
   private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
@@ -147,8 +143,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     // We firstly execute the first one and then the rest. This is because the first table creation
     // creates the metadata table, and this process can't be handled in multiple threads/processes
     // at the same time.
-    executeDdls(testCallables.subList(0, 1));
-    executeDdls(testCallables.subList(1, testCallables.size()));
+    executeInParallel(testCallables.subList(0, 1));
+    executeInParallel(testCallables.subList(1, testCallables.size()));
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -243,8 +239,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     // We firstly execute the callables without the last one. And then we execute the last one. This
     // is because the last table deletion deletes the metadata table, and this process can't be
     // handled in multiple threads/processes at the same time.
-    executeDdls(testCallables.subList(0, testCallables.size() - 1));
-    executeDdls(testCallables.subList(testCallables.size() - 1, testCallables.size()));
+    executeInParallel(testCallables.subList(0, testCallables.size() - 1));
+    executeInParallel(testCallables.subList(testCallables.size() - 1, testCallables.size()));
   }
 
   private void truncateTable(
@@ -2056,22 +2052,6 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       }
     }
     executeInParallel(testCallables);
-  }
-
-  private void executeDdls(List<Callable<Void>> ddls)
-      throws InterruptedException, java.util.concurrent.ExecutionException {
-    if (isParallelDdlSupported()) {
-      executeInParallel(ddls);
-    } else {
-      ddls.forEach(
-          ddl -> {
-            try {
-              ddl.call();
-            } catch (Exception e) {
-              throw new RuntimeException(e);
-            }
-          });
-    }
   }
 
   private void executeInParallel(List<Callable<Void>> testCallables)

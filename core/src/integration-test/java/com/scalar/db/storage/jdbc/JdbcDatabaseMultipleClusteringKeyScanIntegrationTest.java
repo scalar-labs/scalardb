@@ -25,18 +25,10 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (JdbcTestUtils.isOracle(rdbEngine)) {
+    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isYugabyte(rdbEngine)) {
       return 1;
     }
     return super.getThreadNum();
-  }
-
-  @Override
-  protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      return false;
-    }
-    return super.isParallelDdlSupported();
   }
 
   // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed and the

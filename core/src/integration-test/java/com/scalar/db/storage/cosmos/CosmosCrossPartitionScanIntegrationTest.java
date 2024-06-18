@@ -27,6 +27,11 @@ public class CosmosCrossPartitionScanIntegrationTest
     return CosmosEnv.getCreationOptions();
   }
 
+  @Override
+  protected int getThreadNum() {
+    return 3;
+  }
+
   @Test
   @Override
   @Disabled("Cross partition scan with ordering is not supported in Cosmos DB")

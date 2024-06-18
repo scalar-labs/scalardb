@@ -129,10 +129,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     return namespaceBaseName + firstColumnType;
   }
 
-  protected boolean isParallelDdlSupported() {
-    return true;
-  }
-
   private void createTableForConditionTests() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(getNamespaceName(), true, options);
@@ -171,7 +167,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
       testCallables.add(testCallable);
     }
 
-    executeDdls(testCallables);
+    executeInParallel(testCallables);
   }
 
   private void createTable(
@@ -733,7 +729,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
       testCallables.add(testCallable);
     }
 
-    executeDdls(testCallables);
+    executeInParallel(testCallables);
   }
 
   @Test
@@ -1123,22 +1119,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         getExpectedResults(column.getDataType(), Operator.LTE, column.getIntValue()),
         ImmutableList.of(PARTITION_KEY_NAME, COL_NAME2),
         description(column, Operator.LTE));
-  }
-
-  private void executeDdls(List<Callable<Void>> ddls)
-      throws InterruptedException, java.util.concurrent.ExecutionException {
-    if (isParallelDdlSupported()) {
-      executeInParallel(ddls);
-    } else {
-      ddls.forEach(
-          ddl -> {
-            try {
-              ddl.call();
-            } catch (Exception e) {
-              throw new RuntimeException(e);
-            }
-          });
-    }
   }
 
   private void executeInParallel(List<Callable<Void>> testCallables)
