@@ -93,7 +93,7 @@ The limitation is not specific to ScalarDB but to databases where data is distri
 
 :::note
 
-If you run ScalarDB on a relational database with proper indexes, your query might be efficient because the query is pushed down to the database. 
+If you run ScalarDB on a relational database with proper indexes, your range query might be efficient because the query is pushed down to the database. 
 
 :::
 
