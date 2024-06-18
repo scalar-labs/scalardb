@@ -149,7 +149,6 @@ task integrationTestCosmos(type: Test) {
     options {
         systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
-    maxParallelForks = 3
     jvmArgs '-XX:MaxDirectMemorySize=4g', '-Xmx6g'
 }
 
