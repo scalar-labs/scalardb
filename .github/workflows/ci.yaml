@@ -241,7 +241,7 @@ jobs:
 
   integration-test-for-cosmos:
     name: Cosmos DB integration test
-    runs-on: self-hosted
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -259,20 +259,31 @@ jobs:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Generate unique prefix using the epoch
+      - name: Start Azure Cosmos DB emulator
         run: |
-          echo "db_prefix=$(date +%s%3N)" >> $GITHUB_ENV
+          Write-Host "Launching Cosmos DB Emulator"
+          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+          Start-CosmosDbEmulator -Consistency Strong
+
+      - name: Install TLS/SSL certificate
+        run: |
+          $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
+          $params = @{
+            Cert = $cert
+            Type = "CERT"
+            FilePath = "$home/tmp-cert.cer"
+            NoClobber = $true
+          }
+          Export-Certificate @params
+          certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
+          Remove-Item $home/tmp-cert.cer
+          & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
+          & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -storepass 'changeit' -list -alias cosmos_emulator
 
       - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=${{ secrets.COSMOS_URI }} -Dscalardb.cosmos.password=${{ secrets.COSMOS_PASSWORD }} -Dscalardb.cosmos.database_prefix=${{ env.db_prefix }}_
-
-      - name : Delete gradle daemon log files
-        if: always()
-#       Delete all files modified more than 3 days ago with the ".out.log" file extension located in the "/home/azureuser/.gradle/daemon"
-#       folder hierarchy. These files accumulate over time and can end up using a lot of disk space
-        run : find /home/azureuser/.gradle/daemon -name "*.out.log" -type f -mtime +3 -exec rm -vf {} +
+          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dfile.encoding=UTF-8
 
       - name: Upload Gradle test reports
         if: always()
