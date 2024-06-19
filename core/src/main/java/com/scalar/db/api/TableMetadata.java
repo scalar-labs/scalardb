@@ -15,7 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 import javax.annotation.concurrent.Immutable;
 
-/** A class that represents the table metadata */
+/** A class that represents the table metadata. */
 @Immutable
 public class TableMetadata {
 
@@ -46,7 +46,7 @@ public class TableMetadata {
   }
 
   /**
-   * Creates a new builder instance
+   * Creates a new builder instance.
    *
    * @return a new builder instance
    */
@@ -55,7 +55,7 @@ public class TableMetadata {
   }
 
   /**
-   * Creates a new builder instance based on a prototype
+   * Creates a new builder instance based on a prototype.
    *
    * @param prototype a prototype for a new builder
    * @return a new builder instance
@@ -65,7 +65,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the column names of the table
+   * Returns the column names of the table.
    *
    * @return an {@code LinkedHashSet} of the column names
    */
@@ -74,7 +74,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the data type of the specified column
+   * Returns the data type of the specified column.
    *
    * @param columnName a column name to retrieve the data type
    * @return the {@code DataType} of the specified column
@@ -84,7 +84,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the map of the columns names and the data types
+   * Returns the map of the columns names and the data types.
    *
    * @return the map of the columns names and the data types
    */
@@ -93,7 +93,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the partition-key column names
+   * Returns the partition-key column names.
    *
    * @return an {@code LinkedHashSet} of the partition-key column names
    */
@@ -102,7 +102,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the clustering-key column names
+   * Returns the clustering-key column names.
    *
    * @return an {@code LinkedHashSet} of the clustering-key column names
    */
@@ -111,7 +111,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the clustering order of the specified clustering-key column
+   * Returns the clustering order of the specified clustering-key column.
    *
    * @param clusteringKeyName a clustering-key column name to retrieve the order
    * @return the clustering order of the specified clustering-key column
@@ -121,7 +121,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the map of the clustering-key column names and the clustering orders
+   * Returns the map of the clustering-key column names and the clustering orders.
    *
    * @return the map of the clustering-key column names and the clustering orders
    */
@@ -130,7 +130,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the secondary-index column names
+   * Returns the secondary-index column names.
    *
    * @return an {@code Set} of the secondary-index column names
    */
@@ -139,7 +139,7 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the encrypted column names
+   * Returns the encrypted column names.
    *
    * @return an {@code Set} of the encrypted column names
    */
@@ -176,7 +176,7 @@ public class TableMetadata {
         secondaryIndexNames);
   }
 
-  /** A builder class that creates a TableMetadata instance */
+  /** A builder class that creates a TableMetadata instance. */
   public static final class Builder {
     private final LinkedHashMap<String, DataType> columns = new LinkedHashMap<>();
     private final LinkedHashSet<String> partitionKeyNames = new LinkedHashSet<>();
