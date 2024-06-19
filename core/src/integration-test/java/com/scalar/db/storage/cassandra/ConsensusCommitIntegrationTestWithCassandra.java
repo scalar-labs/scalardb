@@ -9,7 +9,7 @@ public class ConsensusCommitIntegrationTestWithCassandra
     extends ConsensusCommitIntegrationTestBase {
   @Override
   protected Properties getProps(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

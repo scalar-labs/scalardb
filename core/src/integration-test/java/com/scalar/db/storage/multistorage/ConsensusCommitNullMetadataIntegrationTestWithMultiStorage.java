@@ -1,5 +1,6 @@
 package com.scalar.db.storage.multistorage;
 
+import com.scalar.db.common.ConsensusCommitTestUtils;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitNullMetadataIntegrationTestBase;
@@ -56,7 +57,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
-    return properties;
+    return ConsensusCommitTestUtils.loadConsensusCommitProperties(properties);
   }
 
   @Override

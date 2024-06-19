@@ -9,7 +9,7 @@ public class TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrationTestWit
     extends TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrationTestBase {
   @Override
   protected Properties getProperties(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

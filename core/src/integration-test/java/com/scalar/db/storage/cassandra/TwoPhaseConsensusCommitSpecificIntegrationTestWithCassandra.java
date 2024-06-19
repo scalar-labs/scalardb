@@ -10,7 +10,7 @@ public class TwoPhaseConsensusCommitSpecificIntegrationTestWithCassandra
 
   @Override
   protected Properties getProperties1(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override
