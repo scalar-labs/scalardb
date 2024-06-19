@@ -863,9 +863,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (IllegalStateException e) {
-      // FIXME
+      // FIXME: Add namespace and table names
       throw new IllegalStateException(
-          "Failed to repair table since the raw table that has inconsistent schema exists");
+          "Failed to repair table since the raw table that has inconsistent schema exists"
+              + " rawTableSchema="
+              + rawTableMetadata
+              + ", metadata="
+              + metadata);
     }
   }
 
