@@ -95,44 +95,44 @@ public class TableMetadata {
   /**
    * Returns the partition key column names
    *
-   * @return an {@code LinkedHashSet} of partition key names
+   * @return an {@code LinkedHashSet} of the partition key names
    */
   public LinkedHashSet<String> getPartitionKeyNames() {
     return partitionKeyNames;
   }
 
   /**
-   * Returns the clustering key column names
+   * Returns the clustering-key column names
    *
-   * @return an {@code LinkedHashSet} of clustering key names
+   * @return an {@code LinkedHashSet} of the clustering-key names
    */
   public LinkedHashSet<String> getClusteringKeyNames() {
     return clusteringKeyNames;
   }
 
   /**
-   * Returns the clustering order of the specified clustering key column
+   * Returns the clustering order of the specified clustering-key column
    *
-   * @param clusteringKeyName a clustering key column name to retrieve the order
-   * @return the clustering order of the specified clustering key column
+   * @param clusteringKeyName a clustering-key column name to retrieve the order
+   * @return the clustering order of the specified clustering-key column
    */
   public Scan.Ordering.Order getClusteringOrder(String clusteringKeyName) {
     return clusteringOrders.get(clusteringKeyName);
   }
 
   /**
-   * Returns the map of the clustering key column names and the clustering orders
+   * Returns the map of the clustering-key column names and the clustering orders
    *
-   * @return the map of the clustering key column names and the clustering orders
+   * @return the map of the clustering-key column names and the clustering orders
    */
   public Map<String, Scan.Ordering.Order> getClusteringOrders() {
     return clusteringOrders;
   }
 
   /**
-   * Returns the secondary index column names
+   * Returns the secondary-index column names
    *
-   * @return an {@code Set} of the secondary index column names
+   * @return an {@code Set} of the secondary-index column names
    */
   public Set<String> getSecondaryIndexNames() {
     return secondaryIndexNames;
