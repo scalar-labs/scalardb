@@ -303,8 +303,14 @@ jobs:
           Export-Certificate @params
           certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
           Remove-Item $home/tmp-cert.cer
-          & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
-          & ${env:JAVA_HOME}/bin/keytool.exe -keystore ${env:JAVA_HOME}/jre/lib/security/cacerts -storepass 'changeit' -list -alias cosmos_emulator
+          # Setting the keystore option differs between Java 8 and Java 11+
+          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+            $keystore = "-keystore", "${env:JAVA_HOME}/jre/lib/security/cacerts"
+          } else {
+            $keystore = "-cacerts"
+          }
+          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
+          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
 
       - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v3
