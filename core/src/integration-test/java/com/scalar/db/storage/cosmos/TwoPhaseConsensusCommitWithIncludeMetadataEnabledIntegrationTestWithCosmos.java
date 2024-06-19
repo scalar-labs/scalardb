@@ -10,18 +10,18 @@ public class TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrationTestWit
 
   @Override
   protected Properties getProperties(String testName) {
-    return CosmosEnv.getProperties(testName);
+    return ConsensusCommitCosmosEnv.getProperties(testName);
   }
 
   @Override
   protected String getNamespace() {
     String namespace = super.getNamespace();
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
+    Optional<String> databasePrefix = ConsensusCommitCosmosEnv.getDatabasePrefix();
     return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return CosmosEnv.getCreationOptions();
+    return ConsensusCommitCosmosEnv.getCreationOptions();
   }
 }

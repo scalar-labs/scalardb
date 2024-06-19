@@ -12,14 +12,14 @@ public class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestWithCosmos
 
   @Override
   protected Properties getProps1(String testName) {
-    Properties properties = CosmosEnv.getProperties(testName);
+    Properties properties = ConsensusCommitCosmosEnv.getProperties(testName);
     properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     return properties;
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return CosmosEnv.getCreationOptions();
+    return ConsensusCommitCosmosEnv.getCreationOptions();
   }
 
   @Test

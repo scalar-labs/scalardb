@@ -9,7 +9,7 @@ public class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithCassand
     extends ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBase {
   @Override
   protected Properties getProperties(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

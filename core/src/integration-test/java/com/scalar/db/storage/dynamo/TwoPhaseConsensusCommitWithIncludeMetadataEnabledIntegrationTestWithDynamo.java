@@ -9,11 +9,11 @@ public class TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrationTestWit
 
   @Override
   protected Properties getProperties(String testName) {
-    return DynamoEnv.getProperties(testName);
+    return ConsensusCommitDynamoEnv.getProperties(testName);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return DynamoEnv.getCreationOptions();
+    return ConsensusCommitDynamoEnv.getCreationOptions();
   }
 }
