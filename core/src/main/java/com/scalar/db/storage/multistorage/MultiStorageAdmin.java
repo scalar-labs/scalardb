@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -200,12 +199,6 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   public TableMetadata getImportTableMetadata(String namespace, String table)
       throws ExecutionException {
     return getAdmin(namespace, table).getImportTableMetadata(namespace, table);
-  }
-
-  @Override
-  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
-      throws ExecutionException {
-    return getAdmin(namespace, table).getRawTableMetadata(namespace, table);
   }
 
   @Override

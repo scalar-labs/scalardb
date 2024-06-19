@@ -7,7 +7,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -98,12 +97,6 @@ public class AdminService implements DistributedStorageAdmin {
   public TableMetadata getImportTableMetadata(String namespace, String table)
       throws ExecutionException {
     return admin.getImportTableMetadata(namespace, table);
-  }
-
-  @Override
-  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
-      throws ExecutionException {
-    return admin.getRawTableMetadata(namespace, table);
   }
 
   @Override

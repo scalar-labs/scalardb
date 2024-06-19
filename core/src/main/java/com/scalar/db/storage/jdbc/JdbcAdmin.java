@@ -27,10 +27,12 @@ import java.sql.Statement;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -493,7 +495,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  private TableMetadata getRawTableMetadataInternal(String namespace, String table)
+  private Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
 
@@ -502,8 +504,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String schemaName = rdbEngine.getSchemaName(namespace);
 
       if (!tableExistsInternal(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
+        return Optional.empty();
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
@@ -533,13 +534,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           e);
     }
 
-    return builder.build();
-  }
-
-  @Override
-  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
-      throws ExecutionException {
-    return Optional.of(getRawTableMetadataInternal(namespace, table));
+    return Optional.of(builder.build());
   }
 
   @Override
@@ -550,14 +545,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
     }
 
-    TableMetadata rawTableMetadata = getRawTableMetadataInternal(namespace, table);
-    if (rawTableMetadata.getPartitionKeyNames().isEmpty()) {
+    Optional<TableMetadata> rawTableMetadata = getRawTableMetadata(namespace, table);
+
+    if (!rawTableMetadata.isPresent()) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
+    }
+
+    if (rawTableMetadata.get().getPartitionKeyNames().isEmpty()) {
       throw new IllegalStateException(
           CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
               getFullTableName(namespace, table)));
     }
 
-    return rawTableMetadata;
+    return rawTableMetadata.get();
   }
 
   @Override
@@ -805,10 +806,76 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @VisibleForTesting
+  void verifyRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
+      throws ExecutionException {
+    // Repairing table is supposed to be used for either of the following cases:
+    // 1. The target raw table doesn't exist.
+    // 2. The target raw table exists, and the schema and the ScalarDB metadata are consistent.
+    //
+    // Therefore, the operation should fail if any the above case isn't satisfied.
+    Optional<TableMetadata> optRawTableMetadata = getRawTableMetadata(namespace, table);
+    if (!optRawTableMetadata.isPresent()) {
+      return;
+    }
+
+    TableMetadata rawTableMetadata = optRawTableMetadata.get();
+    List<String> primaryKeyNamesInMetadata =
+        Stream.concat(
+                metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
+            .collect(Collectors.toList());
+    try {
+      // Check the primary keys. `rawTableMetadata` contains clustering keys as partition keys.
+      if (primaryKeyNamesInMetadata.size() != rawTableMetadata.getPartitionKeyNames().size()) {
+        throw new IllegalStateException("The sizes of primary keys are different");
+      }
+      for (String partitionKeyName : primaryKeyNamesInMetadata) {
+        if (!rawTableMetadata.getPartitionKeyNames().contains(partitionKeyName)) {
+          throw new IllegalStateException(
+              String.format(
+                  "Partition key '%s' doesn't exist in the raw table schema", partitionKeyName));
+        }
+        DataType columnDataType = metadata.getColumnDataType(partitionKeyName);
+        DataType columnDataTypeOfRawTable = rawTableMetadata.getColumnDataType(partitionKeyName);
+        if (!columnDataType.equals(columnDataTypeOfRawTable)) {
+          throw new IllegalStateException(
+              String.format("The data type of partition key '%s' are different", partitionKeyName));
+        }
+      }
+      // Check other columns.
+      if (metadata.getColumnNames().size() != rawTableMetadata.getColumnNames().size()) {
+        throw new IllegalStateException("The sizes of columns are different");
+      }
+      for (String columnName : metadata.getColumnNames()) {
+        if (primaryKeyNamesInMetadata.contains(columnName)) {
+          // Partition keys are already checked.
+          continue;
+        }
+        if (!rawTableMetadata.getColumnNames().contains(columnName)) {
+          throw new IllegalStateException(
+              String.format("Column '%s' doesn't exist in the raw table schema", columnName));
+        }
+        DataType columnDataType = metadata.getColumnDataType(columnName);
+        DataType columnDataTypeOfRawTable = rawTableMetadata.getColumnDataType(columnName);
+        if (!columnDataType.equals(columnDataTypeOfRawTable)) {
+          throw new IllegalStateException(
+              String.format("The data type of column '%s' are different", columnName));
+        }
+      }
+    } catch (IllegalStateException e) {
+      // FIXME
+      throw new IllegalStateException(
+          "Failed to repair table since the raw table that has inconsistent schema exists");
+    }
+  }
+
   @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+
+    verifyRawTableSchemaForRepairTable(namespace, table, metadata);
+
     try (Connection connection = dataSource.getConnection()) {
       createTableInternal(connection, namespace, table, metadata, true);
       addTableMetadata(connection, namespace, table, metadata, true, true);

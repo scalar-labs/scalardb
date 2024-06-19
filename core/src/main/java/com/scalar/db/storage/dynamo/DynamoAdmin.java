@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -1355,11 +1354,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in DynamoDB");
-  }
-
-  @Override
-  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table) {
-    return Optional.empty();
   }
 
   @Override

@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import java.util.Optional;
 
 /**
  * An administrative interface for distributed storage implementations. The user can execute
@@ -54,20 +53,6 @@ public interface DistributedStorageAdmin extends Admin {
    * @return import table metadata in the ScalarDB format
    */
   TableMetadata getImportTableMetadata(String namespace, String table) throws ExecutionException;
-
-  /**
-   * Get raw table metadata in the ScalarDB format. This is similar to {@code
-   * getImportTableMetadata()}, but this doesn't execute the validations for importing table.
-   *
-   * @param namespace namespace name
-   * @param table table name
-   * @throws IllegalArgumentException if the table does not exist
-   * @throws IllegalStateException if the table does not meet the requirement of ScalarDB table
-   * @throws ExecutionException if the operation fails
-   * @return raw table metadata in the ScalarDB format
-   */
-  Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
-      throws ExecutionException;
 
   /**
    * Add a column in the table without updating the metadata table in ScalarDB.

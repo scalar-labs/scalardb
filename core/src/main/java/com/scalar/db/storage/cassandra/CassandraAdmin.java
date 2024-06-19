@@ -33,7 +33,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -273,11 +272,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(
         CoreError.CASSANDRA_IMPORT_NOT_SUPPORTED.buildMessage());
-  }
-
-  @Override
-  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table) {
-    return Optional.empty();
   }
 
   @Override

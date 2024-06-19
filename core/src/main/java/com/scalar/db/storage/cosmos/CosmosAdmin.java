@@ -42,7 +42,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -631,11 +630,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
-  }
-
-  @Override
-  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table) {
-    return Optional.empty();
   }
 
   @Override
