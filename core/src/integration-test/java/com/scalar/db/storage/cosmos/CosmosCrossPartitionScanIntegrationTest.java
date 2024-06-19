@@ -29,7 +29,12 @@ public class CosmosCrossPartitionScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    return 1;
+    return 3;
+  }
+
+  @Override
+  protected boolean isParallelDdlSupported() {
+    return false;
   }
 
   @Test
