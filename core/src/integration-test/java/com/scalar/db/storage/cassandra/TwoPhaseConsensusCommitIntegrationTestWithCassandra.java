@@ -7,6 +7,6 @@ public class TwoPhaseConsensusCommitIntegrationTestWithCassandra
     extends TwoPhaseConsensusCommitIntegrationTestBase {
   @Override
   protected Properties getProps1(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 }

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.multistorage;
 
+import com.scalar.db.common.ConsensusCommitTestUtils;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitNullMetadataIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
@@ -48,6 +49,6 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
     // The default storage is cassandra
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
-    return props;
+    return ConsensusCommitTestUtils.loadConsensusCommitProperties(props);
   }
 }

@@ -20,6 +20,7 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -29,6 +30,7 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/cosmos/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -38,6 +40,7 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -47,6 +50,7 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
         }
@@ -57,7 +61,8 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/jdbc/*.java'
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcTestUtils.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
         }
         resources.srcDir file('src/integration-test/resources')

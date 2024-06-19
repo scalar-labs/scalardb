@@ -9,18 +9,18 @@ public class ConsensusCommitIntegrationTestWithCosmos extends ConsensusCommitInt
 
   @Override
   protected Properties getProps(String testName) {
-    return CosmosEnv.getProperties(testName);
+    return ConsensusCommitCosmosEnv.getProperties(testName);
   }
 
   @Override
   protected String getNamespaceBaseName() {
     String namespaceBaseName = super.getNamespaceBaseName();
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
+    Optional<String> databasePrefix = ConsensusCommitCosmosEnv.getDatabasePrefix();
     return databasePrefix.map(prefix -> prefix + namespaceBaseName).orElse(namespaceBaseName);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return CosmosEnv.getCreationOptions();
+    return ConsensusCommitCosmosEnv.getCreationOptions();
   }
 }

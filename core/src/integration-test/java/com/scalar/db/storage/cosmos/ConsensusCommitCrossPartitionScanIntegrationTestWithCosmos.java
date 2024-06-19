@@ -13,7 +13,7 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithCosmos
 
   @Override
   protected Properties getProps(String testName) {
-    Properties properties = CosmosEnv.getProperties(testName);
+    Properties properties = ConsensusCommitCosmosEnv.getProperties(testName);
     properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     return properties;
   }
@@ -21,13 +21,13 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithCosmos
   @Override
   protected String getNamespaceBaseName() {
     String namespaceBaseName = super.getNamespaceBaseName();
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
+    Optional<String> databasePrefix = ConsensusCommitCosmosEnv.getDatabasePrefix();
     return databasePrefix.map(prefix -> prefix + namespaceBaseName).orElse(namespaceBaseName);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return CosmosEnv.getCreationOptions();
+    return ConsensusCommitCosmosEnv.getCreationOptions();
   }
 
   @Test
