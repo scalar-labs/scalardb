@@ -93,9 +93,9 @@ public class TableMetadata {
   }
 
   /**
-   * Returns the partition key column names
+   * Returns the partition-key column names
    *
-   * @return an {@code LinkedHashSet} of the partition key names
+   * @return an {@code LinkedHashSet} of the partition-key column names
    */
   public LinkedHashSet<String> getPartitionKeyNames() {
     return partitionKeyNames;
@@ -104,7 +104,7 @@ public class TableMetadata {
   /**
    * Returns the clustering-key column names
    *
-   * @return an {@code LinkedHashSet} of the clustering-key names
+   * @return an {@code LinkedHashSet} of the clustering-key column names
    */
   public LinkedHashSet<String> getClusteringKeyNames() {
     return clusteringKeyNames;
@@ -195,10 +195,25 @@ public class TableMetadata {
       secondaryIndexNames.addAll(prototype.secondaryIndexNames);
     }
 
+    /**
+     * Adds a column with the specified name and data type.
+     *
+     * @param name a column name
+     * @param type a data type of the column
+     * @return a builder instance
+     */
     public Builder addColumn(String name, DataType type) {
       return addColumn(name, type, false);
     }
 
+    /**
+     * Adds a column with the specified name, data type, and encryption flag.
+     *
+     * @param name a column name
+     * @param type a data type of the column
+     * @param encrypted whether the column is encrypted
+     * @return a builder instance
+     */
     public Builder addColumn(String name, DataType type, boolean encrypted) {
       columns.put(name, type);
       if (encrypted) {
@@ -207,48 +222,105 @@ public class TableMetadata {
       return this;
     }
 
+    /**
+     * Removes the column with the specified name.
+     *
+     * @param name a column name
+     * @return a builder instance
+     */
     public Builder removeColumn(String name) {
       columns.remove(name);
       return this;
     }
 
+    /**
+     * Adds a partition-key column with the specified name.
+     *
+     * @param name a column name
+     * @return a builder instance
+     */
     public Builder addPartitionKey(String name) {
       partitionKeyNames.add(name);
       return this;
     }
 
+    /**
+     * Removes the partition-key column with the specified name.
+     *
+     * @param name a column name
+     * @return a builder instance
+     */
     public Builder removePartitionKey(String name) {
       partitionKeyNames.remove(name);
       return this;
     }
 
+    /**
+     * Adds a clustering-key column with the specified name and the default order (ASC).
+     *
+     * @param name a column name
+     * @return a builder instance
+     */
     public Builder addClusteringKey(String name) {
       addClusteringKey(name, Scan.Ordering.Order.ASC);
       return this;
     }
 
+    /**
+     * Adds a clustering-key column with the specified name and the specified order.
+     *
+     * @param name a column name
+     * @param clusteringOrder a clustering order
+     * @return a builder instance
+     */
     public Builder addClusteringKey(String name, Scan.Ordering.Order clusteringOrder) {
       clusteringKeyNames.add(name);
       clusteringOrders.put(name, clusteringOrder);
       return this;
     }
 
+    /**
+     * Removes the clustering-key column with the specified name.
+     *
+     * @param name a column name
+     * @return a builder instance
+     */
     public Builder removeClusteringKey(String name) {
       clusteringKeyNames.remove(name);
       clusteringOrders.remove(name);
       return this;
     }
 
+    /**
+     * Adds a secondary-index column with the specified name.
+     *
+     * @param name a column name
+     * @return a builder instance
+     */
     public Builder addSecondaryIndex(String name) {
       secondaryIndexNames.add(name);
       return this;
     }
 
+    /**
+     * Removes the secondary-index column with the specified name.
+     *
+     * @param name a column name
+     * @return a builder instance
+     */
     public Builder removeSecondaryIndex(String name) {
       secondaryIndexNames.remove(name);
       return this;
     }
 
+    /**
+     * Builds a TableMetadata instance.
+     *
+     * @throws IllegalStateException if no columns are specified or no partition-key columns are
+     *     specified or a partition-key column is not specified in the column definitions or a
+     *     clustering-key column is not specified in the column definitions
+     * @return a TableMetadata instance
+     */
     public TableMetadata build() {
       if (columns.isEmpty()) {
         throw new IllegalStateException(

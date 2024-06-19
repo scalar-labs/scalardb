@@ -594,6 +594,15 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void addNewColumnToTable_WithEncrypted_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.addNewColumnToTable(NAMESPACE, TABLE, "c2", DataType.TEXT, true))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
