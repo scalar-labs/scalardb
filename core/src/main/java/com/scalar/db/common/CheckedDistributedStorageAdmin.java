@@ -10,6 +10,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -316,6 +317,20 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       return admin.getImportTableMetadata(namespace, table);
     } catch (ExecutionException e) {
       throw new ExecutionException(
+          CoreError.GETTING_IMPORT_TABLE_METADATA_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    try {
+      return admin.getRawTableMetadata(namespace, table);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          // FIXME
           CoreError.GETTING_IMPORT_TABLE_METADATA_FAILED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table)),
           e);

@@ -31,6 +31,7 @@ import io.grpc.StatusRuntimeException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.ThreadSafe;
@@ -330,6 +331,12 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   public TableMetadata getImportTableMetadata(String namespace, String table) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in ScalarDB Server");
+  }
+
+  @Override
+  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table) {
+    // FIXME
+    return Optional.empty();
   }
 
   @Override

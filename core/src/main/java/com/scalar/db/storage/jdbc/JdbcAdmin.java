@@ -493,16 +493,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table)
+  private TableMetadata getRawTableMetadataInternal(String namespace, String table)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
-    boolean primaryKeyExists = false;
-
-    if (!rdbEngine.isImportable()) {
-      throw new UnsupportedOperationException(
-          CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
-    }
 
     try (Connection connection = dataSource.getConnection()) {
       String catalogName = rdbEngine.getCatalogName(namespace);
@@ -516,15 +509,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       DatabaseMetaData metadata = connection.getMetaData();
       ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
       while (resultSet.next()) {
-        primaryKeyExists = true;
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         builder.addPartitionKey(columnName);
-      }
-
-      if (!primaryKeyExists) {
-        throw new IllegalStateException(
-            CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
-                getFullTableName(namespace, table)));
       }
 
       resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
@@ -548,6 +534,30 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     return builder.build();
+  }
+
+  @Override
+  public Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    return Optional.of(getRawTableMetadataInternal(namespace, table));
+  }
+
+  @Override
+  public TableMetadata getImportTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    if (!rdbEngine.isImportable()) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
+    }
+
+    TableMetadata rawTableMetadata = getRawTableMetadataInternal(namespace, table);
+    if (rawTableMetadata.getPartitionKeyNames().isEmpty()) {
+      throw new IllegalStateException(
+          CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
+              getFullTableName(namespace, table)));
+    }
+
+    return rawTableMetadata;
   }
 
   @Override
