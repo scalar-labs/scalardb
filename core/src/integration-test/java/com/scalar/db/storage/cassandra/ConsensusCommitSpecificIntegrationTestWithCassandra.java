@@ -8,6 +8,6 @@ public class ConsensusCommitSpecificIntegrationTestWithCassandra
 
   @Override
   protected Properties getProperties(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 }
