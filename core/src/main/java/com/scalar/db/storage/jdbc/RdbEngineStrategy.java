@@ -131,4 +131,8 @@ public interface RdbEngineStrategy {
   default @Nullable String getSchemaName(String namespace) {
     return namespace;
   }
+
+  default String rawTableName(String namespace, String table) {
+    return table;
+  }
 }

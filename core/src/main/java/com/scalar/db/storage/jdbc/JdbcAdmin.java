@@ -508,13 +508,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
-      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
+      String rawTableName = rdbEngine.rawTableName(namespace, table);
+      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, rawTableName);
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         builder.addPartitionKey(columnName);
       }
 
-      resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
+      resultSet = metadata.getColumns(catalogName, schemaName, rawTableName, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         builder.addColumn(

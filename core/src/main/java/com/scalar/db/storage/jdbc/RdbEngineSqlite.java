@@ -7,6 +7,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Driver;
 import java.sql.JDBCType;
@@ -278,5 +279,16 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
+  }
+
+  @Override
+  @Nullable
+  public String rawSchemaName(String namespace) {
+    return null;
+  }
+
+  @Override
+  public String rawTableName(String namespace, String table) {
+    return namespace + NAMESPACE_SEPARATOR + table;
   }
 }
