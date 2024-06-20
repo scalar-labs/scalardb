@@ -5,7 +5,6 @@ import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBas
 import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -14,13 +13,6 @@ public class CosmosConditionalMutationIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return CosmosEnv.getProperties(testName);
-  }
-
-  @Override
-  protected String getNamespace() {
-    String namespace = super.getNamespace();
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }
 
   @Override
