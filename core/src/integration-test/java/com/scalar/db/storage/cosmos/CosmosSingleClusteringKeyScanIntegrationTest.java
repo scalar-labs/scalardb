@@ -4,7 +4,6 @@ import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTes
 import com.scalar.db.io.DataType;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
@@ -13,13 +12,6 @@ public class CosmosSingleClusteringKeyScanIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return CosmosEnv.getProperties(testName);
-  }
-
-  @Override
-  protected String getNamespace() {
-    String namespace = super.getNamespace();
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }
 
   @Override
