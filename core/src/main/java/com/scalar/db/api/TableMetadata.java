@@ -316,8 +316,8 @@ public class TableMetadata {
     /**
      * Builds a TableMetadata instance.
      *
-     * @throws IllegalStateException if no columns are specified or no partition-key columns are
-     *     specified or a partition-key column is not specified in the column definitions or a
+     * @throws IllegalStateException if no columns are specified, no partition-key columns are
+     *     specified, a partition-key column is not specified in the column definitions, or a
      *     clustering-key column is not specified in the column definitions
      * @return a TableMetadata instance
      */
