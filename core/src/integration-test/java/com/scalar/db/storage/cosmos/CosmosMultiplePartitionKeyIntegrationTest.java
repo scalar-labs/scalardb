@@ -2,7 +2,6 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 
 public class CosmosMultiplePartitionKeyIntegrationTest
@@ -13,15 +12,13 @@ public class CosmosMultiplePartitionKeyIntegrationTest
   }
 
   @Override
-  protected String getNamespaceBaseName() {
-    String namespaceBaseName = super.getNamespaceBaseName();
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + namespaceBaseName).orElse(namespaceBaseName);
+  protected int getThreadNum() {
+    return 3;
   }
 
   @Override
-  protected int getThreadNum() {
-    return 3;
+  protected boolean isParallelDdlSupported() {
+    return false;
   }
 
   @Override
