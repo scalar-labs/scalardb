@@ -2,16 +2,12 @@ package com.scalar.db.storage.cosmos;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 
 public final class CosmosEnv {
   private static final String PROP_COSMOS_URI = "scalardb.cosmos.uri";
   private static final String PROP_COSMOS_PASSWORD = "scalardb.cosmos.password";
-  private static final String PROP_COSMOS_DATABASE_PREFIX = "scalardb.cosmos.database_prefix";
   private static final String PROP_COSMOS_CREATE_OPTIONS = "scalardb.cosmos.create_options";
 
   private static final ImmutableMap<String, String> DEFAULT_COSMOS_CREATE_OPTIONS =
@@ -22,7 +18,6 @@ public final class CosmosEnv {
   public static Properties getProperties(String testName) {
     String contactPoint = System.getProperty(PROP_COSMOS_URI);
     String password = System.getProperty(PROP_COSMOS_PASSWORD);
-    Optional<String> databasePrefix = getDatabasePrefix();
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
@@ -32,27 +27,12 @@ public final class CosmosEnv {
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
 
-    if (databasePrefix.isPresent()) {
-      // Add the prefix and testName as a metadata database suffix
-      properties.setProperty(
-          DatabaseConfig.SYSTEM_NAMESPACE_NAME,
-          databasePrefix.get() + DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
-
-      properties.setProperty(
-          ConsensusCommitConfig.COORDINATOR_NAMESPACE,
-          databasePrefix.get() + Coordinator.NAMESPACE);
-    } else {
-      // Add testName as a metadata database suffix
-      properties.setProperty(
-          DatabaseConfig.SYSTEM_NAMESPACE_NAME,
-          DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
-    }
+    // Add testName as a metadata database suffix
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return properties;
-  }
-
-  public static Optional<String> getDatabasePrefix() {
-    return Optional.ofNullable(System.getProperty(PROP_COSMOS_DATABASE_PREFIX));
   }
 
   public static Map<String, String> getCreationOptions() {
