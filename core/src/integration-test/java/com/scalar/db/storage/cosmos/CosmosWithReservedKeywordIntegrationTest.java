@@ -2,7 +2,6 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageWithReservedKeywordIntegrationTestBase;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 
 public class CosmosWithReservedKeywordIntegrationTest
@@ -15,9 +14,7 @@ public class CosmosWithReservedKeywordIntegrationTest
 
   @Override
   protected String getNamespace() {
-    String namespace = "reserved_keyword_test";
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
+    return "reserved_keyword_test";
   }
 
   @Override
