@@ -140,21 +140,29 @@ class RdbEngineSqlite implements RdbEngineStrategy {
     // Note: The current implementation only supports columns created by ScalarDB. This can't be
     //       used for importing tables.
     switch (type) {
-      case BOOLEAN:
-        return DataType.BOOLEAN;
       case INTEGER:
-        return DataType.INT;
-      case BIGINT:
-        return DataType.BIGINT;
+        if (typeName.equalsIgnoreCase("int")) {
+          return DataType.INT;
+        } else if (typeName.equalsIgnoreCase("boolean")) {
+          return DataType.BOOLEAN;
+        } else if (typeName.equalsIgnoreCase("bigint")) {
+          return DataType.BIGINT;
+        }
+        break;
+      case VARCHAR:
+        return DataType.TEXT;
       case FLOAT:
-        return DataType.FLOAT;
-      case DOUBLE:
-        return DataType.DOUBLE;
+        if (typeName.equalsIgnoreCase("float")) {
+          return DataType.FLOAT;
+        } else if (typeName.equalsIgnoreCase("double")) {
+          return DataType.DOUBLE;
+        }
+        break;
       default:
-        throw new IllegalArgumentException(
-            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
-                typeName, columnDescription));
+        break;
     }
+    throw new IllegalArgumentException(
+        CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(typeName, columnDescription));
   }
 
   @Override
