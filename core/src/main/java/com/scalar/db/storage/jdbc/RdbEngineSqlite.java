@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -136,7 +137,24 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public DataType getDataTypeForScalarDb(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
-    throw new AssertionError("SQLite is not supported");
+    // Note: The current implementation only supports columns created by ScalarDB. This can't be
+    //       used for importing tables.
+    switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case INTEGER:
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case FLOAT:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      default:
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+    }
   }
 
   @Override
