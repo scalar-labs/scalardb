@@ -9,11 +9,11 @@ public class TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrationTestWit
 
   @Override
   protected Properties getProperties(String testName) {
-    return CosmosEnv.getProperties(testName);
+    return ConsensusCommitCosmosEnv.getProperties(testName);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return CosmosEnv.getCreationOptions();
+    return ConsensusCommitCosmosEnv.getCreationOptions();
   }
 }

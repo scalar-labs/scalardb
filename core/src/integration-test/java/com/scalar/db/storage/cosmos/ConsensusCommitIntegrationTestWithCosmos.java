@@ -8,11 +8,11 @@ public class ConsensusCommitIntegrationTestWithCosmos extends ConsensusCommitInt
 
   @Override
   protected Properties getProps(String testName) {
-    return CosmosEnv.getProperties(testName);
+    return ConsensusCommitCosmosEnv.getProperties(testName);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return CosmosEnv.getCreationOptions();
+    return ConsensusCommitCosmosEnv.getCreationOptions();
   }
 }

@@ -17,6 +17,11 @@ public class CosmosMultiplePartitionKeyIntegrationTest
   }
 
   @Override
+  protected boolean isParallelDdlSupported() {
+    return false;
+  }
+
+  @Override
   protected Map<String, String> getCreationOptions() {
     return CosmosEnv.getCreationOptions();
   }

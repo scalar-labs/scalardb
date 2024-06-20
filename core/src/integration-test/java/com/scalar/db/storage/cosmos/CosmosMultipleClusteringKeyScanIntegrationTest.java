@@ -39,6 +39,11 @@ public class CosmosMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
+  protected boolean isParallelDdlSupported() {
+    return false;
+  }
+
+  @Override
   protected Map<String, String> getCreationOptions() {
     return CosmosEnv.getCreationOptions();
   }
