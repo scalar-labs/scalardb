@@ -835,24 +835,30 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       // Check the primary keys.
       if (primaryKeyNamesInMetadata.size() != primaryKeyNamesInRawTable.size()) {
-        throw new IllegalStateException("The sizes of primary keys are different");
+        throw new IllegalStateException(
+            String.format(
+                "The sizes of primary keys are different between the ScalarDB metadata (%d) and the raw table schema (%d)",
+                primaryKeyNamesInMetadata.size(), primaryKeyNamesInRawTable.size()));
       }
       for (String partitionKeyName : primaryKeyNamesInMetadata) {
         if (!primaryKeyNamesInRawTable.contains(partitionKeyName)) {
           throw new IllegalStateException(
               String.format(
-                  "Partition key '%s' doesn't exist in the raw table schema", partitionKeyName));
+                  "Partition key (%s) doesn't exist in the raw table schema", partitionKeyName));
         }
       }
 
       // Check the columns.
       if (metadata.getColumnNames().size() != rawTableMetadata.getColumnNames().size()) {
-        throw new IllegalStateException("The sizes of columns are different");
+        throw new IllegalStateException(
+            String.format(
+                "The sizes of columns are different between the ScalarDB metadata (%d) and the raw table schema (%d)",
+                metadata.getColumnNames().size(), rawTableMetadata.getColumnNames().size()));
       }
       for (String columnName : metadata.getColumnNames()) {
         if (!rawTableMetadata.getColumnNames().contains(columnName)) {
           throw new IllegalStateException(
-              String.format("Column '%s' doesn't exist in the raw table schema", columnName));
+              String.format("Column (%s) doesn't exist in the raw table schema", columnName));
         }
 
         DataType columnDataType = metadata.getColumnDataType(columnName);
@@ -871,16 +877,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
 
         throw new IllegalStateException(
-            String.format("The data type of column '%s' are different", columnName));
+            String.format("The data type of column (%s) are different", columnName));
       }
     } catch (IllegalStateException e) {
-      // FIXME: Add namespace and table names
       throw new IllegalStateException(
-          "Failed to repair table since the raw table that has inconsistent schema exists"
-              + " rawTableSchema="
-              + rawTableMetadata
-              + ", metadata="
-              + metadata,
+          String.format(
+              "Failed to repair table since the raw table with inconsistent schema exists. ScalarDbMetadata=%s, RawTableSchema=%s",
+              metadata, rawTableMetadata),
           e);
     }
   }
