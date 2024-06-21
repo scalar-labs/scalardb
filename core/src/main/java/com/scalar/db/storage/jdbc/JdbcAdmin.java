@@ -495,7 +495,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  private Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
+  @VisibleForTesting
+  Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
 
@@ -821,24 +822,30 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     TableMetadata rawTableMetadata = optRawTableMetadata.get();
+    // Partition keys and clustering keys are handled as primary keys in the underlying RDBMS.
+    List<String> primaryKeyNamesInRawTable =
+        Stream.concat(
+                rawTableMetadata.getPartitionKeyNames().stream(),
+                rawTableMetadata.getClusteringKeyNames().stream())
+            .collect(Collectors.toList());
     List<String> primaryKeyNamesInMetadata =
         Stream.concat(
                 metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
             .collect(Collectors.toList());
     try {
-      // Check the primary keys. `rawTableMetadata` contains clustering keys as partition keys.
-      if (primaryKeyNamesInMetadata.size() != rawTableMetadata.getPartitionKeyNames().size()) {
+      // Check the primary keys.
+      if (primaryKeyNamesInMetadata.size() != primaryKeyNamesInRawTable.size()) {
         throw new IllegalStateException("The sizes of primary keys are different");
       }
       for (String partitionKeyName : primaryKeyNamesInMetadata) {
-        if (!rawTableMetadata.getPartitionKeyNames().contains(partitionKeyName)) {
+        if (!primaryKeyNamesInRawTable.contains(partitionKeyName)) {
           throw new IllegalStateException(
               String.format(
                   "Partition key '%s' doesn't exist in the raw table schema", partitionKeyName));
         }
       }
 
-      // Check other columns.
+      // Check the columns.
       if (metadata.getColumnNames().size() != rawTableMetadata.getColumnNames().size()) {
         throw new IllegalStateException("The sizes of columns are different");
       }

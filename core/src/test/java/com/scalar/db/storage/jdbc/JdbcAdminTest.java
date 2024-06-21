@@ -12,7 +12,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -20,6 +22,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -35,6 +38,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -46,6 +50,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,10 +97,15 @@ public class JdbcAdminTest {
   }
 
   private JdbcAdmin createJdbcAdminFor(RdbEngine rdbEngine) {
+    return createJdbcAdminWithMockRdbEngine(RdbEngine.createRdbEngineStrategy(rdbEngine));
+  }
+
+  private JdbcAdmin createJdbcAdminWithMockRdbEngine(RdbEngineStrategy rdbEngineStrategy) {
     // Arrange
-    RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(rdbEngine);
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
-      mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
+      mocked
+          .when(() -> RdbEngineFactory.create(any(JdbcConfig.class)))
+          .thenReturn(rdbEngineStrategy);
       return new JdbcAdmin(dataSource, config);
     }
   }
@@ -1187,7 +1197,79 @@ public class JdbcAdminTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void repairTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(RdbEngine rdbEngine)
+  public void repairTable_WithConsistentRawTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(
+      RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.of(metadata)).when(adminSpy).getRawTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WithoutRawTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(
+      RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.empty()).when(adminSpy).getRawTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WithInconsistentRawTablePrimaryKey_ShouldFail(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
@@ -1211,13 +1293,103 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    TableMetadata rawTableMetadata =
+        TableMetadata.newBuilder(metadata).addPartitionKey("c2").build();
+    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRawTableMetadata(namespace, table);
 
     // Act
-    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+    assertThatThrownBy(
+            () -> adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap()))
+        .isInstanceOf(IllegalStateException.class);
 
     // Assert
-    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
-    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+    verify(adminSpy, never())
+        .createTableInternal(any(), anyString(), anyString(), any(), anyBoolean());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WithInconsistentRawTableColumn_ShouldFail(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    TableMetadata rawTableMetadata = TableMetadata.newBuilder(metadata).removeColumn("c7").build();
+    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRawTableMetadata(namespace, table);
+
+    // Act
+    assertThatThrownBy(
+            () -> adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap()))
+        .isInstanceOf(IllegalStateException.class);
+
+    // Assert
+    verify(adminSpy, never())
+        .createTableInternal(any(), anyString(), anyString(), any(), anyBoolean());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WithInconsistentRawTableColumnType_ShouldFail(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    TableMetadata rawTableMetadata =
+        TableMetadata.newBuilder(metadata).removeColumn("c7").addColumn("c7", DataType.INT).build();
+    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRawTableMetadata(namespace, table);
+
+    // Act
+    assertThatThrownBy(
+            () -> adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap()))
+        .isInstanceOf(IllegalStateException.class);
+
+    // Assert
+    verify(adminSpy, never())
+        .createTableInternal(any(), anyString(), anyString(), any(), anyBoolean());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
   }
 
   @Test
@@ -2539,6 +2711,120 @@ public class JdbcAdminTest {
   }
 
   @Test
+  void getRawTableMetadata_shouldReturnProperValue() throws SQLException, ExecutionException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    when(connection.getMetaData()).thenReturn(metadata);
+
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString("COLUMN_NAME")).thenReturn("pk1").thenReturn("pk2");
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+
+    ResultSet columnResults = mock(ResultSet.class);
+    when(columnResults.next())
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(false);
+    when(columnResults.getString("COLUMN_NAME"))
+        .thenReturn("pk1")
+        .thenReturn("pk2")
+        .thenReturn("col1")
+        .thenReturn("col2");
+    when(columnResults.getInt("DATA_TYPE"))
+        .thenReturn(Types.INTEGER)
+        .thenReturn(Types.VARCHAR)
+        .thenReturn(Types.FLOAT)
+        .thenReturn(Types.BIGINT);
+    when(columnResults.getString("TYPE_NAME"))
+        .thenReturn("intintint")
+        .thenReturn("texttext")
+        .thenReturn("floatfloat")
+        .thenReturn("bigintbig");
+    when(columnResults.getInt("COLUMN_SIZE"))
+        .thenReturn(10)
+        .thenReturn(20)
+        .thenReturn(30)
+        .thenReturn(40);
+    when(columnResults.getInt("DECIMAL_DIGITS"))
+        .thenReturn(11)
+        .thenReturn(22)
+        .thenReturn(33)
+        .thenReturn(44);
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+
+    RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
+    when(rdbEngine.rawSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
+    when(rdbEngine.rawTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
+    when(rdbEngine.getDataTypeForScalarDb(any(), anyString(), anyInt(), anyInt(), anyString()))
+        .thenReturn(DataType.INT)
+        .thenReturn(DataType.TEXT)
+        .thenReturn(DataType.FLOAT)
+        .thenReturn(DataType.BIGINT);
+    JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
+
+    // Act
+    Optional<TableMetadata> rawTableMetadata = admin.getRawTableMetadata(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(rawTableMetadata).isPresent();
+    assertThat(rawTableMetadata.get().getPartitionKeyNames()).containsExactly("pk1", "pk2");
+    assertThat(rawTableMetadata.get().getClusteringKeyNames()).isEmpty();
+    assertThat(rawTableMetadata.get().getColumnNames())
+        .containsExactly("pk1", "pk2", "col1", "col2");
+    assertThat(rawTableMetadata.get().getColumnDataType("pk1")).isEqualTo(DataType.INT);
+    assertThat(rawTableMetadata.get().getColumnDataType("pk2")).isEqualTo(DataType.TEXT);
+    assertThat(rawTableMetadata.get().getColumnDataType("col1")).isEqualTo(DataType.FLOAT);
+    assertThat(rawTableMetadata.get().getColumnDataType("col2")).isEqualTo(DataType.BIGINT);
+    verify(rdbEngine)
+        .getDataTypeForScalarDb(eq(JDBCType.INTEGER), eq("intintint"), eq(10), eq(11), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDb(eq(JDBCType.VARCHAR), eq("texttext"), eq(20), eq(22), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDb(eq(JDBCType.FLOAT), eq("floatfloat"), eq(30), eq(33), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDb(eq(JDBCType.BIGINT), eq("bigintbig"), eq(40), eq(44), anyString());
+  }
+
+  @Test
+  void getRawTableMetadata_WithNoPrimaryKeyForX_ShouldThrowIllegalStateException()
+      throws SQLException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    when(connection.getMetaData()).thenReturn(metadata);
+
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    when(primaryKeyResults.next()).thenReturn(false);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+
+    ResultSet columnResults = mock(ResultSet.class);
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString("COLUMN_NAME")).thenReturn("col1");
+    when(columnResults.getInt("DATA_TYPE")).thenReturn(Types.INTEGER);
+    when(columnResults.getString("TYPE_NAME")).thenReturn("intintint");
+    when(columnResults.getInt("COLUMN_SIZE")).thenReturn(10);
+    when(columnResults.getInt("DECIMAL_DIGITS")).thenReturn(11);
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+
+    RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
+    when(rdbEngine.rawSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
+    when(rdbEngine.rawTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
+    JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getRawTableMetadata(NAMESPACE, TABLE))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
   public void getImportTableMetadata_ForX_ShouldWorkProperly()
       throws SQLException, ExecutionException {
     for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
@@ -2624,17 +2910,6 @@ public class JdbcAdminTest {
     // Act Assert
     assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE))
         .isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
-  public void getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowExecutionException()
-      throws SQLException {
-    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
-      if (!rdbEngine.equals(RdbEngine.SQLITE)) {
-        getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowIllegalStateException(
-            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-      }
-    }
   }
 
   @Test
