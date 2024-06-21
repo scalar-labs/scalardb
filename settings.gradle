@@ -1,3 +1,19 @@
+// Used for the integration test to download any configured JDK that cannot be found on the system to be downloaded automatically
+// This is disabled by default using the gradle property `org.gradle.java.installations.auto-download=false` set in the `gradle.properties` file
+plugins {
+    id("org.gradle.toolchains.foojay-resolver") version "0.8.0"
+}
+
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository("foojay") {
+                resolverClass = org.gradle.toolchains.foojay.FoojayToolchainResolver
+            }
+        }
+    }
+}
+
 rootProject.name = 'scalardb'
 include 'core'
 include 'rpc'
