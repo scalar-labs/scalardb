@@ -1,3 +1,19 @@
+// Used for the integration test to download any configured JDK that cannot be found on the system to be downloaded automatically
+// Downloaded JDKs are stored in the Gradle user home directory (~/.gradle/jdks)
+plugins {
+    id("org.gradle.toolchains.foojay-resolver") version "0.8.0"
+}
+
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository("foojay") {
+                resolverClass = org.gradle.toolchains.foojay.FoojayToolchainResolver
+            }
+        }
+    }
+}
+
 rootProject.name = 'scalardb'
 include 'core'
 include 'rpc'
