@@ -8,20 +8,26 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
+import com.scalar.db.api.GetBuilder.BuildableGetOrGetWithIndexFromExisting;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.transaction.consensuscommit.Snapshot.Key;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -73,12 +79,12 @@ public class CrudHandler {
     List<String> originalProjections = new ArrayList<>(get.getProjections());
     Snapshot.Key key = new Snapshot.Key(get);
     readUnread(key, get);
-    return createGetResult(key, originalProjections);
+    return createGetResult(key, get, originalProjections);
   }
 
   @VisibleForTesting
   void readUnread(Snapshot.Key key, Get get) throws CrudException {
-    if (!snapshot.containsKeyInReadSet(key)) {
+    if (!snapshot.contains(get)) {
       read(key, get);
     }
   }
@@ -86,8 +92,13 @@ public class CrudHandler {
   private void read(Snapshot.Key key, Get get) throws CrudException {
     Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
-      snapshot.put(key, result); // for read set
-      snapshot.put(get, key); // for extra-read using Get
+      if (result.isPresent() || get.getConjunctions().isEmpty()) {
+        // Keep the read set latest to create before image using it when the transaction writes or
+        // deletes this record. However, if a get operation has a conjunction and the result is
+        // empty, we don't need to deem the record does not exist.
+        snapshot.put(key, result);
+      }
+      snapshot.put(get, result); // for re-read and validation
       return;
     }
     throw new UncommittedRecordException(
@@ -97,11 +108,11 @@ public class CrudHandler {
         snapshot.getId());
   }
 
-  private Optional<Result> createGetResult(Snapshot.Key key, List<String> projections)
+  private Optional<Result> createGetResult(Snapshot.Key key, Get get, List<String> projections)
       throws CrudException {
     TableMetadata metadata = getTableMetadata(key.getNamespace(), key.getTable());
     return snapshot
-        .get(key)
+        .mergeResult(key, snapshot.get(get), get.getConjunctions())
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled));
   }
 
@@ -122,17 +133,18 @@ public class CrudHandler {
   private List<Result> scanInternal(Scan scan) throws CrudException {
     List<String> originalProjections = new ArrayList<>(scan.getProjections());
 
-    List<Result> results = new ArrayList<>();
+    Map<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
 
-    Optional<List<Snapshot.Key>> keysInSnapshot = snapshot.get(scan);
-    if (keysInSnapshot.isPresent()) {
-      for (Snapshot.Key key : keysInSnapshot.get()) {
-        snapshot.get(key).ifPresent(results::add);
+    Optional<Map<Snapshot.Key, TransactionResult>> resultsInSnapshot = snapshot.get(scan);
+    if (resultsInSnapshot.isPresent()) {
+      for (Entry<Key, TransactionResult> entry : resultsInSnapshot.get().entrySet()) {
+        snapshot
+            .mergeResult(entry.getKey(), Optional.of(entry.getValue()))
+            .ifPresent(result -> results.put(entry.getKey(), result));
       }
       return createScanResults(scan, originalProjections, results);
     }
 
-    List<Snapshot.Key> keys = new ArrayList<>();
     Scanner scanner = null;
     try {
       scanner = scanFromStorage(scan);
@@ -148,12 +160,11 @@ public class CrudHandler {
 
         Snapshot.Key key = new Snapshot.Key(scan, r);
 
-        if (!snapshot.containsKeyInReadSet(key)) {
-          snapshot.put(key, Optional.of(result));
-        }
+        // We always update the read set to create before image using the latest result when the
+        // transaction writes or deletes this record.
+        snapshot.put(key, Optional.of(result));
 
-        keys.add(key);
-        snapshot.get(key).ifPresent(results::add);
+        snapshot.mergeResult(key, Optional.of(result)).ifPresent(value -> results.put(key, value));
       }
     } finally {
       if (scanner != null) {
@@ -164,15 +175,16 @@ public class CrudHandler {
         }
       }
     }
-    snapshot.put(scan, keys);
+    snapshot.put(scan, results);
 
     return createScanResults(scan, originalProjections, results);
   }
 
-  private List<Result> createScanResults(Scan scan, List<String> projections, List<Result> results)
+  private List<Result> createScanResults(
+      Scan scan, List<String> projections, Map<Snapshot.Key, TransactionResult> results)
       throws CrudException {
     TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
-    return results.stream()
+    return results.values().stream()
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled))
         .collect(Collectors.toList());
   }
@@ -189,7 +201,7 @@ public class CrudHandler {
     }
 
     if (put.getCondition().isPresent()) {
-      if (put.isImplicitPreReadEnabled()) {
+      if (put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key)) {
         readUnread(key, createGet(key));
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
@@ -203,7 +215,9 @@ public class CrudHandler {
     Snapshot.Key key = new Snapshot.Key(delete);
 
     if (delete.getCondition().isPresent()) {
-      readUnread(key, createGet(key));
+      if (!snapshot.containsKeyInReadSet(key)) {
+        readUnread(key, createGet(key));
+      }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           delete, snapshot.getFromReadSet(key).orElse(null));
     }
@@ -253,16 +267,17 @@ public class CrudHandler {
   @VisibleForTesting
   Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
-      get.clearProjections();
+      BuildableGetOrGetWithIndexFromExisting builder = Get.newBuilder(get);
+      builder.clearProjections();
       // Retrieve only the after images columns when including the metadata is disabled, otherwise
       // retrieve all the columns
       if (!isIncludeMetadataEnabled) {
         LinkedHashSet<String> afterImageColumnNames =
             tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
-        get.withProjections(afterImageColumnNames);
+        builder.projections(afterImageColumnNames);
       }
-      get.withConsistency(Consistency.LINEARIZABLE);
-      return storage.get(get).map(TransactionResult::new);
+      builder.consistency(Consistency.LINEARIZABLE);
+      return storage.get(builder.build()).map(TransactionResult::new);
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(),
@@ -273,16 +288,17 @@ public class CrudHandler {
 
   private Scanner scanFromStorage(Scan scan) throws CrudException {
     try {
-      scan.clearProjections();
+      BuildableScanOrScanAllFromExisting builder = Scan.newBuilder(scan);
+      builder.clearProjections();
       // Retrieve only the after images columns when including the metadata is disabled, otherwise
       // retrieve all the columns
       if (!isIncludeMetadataEnabled) {
         LinkedHashSet<String> afterImageColumnNames =
             tableMetadataManager.getTransactionTableMetadata(scan).getAfterImageColumnNames();
-        scan.withProjections(afterImageColumnNames);
+        builder.projections(afterImageColumnNames);
       }
-      scan.withConsistency(Consistency.LINEARIZABLE);
-      return storage.scan(scan);
+      builder.consistency(Consistency.LINEARIZABLE);
+      return storage.scan(builder.build());
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),

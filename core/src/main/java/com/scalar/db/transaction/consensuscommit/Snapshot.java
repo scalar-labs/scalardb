@@ -14,6 +14,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -51,8 +52,8 @@ public class Snapshot {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
-  private final Map<Get, Key> getSet;
-  private final Map<Scan, List<Key>> scanSet;
+  private final Map<Get, Optional<TransactionResult>> getSet;
+  private final Map<Scan, Map<Key, TransactionResult>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
@@ -82,8 +83,8 @@ public class Snapshot {
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
-      Map<Get, Key> getSet,
-      Map<Scan, List<Key>> scanSet,
+      Map<Get, Optional<TransactionResult>> getSet,
+      Map<Scan, Map<Key, TransactionResult>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
     this.id = id;
@@ -115,12 +116,12 @@ public class Snapshot {
     readSet.put(key, result);
   }
 
-  public void put(Get get, Key key) {
-    getSet.put(get, key);
+  public void put(Get get, Optional<TransactionResult> result) {
+    getSet.put(get, result);
   }
 
-  public void put(Scan scan, List<Key> keys) {
-    scanSet.put(scan, keys);
+  public void put(Scan scan, Map<Key, TransactionResult> results) {
+    scanSet.put(scan, results);
   }
 
   public void put(Key key, Put put) {
@@ -158,22 +159,29 @@ public class Snapshot {
     return new ArrayList<>(deleteSet.values());
   }
 
-  public Optional<TransactionResult> get(Key key) throws CrudException {
+  public Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
+      throws CrudException {
     if (deleteSet.containsKey(key)) {
       return Optional.empty();
-    } else if (readSet.containsKey(key)) {
-      if (writeSet.containsKey(key)) {
-        // merge the result in the read set and the put in the write set
-        return Optional.of(
-            new TransactionResult(
-                new MergedResult(readSet.get(key), writeSet.get(key), getTableMetadata(key))));
-      } else {
-        return readSet.get(key);
-      }
+    } else if (readSet.containsKey(key) && writeSet.containsKey(key)) {
+      // merge the result in the read set and the put in the write set
+      return Optional.of(
+          new TransactionResult(
+              new MergedResult(readSet.get(key), writeSet.get(key), getTableMetadata(key))));
+    } else {
+      return result;
     }
-    throw new IllegalArgumentException(
-        CoreError.CONSENSUS_COMMIT_GETTING_DATA_NEITHER_IN_READ_SET_NOR_DELETE_SET_NOT_ALLOWED
-            .buildMessage());
+  }
+
+  public Optional<TransactionResult> mergeResult(
+      Key key, Optional<TransactionResult> result, Set<Conjunction> conjunctions)
+      throws CrudException {
+    return mergeResult(key, result)
+        .filter(
+            r ->
+                conjunctions.isEmpty()
+                    || !writeSet.containsKey(key)
+                    || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
@@ -200,7 +208,16 @@ public class Snapshot {
     return metadata.getTableMetadata();
   }
 
-  public Optional<List<Key>> get(Scan scan) {
+  public boolean contains(Get get) {
+    return getSet.containsKey(get);
+  }
+
+  public Optional<TransactionResult> get(Get get) {
+    assert this.contains(get);
+    return getSet.get(get);
+  }
+
+  public Optional<Map<Key, TransactionResult>> get(Scan scan) {
     if (scanSet.containsKey(scan)) {
       return Optional.ofNullable(scanSet.get(scan));
     }
@@ -238,7 +255,7 @@ public class Snapshot {
     }
 
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      if (scanSet.get(scan).contains(entry.getKey())) {
+      if (scanSet.get(scan).containsKey(entry.getKey())) {
         return true;
       }
 
@@ -301,7 +318,7 @@ public class Snapshot {
 
   private boolean isWriteSetOverlappedWith(ScanWithIndex scan) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      if (scanSet.get(scan).contains(entry.getKey())) {
+      if (scanSet.get(scan).containsKey(entry.getKey())) {
         return true;
       }
 
@@ -342,7 +359,7 @@ public class Snapshot {
       // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
 
       // Check for cases 1 and 2
-      if (scanSet.get(scan).contains(entry.getKey())) {
+      if (scanSet.get(scan).containsKey(entry.getKey())) {
         return true;
       }
 
@@ -431,14 +448,14 @@ public class Snapshot {
     List<ParallelExecutorTask> tasks = new ArrayList<>();
 
     // Read set by scan is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Scan, List<Key>> entry : scanSet.entrySet()) {
+    for (Map.Entry<Scan, Map<Key, TransactionResult>> entry : scanSet.entrySet()) {
       tasks.add(
           () -> {
             Map<Key, TransactionResult> currentReadMap = new HashMap<>();
             Set<Key> validatedReadSet = new HashSet<>();
             Scanner scanner = null;
+            Scan scan = entry.getKey();
             try {
-              Scan scan = entry.getKey();
               // only get tx_id and tx_version columns because we use only them to compare
               scan.clearProjections();
               scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
@@ -462,13 +479,16 @@ public class Snapshot {
               }
             }
 
-            for (Key key : entry.getValue()) {
+            for (Map.Entry<Key, TransactionResult> e : entry.getValue().entrySet()) {
+              Key key = e.getKey();
+              TransactionResult result = e.getValue();
               if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
                 continue;
               }
               // Check if read records are not changed
               TransactionResult latestResult = currentReadMap.get(key);
-              if (isChanged(Optional.ofNullable(latestResult), readSet.get(key))) {
+
+              if (isChanged(Optional.ofNullable(latestResult), Optional.of(result))) {
                 throwExceptionDueToAntiDependency();
               }
               validatedReadSet.add(key);
@@ -481,30 +501,23 @@ public class Snapshot {
           });
     }
 
-    // Calculate read set validated by scan
-    Set<Key> validatedReadSetByScan = new HashSet<>();
-    for (List<Key> values : scanSet.values()) {
-      validatedReadSetByScan.addAll(values);
-    }
-
     // Read set by get is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Get, Key> entry : getSet.entrySet()) {
+    for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
       Get get = entry.getKey();
-      Key key = entry.getValue();
-      if (writeSet.containsKey(key)
-          || deleteSet.containsKey(key)
-          || validatedReadSetByScan.contains(key)) {
+      Key key = new Key(get);
+      if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
         continue;
       }
 
       tasks.add(
           () -> {
+            Optional<TransactionResult> originalResult = getSet.get(get);
             // only get tx_id and tx_version columns because we use only them to compare
             get.clearProjections();
             get.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
             Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
             // Check if a read record is not changed
-            if (isChanged(latestResult, readSet.get(key))) {
+            if (isChanged(latestResult, originalResult)) {
               throwExceptionDueToAntiDependency();
             }
           });
