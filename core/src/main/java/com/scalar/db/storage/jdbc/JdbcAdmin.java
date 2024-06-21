@@ -836,32 +836,35 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               String.format(
                   "Partition key '%s' doesn't exist in the raw table schema", partitionKeyName));
         }
-        DataType columnDataType = metadata.getColumnDataType(partitionKeyName);
-        DataType columnDataTypeOfRawTable = rawTableMetadata.getColumnDataType(partitionKeyName);
-        if (!columnDataType.equals(columnDataTypeOfRawTable)) {
-          throw new IllegalStateException(
-              String.format("The data type of partition key '%s' are different", partitionKeyName));
-        }
       }
+
       // Check other columns.
       if (metadata.getColumnNames().size() != rawTableMetadata.getColumnNames().size()) {
         throw new IllegalStateException("The sizes of columns are different");
       }
       for (String columnName : metadata.getColumnNames()) {
-        if (primaryKeyNamesInMetadata.contains(columnName)) {
-          // Partition keys are already checked.
-          continue;
-        }
         if (!rawTableMetadata.getColumnNames().contains(columnName)) {
           throw new IllegalStateException(
               String.format("Column '%s' doesn't exist in the raw table schema", columnName));
         }
+
         DataType columnDataType = metadata.getColumnDataType(columnName);
         DataType columnDataTypeOfRawTable = rawTableMetadata.getColumnDataType(columnName);
-        if (!columnDataType.equals(columnDataTypeOfRawTable)) {
-          throw new IllegalStateException(
-              String.format("The data type of column '%s' are different", columnName));
+        if (columnDataType == DataType.FLOAT || columnDataType == DataType.DOUBLE) {
+          // Some RDBMS internally use the same data type for ScalarDB FLOAT and DOUBLE. So, if
+          // either data type is returned from the underlying RDBMS, ScalarDB can't distinguish
+          // which data type was actually specified in the table schema. Therefore, we treat FLOAT
+          // and DOUBLE as the same group.
+          if (columnDataTypeOfRawTable == DataType.FLOAT
+              || columnDataTypeOfRawTable == DataType.DOUBLE) {
+            continue;
+          }
+        } else if (columnDataType.equals(columnDataTypeOfRawTable)) {
+          continue;
         }
+
+        throw new IllegalStateException(
+            String.format("The data type of column '%s' are different", columnName));
       }
     } catch (IllegalStateException e) {
       // FIXME: Add namespace and table names
@@ -870,7 +873,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               + " rawTableSchema="
               + rawTableMetadata
               + ", metadata="
-              + metadata);
+              + metadata,
+          e);
     }
   }
 
