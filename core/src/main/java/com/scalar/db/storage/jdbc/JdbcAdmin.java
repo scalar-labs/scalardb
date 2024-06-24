@@ -809,7 +809,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @VisibleForTesting
-  void verifyRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
+  void checkRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     // Repairing table is supposed to be used for either of the following cases:
     // 1. The target raw table doesn't exist.
@@ -893,7 +893,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
 
-    verifyRawTableSchemaForRepairTable(namespace, table, metadata);
+    checkRawTableSchemaForRepairTable(namespace, table, metadata);
 
     try (Connection connection = dataSource.getConnection()) {
       createTableInternal(connection, namespace, table, metadata, true);
