@@ -1,12 +1,14 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
@@ -109,6 +111,8 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
   }
 
   protected abstract Properties getProperties(String testName);
+
+  protected abstract String getCoordinatorNamespaceName(String testName);
 
   protected void waitForDifferentSessionDdl() {
     // No wait by default.
@@ -213,6 +217,22 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
+    assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
+  }
+
+  @Test
+  public void repairCoordinatorTables_OldSchemaCoordinatorTablesExist_ShouldFail()
+      throws Exception {
+
+    // Arrange
+    adminTestUtils.deleteColumn(
+        getCoordinatorNamespaceName(TEST_NAME), Coordinator.TABLE, Attribute.CHILD_IDS);
+
+    // Act
+    // Assert
+    assertThatThrownBy(() -> admin.repairCoordinatorTables(getCreationOptions()))
+        .isInstanceOf(IllegalStateException.class);
+
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 

@@ -6,6 +6,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitAdminRepairIntegrationTestWithCosmos
@@ -42,4 +43,9 @@ public class ConsensusCommitAdminRepairIntegrationTestWithCosmos
             () -> cosmosAdminTestUtils.getTableStoredProcedure(getNamespace(), getTable()).read())
         .doesNotThrowAnyException();
   }
+
+  @Disabled(
+      "Inconsistency check for the raw table schema and the ScalarDB metadata isn't executed in schemaless database/storage")
+  @Override
+  public void repairCoordinatorTables_OldSchemaCoordinatorTablesExist_ShouldFail() {}
 }

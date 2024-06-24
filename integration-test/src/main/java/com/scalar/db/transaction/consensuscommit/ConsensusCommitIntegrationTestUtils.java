@@ -12,4 +12,8 @@ public final class ConsensusCommitIntegrationTestUtils {
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + suffix);
   }
+
+  public static String getCoordinatorNamespace(Properties properties) {
+    return properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
+  }
 }

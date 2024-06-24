@@ -17,5 +17,10 @@ public abstract class ConsensusCommitAdminRepairIntegrationTestBase
     return properties;
   }
 
+  @Override
+  protected String getCoordinatorNamespaceName(String testName) {
+    return ConsensusCommitIntegrationTestUtils.getCoordinatorNamespace(getProperties(testName));
+  }
+
   protected abstract Properties getProps(String testName);
 }

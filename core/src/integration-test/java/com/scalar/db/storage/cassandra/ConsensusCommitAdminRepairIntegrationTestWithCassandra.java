@@ -6,6 +6,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairInteg
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitAdminRepairIntegrationTestWithCassandra
     extends ConsensusCommitAdminRepairIntegrationTestBase {
@@ -30,4 +31,9 @@ public class ConsensusCommitAdminRepairIntegrationTestWithCassandra
     admin = new ConsensusCommitAdmin(storageAdmin, new DatabaseConfig(properties));
     adminTestUtils = new CassandraAdminTestUtils(getProperties(testName), clusterManager);
   }
+
+  @Disabled(
+      "Inconsistency check for the raw table schema and the ScalarDB metadata isn't executed in schemaless database/storage")
+  @Override
+  public void repairCoordinatorTables_OldSchemaCoordinatorTablesExist_ShouldFail() {}
 }
