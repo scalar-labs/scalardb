@@ -812,8 +812,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   void checkRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     // Repairing table is supposed to be used for either of the following cases:
-    // 1. The target raw table doesn't exist.
-    // 2. The target raw table exists, and the schema and the ScalarDB metadata are consistent.
+    // 1. The target raw table doesn't exist. The Admin API creates the raw table.
+    // 2. The target raw table exists, and the schema and the ScalarDB metadata are consistent. The
+    //    Admin API does nothing.
     //
     // Therefore, the operation should fail if any the above case isn't satisfied.
     Optional<TableMetadata> optRawTableMetadata = getRawTableMetadata(namespace, table);
