@@ -2482,8 +2482,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void get_PutThenGetWithConjunctionReturnEmptyFromStorage_ShouldReturnEmpty()
-      throws TransactionException {
+  public void
+      get_PutThenGetWithConjunctionReturnEmptyFromStorageAndMatchedWithPut_ShouldReturnResult()
+          throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
 
@@ -2492,6 +2493,27 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Get get =
         Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
             .where(ConditionBuilder.column(BALANCE).isEqualToInt(1))
+            .build();
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
+  public void
+      get_PutThenGetWithConjunctionReturnEmptyFromStorageAndUnmatchedWithPut_ShouldReturnEmpty()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    Get get =
+        Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(0))
             .build();
     Optional<Result> result = transaction.get(get);
     assertThatCode(transaction::commit).doesNotThrowAnyException();

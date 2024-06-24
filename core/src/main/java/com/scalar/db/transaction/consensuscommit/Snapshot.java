@@ -163,11 +163,11 @@ public class Snapshot {
       throws CrudException {
     if (deleteSet.containsKey(key)) {
       return Optional.empty();
-    } else if (readSet.containsKey(key) && writeSet.containsKey(key)) {
+    } else if (writeSet.containsKey(key)) {
       // merge the result in the read set and the put in the write set
       return Optional.of(
           new TransactionResult(
-              new MergedResult(readSet.get(key), writeSet.get(key), getTableMetadata(key))));
+              new MergedResult(result, writeSet.get(key), getTableMetadata(key))));
     } else {
       return result;
     }
