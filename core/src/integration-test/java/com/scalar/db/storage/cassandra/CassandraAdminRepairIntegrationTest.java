@@ -5,6 +5,7 @@ import com.scalar.db.config.DatabaseConfig;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class CassandraAdminRepairIntegrationTest
     extends DistributedStorageAdminRepairIntegrationTestBase {
@@ -28,4 +29,9 @@ public class CassandraAdminRepairIntegrationTest
     admin = new CassandraAdmin(clusterManager, new DatabaseConfig(properties));
     adminTestUtils = new CassandraAdminTestUtils(properties, clusterManager);
   }
+
+  @Disabled(
+      "Inconsistency check for the raw table schema and the ScalarDB metadata isn't executed in schemaless database/storage")
+  @Override
+  public void repairTable_ForExistingTableAndMetadataWithInconsistentSchema_ShouldFail() {}
 }

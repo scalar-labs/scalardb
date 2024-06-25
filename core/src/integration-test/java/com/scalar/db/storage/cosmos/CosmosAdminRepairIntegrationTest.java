@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedStorageAdminRepairIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class CosmosAdminRepairIntegrationTest
@@ -42,4 +43,9 @@ public class CosmosAdminRepairIntegrationTest
             () -> cosmosAdminTestUtils.getTableStoredProcedure(getNamespace(), getTable()).read())
         .doesNotThrowAnyException();
   }
+
+  @Disabled(
+      "Inconsistency check for the raw table schema and the ScalarDB metadata isn't executed in schemaless database/storage")
+  @Override
+  public void repairTable_ForExistingTableAndMetadataWithInconsistentSchema_ShouldFail() {}
 }
