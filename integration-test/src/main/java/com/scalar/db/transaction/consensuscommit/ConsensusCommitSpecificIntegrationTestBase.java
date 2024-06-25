@@ -3158,6 +3158,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  public void scan_CalledTwice_ShouldReturnFromSnapshotInSecondTime()
+      throws TransactionException, ExecutionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+
+    // Act
+    List<Result> result1 = transaction.scan(scan);
+    List<Result> result2 = transaction.scan(scan);
+    transaction.commit();
+
+    // Assert
+    verify(storage).scan(any(Scan.class));
+    assertThat(result1).isEqualTo(result2);
+  }
+
+  @Test
   public void scan_CalledTwiceWithSameConditionsAndUpdateForHappenedInBetween_ShouldReadRepeatably()
       throws TransactionException {
     // Arrange

@@ -8,12 +8,11 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
-import com.scalar.db.api.GetBuilder.BuildableGetOrGetWithIndexFromExisting;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -75,8 +74,9 @@ public class CrudHandler {
     this.parallelExecutor = parallelExecutor;
   }
 
-  public Optional<Result> get(Get get) throws CrudException {
-    List<String> originalProjections = new ArrayList<>(get.getProjections());
+  public Optional<Result> get(Get originalGet) throws CrudException {
+    List<String> originalProjections = new ArrayList<>(originalGet.getProjections());
+    Get get = (Get) prepareStorageSelection(originalGet);
     Snapshot.Key key = new Snapshot.Key(get);
     readUnread(key, get);
     return createGetResult(key, get, originalProjections);
@@ -130,8 +130,9 @@ public class CrudHandler {
     return results;
   }
 
-  private List<Result> scanInternal(Scan scan) throws CrudException {
-    List<String> originalProjections = new ArrayList<>(scan.getProjections());
+  private List<Result> scanInternal(Scan originalScan) throws CrudException {
+    List<String> originalProjections = new ArrayList<>(originalScan.getProjections());
+    Scan scan = (Scan) prepareStorageSelection(originalScan);
 
     Map<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
 
@@ -252,14 +253,14 @@ public class CrudHandler {
     }
   }
 
-  private Get createGet(Snapshot.Key key) {
+  private Get createGet(Snapshot.Key key) throws CrudException {
     GetBuilder.BuildableGet buildableGet =
         Get.newBuilder()
             .namespace(key.getNamespace())
             .table(key.getTable())
             .partitionKey(key.getPartitionKey());
     key.getClusteringKey().ifPresent(buildableGet::clusteringKey);
-    return buildableGet.build();
+    return (Get) prepareStorageSelection(buildableGet.build());
   }
 
   // Although this class is not thread-safe, this method is actually thread-safe because the storage
@@ -267,17 +268,7 @@ public class CrudHandler {
   @VisibleForTesting
   Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
-      BuildableGetOrGetWithIndexFromExisting builder = Get.newBuilder(get);
-      builder.clearProjections();
-      // Retrieve only the after images columns when including the metadata is disabled, otherwise
-      // retrieve all the columns
-      if (!isIncludeMetadataEnabled) {
-        LinkedHashSet<String> afterImageColumnNames =
-            tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
-        builder.projections(afterImageColumnNames);
-      }
-      builder.consistency(Consistency.LINEARIZABLE);
-      return storage.get(builder.build()).map(TransactionResult::new);
+      return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(),
@@ -288,22 +279,30 @@ public class CrudHandler {
 
   private Scanner scanFromStorage(Scan scan) throws CrudException {
     try {
-      BuildableScanOrScanAllFromExisting builder = Scan.newBuilder(scan);
-      builder.clearProjections();
-      // Retrieve only the after images columns when including the metadata is disabled, otherwise
-      // retrieve all the columns
-      if (!isIncludeMetadataEnabled) {
-        LinkedHashSet<String> afterImageColumnNames =
-            tableMetadataManager.getTransactionTableMetadata(scan).getAfterImageColumnNames();
-        builder.projections(afterImageColumnNames);
-      }
-      builder.consistency(Consistency.LINEARIZABLE);
-      return storage.scan(builder.build());
+      return storage.scan(scan);
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
           e,
           snapshot.getId());
+    }
+  }
+
+  private Selection prepareStorageSelection(Selection selection) throws CrudException {
+    try {
+      selection.clearProjections();
+      // Retrieve only the after images columns when including the metadata is disabled, otherwise
+      // retrieve all the columns
+      if (!isIncludeMetadataEnabled) {
+        LinkedHashSet<String> afterImageColumnNames =
+            tableMetadataManager.getTransactionTableMetadata(selection).getAfterImageColumnNames();
+        selection.withProjections(afterImageColumnNames);
+      }
+      selection.withConsistency(Consistency.LINEARIZABLE);
+      return selection;
+    } catch (ExecutionException e) {
+      throw new CrudException(
+          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(), e, snapshot.getId());
     }
   }
 
