@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
@@ -22,6 +23,13 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
   @Override
   protected boolean isIndexOnBooleanColumnSupported() {
     return false;
+  }
+
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    return new DynamoConfig(new DatabaseConfig(properties))
+        .getTableMetadataNamespace()
+        .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are

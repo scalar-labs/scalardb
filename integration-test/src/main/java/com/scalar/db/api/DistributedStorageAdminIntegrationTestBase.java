@@ -71,6 +71,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
           .build();
   private StorageFactory storageFactory;
   private DistributedStorageAdmin admin;
+  private String systemNamespaceName;
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -78,8 +79,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
-    storageFactory = StorageFactory.create(getProperties(TEST_NAME));
+    Properties properties = getProperties(TEST_NAME);
+    storageFactory = StorageFactory.create(properties);
     admin = storageFactory.getAdmin();
+    systemNamespaceName = getSystemNamespaceName(properties);
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
@@ -89,6 +92,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   protected void initialize(String testName) throws Exception {}
 
   protected abstract Properties getProperties(String testName);
+
+  protected abstract String getSystemNamespaceName(Properties properties);
 
   protected String getNamespace1() {
     return NAMESPACE1;
@@ -763,6 +768,17 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThatThrownBy(
             () -> admin.addNewColumnToTable(namespace1, TABLE1, COL_NAME2, DataType.TEXT))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(namespaces).containsOnly(namespace1, namespace2, systemNamespaceName);
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

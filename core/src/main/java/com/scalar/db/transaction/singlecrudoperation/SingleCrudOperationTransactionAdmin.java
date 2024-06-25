@@ -105,6 +105,11 @@ public class SingleCrudOperationTransactionAdmin implements DistributedTransacti
     distributedStorageAdmin.addNewColumnToTable(namespace, table, columnName, columnType);
   }
 
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    return distributedStorageAdmin.getNamespaceNames();
+  }
+
   /**
    * {@inheritDoc}
    *

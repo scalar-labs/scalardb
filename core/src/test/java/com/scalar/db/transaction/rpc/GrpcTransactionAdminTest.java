@@ -422,5 +422,7 @@ public class GrpcTransactionAdminTest {
     // Act Assert
     assertThatThrownBy(() -> admin.importTable(namespace, table, Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> admin.getNamespaceNames())
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

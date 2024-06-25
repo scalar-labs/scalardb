@@ -35,7 +35,7 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
     metadataDatabase =
         new CosmosConfig(new DatabaseConfig(properties))
             .getTableMetadataDatabase()
-            .orElse(CosmosAdmin.METADATA_DATABASE);
+            .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Override

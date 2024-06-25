@@ -45,7 +45,8 @@ public final class DynamoEnv {
 
     // Add testName as a metadata namespace suffix
     props.setProperty(
-        DynamoConfig.TABLE_METADATA_NAMESPACE, DynamoAdmin.METADATA_NAMESPACE + "_" + testName);
+        DynamoConfig.TABLE_METADATA_NAMESPACE,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return props;
   }

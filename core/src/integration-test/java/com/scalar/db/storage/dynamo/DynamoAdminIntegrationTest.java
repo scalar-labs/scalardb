@@ -1,6 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
+import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -21,6 +22,13 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Override
   protected boolean isIndexOnBooleanColumnSupported() {
     return false;
+  }
+
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    return new DynamoConfig(new DatabaseConfig(properties))
+        .getTableMetadataNamespace()
+        .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are

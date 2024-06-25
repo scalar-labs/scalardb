@@ -4,6 +4,8 @@ import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class DistributedStorageAdminIntegrationTestWithServer
     extends DistributedStorageAdminIntegrationTestBase {
@@ -32,4 +34,15 @@ public class DistributedStorageAdminIntegrationTestWithServer
       server.shutdown();
     }
   }
+
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    // "Unused for ScalarDB server"
+    return null;
+  }
+
+  @Override
+  @Test
+  @Disabled("Retrieving the namespace names is not supported in ScalarDB server")
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 }

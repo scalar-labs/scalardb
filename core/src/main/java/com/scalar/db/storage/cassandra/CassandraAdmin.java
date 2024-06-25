@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -40,14 +41,29 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
 
   private final ClusterManager clusterManager;
+  private final String systemNamespace;
 
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
+    systemNamespace =
+        new CassandraConfig(config)
+            .getSystemNamespaceName()
+            .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   CassandraAdmin(ClusterManager clusterManager) {
     this.clusterManager = clusterManager;
+    systemNamespace = DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME;
+  }
+
+  @VisibleForTesting
+  CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
+    this.clusterManager = clusterManager;
+    systemNamespace =
+        new CassandraConfig(config)
+            .getSystemNamespaceName()
+            .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Override
@@ -284,6 +300,23 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           String.format(
               "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
+    }
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      // Retrieve user keyspace and filter out system ones. A downside is that this may include
+      // keyspace not created by ScalarDB.
+      return Stream.concat(
+              clusterManager.getSession().getCluster().getMetadata().getKeyspaces().stream()
+                  .map(KeyspaceMetadata::getName)
+                  .filter(name -> !name.startsWith("system")),
+              Stream.of(systemNamespace))
+          .collect(Collectors.toSet());
+
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Retrieving the existing keyspace names failed", e);
     }
   }
 

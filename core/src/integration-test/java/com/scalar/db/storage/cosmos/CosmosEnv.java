@@ -29,7 +29,8 @@ public final class CosmosEnv {
 
     // Add testName as a metadata database suffix
     props.setProperty(
-        CosmosConfig.TABLE_METADATA_DATABASE, CosmosAdmin.METADATA_DATABASE + "_" + testName);
+        CosmosConfig.TABLE_METADATA_DATABASE,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return props;
   }

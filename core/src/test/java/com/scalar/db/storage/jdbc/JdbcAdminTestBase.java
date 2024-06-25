@@ -239,9 +239,20 @@ public abstract class JdbcAdminTestBase {
 
   public ResultSet mockResultSet(List<GetColumnsResultSetMocker.Row> rows) throws SQLException {
     ResultSet resultSet = mock(ResultSet.class);
-    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
+    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call is
     // mocked to return the current row data
     doAnswer(new GetColumnsResultSetMocker(rows)).when(resultSet).next();
+    return resultSet;
+  }
+
+  public ResultSet mockResultSet(SelectFullTableNameFromMetadataTableResultSetMocker.Row... rows)
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call is
+    // mocked to return the current row data
+    doAnswer(new SelectFullTableNameFromMetadataTableResultSetMocker(Arrays.asList(rows)))
+        .when(resultSet)
+        .next();
     return resultSet;
   }
 
@@ -2614,6 +2625,145 @@ public abstract class JdbcAdminTestBase {
     assertThat(hasDifferentClusteringOrders(metadata2)).isTrue();
   }
 
+  @Test
+  public void getNamespaceNames_ForMysql_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT DISTINCT `full_table_name` FROM `" + tableMetadataSchemaName + "`.`metadata`");
+  }
+
+  @Test
+  public void getNamespaceNames_Posgresql_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_Oracle_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_SqlServer_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT DISTINCT [full_table_name] FROM [" + tableMetadataSchemaName + "].[metadata]");
+  }
+
+  @Test
+  public void getNamespaceNames_Sqlite_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "$metadata\"");
+  }
+
+  private void getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+      RdbEngine rdbEngine, String getTableMetadataNamespacesStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
+
+    when(connection.createStatement()).thenReturn(getTableMetadataNamespacesStatementMock);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns1.tbl1"),
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns1.tbl2"),
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns2.tbl3"));
+    when(getTableMetadataNamespacesStatementMock.executeQuery(anyString())).thenReturn(resultSet);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(connection).createStatement();
+    verify(getTableMetadataNamespacesStatementMock)
+        .executeQuery(getTableMetadataNamespacesStatement);
+    assertThat(actual).containsOnly("ns1", "ns2", tableMetadataSchemaName);
+  }
+
+  @Test
+  public void getNamespaceNames_ForMysql_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.MYSQL,
+        "SELECT DISTINCT `full_table_name` FROM `" + tableMetadataSchemaName + "`.`metadata`");
+  }
+
+  @Test
+  public void getNamespaceNames_Posgresql_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.POSTGRESQL,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_Oracle_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.ORACLE,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_SqlServer_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.SQL_SERVER,
+        "SELECT DISTINCT [full_table_name] FROM [" + tableMetadataSchemaName + "].[metadata]");
+  }
+
+  @Test
+  public void getNamespaceNames_Sqlite_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.SQLITE,
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "$metadata\"");
+  }
+
+  private void getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+      RdbEngine rdbEngine, String getTableMetadataNamespacesStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
+
+    when(connection.createStatement()).thenReturn(getTableMetadataNamespacesStatementMock);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(getTableMetadataNamespacesStatementMock.executeQuery(anyString())).thenThrow(sqlException);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(connection).createStatement();
+    verify(getTableMetadataNamespacesStatementMock)
+        .executeQuery(getTableMetadataNamespacesStatement);
+    assertThat(actual).containsOnly(tableMetadataSchemaName);
+  }
+
   private PreparedStatement prepareStatementForNamespaceCheck() throws SQLException {
     return prepareStatementForNamespaceCheck(true);
   }
@@ -2866,6 +3016,42 @@ public abstract class JdbcAdminTestBase {
         return false;
       }
       GetTablesNamesResultSetMocker.Row currentRow = rows.get(row);
+      ResultSet mock = (ResultSet) invocation.getMock();
+      when(mock.getString(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME))
+          .thenReturn(currentRow.fullTableName);
+      return true;
+    }
+
+    static class Row {
+
+      final String fullTableName;
+
+      public Row(String fullTableName) {
+        this.fullTableName = fullTableName;
+      }
+    }
+  }
+
+  // Utility class used to mock ResultSet for a "select full_table_name from" query on the metadata
+  // table
+  static class SelectFullTableNameFromMetadataTableResultSetMocker
+      implements org.mockito.stubbing.Answer<Object> {
+
+    final List<SelectFullTableNameFromMetadataTableResultSetMocker.Row> rows;
+    int row = -1;
+
+    public SelectFullTableNameFromMetadataTableResultSetMocker(
+        List<SelectFullTableNameFromMetadataTableResultSetMocker.Row> rows) {
+      this.rows = rows;
+    }
+
+    @Override
+    public Object answer(InvocationOnMock invocation) throws Throwable {
+      row++;
+      if (row >= rows.size()) {
+        return false;
+      }
+      SelectFullTableNameFromMetadataTableResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
       when(mock.getString(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME))
           .thenReturn(currentRow.fullTableName);

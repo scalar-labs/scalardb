@@ -28,7 +28,8 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     super(cassandraProperties);
 
     jdbcConfig = new JdbcConfig(new DatabaseConfig(jdbcProperties));
-    jdbcMetadataSchema = jdbcConfig.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
+    jdbcMetadataSchema =
+        jdbcConfig.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     rdbEngine = RdbEngineFactory.create(jdbcConfig);
   }
 

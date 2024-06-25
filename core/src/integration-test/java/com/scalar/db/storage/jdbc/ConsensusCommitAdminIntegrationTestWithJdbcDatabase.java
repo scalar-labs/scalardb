@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import java.util.Properties;
@@ -12,6 +13,13 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
   @Override
   protected Properties getProps(String testName) {
     return JdbcEnv.getProperties(testName);
+  }
+
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    return new JdbcConfig(new DatabaseConfig(properties))
+        .getTableMetadataSchema()
+        .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are

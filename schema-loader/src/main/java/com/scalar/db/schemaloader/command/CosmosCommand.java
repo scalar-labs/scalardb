@@ -103,7 +103,7 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
     if (tableMetadataDatabasePrefix != null) {
       props.setProperty(
           CosmosConfig.TABLE_METADATA_DATABASE,
-          tableMetadataDatabasePrefix + CosmosAdmin.METADATA_DATABASE);
+          tableMetadataDatabasePrefix + DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     }
     if (coordinatorNamespacePrefix != null) {
       props.setProperty(
