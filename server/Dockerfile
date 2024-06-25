@@ -1,6 +1,6 @@
 FROM docker.io/busybox:1.36 AS tools
 
-ENV GRPC_HEALTH_PROBE_VERSION v0.4.22
+ENV GRPC_HEALTH_PROBE_VERSION v0.4.28
 
 # Install grpc_health_probe for kubernetes.
 # https://kubernetes.io/blog/2018/10/01/health-checking-grpc-servers-on-kubernetes/
