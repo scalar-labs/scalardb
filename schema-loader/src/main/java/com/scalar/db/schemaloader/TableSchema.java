@@ -96,7 +96,7 @@ public class TableSchema {
       for (JsonElement clusteringKeyRaw : clusteringKeys) {
         String clusteringKey;
         String order;
-        String[] clusteringKeyFull = clusteringKeyRaw.getAsString().split(" ", -1);
+        String[] clusteringKeyFull = clusteringKeyRaw.getAsString().split("\\s+", -1);
         if (clusteringKeyFull.length < 2) {
           clusteringKey = clusteringKeyFull[0];
           tableBuilder.addClusteringKey(clusteringKey);
@@ -128,13 +128,21 @@ public class TableSchema {
     traveledKeys.add(COLUMNS);
     for (Entry<String, JsonElement> column : columns.entrySet()) {
       String columnName = column.getKey();
-      DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
-      if (columnDataType == null) {
+
+      String[] columnDataTypeAndEncrypted = column.getValue().getAsString().split("\\s+", -1);
+      String columnDataType = columnDataTypeAndEncrypted[0];
+      boolean encrypted =
+          columnDataTypeAndEncrypted.length > 1
+              && columnDataTypeAndEncrypted[1].equalsIgnoreCase("ENCRYPTED");
+
+      DataType dataType = DATA_MAP_TYPE.get(columnDataType.toUpperCase());
+      if (dataType == null) {
         throw new IllegalArgumentException(
             CoreError.SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE.buildMessage(
                 tableFullName, columnName, column.getValue().getAsString()));
       }
-      tableBuilder.addColumn(columnName, columnDataType);
+
+      tableBuilder.addColumn(columnName, dataType, encrypted);
     }
 
     // Add secondary indexes
