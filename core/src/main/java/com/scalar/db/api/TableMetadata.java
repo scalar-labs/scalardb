@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -162,7 +163,8 @@ public class TableMetadata {
         && Objects.equals(partitionKeyNames, metadata.partitionKeyNames)
         && Objects.equals(clusteringKeyNames, metadata.clusteringKeyNames)
         && Objects.equals(clusteringOrders, metadata.clusteringOrders)
-        && Objects.equals(secondaryIndexNames, metadata.secondaryIndexNames);
+        && Objects.equals(secondaryIndexNames, metadata.secondaryIndexNames)
+        && Objects.equals(encryptedColumnNames, metadata.encryptedColumnNames);
   }
 
   @Override
@@ -173,7 +175,21 @@ public class TableMetadata {
         partitionKeyNames,
         clusteringKeyNames,
         clusteringOrders,
-        secondaryIndexNames);
+        secondaryIndexNames,
+        encryptedColumnNames);
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("columnNames", columnNames)
+        .add("columnDataTypes", columnDataTypes)
+        .add("partitionKeyNames", partitionKeyNames)
+        .add("clusteringKeyNames", clusteringKeyNames)
+        .add("clusteringOrders", clusteringOrders)
+        .add("secondaryIndexNames", secondaryIndexNames)
+        .add("encryptedColumnNames", encryptedColumnNames)
+        .toString();
   }
 
   /** A builder class that creates a TableMetadata instance. */
