@@ -37,6 +37,9 @@ public class MultiStorageConfigTest {
 
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
+    // Global properties for all storages
+    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+
     // Act
     MultiStorageConfig config = new MultiStorageConfig(new DatabaseConfig(props));
 
@@ -52,6 +55,7 @@ public class MultiStorageConfigTest {
     assertThat(c.getUsername().get()).isEqualTo("cassandra");
     assertThat(c.getPassword().isPresent()).isTrue();
     assertThat(c.getPassword().get()).isEqualTo("cassandra");
+    assertThat(c.isCrossPartitionScanEnabled()).isTrue();
 
     assertThat(config.getDatabasePropertiesMap().containsKey("mysql")).isTrue();
     c = new DatabaseConfig(config.getDatabasePropertiesMap().get("mysql"));
@@ -62,6 +66,7 @@ public class MultiStorageConfigTest {
     assertThat(c.getUsername().get()).isEqualTo("root");
     assertThat(c.getPassword().isPresent()).isTrue();
     assertThat(c.getPassword().get()).isEqualTo("mysql");
+    assertThat(c.isCrossPartitionScanEnabled()).isTrue();
 
     assertThat(config.getTableStorageMap().size()).isEqualTo(3);
     assertThat(config.getTableStorageMap().get("user.order")).isEqualTo("cassandra");
