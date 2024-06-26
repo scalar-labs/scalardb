@@ -180,7 +180,7 @@ public class Snapshot {
         .filter(
             r ->
                 conjunctions.isEmpty()
-                    || !writeSet.containsKey(key)
+                    || !r.isMergedResult()
                     || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
   }
 

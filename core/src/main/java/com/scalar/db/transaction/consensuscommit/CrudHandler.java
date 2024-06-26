@@ -17,7 +17,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.transaction.consensuscommit.Snapshot.Key;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -93,9 +92,10 @@ public class CrudHandler {
     Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
       if (result.isPresent() || get.getConjunctions().isEmpty()) {
-        // Keep the read set latest to create before image using it when the transaction writes or
-        // deletes this record. However, if a get operation has a conjunction and the result is
-        // empty, we don't need to deem the record does not exist.
+        // Keep the read set latest to create the before image using it when the transaction writes
+        // or deletes this record. However, we update it only if a get operation has no conjunction
+        // or the result exists. This is because we don’t know whether the record actually does not
+        // exist due to the conjunction.
         snapshot.put(key, result);
       }
       snapshot.put(get, result); // for re-read and validation
@@ -138,7 +138,7 @@ public class CrudHandler {
 
     Optional<Map<Snapshot.Key, TransactionResult>> resultsInSnapshot = snapshot.get(scan);
     if (resultsInSnapshot.isPresent()) {
-      for (Entry<Key, TransactionResult> entry : resultsInSnapshot.get().entrySet()) {
+      for (Entry<Snapshot.Key, TransactionResult> entry : resultsInSnapshot.get().entrySet()) {
         snapshot
             .mergeResult(entry.getKey(), Optional.of(entry.getValue()))
             .ifPresent(result -> results.put(entry.getKey(), result));
