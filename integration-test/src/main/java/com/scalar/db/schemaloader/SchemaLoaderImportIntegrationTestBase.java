@@ -196,7 +196,9 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     waitForDifferentSessionDdl();
     createImportableTable(namespace2, TABLE_2);
 
-    // Create a non-related table with the same name.
+    // Create non-related tables.
+    waitForDifferentSessionDdl();
+    createNonImportableTable(namespace1, TABLE_2);
     waitForDifferentSessionDdl();
     createNonImportableTable(namespace2, TABLE_1);
 
@@ -212,7 +214,17 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
       assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
       assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
     } finally {
-      dropNonImportableTable(namespace2, TABLE_1);
+      try {
+        dropNonImportableTable(namespace1, TABLE_2);
+      } catch (Exception e) {
+        logger.warn("Failed to drop non-importable table. {}.{}", namespace1, TABLE_2, e);
+      }
+
+      try {
+        dropNonImportableTable(namespace2, TABLE_1);
+      } catch (Exception e) {
+        logger.warn("Failed to drop non-importable table. {}.{}", namespace2, TABLE_1, e);
+      }
     }
   }
 

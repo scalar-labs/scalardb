@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -353,5 +354,17 @@ class RdbEngineMysql implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
+  }
+
+  @Nullable
+  @Override
+  public String rawCatalogName(String namespace) {
+    return namespace;
+  }
+
+  @Nullable
+  @Override
+  public String rawSchemaName(String namespace) {
+    return namespace;
   }
 }
