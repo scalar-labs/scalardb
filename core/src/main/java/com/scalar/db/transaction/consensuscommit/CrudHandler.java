@@ -88,7 +88,10 @@ public class CrudHandler {
     }
   }
 
-  private void read(Snapshot.Key key, Get get) throws CrudException {
+  // Although this class is not thread-safe, this method is actually thread-safe, so we call it
+  // concurrently in the implicit pre-read
+  @VisibleForTesting
+  void read(Snapshot.Key key, Get get) throws CrudException {
     Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
       if (result.isPresent() || get.getConjunctions().isEmpty()) {
@@ -203,7 +206,7 @@ public class CrudHandler {
 
     if (put.getCondition().isPresent()) {
       if (put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key)) {
-        readUnread(key, createGet(key));
+        read(key, createGet(key));
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           put, snapshot.getFromReadSet(key).orElse(null));
@@ -217,7 +220,7 @@ public class CrudHandler {
 
     if (delete.getCondition().isPresent()) {
       if (!snapshot.containsKeyInReadSet(key)) {
-        readUnread(key, createGet(key));
+        read(key, createGet(key));
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           delete, snapshot.getFromReadSet(key).orElse(null));

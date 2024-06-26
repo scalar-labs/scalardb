@@ -543,7 +543,7 @@ public class CrudHandlerTest {
             tableMetadataManager,
             parallelExecutor,
             readSet,
-            new HashMap<>(),
+            new ConcurrentHashMap<>(),
             new HashMap<>(),
             new HashMap<>(),
             deleteSet);
@@ -723,7 +723,7 @@ public class CrudHandlerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).readUnread(key, getForKey);
+    verify(spied).read(key, getForKey);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
     verify(snapshot).put(key, put);
@@ -873,7 +873,7 @@ public class CrudHandlerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).readUnread(key, getForKey);
+    verify(spied).read(key, getForKey);
     verify(snapshot).getFromReadSet(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null);
     verify(snapshot).put(key, delete);

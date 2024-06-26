@@ -52,7 +52,7 @@ public class Snapshot {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
-  private final Map<Get, Optional<TransactionResult>> getSet;
+  private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
   private final Map<Scan, Map<Key, TransactionResult>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
@@ -69,7 +69,7 @@ public class Snapshot {
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     readSet = new ConcurrentHashMap<>();
-    getSet = new HashMap<>();
+    getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
@@ -83,7 +83,7 @@ public class Snapshot {
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
-      Map<Get, Optional<TransactionResult>> getSet,
+      ConcurrentMap<Get, Optional<TransactionResult>> getSet,
       Map<Scan, Map<Key, TransactionResult>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
@@ -116,6 +116,8 @@ public class Snapshot {
     readSet.put(key, result);
   }
 
+  // Although this class is not thread-safe, this method is actually thread-safe because the getSet
+  // is a concurrent map
   public void put(Get get, Optional<TransactionResult> result) {
     getSet.put(get, result);
   }
@@ -487,7 +489,6 @@ public class Snapshot {
               }
               // Check if read records are not changed
               TransactionResult latestResult = currentReadMap.get(key);
-
               if (isChanged(Optional.ofNullable(latestResult), Optional.of(result))) {
                 throwExceptionDueToAntiDependency();
               }

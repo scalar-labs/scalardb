@@ -94,7 +94,7 @@ public class SnapshotTest {
 
   private Snapshot snapshot;
   private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
-  private Map<Get, Optional<TransactionResult>> getSet;
+  private ConcurrentMap<Get, Optional<TransactionResult>> getSet;
   private Map<Scan, Map<Snapshot.Key, TransactionResult>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
@@ -122,7 +122,7 @@ public class SnapshotTest {
 
   private Snapshot prepareSnapshot(Isolation isolation, SerializableStrategy strategy) {
     readSet = new ConcurrentHashMap<>();
-    getSet = new HashMap<>();
+    getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
