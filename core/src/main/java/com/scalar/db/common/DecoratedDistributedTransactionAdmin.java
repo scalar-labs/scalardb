@@ -12,40 +12,40 @@ import javax.annotation.Nullable;
 
 public abstract class DecoratedDistributedTransactionAdmin implements DistributedTransactionAdmin {
 
-  private final DistributedTransactionAdmin decoratedDistributedTransactionAdmin;
+  private final DistributedTransactionAdmin distributedTransactionAdmin;
 
   public DecoratedDistributedTransactionAdmin(
-      DistributedTransactionAdmin decoratedDistributedTransactionAdmin) {
-    this.decoratedDistributedTransactionAdmin = decoratedDistributedTransactionAdmin;
+      DistributedTransactionAdmin distributedTransactionAdmin) {
+    this.distributedTransactionAdmin = distributedTransactionAdmin;
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createNamespace(namespace, options);
+    distributedTransactionAdmin.createNamespace(namespace, options);
   }
 
   @Override
   public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createNamespace(namespace, ifNotExists, options);
+    distributedTransactionAdmin.createNamespace(namespace, ifNotExists, options);
   }
 
   @Override
   public void createNamespace(String namespace, boolean ifNotExists) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createNamespace(namespace, ifNotExists);
+    distributedTransactionAdmin.createNamespace(namespace, ifNotExists);
   }
 
   @Override
   public void createNamespace(String namespace) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createNamespace(namespace);
+    distributedTransactionAdmin.createNamespace(namespace);
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createTable(namespace, table, metadata, options);
+    distributedTransactionAdmin.createTable(namespace, table, metadata, options);
   }
 
   @Override
@@ -56,54 +56,53 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
       boolean ifNotExists,
       Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createTable(
-        namespace, table, metadata, ifNotExists, options);
+    distributedTransactionAdmin.createTable(namespace, table, metadata, ifNotExists, options);
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, boolean ifNotExists)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createTable(namespace, table, metadata, ifNotExists);
+    distributedTransactionAdmin.createTable(namespace, table, metadata, ifNotExists);
   }
 
   @Override
   public void createTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createTable(namespace, table, metadata);
+    distributedTransactionAdmin.createTable(namespace, table, metadata);
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropTable(namespace, table);
+    distributedTransactionAdmin.dropTable(namespace, table);
   }
 
   @Override
   public void dropTable(String namespace, String table, boolean ifExists)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropTable(namespace, table, ifExists);
+    distributedTransactionAdmin.dropTable(namespace, table, ifExists);
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropNamespace(namespace);
+    distributedTransactionAdmin.dropNamespace(namespace);
   }
 
   @Override
   public void dropNamespace(String namespace, boolean ifExists) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropNamespace(namespace, ifExists);
+    distributedTransactionAdmin.dropNamespace(namespace, ifExists);
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.truncateTable(namespace, table);
+    distributedTransactionAdmin.truncateTable(namespace, table);
   }
 
   @Override
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createIndex(namespace, table, columnName, options);
+    distributedTransactionAdmin.createIndex(namespace, table, columnName, options);
   }
 
   @Override
@@ -114,219 +113,217 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
       boolean ifNotExists,
       Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createIndex(
-        namespace, table, columnName, ifNotExists, options);
+    distributedTransactionAdmin.createIndex(namespace, table, columnName, ifNotExists, options);
   }
 
   @Override
   public void createIndex(String namespace, String table, String columnName, boolean ifNotExists)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createIndex(namespace, table, columnName, ifNotExists);
+    distributedTransactionAdmin.createIndex(namespace, table, columnName, ifNotExists);
   }
 
   @Override
   public void createIndex(String namespace, String table, String columnName)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createIndex(namespace, table, columnName);
+    distributedTransactionAdmin.createIndex(namespace, table, columnName);
   }
 
   @Override
   public void dropIndex(String namespace, String table, String columnName)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropIndex(namespace, table, columnName);
+    distributedTransactionAdmin.dropIndex(namespace, table, columnName);
   }
 
   @Override
   public void dropIndex(String namespace, String table, String columnName, boolean ifExists)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropIndex(namespace, table, columnName, ifExists);
+    distributedTransactionAdmin.dropIndex(namespace, table, columnName, ifExists);
   }
 
   @Override
   public boolean indexExists(String namespace, String table, String columnName)
       throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.indexExists(namespace, table, columnName);
+    return distributedTransactionAdmin.indexExists(namespace, table, columnName);
   }
 
   @Nullable
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.getTableMetadata(namespace, table);
+    return distributedTransactionAdmin.getTableMetadata(namespace, table);
   }
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.getNamespaceTableNames(namespace);
+    return distributedTransactionAdmin.getNamespaceTableNames(namespace);
   }
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.namespaceExists(namespace);
+    return distributedTransactionAdmin.namespaceExists(namespace);
   }
 
   @Override
   public boolean tableExists(String namespace, String table) throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.tableExists(namespace, table);
+    return distributedTransactionAdmin.tableExists(namespace, table);
   }
 
   @Override
   public void repairNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.repairNamespace(namespace, options);
+    distributedTransactionAdmin.repairNamespace(namespace, options);
   }
 
   @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.repairTable(namespace, table, metadata, options);
+    distributedTransactionAdmin.repairTable(namespace, table, metadata, options);
   }
 
   @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.addNewColumnToTable(
-        namespace, table, columnName, columnType);
+    distributedTransactionAdmin.addNewColumnToTable(namespace, table, columnName, columnType);
   }
 
   @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType, boolean encrypted)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.addNewColumnToTable(
+    distributedTransactionAdmin.addNewColumnToTable(
         namespace, table, columnName, columnType, encrypted);
   }
 
   @Override
   public void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.importTable(namespace, table, options);
+    distributedTransactionAdmin.importTable(namespace, table, options);
   }
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.getNamespaceNames();
+    return distributedTransactionAdmin.getNamespaceNames();
   }
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.upgrade(options);
+    distributedTransactionAdmin.upgrade(options);
   }
 
   @Override
   public void createCoordinatorTables(Map<String, String> options) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createCoordinatorTables(options);
+    distributedTransactionAdmin.createCoordinatorTables(options);
   }
 
   @Override
   public void createCoordinatorTables(boolean ifNotExist, Map<String, String> options)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createCoordinatorTables(ifNotExist, options);
+    distributedTransactionAdmin.createCoordinatorTables(ifNotExist, options);
   }
 
   @Override
   public void createCoordinatorTables(boolean ifNotExist) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createCoordinatorTables(ifNotExist);
+    distributedTransactionAdmin.createCoordinatorTables(ifNotExist);
   }
 
   @Override
   public void createCoordinatorTables() throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createCoordinatorTables();
+    distributedTransactionAdmin.createCoordinatorTables();
   }
 
   @Override
   public void dropCoordinatorTables() throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropCoordinatorTables();
+    distributedTransactionAdmin.dropCoordinatorTables();
   }
 
   @Override
   public void dropCoordinatorTables(boolean ifExist) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropCoordinatorTables(ifExist);
+    distributedTransactionAdmin.dropCoordinatorTables(ifExist);
   }
 
   @Override
   public void truncateCoordinatorTables() throws ExecutionException {
-    decoratedDistributedTransactionAdmin.truncateCoordinatorTables();
+    distributedTransactionAdmin.truncateCoordinatorTables();
   }
 
   @Override
   public boolean coordinatorTablesExist() throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.coordinatorTablesExist();
+    return distributedTransactionAdmin.coordinatorTablesExist();
   }
 
   @Override
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.repairCoordinatorTables(options);
+    distributedTransactionAdmin.repairCoordinatorTables(options);
   }
 
   @Override
   public void createUser(String username, @Nullable String password, UserOption... userOptions)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.createUser(username, password, userOptions);
+    distributedTransactionAdmin.createUser(username, password, userOptions);
   }
 
   @Override
   public void alterUser(String username, @Nullable String password, UserOption... userOptions)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.alterUser(username, password, userOptions);
+    distributedTransactionAdmin.alterUser(username, password, userOptions);
   }
 
   @Override
   public void dropUser(String username) throws ExecutionException {
-    decoratedDistributedTransactionAdmin.dropUser(username);
+    distributedTransactionAdmin.dropUser(username);
   }
 
   @Override
   public void grant(
       String username, String namespaceName, String tableName, Privilege... privileges)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.grant(username, namespaceName, tableName, privileges);
+    distributedTransactionAdmin.grant(username, namespaceName, tableName, privileges);
   }
 
   @Override
   public void grant(String username, String namespaceName, Privilege... privileges)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.grant(username, namespaceName, privileges);
+    distributedTransactionAdmin.grant(username, namespaceName, privileges);
   }
 
   @Override
   public void revoke(
       String username, String namespaceName, String tableName, Privilege... privileges)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.revoke(username, namespaceName, tableName, privileges);
+    distributedTransactionAdmin.revoke(username, namespaceName, tableName, privileges);
   }
 
   @Override
   public void revoke(String username, String namespaceName, Privilege... privileges)
       throws ExecutionException {
-    decoratedDistributedTransactionAdmin.revoke(username, namespaceName, privileges);
+    distributedTransactionAdmin.revoke(username, namespaceName, privileges);
   }
 
   @Override
   public Optional<User> getUser(String username) throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.getUser(username);
+    return distributedTransactionAdmin.getUser(username);
   }
 
   @Override
   public List<User> getUsers() throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.getUsers();
+    return distributedTransactionAdmin.getUsers();
   }
 
   @Override
   public Set<Privilege> getPrivileges(String username, String namespaceName)
       throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.getPrivileges(username, namespaceName);
+    return distributedTransactionAdmin.getPrivileges(username, namespaceName);
   }
 
   @Override
   public Set<Privilege> getPrivileges(String username, String namespaceName, String tableName)
       throws ExecutionException {
-    return decoratedDistributedTransactionAdmin.getPrivileges(username, namespaceName, tableName);
+    return distributedTransactionAdmin.getPrivileges(username, namespaceName, tableName);
   }
 
   @Override
   public void close() {
-    decoratedDistributedTransactionAdmin.close();
+    distributedTransactionAdmin.close();
   }
 }
