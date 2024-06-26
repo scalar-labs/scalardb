@@ -21,129 +21,129 @@ import java.util.Optional;
 
 public abstract class DecoratedDistributedTransaction implements DistributedTransaction {
 
-  private final DistributedTransaction decoratedTransaction;
+  private final DistributedTransaction transaction;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public DecoratedDistributedTransaction(DistributedTransaction decoratedTransaction) {
-    this.decoratedTransaction = decoratedTransaction;
+  public DecoratedDistributedTransaction(DistributedTransaction transaction) {
+    this.transaction = transaction;
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
-    decoratedTransaction.with(namespace, tableName);
+    transaction.with(namespace, tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
-    decoratedTransaction.withNamespace(namespace);
+    transaction.withNamespace(namespace);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
-    return decoratedTransaction.getNamespace();
+    return transaction.getNamespace();
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
-    decoratedTransaction.withTable(tableName);
+    transaction.withTable(tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
-    return decoratedTransaction.getTable();
+    return transaction.getTable();
   }
 
   @Override
   public String getId() {
-    return decoratedTransaction.getId();
+    return transaction.getId();
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    return decoratedTransaction.get(get);
+    return transaction.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    return decoratedTransaction.scan(scan);
+    return transaction.scan(scan);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException {
-    decoratedTransaction.put(put);
+    transaction.put(put);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
-    decoratedTransaction.put(puts);
+    transaction.put(puts);
   }
 
   @Override
   public void delete(Delete delete) throws CrudException {
-    decoratedTransaction.delete(delete);
+    transaction.delete(delete);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
-    decoratedTransaction.delete(deletes);
+    transaction.delete(deletes);
   }
 
   @Override
   public void insert(Insert insert) throws CrudException {
-    decoratedTransaction.insert(insert);
+    transaction.insert(insert);
   }
 
   @Override
   public void update(Update update) throws CrudException {
-    decoratedTransaction.update(update);
+    transaction.update(update);
   }
 
   @Override
   public void upsert(Upsert upsert) throws CrudException {
-    decoratedTransaction.upsert(upsert);
+    transaction.upsert(upsert);
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    decoratedTransaction.mutate(mutations);
+    transaction.mutate(mutations);
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    decoratedTransaction.commit();
+    transaction.commit();
   }
 
   @Override
   public void rollback() throws RollbackException {
-    decoratedTransaction.rollback();
+    transaction.rollback();
   }
 
   @Override
   public void abort() throws AbortException {
-    decoratedTransaction.abort();
+    transaction.abort();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP")
   public DistributedTransaction getOriginalTransaction() {
-    if (decoratedTransaction instanceof DecoratedDistributedTransaction) {
-      return ((DecoratedDistributedTransaction) decoratedTransaction).getOriginalTransaction();
+    if (transaction instanceof DecoratedDistributedTransaction) {
+      return ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
     }
-    return decoratedTransaction;
+    return transaction;
   }
 }

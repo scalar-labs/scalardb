@@ -22,160 +22,160 @@ import java.util.Optional;
 public abstract class DecoratedTwoPhaseCommitTransactionManager
     implements TwoPhaseCommitTransactionManager {
 
-  private final TwoPhaseCommitTransactionManager decoratedTransactionManager;
+  private final TwoPhaseCommitTransactionManager transactionManager;
 
   public DecoratedTwoPhaseCommitTransactionManager(
-      TwoPhaseCommitTransactionManager decoratedTransactionManager) {
-    this.decoratedTransactionManager = decoratedTransactionManager;
+      TwoPhaseCommitTransactionManager transactionManager) {
+    this.transactionManager = transactionManager;
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
-    decoratedTransactionManager.with(namespace, tableName);
+    transactionManager.with(namespace, tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
-    decoratedTransactionManager.withNamespace(namespace);
+    transactionManager.withNamespace(namespace);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
-    return decoratedTransactionManager.getNamespace();
+    return transactionManager.getNamespace();
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
-    decoratedTransactionManager.withTable(tableName);
+    transactionManager.withTable(tableName);
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
-    return decoratedTransactionManager.getTable();
+    return transactionManager.getTable();
   }
 
   @Override
   public TwoPhaseCommitTransaction begin() throws TransactionException {
-    return decoratedTransactionManager.begin();
+    return transactionManager.begin();
   }
 
   @Override
   public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
-    return decoratedTransactionManager.begin(txId);
+    return transactionManager.begin(txId);
   }
 
   @Override
   public TwoPhaseCommitTransaction start() throws TransactionException {
-    return decoratedTransactionManager.start();
+    return transactionManager.start();
   }
 
   @Override
   public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
-    return decoratedTransactionManager.start(txId);
+    return transactionManager.start(txId);
   }
 
   @Override
   public TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException {
-    return decoratedTransactionManager.resume(txId);
+    return transactionManager.resume(txId);
   }
 
   @Override
   public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
-    return decoratedTransactionManager.join(txId);
+    return transactionManager.join(txId);
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return decoratedTransactionManager.get(get);
+    return transactionManager.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return decoratedTransactionManager.scan(scan);
+    return transactionManager.scan(scan);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.put(put);
+    transactionManager.put(put);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.put(puts);
+    transactionManager.put(puts);
   }
 
   @Override
   public void insert(Insert insert) throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.insert(insert);
+    transactionManager.insert(insert);
   }
 
   @Override
   public void upsert(Upsert upsert) throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.upsert(upsert);
+    transactionManager.upsert(upsert);
   }
 
   @Override
   public void update(Update update) throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.update(update);
+    transactionManager.update(update);
   }
 
   @Override
   public void delete(Delete delete) throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.delete(delete);
+    transactionManager.delete(delete);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.delete(deletes);
+    transactionManager.delete(deletes);
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations)
       throws CrudException, UnknownTransactionStatusException {
-    decoratedTransactionManager.mutate(mutations);
+    transactionManager.mutate(mutations);
   }
 
   @Override
   public TransactionState getState(String txId) throws TransactionException {
-    return decoratedTransactionManager.getState(txId);
+    return transactionManager.getState(txId);
   }
 
   @Override
   public TransactionState rollback(String txId) throws TransactionException {
-    return decoratedTransactionManager.rollback(txId);
+    return transactionManager.rollback(txId);
   }
 
   @Override
   public TransactionState abort(String txId) throws TransactionException {
-    return decoratedTransactionManager.abort(txId);
+    return transactionManager.abort(txId);
   }
 
   @Override
   public void close() {
-    decoratedTransactionManager.close();
+    transactionManager.close();
   }
 
   public TwoPhaseCommitTransactionManager getOriginalTransactionManager() {
-    if (decoratedTransactionManager instanceof DecoratedTwoPhaseCommitTransactionManager) {
-      return ((DecoratedTwoPhaseCommitTransactionManager) decoratedTransactionManager)
+    if (transactionManager instanceof DecoratedTwoPhaseCommitTransactionManager) {
+      return ((DecoratedTwoPhaseCommitTransactionManager) transactionManager)
           .getOriginalTransactionManager();
     }
-    return decoratedTransactionManager;
+    return transactionManager;
   }
 }
