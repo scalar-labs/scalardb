@@ -2589,8 +2589,14 @@ public class JdbcAdminTest {
         .thenReturn("");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
 
     Map<String, DataType> expectedColumns = new LinkedHashMap<>();
     expectedColumns.put("pk1", DataType.TEXT);
