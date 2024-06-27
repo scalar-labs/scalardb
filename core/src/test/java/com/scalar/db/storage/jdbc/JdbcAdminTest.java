@@ -2924,6 +2924,17 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowExecutionException()
+      throws SQLException {
+    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
+      if (!rdbEngine.equals(RdbEngine.SQLITE)) {
+        getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowIllegalStateException(
+            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+      }
+    }
+  }
+
+  @Test
   public void getImportTableMetadata_WithNonExistingTableForX_ShouldThrowIllegalArgumentException()
       throws SQLException {
     for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
@@ -2961,17 +2972,20 @@ public class JdbcAdminTest {
     Statement checkTableExistStatement = mock(Statement.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
     ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(checkTableExistStatement);
     when(connection.getMetaData()).thenReturn(metadata);
     when(primaryKeyResults.next()).thenReturn(false);
+    when(columnResults.next()).thenReturn(false);
     RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
     } else {
       when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
     }
-
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     String description = "database engine specific test failed: " + rdbEngine;
 
@@ -3013,7 +3027,6 @@ public class JdbcAdminTest {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("timestamp");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
-
     RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);

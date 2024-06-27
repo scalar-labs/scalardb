@@ -192,18 +192,6 @@ public class TableMetadata {
         .toString();
   }
 
-  @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("columnNames", columnNames)
-        .add("columnDataTypes", columnDataTypes)
-        .add("partitionKeyNames", partitionKeyNames)
-        .add("clusteringKeyNames", clusteringKeyNames)
-        .add("clusteringOrders", clusteringOrders)
-        .add("secondaryIndexNames", secondaryIndexNames)
-        .toString();
-  }
-
   /** A builder class that creates a TableMetadata instance. */
   public static final class Builder {
     private final LinkedHashMap<String, DataType> columns = new LinkedHashMap<>();
