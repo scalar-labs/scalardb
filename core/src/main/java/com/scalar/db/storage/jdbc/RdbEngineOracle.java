@@ -309,6 +309,9 @@ class RdbEngineOracle implements RdbEngineStrategy {
         return DataType.BOOLEAN;
       case NUMERIC:
         if (digits == 0) {
+          if (columnSize == 1) {
+            return DataType.BOOLEAN;
+          }
           return DataType.BIGINT;
         } else {
           return DataType.DOUBLE;
