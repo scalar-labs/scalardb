@@ -124,11 +124,11 @@ public interface RdbEngineStrategy {
 
   String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);
 
-  default @Nullable String getRawCatalogName(String namespace) {
+  default @Nullable String getCatalogName(String namespace) {
     return null;
   }
 
-  default @Nullable String getRawSchemaName(String namespace) {
+  default @Nullable String getSchemaName(String namespace) {
     return namespace;
   }
 }
