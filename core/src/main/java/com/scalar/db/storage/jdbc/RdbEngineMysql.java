@@ -358,13 +358,16 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Nullable
   @Override
-  public String rawCatalogName(String namespace) {
+  public String getRawCatalogName(String namespace) {
     return namespace;
   }
 
   @Nullable
   @Override
-  public String rawSchemaName(String namespace) {
+  public String getRawSchemaName(String namespace) {
+    // This can be null. However, we return the namespace from this method just in case since users
+    // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
+    // method is used for filtering.
     return namespace;
   }
 }

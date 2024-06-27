@@ -505,8 +505,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
-      String rawCatalogName = rdbEngine.rawCatalogName(namespace);
-      String rawSchemaName = rdbEngine.rawSchemaName(namespace);
+      String rawCatalogName = rdbEngine.getRawCatalogName(namespace);
+      String rawSchemaName = rdbEngine.getRawSchemaName(namespace);
 
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
