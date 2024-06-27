@@ -1221,7 +1221,7 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    doReturn(Optional.of(metadata)).when(adminSpy).getRawTableMetadata(namespace, table);
+    doReturn(Optional.of(metadata)).when(adminSpy).getRawTableMetadata(namespace, table, false);
 
     // Act
     adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
@@ -1257,7 +1257,7 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    doReturn(Optional.empty()).when(adminSpy).getRawTableMetadata(namespace, table);
+    doReturn(Optional.empty()).when(adminSpy).getRawTableMetadata(namespace, table, false);
 
     // Act
     adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
@@ -1295,7 +1295,9 @@ public class JdbcAdminTest {
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
     TableMetadata rawTableMetadata =
         TableMetadata.newBuilder(metadata).addPartitionKey("c2").build();
-    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRawTableMetadata(namespace, table);
+    doReturn(Optional.of(rawTableMetadata))
+        .when(adminSpy)
+        .getRawTableMetadata(namespace, table, false);
 
     // Act
     assertThatThrownBy(
@@ -1336,7 +1338,9 @@ public class JdbcAdminTest {
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
     TableMetadata rawTableMetadata = TableMetadata.newBuilder(metadata).removeColumn("c7").build();
-    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRawTableMetadata(namespace, table);
+    doReturn(Optional.of(rawTableMetadata))
+        .when(adminSpy)
+        .getRawTableMetadata(namespace, table, false);
 
     // Act
     assertThatThrownBy(
@@ -1378,7 +1382,9 @@ public class JdbcAdminTest {
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
     TableMetadata rawTableMetadata =
         TableMetadata.newBuilder(metadata).removeColumn("c7").addColumn("c7", DataType.INT).build();
-    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRawTableMetadata(namespace, table);
+    doReturn(Optional.of(rawTableMetadata))
+        .when(adminSpy)
+        .getRawTableMetadata(namespace, table, false);
 
     // Act
     assertThatThrownBy(
@@ -2761,7 +2767,8 @@ public class JdbcAdminTest {
     RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
     when(rdbEngine.rawSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
     when(rdbEngine.rawTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
-    when(rdbEngine.getDataTypeForScalarDb(any(), anyString(), anyInt(), anyInt(), anyString()))
+    when(rdbEngine.getDataTypeForScalarDbLeniently(
+            any(), anyString(), anyInt(), anyInt(), anyString()))
         .thenReturn(DataType.INT)
         .thenReturn(DataType.TEXT)
         .thenReturn(DataType.FLOAT)
@@ -2769,7 +2776,7 @@ public class JdbcAdminTest {
     JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
 
     // Act
-    Optional<TableMetadata> rawTableMetadata = admin.getRawTableMetadata(NAMESPACE, TABLE);
+    Optional<TableMetadata> rawTableMetadata = admin.getRawTableMetadata(NAMESPACE, TABLE, false);
 
     // Assert
     assertThat(rawTableMetadata).isPresent();
@@ -2782,13 +2789,17 @@ public class JdbcAdminTest {
     assertThat(rawTableMetadata.get().getColumnDataType("col1")).isEqualTo(DataType.FLOAT);
     assertThat(rawTableMetadata.get().getColumnDataType("col2")).isEqualTo(DataType.BIGINT);
     verify(rdbEngine)
-        .getDataTypeForScalarDb(eq(JDBCType.INTEGER), eq("intintint"), eq(10), eq(11), anyString());
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.INTEGER), eq("intintint"), eq(10), eq(11), anyString());
     verify(rdbEngine)
-        .getDataTypeForScalarDb(eq(JDBCType.VARCHAR), eq("texttext"), eq(20), eq(22), anyString());
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.VARCHAR), eq("texttext"), eq(20), eq(22), anyString());
     verify(rdbEngine)
-        .getDataTypeForScalarDb(eq(JDBCType.FLOAT), eq("floatfloat"), eq(30), eq(33), anyString());
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.FLOAT), eq("floatfloat"), eq(30), eq(33), anyString());
     verify(rdbEngine)
-        .getDataTypeForScalarDb(eq(JDBCType.BIGINT), eq("bigintbig"), eq(40), eq(44), anyString());
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.BIGINT), eq("bigintbig"), eq(40), eq(44), anyString());
   }
 
   @Test
@@ -2820,7 +2831,7 @@ public class JdbcAdminTest {
     JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
 
     // Act Assert
-    assertThatThrownBy(() -> admin.getRawTableMetadata(NAMESPACE, TABLE))
+    assertThatThrownBy(() -> admin.getRawTableMetadata(NAMESPACE, TABLE, false))
         .isInstanceOf(IllegalStateException.class);
   }
 
