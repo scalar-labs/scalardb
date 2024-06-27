@@ -883,6 +883,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               || columnDataTypeOfRawTable == DataType.DOUBLE) {
             continue;
           }
+        } else if (columnDataType == DataType.INT || columnDataType == DataType.BIGINT) {
+          // Handle INT and BIGINT similarly to FLOAT and DOUBLE.
+          if (columnDataTypeOfRawTable == DataType.INT
+              || columnDataTypeOfRawTable == DataType.BIGINT) {
+            continue;
+          }
         } else if (columnDataType.equals(columnDataTypeOfRawTable)) {
           continue;
         }
