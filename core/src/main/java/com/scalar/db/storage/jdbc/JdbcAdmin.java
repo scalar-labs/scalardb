@@ -899,8 +899,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (IllegalStateException e) {
       throw new IllegalStateException(
           String.format(
-              "Failed to repair table since the raw table with inconsistent schema exists. Namespace=%s, Table=%s, ScalarDbMetadata=%s, RawTableSchema=%s",
-              namespace, table, metadata, rawTableMetadata),
+              "Failed to repair table since the raw table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDbMetadata:%s, RawTableSchema:%s, Details:%s",
+              namespace, table, metadata, rawTableMetadata, e.getMessage()),
           e);
     }
   }
