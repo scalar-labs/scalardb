@@ -2,7 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -140,10 +139,22 @@ class RdbEngineSqlite implements RdbEngineStrategy {
     throw new AssertionError("SQLite is not supported");
   }
 
+  /**
+   * Takes JDBC column information and returns a corresponding ScalarDB data type.
+   *
+   * @param type A JDBC type.
+   * @param typeName A JDBC column type name.
+   * @param columnSize A JDBC column size.
+   * @param digits A JDBC column digits.
+   * @param columnDescription A JDBC column description.
+   * @return A corresponding ScalarDB data type.
+   */
   @Override
   public DataType getDataTypeForScalarDbLeniently(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
     switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
       case INTEGER:
         if (typeName.equalsIgnoreCase("int")) {
           return DataType.INT;
@@ -165,9 +176,10 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       default:
         break;
     }
-    // FIXME
     throw new IllegalArgumentException(
-        CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(typeName, columnDescription));
+        String.format(
+            "Unexpected data type. JDBC type: %s, Type name: %s, Column size: %d, Column digits: %d, Column desc: %s",
+            type, typeName, columnSize, digits, columnDescription));
   }
 
   @Override

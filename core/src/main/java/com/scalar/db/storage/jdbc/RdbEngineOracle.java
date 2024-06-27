@@ -289,10 +289,24 @@ class RdbEngineOracle implements RdbEngineStrategy {
     }
   }
 
+  /**
+   * Takes JDBC column information and returns a corresponding ScalarDB data type. The data type
+   * mapping logic in this method is based on {@link RdbEngineOracle#getDataTypeForScalarDb} which
+   * is created only for the table import feature and a bit too strict for other usages.
+   *
+   * @param type A JDBC type.
+   * @param typeName A JDBC column type name.
+   * @param columnSize A JDBC column size.
+   * @param digits A JDBC column digits.
+   * @param columnDescription A JDBC column description.
+   * @return A corresponding ScalarDB data type.
+   */
   @Override
   public DataType getDataTypeForScalarDbLeniently(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
     switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
       case NUMERIC:
         if (digits == 0) {
           return DataType.BIGINT;
@@ -317,10 +331,10 @@ class RdbEngineOracle implements RdbEngineStrategy {
       case BLOB:
         return DataType.BLOB;
       default:
-        // FIXME
         throw new IllegalArgumentException(
-            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
-                typeName, columnDescription));
+            String.format(
+                "Unexpected data type. JDBC type: %s, Type name: %s, Column size: %d, Column digits: %d, Column desc: %s",
+                type, typeName, columnSize, digits, columnDescription));
     }
   }
 
