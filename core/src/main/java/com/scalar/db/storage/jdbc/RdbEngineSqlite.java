@@ -165,7 +165,12 @@ class RdbEngineSqlite implements RdbEngineStrategy {
         }
         break;
       case VARCHAR:
-        return DataType.TEXT;
+        if (typeName.equalsIgnoreCase("text")) {
+          return DataType.TEXT;
+        } else if (typeName.equalsIgnoreCase("blob")) {
+          return DataType.BLOB;
+        }
+        break;
       case FLOAT:
         if (typeName.equalsIgnoreCase("float")) {
           return DataType.FLOAT;
