@@ -20,6 +20,7 @@ import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -496,7 +497,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @VisibleForTesting
-  Optional<TableMetadata> getRawTableMetadata(String namespace, String table)
+  Optional<TableMetadata> getRawTableMetadata(String namespace, String table, boolean forImport)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
 
@@ -519,14 +520,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       resultSet = metadata.getColumns(catalogName, schemaName, rawTableName, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        builder.addColumn(
-            columnName,
-            rdbEngine.getDataTypeForScalarDb(
-                getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE)),
-                resultSet.getString(JDBC_COL_TYPE_NAME),
-                resultSet.getInt(JDBC_COL_COLUMN_SIZE),
-                resultSet.getInt(JDBC_COL_DECIMAL_DIGITS),
-                getFullTableName(namespace, table) + " " + columnName));
+        JDBCType jdbcType = getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE));
+        String typeName = resultSet.getString(JDBC_COL_TYPE_NAME);
+        int colSize = resultSet.getInt(JDBC_COL_COLUMN_SIZE);
+        int colDigit = resultSet.getInt(JDBC_COL_DECIMAL_DIGITS);
+        String colDesc = getFullTableName(namespace, table) + " " + columnName;
+        DataType scalarDbDataType;
+        if (forImport) {
+          // TODO: Rename getDataTypeForScalarDb to something more import-ish.
+          scalarDbDataType =
+              rdbEngine.getDataTypeForScalarDb(jdbcType, typeName, colSize, colDigit, colDesc);
+        } else {
+          scalarDbDataType =
+              rdbEngine.getDataTypeForScalarDbLeniently(
+                  jdbcType, typeName, colSize, colDigit, colDesc);
+        }
+
+        builder.addColumn(columnName, scalarDbDataType);
       }
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -547,7 +557,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
     }
 
-    Optional<TableMetadata> rawTableMetadata = getRawTableMetadata(namespace, table);
+    Optional<TableMetadata> rawTableMetadata = getRawTableMetadata(namespace, table, true);
 
     if (!rawTableMetadata.isPresent()) {
       throw new IllegalArgumentException(
@@ -817,7 +827,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     //    Admin API does nothing.
     //
     // Therefore, the operation should fail if any the above case isn't satisfied.
-    Optional<TableMetadata> optRawTableMetadata = getRawTableMetadata(namespace, table);
+    Optional<TableMetadata> optRawTableMetadata = getRawTableMetadata(namespace, table, false);
     if (!optRawTableMetadata.isPresent()) {
       return;
     }

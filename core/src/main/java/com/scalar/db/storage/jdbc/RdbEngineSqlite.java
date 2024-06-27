@@ -137,8 +137,12 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public DataType getDataTypeForScalarDb(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
-    // Note: The current implementation only supports columns created by ScalarDB. This can't be
-    //       used for importing tables.
+    throw new AssertionError("SQLite is not supported");
+  }
+
+  @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
     switch (type) {
       case INTEGER:
         if (typeName.equalsIgnoreCase("int")) {
@@ -161,6 +165,7 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       default:
         break;
     }
+    // FIXME
     throw new IllegalArgumentException(
         CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(typeName, columnDescription));
   }

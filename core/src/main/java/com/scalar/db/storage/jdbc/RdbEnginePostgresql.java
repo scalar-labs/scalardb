@@ -278,6 +278,34 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BIT:
+        return DataType.BOOLEAN;
+      case SMALLINT:
+      case INTEGER:
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case VARCHAR:
+        return DataType.TEXT;
+      case BINARY:
+        return DataType.BLOB;
+      default:
+        // FIXME
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+    }
+  }
+
+  @Override
   public int getSqlTypes(DataType dataType) {
     switch (dataType) {
       case BOOLEAN:

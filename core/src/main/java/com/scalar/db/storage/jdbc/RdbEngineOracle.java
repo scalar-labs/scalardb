@@ -290,6 +290,41 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case NUMERIC:
+        if (digits == 0) {
+          return DataType.BIGINT;
+        } else {
+          return DataType.DOUBLE;
+        }
+      case REAL:
+        return DataType.FLOAT;
+      case FLOAT:
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case NCHAR:
+      case VARCHAR:
+      case NVARCHAR:
+      case CLOB:
+      case NCLOB:
+      case LONGVARCHAR:
+        return DataType.TEXT;
+      case VARBINARY:
+      case LONGVARBINARY:
+      case BLOB:
+        return DataType.BLOB;
+      default:
+        // FIXME
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+    }
+  }
+
+  @Override
   public int getSqlTypes(DataType dataType) {
     switch (dataType) {
       case BOOLEAN:

@@ -290,6 +290,42 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BIT:
+        return DataType.BOOLEAN;
+      case TINYINT:
+      case SMALLINT:
+        return DataType.INT;
+      case INTEGER:
+        if (typeName.toUpperCase().endsWith("UNSIGNED")) {
+          return DataType.BIGINT;
+        }
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case VARCHAR:
+      case LONGVARCHAR:
+        return DataType.TEXT;
+      case BINARY:
+      case VARBINARY:
+      case LONGVARBINARY:
+        return DataType.BLOB;
+      default:
+        // FIXME
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+    }
+  }
+
+  @Override
   public int getSqlTypes(DataType dataType) {
     switch (dataType) {
       case BOOLEAN:

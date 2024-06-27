@@ -32,6 +32,9 @@ public interface RdbEngineStrategy {
   DataType getDataTypeForScalarDb(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription);
 
+  DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription);
+
   int getSqlTypes(DataType dataType);
 
   String getTextType(int charLength);
