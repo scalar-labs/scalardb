@@ -15,7 +15,6 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -356,6 +355,8 @@ class RdbEngineMysql implements RdbEngineStrategy {
     return createIndexSql;
   }
 
+  /* For experiment.
+
   @Nullable
   @Override
   public String getCatalogName(String namespace) {
@@ -370,4 +371,5 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // method is used for filtering.
     return namespace;
   }
+   */
 }
