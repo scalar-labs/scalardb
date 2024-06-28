@@ -81,6 +81,14 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     super.importTables_ImportableTablesGiven_ShouldImportProperly();
   }
 
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly()
+      throws Exception {
+    super.importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly();
+  }
+
   @Override
   public void afterAll() {
     try {
