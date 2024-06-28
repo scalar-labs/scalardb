@@ -123,4 +123,12 @@ public interface RdbEngineStrategy {
   boolean isDuplicateIndexError(SQLException e);
 
   String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);
+
+  default @Nullable String getCatalogName(String namespace) {
+    return null;
+  }
+
+  default @Nullable String getSchemaName(String namespace) {
+    return namespace;
+  }
 }
