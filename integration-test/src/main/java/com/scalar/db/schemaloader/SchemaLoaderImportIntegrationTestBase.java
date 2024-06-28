@@ -24,9 +24,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SchemaLoaderImportIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
   private static final String TEST_NAME = "schema_loader_import";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path IMPORT_SCHEMA_FILE_PATH =
@@ -149,6 +153,44 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
+  }
+
+  @Test
+  public void importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly()
+      throws Exception {
+    // Arrange
+    transactionAdmin.createNamespace(namespace1);
+    storageAdmin.createNamespace(namespace2);
+    createImportableTable(namespace1, TABLE_1);
+    createImportableTable(namespace2, TABLE_2);
+
+    // Create non-related tables.
+    createNonImportableTable(namespace1, TABLE_2);
+    createNonImportableTable(namespace2, TABLE_1);
+
+    try {
+      // Act
+      int exitCode =
+          executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
+
+      // Assert
+      assertThat(exitCode).isEqualTo(0);
+      assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
+      assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
+      assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
+    } finally {
+      try {
+        dropNonImportableTable(namespace1, TABLE_2);
+      } catch (Exception e) {
+        logger.warn("Failed to drop non-importable table. {}.{}", namespace1, TABLE_2, e);
+      }
+
+      try {
+        dropNonImportableTable(namespace2, TABLE_1);
+      } catch (Exception e) {
+        logger.warn("Failed to drop non-importable table. {}.{}", namespace2, TABLE_1, e);
+      }
+    }
   }
 
   @Test
