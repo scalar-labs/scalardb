@@ -24,9 +24,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SchemaLoaderImportIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
   private static final String TEST_NAME = "schema_loader_import";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path IMPORT_SCHEMA_FILE_PATH =
@@ -155,27 +159,17 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   public void importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly()
       throws Exception {
     // Arrange
-    waitForDifferentSessionDdl();
     transactionAdmin.createNamespace(namespace1);
-
-    waitForDifferentSessionDdl();
     storageAdmin.createNamespace(namespace2);
-
-    waitForDifferentSessionDdl();
     createImportableTable(namespace1, TABLE_1);
-
-    waitForDifferentSessionDdl();
     createImportableTable(namespace2, TABLE_2);
 
     // Create non-related tables.
-    waitForDifferentSessionDdl();
     createNonImportableTable(namespace1, TABLE_2);
-    waitForDifferentSessionDdl();
     createNonImportableTable(namespace2, TABLE_1);
 
     try {
       // Act
-      waitForDifferentSessionDdl();
       int exitCode =
           executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
 
