@@ -121,4 +121,12 @@ public interface RdbEngineStrategy {
   default @Nullable String getEscape(LikeExpression likeExpression) {
     return likeExpression.getEscape();
   }
+
+  default @Nullable String getCatalogName(String namespace) {
+    return null;
+  }
+
+  default @Nullable String getSchemaName(String namespace) {
+    return namespace;
+  }
 }
