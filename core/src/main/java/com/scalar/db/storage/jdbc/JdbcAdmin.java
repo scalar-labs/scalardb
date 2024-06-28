@@ -505,8 +505,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
-      String rawCatalogName = rdbEngine.getCatalogName(namespace);
-      String rawSchemaName = rdbEngine.getSchemaName(namespace);
+      String catalogName = rdbEngine.getCatalogName(namespace);
+      String schemaName = rdbEngine.getSchemaName(namespace);
 
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
@@ -514,7 +514,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
-      ResultSet resultSet = metadata.getPrimaryKeys(rawCatalogName, rawSchemaName, table);
+      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
       while (resultSet.next()) {
         primaryKeyExists = true;
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
@@ -527,7 +527,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 getFullTableName(namespace, table)));
       }
 
-      resultSet = metadata.getColumns(rawCatalogName, rawSchemaName, table, "%");
+      resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         builder.addColumn(
