@@ -181,8 +181,10 @@ public class Snapshot {
     return mergeResult(key, result)
         .filter(
             r ->
-                conjunctions.isEmpty()
-                    || !r.isMergedResult()
+                // We need to apply conditions if it is a merged result. Of course, we can just
+                // return the result without the condition check if there is no condition.
+                !r.isMergedResult()
+                    || conjunctions.isEmpty()
                     || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
   }
 
