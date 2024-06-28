@@ -452,13 +452,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
+      String catalogName = rdbEngine.getCatalogName(namespace);
+      String schemaName = rdbEngine.getSchemaName(namespace);
+
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
             "The table " + getFullTableName(namespace, table) + "  does not exist");
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
-      ResultSet resultSet = metadata.getPrimaryKeys(null, namespace, table);
+      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
       while (resultSet.next()) {
         primaryKeyExists = true;
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
@@ -469,7 +472,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         throw new IllegalStateException("The table must have a primary key");
       }
 
-      resultSet = metadata.getColumns(null, namespace, table, "%");
+      resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         builder.addColumn(
