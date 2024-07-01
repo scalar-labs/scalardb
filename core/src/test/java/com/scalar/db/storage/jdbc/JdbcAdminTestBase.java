@@ -2267,8 +2267,14 @@ public abstract class JdbcAdminTestBase {
         .thenReturn("");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
 
     Map<String, DataType> expectedColumns = new LinkedHashMap<>();
     expectedColumns.put("pk1", DataType.TEXT);
@@ -2351,7 +2357,13 @@ public abstract class JdbcAdminTestBase {
     when(connection.createStatement()).thenReturn(checkTableExistStatement);
     when(connection.getMetaData()).thenReturn(metadata);
     when(primaryKeyResults.next()).thenReturn(false);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    }
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     String description = "database engine specific test failed: " + rdbEngine;
 
@@ -2393,8 +2405,16 @@ public abstract class JdbcAdminTestBase {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("timestamp");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     String description = "database engine specific test failed: " + rdbEngine;
 
@@ -2512,8 +2532,14 @@ public abstract class JdbcAdminTestBase {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
     List<Statement> expectedStatements = new ArrayList<>();
     for (int i = 0; i < expectedSqlStatements.size(); i++) {
       Statement expectedStatement = mock(Statement.class);
