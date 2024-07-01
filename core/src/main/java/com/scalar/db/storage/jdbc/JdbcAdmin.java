@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -57,6 +58,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
+  @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
   public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
@@ -512,9 +514,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       DatabaseMetaData metadata = connection.getMetaData();
       ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, tableName);
+      Map<Integer, String> rawPrimaryKeysWithSeq = new HashMap<>();
       while (resultSet.next()) {
+        int keySeq = resultSet.getInt(JDBC_COL_KEY_SEQ);
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        builder.addPartitionKey(columnName);
+        rawPrimaryKeysWithSeq.put(keySeq, columnName);
+      }
+
+      // Sort the raw primary keys by the key sequence.
+      for (int key :
+          rawPrimaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
+        builder.addPartitionKey(rawPrimaryKeysWithSeq.get(key));
       }
 
       resultSet = metadata.getColumns(catalogName, schemaName, tableName, "%");
