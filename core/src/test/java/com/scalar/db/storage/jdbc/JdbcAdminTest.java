@@ -4,6 +4,7 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_SIZE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DATA_TYPE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DECIMAL_DIGITS;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_KEY_SEQ;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
@@ -2727,7 +2728,8 @@ public class JdbcAdminTest {
 
     ResultSet primaryKeyResults = mock(ResultSet.class);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
-    when(primaryKeyResults.getString("COLUMN_NAME")).thenReturn("pk1").thenReturn("pk2");
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk2").thenReturn("pk1");
+    when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(2).thenReturn(1);
     when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
 
     ResultSet columnResults = mock(ResultSet.class);
@@ -2737,27 +2739,27 @@ public class JdbcAdminTest {
         .thenReturn(true)
         .thenReturn(true)
         .thenReturn(false);
-    when(columnResults.getString("COLUMN_NAME"))
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME))
         .thenReturn("pk1")
         .thenReturn("pk2")
         .thenReturn("col1")
         .thenReturn("col2");
-    when(columnResults.getInt("DATA_TYPE"))
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
         .thenReturn(Types.INTEGER)
         .thenReturn(Types.VARCHAR)
         .thenReturn(Types.FLOAT)
         .thenReturn(Types.BIGINT);
-    when(columnResults.getString("TYPE_NAME"))
+    when(columnResults.getString(JDBC_COL_TYPE_NAME))
         .thenReturn("intintint")
         .thenReturn("texttext")
         .thenReturn("floatfloat")
         .thenReturn("bigintbig");
-    when(columnResults.getInt("COLUMN_SIZE"))
+    when(columnResults.getInt(JDBC_COL_COLUMN_SIZE))
         .thenReturn(10)
         .thenReturn(20)
         .thenReturn(30)
         .thenReturn(40);
-    when(columnResults.getInt("DECIMAL_DIGITS"))
+    when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS))
         .thenReturn(11)
         .thenReturn(22)
         .thenReturn(33)
@@ -2860,7 +2862,8 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(checkTableExistStatement);
     when(connection.getMetaData()).thenReturn(metadata);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
-    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1").thenReturn("pk2");
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk2").thenReturn("pk1");
+    when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(2).thenReturn(1);
     when(columnResults.next())
         .thenAnswer(
             new Answer<Boolean>() {
