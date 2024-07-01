@@ -47,12 +47,12 @@ public class ConsensusCommitAdminIntegrationTestWithServer
 
   @Override
   protected String getSystemNamespaceName(Properties properties) {
-    // "Unused for ScalarDB server"
+    // "Unused for ScalarDB Server"
     return null;
   }
 
   @Override
   @Test
-  @Disabled("Retrieving the namespace names is not supported in ScalarDB server")
+  @Disabled("Retrieving the namespace names is not supported in ScalarDB Server")
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 }
