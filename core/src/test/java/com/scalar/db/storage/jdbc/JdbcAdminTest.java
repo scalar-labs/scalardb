@@ -2765,7 +2765,7 @@ public class JdbcAdminTest {
     when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
 
     RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
-    when(rdbEngine.rawSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
+    when(rdbEngine.getSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
     when(rdbEngine.rawTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
     when(rdbEngine.getDataTypeForScalarDbLeniently(
             any(), anyString(), anyInt(), anyInt(), anyString()))
@@ -2826,7 +2826,7 @@ public class JdbcAdminTest {
     when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
 
     RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
-    when(rdbEngine.rawSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
+    when(rdbEngine.getSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
     when(rdbEngine.rawTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
     JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
 

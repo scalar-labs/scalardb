@@ -331,7 +331,7 @@ class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   @Nullable
-  public String rawSchemaName(String namespace) {
+  public String getSchemaName(String namespace) {
     return null;
   }
 
