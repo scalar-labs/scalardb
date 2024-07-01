@@ -135,7 +135,7 @@ public interface RdbEngineStrategy {
     return namespace;
   }
 
-  default String rawTableName(String namespace, String table) {
+  default String getTableName(String namespace, String table) {
     return table;
   }
 }

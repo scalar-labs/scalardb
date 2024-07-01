@@ -336,7 +336,7 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public String rawTableName(String namespace, String table) {
+  public String getTableName(String namespace, String table) {
     return namespace + NAMESPACE_SEPARATOR + table;
   }
 }

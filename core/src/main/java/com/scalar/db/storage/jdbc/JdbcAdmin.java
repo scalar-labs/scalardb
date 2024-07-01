@@ -504,20 +504,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
+      String tableName = rdbEngine.getTableName(namespace, table);
 
       if (!tableExistsInternal(connection, namespace, table)) {
         return Optional.empty();
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
-      String rawTableName = rdbEngine.rawTableName(namespace, table);
-      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, rawTableName);
+      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, tableName);
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         builder.addPartitionKey(columnName);
       }
 
-      resultSet = metadata.getColumns(catalogName, schemaName, rawTableName, "%");
+      resultSet = metadata.getColumns(catalogName, schemaName, tableName, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         JDBCType jdbcType = getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE));
