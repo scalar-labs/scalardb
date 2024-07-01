@@ -821,12 +821,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting
   void checkRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    // Repairing table is supposed to be used for either of the following cases:
-    // 1. The target raw table doesn't exist. The Admin API creates the raw table.
-    // 2. The target raw table exists, and the schema and the ScalarDB metadata are consistent. The
-    //    Admin API does nothing.
+    // Repairing table is supposed to be used for the following purposes:
+    // 1. To create a raw table in the underlying RDBMS with the expected metadata if the table
+    //    doesn't exist.
+    // 2. To update the ScalarDB metadata table to synchronize it with the expected state.
     //
-    // Therefore, the operation should fail if any the above case isn't satisfied.
+    // Also, the ScalarDB metadata table and the raw table schema must be consistent. Therefore,
+    // the operation should fail if the raw table already exists with inconsistent schema.
     Optional<TableMetadata> optRawTableMetadata = getRawTableMetadata(namespace, table, false);
     if (!optRawTableMetadata.isPresent()) {
       return;
@@ -877,15 +878,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         if (columnDataType == DataType.FLOAT || columnDataType == DataType.DOUBLE) {
           // Some RDBMS internally use the same data type for ScalarDB FLOAT and DOUBLE. So, if
           // either data type is returned from the underlying RDBMS, ScalarDB can't distinguish
-          // which data type was actually specified in the table schema. Therefore, we treat FLOAT
-          // and DOUBLE as the same group.
+          // which ScalarDB data type was actually specified in the table schema. Therefore, we
+          // treat FLOAT and DOUBLE as the same group.
           if (columnDataTypeOfRawTable == DataType.FLOAT
               || columnDataTypeOfRawTable == DataType.DOUBLE) {
             continue;
           }
-        } else if (columnDataType == DataType.INT || columnDataType == DataType.BIGINT) {
-          // Handle INT and BIGINT similarly to FLOAT and DOUBLE.
-          if (columnDataTypeOfRawTable == DataType.INT
+        } else if (columnDataType == DataType.BOOLEAN
+            || columnDataType == DataType.INT
+            || columnDataType == DataType.BIGINT) {
+          // Handle BOOLEAN, INT and BIGINT similarly to FLOAT and DOUBLE. Regarding BOOLEAN,
+          // some RDBMS use a numeric type as BOOLEAN. Therefore, we leniently treat BOOLEAN as the
+          // same group.
+          if (columnDataTypeOfRawTable == DataType.BOOLEAN
+              || columnDataTypeOfRawTable == DataType.INT
               || columnDataTypeOfRawTable == DataType.BIGINT) {
             continue;
           }
