@@ -5,6 +5,8 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitAdminIntegrationTestWithServer
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -42,4 +44,15 @@ public class ConsensusCommitAdminIntegrationTestWithServer
       server.shutdown();
     }
   }
+
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    // "Unused for ScalarDB Server"
+    return null;
+  }
+
+  @Override
+  @Test
+  @Disabled("Retrieving the namespace names is not supported in ScalarDB Server")
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
 }

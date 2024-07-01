@@ -54,6 +54,7 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN = SCAN_PREFIX + "enabled";
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
+  public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {

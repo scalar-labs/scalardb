@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
@@ -76,6 +77,7 @@ public abstract class DynamoAdminTestBase {
   @Mock private DynamoConfig config;
   @Mock private DynamoDbClient client;
   @Mock private ApplicationAutoScalingClient applicationAutoScalingClient;
+  @Mock private DescribeTableResponse tableIsActiveResponse;
   private DynamoAdmin admin;
 
   @BeforeEach
@@ -112,7 +114,7 @@ public abstract class DynamoAdminTestBase {
 
   private String getFullMetadataTableName() {
     return getNamespacePrefixConfig().orElse("")
-        + getTableMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
+        + getTableMetadataNamespaceConfig().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME)
         + "."
         + DynamoAdmin.METADATA_TABLE;
   }
@@ -1190,5 +1192,79 @@ public abstract class DynamoAdminTestBase {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getNamespaceNames_WithExistingTables_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenReturn(mock(DescribeTableResponse.class))
+        .thenThrow(mock(ResourceNotFoundException.class))
+        .thenReturn(tableIsActiveResponse);
+
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    Map<String, AttributeValue> lastEvaluatedKeyFirstIteration =
+        ImmutableMap.of("", AttributeValue.builder().build());
+    Map<String, AttributeValue> lastEvaluatedKeySecondIteration = ImmutableMap.of();
+    when(scanResponse.lastEvaluatedKey())
+        .thenReturn(lastEvaluatedKeyFirstIteration)
+        .thenReturn(lastEvaluatedKeySecondIteration);
+    when(scanResponse.items())
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns1.tbl1").build())))
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns1.tbl2").build()),
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns2.tbl3").build())));
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build());
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .exclusiveStartKey(null)
+                .build());
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .exclusiveStartKey(lastEvaluatedKeyFirstIteration)
+                .build());
+    String metadataNamespace =
+        getTableMetadataNamespaceConfig().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    assertThat(actual).containsOnly("ns1", "ns2", metadataNamespace);
+  }
+
+  @Test
+  public void getNamespaceNames_WithoutExistingTables_ShouldReturnMetadataNamespaceOnly()
+      throws ExecutionException {
+    // Arrange
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenThrow(mock(ResourceNotFoundException.class));
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build());
+    String metadataNamespace =
+        getTableMetadataNamespaceConfig().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    assertThat(actual).containsOnly(metadataNamespace);
   }
 }

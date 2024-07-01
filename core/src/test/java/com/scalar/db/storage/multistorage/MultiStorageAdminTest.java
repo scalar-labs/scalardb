@@ -1,14 +1,19 @@
 package com.scalar.db.storage.multistorage;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -487,5 +492,82 @@ public class MultiStorageAdminTest {
 
     // Assert
     verify(admin2).addNewColumnToTable(namespace, table, column, dataType);
+  }
+
+  @Test
+  public void
+      getNamespaceNames_WithExistingNamespacesNotInMapping_ShouldReturnExistingNamespacesInMappingAndFromDefaultAdmin()
+          throws ExecutionException {
+    // Arrange
+    Map<String, DistributedStorageAdmin> namespaceAdminMap = new HashMap<>();
+    namespaceAdminMap.put("ns1", admin1);
+    namespaceAdminMap.put("ns2", admin2);
+    namespaceAdminMap.put("ns3", admin2);
+    DistributedStorageAdmin defaultAdmin = admin3;
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
+
+    when(admin1.getNamespaceNames()).thenReturn(ImmutableSet.of("ns1", "ns2"));
+    when(admin2.getNamespaceNames()).thenReturn(ImmutableSet.of("ns3"));
+    when(admin3.getNamespaceNames()).thenReturn(ImmutableSet.of("ns4", "ns5"));
+
+    // Act
+    Set<String> actualNamespaces = multiStorageAdmin.getNamespaceNames();
+
+    // Assert
+    verify(admin1).getNamespaceNames();
+    verify(admin2).getNamespaceNames();
+    verify(admin3).getNamespaceNames();
+    assertThat(actualNamespaces).containsOnly("ns1", "ns3", "ns4", "ns5");
+  }
+
+  @Test
+  public void getNamespaceNames_WithNamespaceInMappingButNotExisting_ShouldReturnEmptySet()
+      throws ExecutionException {
+    // Arrange
+    Map<String, DistributedStorageAdmin> namespaceAdminMap = new HashMap<>();
+    namespaceAdminMap.put("ns1", admin1);
+    namespaceAdminMap.put("ns2", admin2);
+    DistributedStorageAdmin defaultAdmin = admin3;
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
+
+    when(admin1.getNamespaceNames()).thenReturn(Collections.emptySet());
+    when(admin2.getNamespaceNames()).thenReturn(Collections.emptySet());
+    when(admin3.getNamespaceNames()).thenReturn(Collections.emptySet());
+
+    // Act
+    Set<String> actualNamespaces = multiStorageAdmin.getNamespaceNames();
+
+    // Assert
+    verify(admin1).getNamespaceNames();
+    verify(admin2).getNamespaceNames();
+    verify(admin3).getNamespaceNames();
+    assertThat(actualNamespaces).isEmpty();
+  }
+
+  @Test
+  public void getNamespaceNames_WithExistingNamespaceButNotInMapping_ShouldReturnEmptySet()
+      throws ExecutionException {
+    // Arrange
+    Map<String, DistributedStorageAdmin> namespaceAdminMap = new HashMap<>();
+    namespaceAdminMap.put("ns1", admin1);
+    namespaceAdminMap.put("ns2", admin2);
+    DistributedStorageAdmin defaultAdmin = admin3;
+    multiStorageAdmin =
+        new MultiStorageAdmin(Collections.emptyMap(), namespaceAdminMap, defaultAdmin);
+
+    when(admin1.getNamespaceNames()).thenReturn(ImmutableSet.of("ns2"));
+    when(admin2.getNamespaceNames()).thenReturn(Collections.emptySet());
+    when(admin3.getNamespaceNames()).thenReturn(Collections.emptySet());
+
+    // Act
+    Set<String> actualNamespaces = multiStorageAdmin.getNamespaceNames();
+
+    // Assert
+    verify(admin1).getNamespaceNames();
+    verify(admin2).getNamespaceNames();
+    verify(admin3).getNamespaceNames();
+    assertThat(actualNamespaces).isEmpty();
   }
 }

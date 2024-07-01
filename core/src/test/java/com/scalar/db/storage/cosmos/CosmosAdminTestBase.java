@@ -861,4 +861,56 @@ public abstract class CosmosAdminTestBase {
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void getNamespaceNames_WithExistingTables_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer tableMetadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(tableMetadataContainer);
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<CosmosTableMetadata> cosmosPagedIterable = mock(CosmosPagedIterable.class);
+    CosmosTableMetadata tableMetadata1 = CosmosTableMetadata.newBuilder().id("ns1.tbl1").build();
+    CosmosTableMetadata tableMetadata2 = CosmosTableMetadata.newBuilder().id("ns1.tbl2").build();
+    CosmosTableMetadata tableMetadata3 = CosmosTableMetadata.newBuilder().id("ns2.tbl3").build();
+    when(cosmosPagedIterable.stream())
+        .thenReturn(Stream.of(tableMetadata1, tableMetadata2, tableMetadata3));
+    when(tableMetadataContainer.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
+        .thenReturn(cosmosPagedIterable);
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(tableMetadataContainer).read();
+    verify(tableMetadataContainer)
+        .queryItems(
+            eq("SELECT container.id FROM container"),
+            any(CosmosQueryRequestOptions.class),
+            eq(CosmosTableMetadata.class));
+    assertThat(actual).containsOnly("ns1", "ns2", metadataDatabaseName);
+  }
+
+  @Test
+  public void getNamespaceNames_WithoutExistingTables_ShouldReturnMetadataDatabaseOnly()
+      throws ExecutionException {
+    // Arrange
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer tableMetadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(anyString())).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(tableMetadataContainer);
+    CosmosException cosmosException = mock(CosmosException.class);
+    when(cosmosException.getStatusCode()).thenReturn(CosmosErrorCode.NOT_FOUND.get());
+    when(tableMetadataContainer.read()).thenThrow(cosmosException);
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(tableMetadataContainer).read();
+    assertThat(actual).containsOnly(metadataDatabaseName);
+  }
 }

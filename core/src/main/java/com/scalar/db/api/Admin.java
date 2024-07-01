@@ -415,4 +415,13 @@ public interface Admin {
    */
   void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException;
+
+  /**
+   * Returns the names of the existing namespaces. However, only namespaces that contain tables are
+   * returned. From ScalarDB 4.0, we plan to improve the design to suppress this limitation.
+   *
+   * @return a set of namespaces names, an empty set if no namespaces exist
+   * @throws ExecutionException if the operation fails
+   */
+  Set<String> getNamespaceNames() throws ExecutionException;
 }

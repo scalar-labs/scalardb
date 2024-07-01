@@ -51,7 +51,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public static final String NO_SCALING = "no-scaling";
   public static final String DEFAULT_NO_SCALING = "false";
 
-  public static final String METADATA_DATABASE = "scalardb";
   public static final String METADATA_CONTAINER = "metadata";
   private static final String ID = "id";
   private static final String CONCATENATED_PARTITION_KEY = "concatenatedPartitionKey";
@@ -70,12 +69,14 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public CosmosAdmin(DatabaseConfig databaseConfig) {
     CosmosConfig config = new CosmosConfig(databaseConfig);
     client = CosmosUtils.buildCosmosClient(config);
-    metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
+    metadataDatabase =
+        config.getTableMetadataDatabase().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   CosmosAdmin(CosmosClient client, CosmosConfig config) {
     this.client = client;
-    metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
+    metadataDatabase =
+        config.getTableMetadataDatabase().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Override
@@ -560,6 +561,32 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public void importTable(String namespace, String table, Map<String, String> options) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      if (!metadataContainerExists()) {
+        return Collections.singleton(metadataDatabase);
+      }
+
+      Set<String> namespaceNames =
+          getMetadataContainer()
+              .queryItems(
+                  "SELECT container.id FROM container",
+                  new CosmosQueryRequestOptions(),
+                  CosmosTableMetadata.class)
+              .stream()
+              .map(
+                  tableMetadata ->
+                      tableMetadata.getId().substring(0, tableMetadata.getId().indexOf('.')))
+              .collect(Collectors.toSet());
+      namespaceNames.add(metadataDatabase);
+
+      return namespaceNames;
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Retrieving the existing namespace names failed", e);
+    }
   }
 
   private boolean metadataContainerExists() {

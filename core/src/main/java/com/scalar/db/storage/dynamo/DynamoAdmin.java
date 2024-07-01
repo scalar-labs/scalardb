@@ -15,6 +15,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -106,7 +107,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private static final String SCALING_TYPE_INDEX_READ = "index-read";
   private static final String SCALING_TYPE_INDEX_WRITE = "index-write";
 
-  public static final String METADATA_NAMESPACE = "scalardb";
   public static final String METADATA_TABLE = "metadata";
   @VisibleForTesting static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
   @VisibleForTesting static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
@@ -167,9 +167,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .build();
 
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace = getMetadataNamespace(config);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -178,9 +176,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace = getMetadataNamespace(config);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -192,11 +188,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       DynamoConfig config) {
     this.client = client;
     this.applicationAutoScalingClient = applicationAutoScalingClient;
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
+    metadataNamespace = getMetadataNamespace(config);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = 0;
+  }
+
+  private static String getMetadataNamespace(DynamoConfig config) {
+    return config.getNamespacePrefix().orElse("")
+        + config.getTableMetadataNamespace().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {
@@ -1217,6 +1216,50 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public void importTable(String namespace, String table, Map<String, String> options) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in DynamoDB");
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    String nonPrefixedMetadataNamespace = metadataNamespace.substring(namespacePrefix.length());
+    if (!metadataTableExists()) {
+      return Collections.singleton(nonPrefixedMetadataNamespace);
+    }
+    try {
+      return new ImmutableSet.Builder<String>()
+          .addAll(getNamespacesOfExistingTables())
+          .add(nonPrefixedMetadataNamespace)
+          .build();
+    } catch (ExecutionException e) {
+      throw new ExecutionException("Retrieving the existing namespace names failed", e);
+    }
+  }
+
+  private Set<String> getNamespacesOfExistingTables() throws ExecutionException {
+    Set<String> nonPrefixedNamespaceNames = new HashSet<>();
+    Map<String, AttributeValue> lastEvaluatedKey = null;
+    do {
+      ScanResponse scanResponse;
+      try {
+        scanResponse =
+            client.scan(
+                ScanRequest.builder()
+                    .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
+                    .exclusiveStartKey(lastEvaluatedKey)
+                    .build());
+      } catch (RuntimeException e) {
+        throw new ExecutionException(
+            "Failed to retrieve the namespaces names of existing tables", e);
+      }
+      lastEvaluatedKey = scanResponse.lastEvaluatedKey();
+
+      for (Map<String, AttributeValue> tableMetadata : scanResponse.items()) {
+        String fullTableName = tableMetadata.get(METADATA_ATTR_TABLE).s();
+        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        nonPrefixedNamespaceNames.add(namespaceName);
+      }
+    } while (!lastEvaluatedKey.isEmpty());
+
+    return nonPrefixedNamespaceNames;
   }
 
   private String getFullTableName(Namespace namespace, String table) {

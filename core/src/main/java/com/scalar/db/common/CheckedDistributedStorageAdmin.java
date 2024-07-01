@@ -321,6 +321,15 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      return admin.getNamespaceNames();
+    } catch (ExecutionException e) {
+      throw new ExecutionException(CoreError.GETTING_NAMESPACE_NAMES_FAILED.buildMessage(), e);
+    }
+  }
+
+  @Override
   public void close() {
     admin.close();
   }

@@ -69,6 +69,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   protected TransactionFactory transactionFactory;
   protected DistributedTransactionAdmin admin;
+  protected String systemNamespaceName;
   protected String namespace1;
   protected String namespace2;
   protected String namespace3;
@@ -80,6 +81,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     Properties properties = getProperties(testName);
     transactionFactory = TransactionFactory.create(properties);
     admin = transactionFactory.getTransactionAdmin();
+    systemNamespaceName = getSystemNamespaceName(properties);
     namespace1 = getNamespaceBaseName() + testName + "1";
     namespace2 = getNamespaceBaseName() + testName + "2";
     namespace3 = getNamespaceBaseName() + testName + "3";
@@ -95,6 +97,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected String getNamespaceBaseName() {
     return NAMESPACE_BASE_NAME;
   }
+
+  protected abstract String getSystemNamespaceName(Properties properties);
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
@@ -837,6 +841,17 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     } finally {
       admin.createCoordinatorTables(true, getCreationOptions());
     }
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(namespaces).containsOnly(namespace1, namespace2, systemNamespaceName);
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

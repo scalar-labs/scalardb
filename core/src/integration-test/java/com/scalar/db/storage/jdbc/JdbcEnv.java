@@ -29,7 +29,9 @@ public final class JdbcEnv {
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
 
     // Add testName as a metadata schema suffix
-    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
+    props.setProperty(
+        JdbcConfig.TABLE_METADATA_SCHEMA,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return props;
   }

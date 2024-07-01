@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
-  public static final String METADATA_SCHEMA = "scalardb";
   public static final String METADATA_TABLE = "metadata";
 
   @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
@@ -67,14 +66,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     JdbcConfig config = new JdbcConfig(databaseConfig);
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema =
+        config.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
-    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema =
+        config.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Override
@@ -774,6 +775,35 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           String.format(
               "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
+    }
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    String selectAllTableNames =
+        "SELECT DISTINCT "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(metadataSchema, METADATA_TABLE);
+    try (Connection connection = dataSource.getConnection();
+        Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
+      Set<String> namespaceOfExistingTables = new HashSet<>();
+      while (rs.next()) {
+        String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
+        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        namespaceOfExistingTables.add(namespaceName);
+      }
+      namespaceOfExistingTables.add(metadataSchema);
+
+      return namespaceOfExistingTables;
+    } catch (SQLException e) {
+      // An exception will be thrown if the namespace table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return Collections.singleton(metadataSchema);
+      }
+      throw new ExecutionException("Getting the existing schema names failed", e);
     }
   }
 
