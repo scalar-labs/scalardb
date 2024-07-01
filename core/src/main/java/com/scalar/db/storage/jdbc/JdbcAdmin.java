@@ -527,7 +527,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         String colDesc = getFullTableName(namespace, table) + " " + columnName;
         DataType scalarDbDataType;
         if (forImport) {
-          // TODO: Rename getDataTypeForScalarDb to something more import-ish.
           scalarDbDataType =
               rdbEngine.getDataTypeForScalarDb(jdbcType, typeName, colSize, colDigit, colDesc);
         } else {
