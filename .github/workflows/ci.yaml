@@ -37,7 +37,7 @@ env:
   ORG_GRADLE_PROJECT_javaVendor: 'temurin'
   ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
   ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
-  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'true'
+  ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
   SET_UP_ORACLE_JDK: "${{ (inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')) &&  'true' || 'false' }}"
   SET_UP_TRUE: true
   SET_UP_FALSE: false
