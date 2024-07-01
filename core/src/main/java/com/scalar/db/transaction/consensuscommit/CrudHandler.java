@@ -95,9 +95,10 @@ public class CrudHandler {
     Optional<TransactionResult> result = getFromStorage(get);
     if (!result.isPresent() || result.get().isCommitted()) {
       if (result.isPresent() || get.getConjunctions().isEmpty()) {
-        // Keep the read set latest to create the before image using the latest record when the
-        // transaction writes or deletes this record. However, we update it only if a get operation
-        // has no conjunction or the result exists. This is because we don’t know whether the record
+        // Keep the read set latest to create before image by using the latest record (result)
+        // because another conflicting transaction might have updated the record after this
+        // transaction read it first. However, we update it only if a get operation has no
+        // conjunction or the result exists. This is because we don’t know whether the record
         // actually exists or not due to the conjunction.
         snapshot.put(key, result);
       }
@@ -164,8 +165,9 @@ public class CrudHandler {
 
         Snapshot.Key key = new Snapshot.Key(scan, r);
 
-        // We always update the read set to create before image using the latest result when the
-        // transaction writes or deletes this record.
+        // We always update the read set to create before image by using the latest record (result)
+        // because another conflicting transaction might have updated the record after this
+        // transaction read it first.
         snapshot.put(key, Optional.of(result));
 
         snapshot.mergeResult(key, Optional.of(result)).ifPresent(value -> results.put(key, value));

@@ -217,7 +217,8 @@ public class Snapshot {
   }
 
   public Optional<TransactionResult> get(Get get) {
-    assert this.contains(get);
+    // We expect this method is called after putting the result of the get operation in the get set.
+    assert getSet.containsKey(get);
     return getSet.get(get);
   }
 
