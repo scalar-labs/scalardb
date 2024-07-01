@@ -77,11 +77,11 @@ public class JdkConfigurationPlugin implements Plugin<Project> {
       javaPlugin.setTargetCompatibility(JavaLanguageVersion.of(8));
     } else {
       javaPlugin.getToolchain().getLanguageVersion().set(javaVersion);
-      logger.debug("Configure to use JDK {} for Java tasks", javaVersion);
+      logger.warn("Configure to use JDK {} for Java tasks", javaVersion);
     }
     if (javaVendor != null) {
       javaPlugin.getToolchain().getVendor().set(javaVendor);
-      logger.debug("Configure to use JDK from {} vendor for Java tasks", javaVendor);
+      logger.warn("Configure to use JDK from {} vendor for Java tasks", javaVendor);
     }
   }
 
@@ -102,13 +102,13 @@ public class JdkConfigurationPlugin implements Plugin<Project> {
                             .launcherFor(
                                 config -> {
                                   config.getLanguageVersion().set(integrationTestJavaVersion);
-                                  logger.debug(
+                                  logger.warn(
                                       "Configure task '{}' to use JDK version {}",
                                       integrationTestTask.getName(),
                                       integrationTestJavaVersion);
                                   if (integrationTestJavaVendor != null) {
                                     config.getVendor().set(integrationTestJavaVendor);
-                                    logger.debug(
+                                    logger.warn(
                                         "Configure task '{}' to use {} JDK vendor",
                                         integrationTestTask.getName(),
                                         integrationTestJavaVendor);
