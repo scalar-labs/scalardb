@@ -41,6 +41,7 @@ import com.scalar.db.io.DataType;
  * }</pre>
  */
 public interface DistributedStorageAdmin extends Admin {
+  
   /**
    * Get import table metadata in the ScalarDB format.
    *
