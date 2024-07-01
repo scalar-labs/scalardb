@@ -862,14 +862,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       for (String columnName : metadata.getColumnNames()) {
         if (!rawTableMetadata.getColumnNames().contains(columnName)) {
           throw new IllegalStateException(
-              String.format("Column (%s) doesn't exist in the raw table schema", columnName));
+              String.format("Column '%s' doesn't exist in the raw table schema", columnName));
         }
 
         DataType columnDataType = metadata.getColumnDataType(columnName);
         DataType columnDataTypeOfRawTable = rawTableMetadata.getColumnDataType(columnName);
         if (columnDataType == DataType.FLOAT || columnDataType == DataType.DOUBLE) {
-          // Some RDBMS internally use the same data type for ScalarDB FLOAT and DOUBLE. So, if
-          // either data type is returned from the underlying RDBMS, ScalarDB can't distinguish
+          // Some RDBMS internally use the same data type for ScalarDB FLOAT and DOUBLE.
+          // If either data type is returned from the underlying RDBMS, ScalarDB can't distinguish
           // which ScalarDB data type was actually specified in the table schema. Therefore, we
           // treat FLOAT and DOUBLE as the same group.
           if (columnDataTypeOfRawTable == DataType.FLOAT
@@ -881,7 +881,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             || columnDataType == DataType.BIGINT) {
           // Handle BOOLEAN, INT and BIGINT similarly to FLOAT and DOUBLE. Regarding BOOLEAN,
           // some RDBMS use a numeric type as BOOLEAN. Therefore, we leniently treat BOOLEAN as the
-          // same group.
+          // same group here.
           if (columnDataTypeOfRawTable == DataType.BOOLEAN
               || columnDataTypeOfRawTable == DataType.INT
               || columnDataTypeOfRawTable == DataType.BIGINT) {
@@ -892,12 +892,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
 
         throw new IllegalStateException(
-            String.format("The data type of column (%s) are different", columnName));
+            String.format("The data type of column '%s' are different", columnName));
       }
     } catch (IllegalStateException e) {
       throw new IllegalStateException(
           String.format(
-              "Failed to repair table since the raw table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDbMetadata:%s, RawTableSchema:%s, Details:%s",
+              "Failed to repair table since the raw table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDB metadata:%s, Raw table schema:%s, Details:%s",
               namespace, table, metadata, rawTableMetadata, e.getMessage()),
           e);
     }
