@@ -144,11 +144,27 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
   }
 
   @Test
-  public void repairTable_ForExistingTableAndMetadataWithInconsistentSchema_ShouldFail()
+  public void repairTable_ForExistingTableAndMetadataWithMissingColumn_ShouldFail()
       throws Exception {
     // Arrange
     TableMetadata newMetadata =
         TableMetadata.newBuilder(TABLE_METADATA).removeColumn(COL_NAME11).build();
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.repairTable(getNamespace(), getTable(), newMetadata, getCreationOptions()))
+        .isInstanceOf(IllegalStateException.class);
+
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+  }
+
+  @Test
+  public void repairTable_ForExistingTableAndMetadataWithUnexpectedColumn_ShouldFail()
+      throws Exception {
+    // Arrange
+    TableMetadata newMetadata =
+        TableMetadata.newBuilder(TABLE_METADATA).addColumn("unknown_col", DataType.TEXT).build();
 
     // Act Assert
     assertThatThrownBy(

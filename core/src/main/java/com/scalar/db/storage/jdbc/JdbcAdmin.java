@@ -846,18 +846,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             .collect(Collectors.toList());
     try {
       // Check the primary keys.
-      if (primaryKeyNamesInMetadata.size() != primaryKeyNamesInRawTable.size()) {
+      if (!primaryKeyNamesInMetadata.equals(primaryKeyNamesInRawTable)) {
         throw new IllegalStateException(
             String.format(
-                "The sizes of primary keys are different between the ScalarDB metadata (%d) and the raw table schema (%d)",
-                primaryKeyNamesInMetadata.size(), primaryKeyNamesInRawTable.size()));
-      }
-      for (String partitionKeyName : primaryKeyNamesInMetadata) {
-        if (!primaryKeyNamesInRawTable.contains(partitionKeyName)) {
-          throw new IllegalStateException(
-              String.format(
-                  "Partition key (%s) doesn't exist in the raw table schema", partitionKeyName));
-        }
+                "The primary keys are different between the ScalarDB metadata (%s) and the raw table schema (%s)",
+                primaryKeyNamesInMetadata, primaryKeyNamesInRawTable));
       }
 
       // Check the columns.
