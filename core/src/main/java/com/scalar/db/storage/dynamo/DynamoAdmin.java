@@ -167,11 +167,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .build();
 
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config
-                .getTableMetadataNamespace()
-                .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    metadataNamespace = getMetadataNamespace(config);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -180,11 +176,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config
-                .getTableMetadataNamespace()
-                .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    metadataNamespace = getMetadataNamespace(config);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = DEFAULT_WAITING_DURATION_SECS;
   }
@@ -196,13 +188,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       DynamoConfig config) {
     this.client = client;
     this.applicationAutoScalingClient = applicationAutoScalingClient;
-    metadataNamespace =
-        config.getNamespacePrefix().orElse("")
-            + config
-                .getTableMetadataNamespace()
-                .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    metadataNamespace = getMetadataNamespace(config);
     namespacePrefix = config.getNamespacePrefix().orElse("");
     waitingDurationSecs = 0;
+  }
+
+  private static String getMetadataNamespace(DynamoConfig config) {
+    return config.getNamespacePrefix().orElse("")
+        + config.getTableMetadataNamespace().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {

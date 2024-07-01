@@ -20,6 +20,7 @@ public class CassandraConfig {
   public CassandraConfig(DatabaseConfig databaseConfig) {
     systemNamespaceName = getString(databaseConfig.getProperties(), SYSTEM_NAMESPACE_NAME, null);
   }
+
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW
   @Override
   protected final void finalize() {}
