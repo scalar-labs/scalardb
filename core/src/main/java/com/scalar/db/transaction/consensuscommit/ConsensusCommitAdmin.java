@@ -278,6 +278,34 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     admin.upgrade(options);
+
+    upgradeCoordinatorTableIfNeeded();
+  }
+
+  private void upgradeCoordinatorTableIfNeeded() throws ExecutionException {
+    TableMetadata currentMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+    if (currentMetadata == null) {
+      return;
+    }
+    TableMetadata expectedMetadata = Coordinator.TABLE_METADATA;
+    for (String columnName : expectedMetadata.getColumnNames()) {
+      if (currentMetadata.getColumnNames().contains(columnName)) {
+        continue;
+      }
+      // If there is a column that exists in the expected metadata and doesn't exist in the current
+      // metadata table, it should be added as long as it's not a key.
+      if (expectedMetadata.getPartitionKeyNames().contains(columnName)
+          || expectedMetadata.getClusteringKeyNames().contains(columnName)
+          || expectedMetadata.getSecondaryIndexNames().contains(columnName)) {
+        throw new IllegalStateException(
+            String.format(
+                "Failed to upgrade the coordinator table schema. Column '%s' that is defined in the latest metadata and doesn't exist in the current table is also defined as a key",
+                columnName));
+      }
+      DataType columnDataType = expectedMetadata.getColumnDataType(columnName);
+      admin.addNewColumnToTable(
+          coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
+    }
   }
 
   @Override
