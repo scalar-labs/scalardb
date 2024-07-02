@@ -1056,7 +1056,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
+  public void getThenScanAndGet_CommitHappenedInBetween_OnlyGetShouldReadRepeatably()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -1078,7 +1078,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(result1).isPresent();
-    assertThat(result1.get()).isEqualTo(result2);
+    assertThat(result1.get()).isNotEqualTo(result2);
+    assertThat(result2.getInt(BALANCE)).isEqualTo(2);
     assertThat(result1).isEqualTo(result3);
   }
 
@@ -2464,7 +2465,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void get_PutCalledBefore_ShouldGet() throws TransactionException {
+  public void get_PutThenGetWithoutConjunctionReturnEmptyFromStorage_ShouldReturnResult()
+      throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
 
@@ -2477,6 +2479,93 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
+  public void
+      get_PutThenGetWithConjunctionReturnEmptyFromStorageAndMatchedWithPut_ShouldReturnResult()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    Get get =
+        Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(1))
+            .build();
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
+  public void
+      get_PutThenGetWithConjunctionReturnEmptyFromStorageAndUnmatchedWithPut_ShouldReturnEmpty()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    Get get =
+        Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(0))
+            .build();
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isNotPresent();
+  }
+
+  @Test
+  public void
+      get_PutThenGetWithConjunctionReturnResultFromStorageAndMatchedWithPut_ShouldReturnResult()
+          throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1);
+    Get get =
+        Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isLessThanOrEqualToInt(INITIAL_BALANCE))
+            .build();
+
+    // Act
+    transaction.put(put);
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
+  public void
+      get_PutThenGetWithConjunctionReturnResultFromStorageButUnmatchedWithPut_ShouldReturnEmpty()
+          throws TransactionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1);
+    Get get =
+        Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(0))
+            .build();
+
+    // Act
+    transaction.put(put);
+    Optional<Result> result = transaction.get(get);
+    assertThat(catchThrowable(transaction::commit)).isInstanceOf(CommitConflictException.class);
+    transaction.rollback();
+
+    // Assert
+    assertThat(result).isNotPresent();
   }
 
   @Test
@@ -2787,6 +2876,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
   }
 
   @Test
@@ -3064,6 +3155,103 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void scan_CalledTwice_ShouldReturnFromSnapshotInSecondTime()
+      throws TransactionException, ExecutionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+
+    // Act
+    List<Result> result1 = transaction.scan(scan);
+    List<Result> result2 = transaction.scan(scan);
+    transaction.commit();
+
+    // Assert
+    verify(storage).scan(any(Scan.class));
+    assertThat(result1).isEqualTo(result2);
+  }
+
+  @Test
+  public void scan_CalledTwiceWithSameConditionsAndUpdateForHappenedInBetween_ShouldReadRepeatably()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction.commit();
+
+    DistributedTransaction transaction1 = manager.begin();
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .start(Key.ofInt(ACCOUNT_TYPE, 0))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(1))
+            .build();
+    List<Result> result1 = transaction1.scan(scan);
+
+    DistributedTransaction transaction2 = manager.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 0));
+    transaction2.commit();
+
+    // Act
+    List<Result> result2 = transaction1.scan(scan);
+    transaction1.commit();
+
+    // Assert
+    assertThat(result1.size()).isEqualTo(1);
+    assertThat(result2.size()).isEqualTo(1);
+    assertThat(result1.get(0)).isEqualTo(result2.get(0));
+  }
+
+  @Test
+  public void
+      scan_CalledTwiceWithDifferentConditionsAndUpdateHappenedInBetween_ShouldNotReadRepeatably()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction.commit();
+
+    DistributedTransaction transaction1 = manager.begin();
+    Scan scan1 =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .start(Key.ofInt(ACCOUNT_TYPE, 0))
+            .where(ConditionBuilder.column(BALANCE).isEqualToInt(1))
+            .build();
+    Scan scan2 =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .start(Key.ofInt(ACCOUNT_TYPE, 0))
+            .where(ConditionBuilder.column(BALANCE).isGreaterThanInt(1))
+            .build();
+    List<Result> result1 = transaction1.scan(scan1);
+
+    DistributedTransaction transaction2 = manager.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
+    transaction2.commit();
+
+    // Act
+    List<Result> result2 = transaction1.scan(scan2);
+    transaction1.commit();
+
+    // Assert
+    assertThat(result1.size()).isEqualTo(1);
+    assertThat(result2.size()).isEqualTo(1);
+    assertThat(result1.get(0)).isNotEqualTo(result2.get(0));
+    assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(1);
+    assertThat(result2.get(0).getInt(BALANCE)).isEqualTo(2);
   }
 
   @Test
