@@ -38,892 +38,892 @@ env:
   INT_TEST_JAVA_RUNTIME_VENDOR: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
 
 jobs:
-#  check:
-#    name: Gradle check
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'check' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: check buildSrc:check -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_test_reports/core
-#          mkdir -p /tmp/gradle_test_reports/server
-#          mkdir -p /tmp/gradle_test_reports/schema-loader
-#          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
-#          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
-#          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
-#
-#      - name: Save SpotBugs reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_spotbugs_reports/core
-#          mkdir -p /tmp/gradle_spotbugs_reports/server
-#          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
-#          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-#          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
-#          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: gradle_check_reports
-#          path: /tmp/gradle_test_reports
-#
-#      - name: Upload Spotbugs reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: gradle_spotbugs_reports
-#          path: /tmp/gradle_spotbugs_reports
-#
-#  integration-test-for-cassandra-3-0:
-#    name: Cassandra 3.0 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      cassandra:
-#        image: cassandra:3.0
-#        env:
-#          MAX_HEAP_SIZE: 2048m
-#          HEAP_NEWSIZE: 512m
-#        ports:
-#          - 9042:9042
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestCassandra' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: cassandra_3.0_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-cassandra-3-11:
-#    name: Cassandra 3.11 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      cassandra:
-#        image: cassandra:3.11
-#        env:
-#          MAX_HEAP_SIZE: 2048m
-#          HEAP_NEWSIZE: 512m
-#        ports:
-#          - 9042:9042
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestCassandra' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: cassandra_3.11_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports
-#
-#  integration-test-for-cosmos:
-#    name: Cosmos DB integration test
-#    runs-on: windows-latest
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Start Azure Cosmos DB emulator
-#        run: |
-#          Write-Host "Launching Cosmos DB Emulator"
-#          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
-#          Start-CosmosDbEmulator -Consistency Strong
-#
-#      - name: Install TLS/SSL certificate
-#        run: |
-#          $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
-#          $params = @{
-#            Cert = $cert
-#            Type = "CERT"
-#            FilePath = "$home/tmp-cert.cer"
-#            NoClobber = $true
-#          }
-#          Export-Certificate @params
-#          certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
-#          Remove-Item $home/tmp-cert.cer
-#           # Setting the keystore option differs between Java 8 and Java 11+
-#          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
-#            $keystore = "-keystore", "${env:JAVA_HOME}/jre/lib/security/cacerts"
-#          } else {
-#            $keystore = "-cacerts"
-#          }
-#          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
-#          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
-#
-#      - name: Setup and execute Gradle 'integrationTestCosmos' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dfile.encoding=UTF-8
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        shell: bash
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: cosmos_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports
-#
-#  integration-test-for-dynamo:
-#    name: DynamoDB integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      dynamodb:
-#        image: amazon/dynamodb-local:1.17.0
-#        ports:
-#          - 8000:8000
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestDynamo' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestDynamo -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: dynamo_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports
-#
-#  integration-test-for-jdbc-mysql-5-7:
-#    name: MySQL 5.7 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      mysql:
-#        image: mysql:5.7
-#        env:
-#          MYSQL_ROOT_PASSWORD: mysql
-#        ports:
-#          - 3306:3306
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: mysql_5.7_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-mysql-8-0:
-#    name: MySQL 8.0 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      mysql:
-#        image: mysql:8.0
-#        env:
-#          MYSQL_ROOT_PASSWORD: mysql
-#        ports:
-#          - 3306:3306
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: mysql_8.0_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports
-#
-#  integration-test-for-jdbc-mysql-8-1:
-#    name: MySQL 8.1 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      mysql:
-#        image: mysql:8.1
-#        env:
-#          MYSQL_ROOT_PASSWORD: mysql
-#        ports:
-#          - 3306:3306
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: mysql_8.1_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-postgresql-12:
-#    name: PostgreSQL 12 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:12-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: postgresql_12_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-postgresql-13:
-#    name: PostgreSQL 13 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:13-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: postgresql_13_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-postgresql-14:
-#    name: PostgreSQL 14 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:14-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: postgresql_14_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-postgresql-15:
-#    name: PostgreSQL 15 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:15-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: postgresql_15_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-oracle-18:
-#    name: Oracle 18 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      oracle:
-#        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18
-#        credentials:
-#          username: ${{ github.repository_owner }}
-#          password: ${{ secrets.CR_PAT }}
-#        env:
-#          ORACLE_PWD: Oracle
-#        ports:
-#          - 1521:1521
-#        options: >-
-#          --health-cmd "/opt/oracle/checkDBStatus.sh"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 120
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: oracle_18_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-oracle-21:
-#    name: Oracle 21 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      oracle:
-#        image: ghcr.io/scalar-labs/oracle/db-prebuilt:21
-#        credentials:
-#          username: ${{ github.repository_owner }}
-#          password: ${{ secrets.CR_PAT }}
-#        env:
-#          ORACLE_PWD: Oracle
-#        ports:
-#          - 1521:1521
-#        options: >-
-#          --health-cmd "/opt/oracle/checkDBStatus.sh"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 120
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: oracle_21_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-oracle-23:
-#    name: Oracle 23 integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Free up ~14GB of disk space by removing the Android SDK
-#        run: |
-#          echo "Storage available before deletion"
-#          df -h /
-#          echo
-#          sudo rm -r /usr/local/lib/android
-#          echo "Storage available after deletion"
-#          df -h /
-#
-#      - name: Login to GitHub Container Registry
-#        uses: docker/login-action@v3
-#        with:
-#          registry: ghcr.io
-#          username: ${{ github.repository_owner }}
-#          password: ${{ secrets.CR_PAT }}
-#
-#      - name: Start Oracle 23 container
-#        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23
-#
-#      - name: Wait for the container to be ready
-#        timeout-minutes: 5
-#        run : |
-#          while [ "`docker inspect -f {{.State.Health.Status}} oracle-23`" != "healthy" ]
-#          do
-#            sleep 10
-#            echo "Container is not yet ready"
-#          done
-#          echo "Container is ready"
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
-#
-#      - name: Stop Oracle 23 container
-#        if: always()
-#        run: docker stop oracle-23 | xargs docker rm
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: oracle_23_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
-#
-#  integration-test-for-jdbc-sqlserver-2017:
-#    name: SQL Server 2017 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      sqlserver:
-#        image: mcr.microsoft.com/mssql/server:2017-latest
-#        env:
-#          MSSQL_PID: "Express"
-#          SA_PASSWORD: "SqlServer17"
-#          ACCEPT_EULA: "Y"
-#        ports:
-#          - 1433:1433
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer17
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: sqlserver_2017_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports
-#
-#  integration-test-for-jdbc-sqlserver-2019:
-#    name: SQL Server 2019 integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      sqlserver:
-#        image: mcr.microsoft.com/mssql/server:2019-latest
-#        env:
-#          MSSQL_PID: "Express"
-#          SA_PASSWORD: "SqlServer19"
-#          ACCEPT_EULA: "Y"
-#        ports:
-#          - 1433:1433
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestJdbc' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Save Gradle test reports
-#        if: always()
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: sqlserver_2019_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports/
+  check:
+    name: Gradle check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup and execute Gradle 'check' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: check buildSrc:check -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_test_reports/core
+          mkdir -p /tmp/gradle_test_reports/server
+          mkdir -p /tmp/gradle_test_reports/schema-loader
+          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
+          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
+          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
+
+      - name: Save SpotBugs reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_spotbugs_reports/core
+          mkdir -p /tmp/gradle_spotbugs_reports/server
+          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
+          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
+          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
+          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: gradle_check_reports
+          path: /tmp/gradle_test_reports
+
+      - name: Upload Spotbugs reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: gradle_spotbugs_reports
+          path: /tmp/gradle_spotbugs_reports
+
+  integration-test-for-cassandra-3-0:
+    name: Cassandra 3.0 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:3.0
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestCassandra' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: cassandra_3.0_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-cassandra-3-11:
+    name: Cassandra 3.11 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:3.11
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestCassandra' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: cassandra_3.11_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
+
+  integration-test-for-cosmos:
+    name: Cosmos DB integration test
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Start Azure Cosmos DB emulator
+        run: |
+          Write-Host "Launching Cosmos DB Emulator"
+          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+          Start-CosmosDbEmulator -Consistency Strong
+
+      - name: Install TLS/SSL certificate
+        run: |
+          $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
+          $params = @{
+            Cert = $cert
+            Type = "CERT"
+            FilePath = "$home/tmp-cert.cer"
+            NoClobber = $true
+          }
+          Export-Certificate @params
+          certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
+          Remove-Item $home/tmp-cert.cer
+           # Setting the keystore option differs between Java 8 and Java 11+
+          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+            $keystore = "-keystore", "${env:JAVA_HOME}/jre/lib/security/cacerts"
+          } else {
+            $keystore = "-cacerts"
+          }
+          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
+          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
+
+      - name: Setup and execute Gradle 'integrationTestCosmos' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dfile.encoding=UTF-8
+
+      - name: Save Gradle test reports
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: cosmos_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
+
+  integration-test-for-dynamo:
+    name: DynamoDB integration test
+    runs-on: ubuntu-latest
+
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:1.17.0
+        ports:
+          - 8000:8000
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestDynamo' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestDynamo -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: dynamo_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
+
+  integration-test-for-jdbc-mysql-5-7:
+    name: MySQL 5.7 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: mysql_5.7_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-mysql-8-0:
+    name: MySQL 8.0 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: mysql_8.0_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
+
+  integration-test-for-jdbc-mysql-8-1:
+    name: MySQL 8.1 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.1
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: mysql_8.1_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-postgresql-12:
+    name: PostgreSQL 12 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: postgresql_12_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-postgresql-13:
+    name: PostgreSQL 13 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: postgresql_13_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-postgresql-14:
+    name: PostgreSQL 14 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: postgresql_14_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-postgresql-15:
+    name: PostgreSQL 15 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: postgresql_15_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-oracle-18:
+    name: Oracle 18 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      oracle:
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18
+        credentials:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+        env:
+          ORACLE_PWD: Oracle
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd "/opt/oracle/checkDBStatus.sh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 120
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: oracle_18_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-oracle-21:
+    name: Oracle 21 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      oracle:
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:21
+        credentials:
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+        env:
+          ORACLE_PWD: Oracle
+        ports:
+          - 1521:1521
+        options: >-
+          --health-cmd "/opt/oracle/checkDBStatus.sh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: oracle_21_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-oracle-23:
+    name: Oracle 23 integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Free up ~14GB of disk space by removing the Android SDK
+        run: |
+          echo "Storage available before deletion"
+          df -h /
+          echo
+          sudo rm -r /usr/local/lib/android
+          echo "Storage available after deletion"
+          df -h /
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Start Oracle 23 container
+        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 5
+        run : |
+          while [ "`docker inspect -f {{.State.Health.Status}} oracle-23`" != "healthy" ]
+          do
+            sleep 10
+            echo "Container is not yet ready"
+          done
+          echo "Container is ready"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Stop Oracle 23 container
+        if: always()
+        run: docker stop oracle-23 | xargs docker rm
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: oracle_23_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
+
+  integration-test-for-jdbc-sqlserver-2017:
+    name: SQL Server 2017 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2017-latest
+        env:
+          MSSQL_PID: "Express"
+          SA_PASSWORD: "SqlServer17"
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer17
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: sqlserver_2017_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
+
+  integration-test-for-jdbc-sqlserver-2019:
+    name: SQL Server 2019 integration test
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          MSSQL_PID: "Express"
+          SA_PASSWORD: "SqlServer19"
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Save Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: sqlserver_2019_integration_test_reports
+          path: /tmp/gradle_integration_test_reports/
 
   integration-test-for-jdbc-mariadb-10:
     name: MariaDB 10 integration test
@@ -973,93 +973,93 @@ jobs:
           name: mariadb_10_integration_test_reports
           path: /tmp/gradle_integration_test_reports/
 
-#  integration-test-for-multi-storage:
-#    name: Multi-storage integration test
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      cassandra:
-#        image: cassandra:3.11
-#        env:
-#          MAX_HEAP_SIZE: 2048m
-#          HEAP_NEWSIZE: 512m
-#        ports:
-#          - 9042:9042
-#      mysql:
-#        image: mysql:8
-#        env:
-#          MYSQL_ROOT_PASSWORD: mysql
-#        ports:
-#          - 3306:3306
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestMultiStorage' task
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: integrationTestMultiStorage -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Save Gradle test reports
-#        if : always()
-#        run: |
-#          mkdir -p /tmp/gradle_integration_test_reports/core
-#          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
-#          cp -a core/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/core/
-#          cp -a schema-loader/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/schema-loader/
-#
-#      - name: Upload Gradle test reports
-#        uses: actions/upload-artifact@v3
-#        if : always()
-#        with:
-#          name: multi_storage_integration_test_reports
-#          path: /tmp/gradle_integration_test_reports
-#
-#  integration-test-for-scalardb-server:
-#    name: ScalarDB Server integration test
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Run MySQL 8
-#        run: |
-#          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-#
-#      - uses: actions/checkout@v4
-#
-#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-#        uses: actions/setup-java@v4
-#        with:
-#          java-version: ${{ env.JAVA_VERSION }}
-#          distribution: ${{ env.JAVA_VENDOR }}
-#
-#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-#        uses: actions/setup-java@v4
-#        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-#        with:
-#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
-#        uses: gradle/gradle-build-action@v3
-#        with:
-#          arguments: integrationTestScalarDbServer -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-#
-#      - name: Upload Gradle test reports
-#        uses: actions/upload-artifact@v4
-#        if : always()
-#        with:
-#          name: scalardb_server_integration_test_reports
-#          path: server/build/reports/tests/integrationTestScalarDbServer
+  integration-test-for-multi-storage:
+    name: Multi-storage integration test
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:3.11
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestMultiStorage' task
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: integrationTestMultiStorage -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Save Gradle test reports
+        if : always()
+        run: |
+          mkdir -p /tmp/gradle_integration_test_reports/core
+          mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+          cp -a core/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/core/
+          cp -a schema-loader/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/schema-loader/
+
+      - name: Upload Gradle test reports
+        uses: actions/upload-artifact@v3
+        if : always()
+        with:
+          name: multi_storage_integration_test_reports
+          path: /tmp/gradle_integration_test_reports
+
+  integration-test-for-scalardb-server:
+    name: ScalarDB Server integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MySQL 8
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestScalarDbServer -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Upload Gradle test reports
+        uses: actions/upload-artifact@v4
+        if : always()
+        with:
+          name: scalardb_server_integration_test_reports
+          path: server/build/reports/tests/integrationTestScalarDbServer
