@@ -1022,7 +1022,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
+  public void getThenScanAndGet_CommitHappenedInBetween_OnlyGetShouldReadRepeatably()
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -1044,7 +1044,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(result1).isPresent();
-    assertThat(result1.get()).isEqualTo(result2);
+    assertThat(result1.get()).isNotEqualTo(result2);
+    assertThat(result2.getInt(BALANCE)).isEqualTo(2);
     assertThat(result1).isEqualTo(result3);
   }
 
@@ -2491,6 +2492,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
   }
 
   @Test
@@ -2722,6 +2725,96 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scanAll);
+  }
+
+  @Test
+  public void scan_CalledTwice_ShouldReturnFromSnapshotInSecondTime()
+      throws TransactionException, ExecutionException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+
+    // Act
+    List<Result> result1 = transaction.scan(scan);
+    List<Result> result2 = transaction.scan(scan);
+    transaction.commit();
+
+    // Assert
+    verify(storage).scan(any(Scan.class));
+    assertThat(result1).isEqualTo(result2);
+  }
+
+  @Test
+  public void scan_CalledTwiceWithSameConditionsAndDeleteHappenedInBetween_ShouldReadRepeatably()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    transaction.commit();
+
+    DistributedTransaction transaction1 = manager.begin();
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .start(Key.ofInt(ACCOUNT_TYPE, 0))
+            .build();
+    List<Result> result1 = transaction1.scan(scan);
+
+    DistributedTransaction transaction2 = manager.begin();
+    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction2.delete(prepareDelete(0, 0, namespace1, TABLE_1));
+    transaction2.commit();
+
+    // Act
+    List<Result> result2 = transaction1.scan(scan);
+    transaction1.commit();
+
+    // Assert
+    assertThat(result1.size()).isEqualTo(1);
+    assertThat(result2.size()).isEqualTo(1);
+    assertThat(result1.get(0)).isEqualTo(result2.get(0));
+  }
+
+  @Test
+  public void
+      scan_CalledTwiceWithDifferentConditionsAndInsertHappenedInBetween_ShouldNotReadRepeatably()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction.commit();
+
+    DistributedTransaction transaction1 = manager.begin();
+    Scan scan1 =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .end(Key.ofInt(ACCOUNT_TYPE, 2))
+            .build();
+    Scan scan2 =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .end(Key.ofInt(ACCOUNT_TYPE, 3))
+            .build();
+    List<Result> result1 = transaction1.scan(scan1);
+
+    DistributedTransaction transaction2 = manager.begin();
+    transaction2.put(preparePut(0, 1, namespace1, TABLE_1));
+    transaction2.commit();
+
+    // Act
+    List<Result> result2 = transaction1.scan(scan2);
+    transaction1.commit();
+
+    // Assert
+    assertThat(result1.size()).isEqualTo(1);
+    assertThat(result2.size()).isEqualTo(2);
   }
 
   private DistributedTransaction prepareTransfer(
