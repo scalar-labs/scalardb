@@ -178,7 +178,7 @@ task integrationTestCassandra(type: Test) {
     classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
         systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
@@ -192,7 +192,7 @@ task integrationTestCosmos(type: Test) {
     classpath = sourceSets.integrationTestCosmos.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
         systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
@@ -206,7 +206,7 @@ task integrationTestDynamo(type: Test) {
     classpath = sourceSets.integrationTestDynamo.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
         systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
@@ -220,7 +220,7 @@ task integrationTestJdbc(type: Test) {
     classpath = sourceSets.integrationTestJdbc.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
         systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
@@ -234,7 +234,7 @@ task integrationTestMultiStorage(type: Test) {
     classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
         systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
@@ -248,7 +248,7 @@ task integrationTestScalarDbServer(type: Test) {
     classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
         systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
