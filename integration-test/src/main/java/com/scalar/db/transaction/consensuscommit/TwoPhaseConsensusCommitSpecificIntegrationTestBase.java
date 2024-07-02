@@ -1011,7 +1011,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
+  public void getThenScanAndGet_CommitHappenedInBetween_OnlyGetShouldReadRepeatably()
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -1036,7 +1036,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(result1).isPresent();
-    assertThat(result1.get()).isEqualTo(result2);
+    assertThat(result1.get()).isNotEqualTo(result2);
+    assertThat(result2.getInt(BALANCE)).isEqualTo(2);
     assertThat(result1).isEqualTo(result3);
   }
 
