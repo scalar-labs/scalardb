@@ -1,3 +1,9 @@
+> [!CAUTION]
+> 
+> This documentation has been moved to the centralized ScalarDB documentation repository, [docs-internal-scalardb](https://github.com/scalar-labs/docs-internal-scalardb). Please update this documentation in that repository instead.
+> 
+> To view the ScalarDB documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/).
+
 # ScalarDB Design Document
 
 For details about the design and implementation of ScalarDB, please see the following documents, which we presented at the VLDB 2023 conference:
