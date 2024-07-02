@@ -7,6 +7,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -552,7 +553,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
           if (rdbEngine.isPrimaryKeyIndex(namespace, table, indexName)) {
             primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
-          } else if (indexName.startsWith(getIndexNamePrefixWithoutColumns(namespace, table))) {
+          } else if (indexName.equals(getIndexName(namespace, table, colName))) {
             normalIndexWithSeq.put(position, new IndexColumn(colName, sortOrder));
           }
         }
@@ -567,7 +568,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
 
       // Sort the index keys by the position.
-      ImmutableList.Builder<IndexColumn> indexColumnBuilder = ImmutableList.builder();
+      ImmutableSet.Builder<IndexColumn> indexColumnBuilder = ImmutableSet.builder();
       for (int position :
           normalIndexWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
         indexColumnBuilder.add(normalIndexWithSeq.get(position));
@@ -978,26 +979,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       // Check the normal index.
       if (rdbTableMetadata.indexColumns != null) {
-        if (rdbTableMetadata.indexColumns.size() != metadata.getSecondaryIndexNames().size()) {
+        if (!rdbTableMetadata.indexColumns.stream()
+            .map(c -> c.name)
+            .collect(Collectors.toSet())
+            .equals(metadata.getSecondaryIndexNames())) {
           throw new IllegalStateException(
               String.format(
-                  "The size of the index keys are different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
-                  metadata.getSecondaryIndexNames().size(), rdbTableMetadata.indexColumns.size()));
-        }
-
-        // Compare the index keys with the secondary index keys of the ScalarDB metadata.
-        int indexOfIndexKeyColumns = 0;
-        for (String keyNameInMetadata : metadata.getSecondaryIndexNames()) {
-          IndexColumn indexKeyColumn = rdbTableMetadata.indexColumns.get(indexOfIndexKeyColumns);
-
-          if (!indexKeyColumn.name.equals(keyNameInMetadata)) {
-            throw new IllegalStateException(
-                String.format(
-                    "The index key name is different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
-                    keyNameInMetadata, indexKeyColumn.name));
-          }
-
-          indexOfIndexKeyColumns++;
+                  "The index keys are different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                  metadata.getSecondaryIndexNames(), rdbTableMetadata.indexColumns));
         }
       }
 

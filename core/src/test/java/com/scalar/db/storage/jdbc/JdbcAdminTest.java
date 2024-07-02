@@ -41,6 +41,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.RdbTableMetadata.IndexColumn;
 import com.scalar.db.storage.jdbc.RdbTableMetadata.PrimaryKeyColumn;
 import com.scalar.db.storage.jdbc.RdbTableMetadata.SortOrder;
 import java.sql.Connection;
@@ -1224,11 +1225,31 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3"))
+                .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c1"))
+                .add(new IndexColumn("c4"))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    doReturn(Optional.of(metadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
@@ -1296,12 +1317,31 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3"))
+                .add(new PrimaryKeyColumn("c2"))
+                .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c1"))
+                .add(new IndexColumn("c4"))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    TableMetadata rdbTableMetadata =
-        TableMetadata.newBuilder(metadata).addPartitionKey("c2").build();
     doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
@@ -1338,12 +1378,30 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3"))
+                .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c1"))
+                .add(new IndexColumn("c4"))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .build());
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    TableMetadata rawTableMetadata = TableMetadata.newBuilder(metadata).removeColumn("c7").build();
-    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     assertThatThrownBy(
@@ -1379,13 +1437,31 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3"))
+                .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c1"))
+                .add(new IndexColumn("c4"))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.INT) // Wrong type
+                .build());
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    TableMetadata rawTableMetadata =
-        TableMetadata.newBuilder(metadata).removeColumn("c7").addColumn("c7", DataType.INT).build();
-    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     assertThatThrownBy(
@@ -1398,6 +1474,8 @@ public class JdbcAdminTest {
     verify(adminSpy, never())
         .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
   }
+
+  // FIXME: Add more tests
 
   @Test
   public void
@@ -2718,7 +2796,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  void getRawTableMetadata_shouldReturnProperValue() throws SQLException, ExecutionException {
+  void getRdbTableMetadata_shouldReturnProperValue() throws SQLException, ExecutionException {
     // Arrange
     Statement checkTableExistStatement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -2839,39 +2917,6 @@ public class JdbcAdminTest {
     verify(rdbEngine)
         .getDataTypeForScalarDbLeniently(
             eq(JDBCType.BIGINT), eq("bigintbig"), eq(40), eq(44), anyString());
-  }
-
-  @Test
-  void getRawTableMetadata_WithNoPrimaryKeyForX_ShouldThrowIllegalStateException()
-      throws SQLException {
-    // Arrange
-    Statement checkTableExistStatement = mock(Statement.class);
-    when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
-    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
-    when(connection.getMetaData()).thenReturn(metadata);
-
-    ResultSet primaryKeyResults = mock(ResultSet.class);
-    when(primaryKeyResults.next()).thenReturn(false);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-
-    ResultSet columnResults = mock(ResultSet.class);
-    when(columnResults.next()).thenReturn(true).thenReturn(false);
-    when(columnResults.getString("COLUMN_NAME")).thenReturn("col1");
-    when(columnResults.getInt("DATA_TYPE")).thenReturn(Types.INTEGER);
-    when(columnResults.getString("TYPE_NAME")).thenReturn("intintint");
-    when(columnResults.getInt("COLUMN_SIZE")).thenReturn(10);
-    when(columnResults.getInt("DECIMAL_DIGITS")).thenReturn(11);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
-
-    RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
-    when(rdbEngine.getSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
-    when(rdbEngine.getTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
-    JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.getRdbTableMetadata(NAMESPACE, TABLE))
-        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test

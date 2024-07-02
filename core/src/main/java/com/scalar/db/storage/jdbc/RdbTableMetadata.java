@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.DataType;
 import java.util.Objects;
 import javax.annotation.Nullable;
@@ -11,12 +12,12 @@ import jdk.nashorn.internal.ir.annotations.Immutable;
 @Immutable
 class RdbTableMetadata {
   final ImmutableList<PrimaryKeyColumn> primaryKeyColumns;
-  @Nullable final ImmutableList<IndexColumn> indexColumns;
+  @Nullable final ImmutableSet<IndexColumn> indexColumns;
   final ImmutableMap<String, DataType> columns;
 
   RdbTableMetadata(
       ImmutableList<PrimaryKeyColumn> primaryKeyColumns,
-      @Nullable ImmutableList<IndexColumn> indexColumns,
+      @Nullable ImmutableSet<IndexColumn> indexColumns,
       ImmutableMap<String, DataType> columns) {
     this.primaryKeyColumns = primaryKeyColumns;
     this.indexColumns = indexColumns;
@@ -63,6 +64,10 @@ class RdbTableMetadata {
       this.sortOrder = sortOrder;
     }
 
+    public PrimaryKeyColumn(String name) {
+      this(name, SortOrder.ASC);
+    }
+
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
@@ -93,6 +98,10 @@ class RdbTableMetadata {
     public IndexColumn(String name, SortOrder sortOrder) {
       this.name = name;
       this.sortOrder = sortOrder;
+    }
+
+    public IndexColumn(String name) {
+      this(name, SortOrder.ASC);
     }
 
     @Override
