@@ -1191,7 +1191,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   }
 
   @Test
-  public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
+  public void getThenScanAndGet_CommitHappenedInBetween_OnlyGetShouldReadRepeatably()
       throws TransactionException, ExecutionException {
     // Arrange
     populateRecordsWithNullMetadata(namespace1, TABLE_1);
@@ -1211,7 +1211,8 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
     // Assert
     assertThat(result1).isPresent();
-    assertThat(result1.get()).isEqualTo(result2);
+    assertThat(result1.get()).isNotEqualTo(result2);
+    assertThat(result2.getInt(BALANCE)).isEqualTo(2);
     assertThat(result1).isEqualTo(result3);
   }
 
