@@ -124,6 +124,10 @@ public abstract class AdminTestUtils {
    */
   public abstract void dropTable(String namespace, String table) throws Exception;
 
+  public void deleteColumn(String namespace, String table, String column) throws Exception {
+    // Do nothing by default.
+  }
+
   /**
    * Closes connections to the storage
    *

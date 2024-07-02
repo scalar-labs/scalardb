@@ -277,6 +277,47 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
     }
   }
 
+  /**
+   * Takes JDBC column information and returns a corresponding ScalarDB data type. The data type
+   * mapping logic in this method is based on {@link RdbEnginePostgresql#getDataTypeForScalarDb}
+   * which is created only for the table import feature and a bit too strict for other usages.
+   *
+   * @param type A JDBC type.
+   * @param typeName A JDBC column type name.
+   * @param columnSize A JDBC column size.
+   * @param digits A JDBC column digits.
+   * @param columnDescription A JDBC column description.
+   * @return A corresponding ScalarDB data type.
+   */
+  @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BIT:
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case SMALLINT:
+      case INTEGER:
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case VARCHAR:
+        return DataType.TEXT;
+      case BINARY:
+        return DataType.BLOB;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unexpected data type. JDBC type: %s, Type name: %s, Column size: %d, Column digits: %d, Column desc: %s",
+                type, typeName, columnSize, digits, columnDescription));
+    }
+  }
+
   @Override
   public int getSqlTypes(DataType dataType) {
     switch (dataType) {
@@ -317,5 +358,10 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
+  }
+
+  @Override
+  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+    return indexName.equals(table + "_pkey");
   }
 }

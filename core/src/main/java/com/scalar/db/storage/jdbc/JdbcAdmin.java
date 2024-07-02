@@ -5,6 +5,9 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -17,14 +20,19 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.RdbTableMetadata.IndexColumn;
+import com.scalar.db.storage.jdbc.RdbTableMetadata.PrimaryKeyColumn;
+import com.scalar.db.storage.jdbc.RdbTableMetadata.SortOrder;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -54,6 +62,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
+  @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
+  @VisibleForTesting static final String JDBC_INDEX_ORDINAL_POSITION = "ORDINAL_POSITION";
+  @VisibleForTesting static final String JDBC_INDEX_COLUMN_NAME = "COLUMN_NAME";
+  @VisibleForTesting static final String JDBC_INDEX_INDEX_NAME = "INDEX_NAME";
+  @VisibleForTesting static final String JDBC_INDEX_ASC_OR_DESC = "ASC_OR_DESC";
   public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
@@ -493,6 +506,104 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
+  @VisibleForTesting
+  Optional<RdbTableMetadata> getRdbTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      String catalogName = rdbEngine.getCatalogName(namespace);
+      String schemaName = rdbEngine.getSchemaName(namespace);
+      String tableName = rdbEngine.getTableName(namespace, table);
+
+      if (!tableExistsInternal(connection, namespace, table)) {
+        return Optional.empty();
+      }
+
+      DatabaseMetaData metadata = connection.getMetaData();
+
+      // Collect the primary key for partition keys and clustering keys.
+      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, tableName);
+      Map<Integer, String> rawPrimaryKeysWithSeq = new HashMap<>();
+      while (resultSet.next()) {
+        int keySeq = resultSet.getInt(JDBC_COL_KEY_SEQ);
+        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+        rawPrimaryKeysWithSeq.put(keySeq, columnName);
+      }
+
+      // Collect the index information for clustering keys and secondary index.
+      Map<String, PrimaryKeyColumn> primaryKeyIndex = new HashMap<>();
+      Map<Integer, IndexColumn> normalIndexWithSeq = new HashMap<>();
+      if (rdbEngine.isIndexInfoSupported()) {
+        ResultSet indexInfo =
+            metadata.getIndexInfo(catalogName, schemaName, tableName, false, false);
+        while (indexInfo.next()) {
+          int position = indexInfo.getInt(JDBC_INDEX_ORDINAL_POSITION);
+          String colName = indexInfo.getString(JDBC_INDEX_COLUMN_NAME);
+          String indexName = indexInfo.getString(JDBC_INDEX_INDEX_NAME);
+          String ascOrDesc = indexInfo.getString(JDBC_INDEX_ASC_OR_DESC);
+          SortOrder sortOrder = SortOrder.UNKNOWN;
+          if (ascOrDesc != null) {
+            if (ascOrDesc.equals("A")) {
+              sortOrder = SortOrder.ASC;
+            } else if (ascOrDesc.equals("D")) {
+              sortOrder = SortOrder.DESC;
+            } else {
+              throw new IllegalStateException("Unexpected value for ASC_OR_DESC: " + ascOrDesc);
+            }
+          }
+
+          if (rdbEngine.isPrimaryKeyIndex(namespace, table, indexName)) {
+            primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
+          } else if (indexName.equals(getIndexName(namespace, table, colName))) {
+            normalIndexWithSeq.put(position, new IndexColumn(colName, sortOrder));
+          }
+        }
+      }
+
+      // Sort the raw primary keys by the key sequence.
+      ImmutableList.Builder<PrimaryKeyColumn> primaryKeyColumnBuilder = ImmutableList.builder();
+      for (int keySeq :
+          rawPrimaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
+        String colName = rawPrimaryKeysWithSeq.get(keySeq);
+        primaryKeyColumnBuilder.add(primaryKeyIndex.get(colName));
+      }
+
+      // Sort the index keys by the position.
+      ImmutableSet.Builder<IndexColumn> indexColumnBuilder = ImmutableSet.builder();
+      for (int position :
+          normalIndexWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
+        indexColumnBuilder.add(normalIndexWithSeq.get(position));
+      }
+
+      // Collect the column information.
+      ImmutableMap.Builder<String, DataType> columnBuilder = ImmutableMap.builder();
+      resultSet = metadata.getColumns(catalogName, schemaName, tableName, "%");
+      while (resultSet.next()) {
+        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+        JDBCType jdbcType = getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE));
+        String typeName = resultSet.getString(JDBC_COL_TYPE_NAME);
+        int colSize = resultSet.getInt(JDBC_COL_COLUMN_SIZE);
+        int colDigit = resultSet.getInt(JDBC_COL_DECIMAL_DIGITS);
+        String colDesc = getFullTableName(namespace, table) + " " + columnName;
+        DataType scalarDbDataType;
+        scalarDbDataType =
+            rdbEngine.getDataTypeForScalarDbLeniently(
+                jdbcType, typeName, colSize, colDigit, colDesc);
+        columnBuilder.put(columnName, scalarDbDataType);
+      }
+      return Optional.of(
+          new RdbTableMetadata(
+              primaryKeyColumnBuilder.build(),
+              rdbEngine.isIndexInfoSupported() ? indexColumnBuilder.build() : null,
+              columnBuilder.build()));
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          "Getting a table metadata for the "
+              + getFullTableName(namespace, table)
+              + " table failed",
+          e);
+    }
+  }
+
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table)
       throws ExecutionException {
@@ -795,10 +906,148 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @VisibleForTesting
+  void checkRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
+      throws ExecutionException {
+    // Repairing table is supposed to be used for the following purposes:
+    // 1. To create a raw table in the underlying RDBMS with the expected metadata if the table
+    //    doesn't exist.
+    // 2. To update the ScalarDB metadata table to synchronize it with the expected state.
+    //
+    // Also, the ScalarDB metadata table and the raw table schema must be consistent. Therefore,
+    // the operation should fail if the raw table already exists with inconsistent schema.
+    Optional<RdbTableMetadata> optRdbTableMetadata = getRdbTableMetadata(namespace, table);
+    if (!optRdbTableMetadata.isPresent()) {
+      return;
+    }
+
+    RdbTableMetadata rdbTableMetadata = optRdbTableMetadata.get();
+    try {
+      // Check the primary keys.
+      if (rdbTableMetadata.primaryKeyColumns.size()
+          != metadata.getPartitionKeyNames().size() + metadata.getClusteringKeyNames().size()) {
+        throw new IllegalStateException(
+            String.format(
+                "The size of the primary keys are different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                metadata.getPartitionKeyNames().size() + metadata.getClusteringKeyNames().size(),
+                rdbTableMetadata.primaryKeyColumns.size()));
+      }
+
+      // Compare the primary keys with the partition keys of the ScalarDB metadata.
+      int indexOfPrimaryKeyColumns = 0;
+      for (String keyNameInMetadata : metadata.getPartitionKeyNames()) {
+        PrimaryKeyColumn primaryKeyColumn =
+            rdbTableMetadata.primaryKeyColumns.get(indexOfPrimaryKeyColumns);
+
+        if (!primaryKeyColumn.name.equals(keyNameInMetadata)) {
+          throw new IllegalStateException(
+              String.format(
+                  "The primary key name is different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                  keyNameInMetadata, primaryKeyColumn.name));
+        }
+
+        indexOfPrimaryKeyColumns++;
+      }
+
+      // Compare the primary keys with the clustering keys of the ScalarDB metadata.
+      for (String keyNameInMetadata : metadata.getClusteringKeyNames()) {
+        PrimaryKeyColumn primaryKeyColumn =
+            rdbTableMetadata.primaryKeyColumns.get(indexOfPrimaryKeyColumns);
+        Order clusteringOrderInMetadata = metadata.getClusteringOrder(keyNameInMetadata);
+
+        if (!primaryKeyColumn.name.equals(keyNameInMetadata)) {
+          throw new IllegalStateException(
+              String.format(
+                  "The primary key name is different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                  keyNameInMetadata, primaryKeyColumn.name));
+        }
+
+        if ((primaryKeyColumn.sortOrder == SortOrder.ASC && clusteringOrderInMetadata != Order.ASC)
+            || (primaryKeyColumn.sortOrder == SortOrder.DESC
+                && clusteringOrderInMetadata != Order.DESC)) {
+          throw new IllegalStateException(
+              String.format(
+                  "The primary key sort order is different between the ScalarDB metadata (%s:%s) and the RDB table schema (%s:%s)",
+                  keyNameInMetadata,
+                  clusteringOrderInMetadata,
+                  primaryKeyColumn.name,
+                  primaryKeyColumn.sortOrder));
+        }
+
+        indexOfPrimaryKeyColumns++;
+      }
+
+      // Check the normal index.
+      if (rdbTableMetadata.indexColumns != null) {
+        if (!rdbTableMetadata.indexColumns.stream()
+            .map(c -> c.name)
+            .collect(Collectors.toSet())
+            .equals(metadata.getSecondaryIndexNames())) {
+          throw new IllegalStateException(
+              String.format(
+                  "The index keys are different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                  metadata.getSecondaryIndexNames(), rdbTableMetadata.indexColumns));
+        }
+      }
+
+      // Check the columns.
+      if (metadata.getColumnNames().size() != rdbTableMetadata.columns.size()) {
+        throw new IllegalStateException(
+            String.format(
+                "The sizes of columns are different between the ScalarDB metadata (%d) and the raw table schema (%d)",
+                metadata.getColumnNames().size(), rdbTableMetadata.columns.size()));
+      }
+      for (String columnName : metadata.getColumnNames()) {
+        if (!rdbTableMetadata.columns.containsKey(columnName)) {
+          throw new IllegalStateException(
+              String.format("Column '%s' doesn't exist in the raw table schema", columnName));
+        }
+
+        DataType columnDataType = metadata.getColumnDataType(columnName);
+        DataType columnDataTypeOfRawTable = rdbTableMetadata.columns.get(columnName);
+        if (columnDataType == DataType.FLOAT || columnDataType == DataType.DOUBLE) {
+          // Some RDBMS internally use the same data type for ScalarDB FLOAT and DOUBLE.
+          // If either data type is returned from the underlying RDBMS, ScalarDB can't distinguish
+          // which ScalarDB data type was actually specified in the table schema. Therefore, we
+          // treat FLOAT and DOUBLE as the same group.
+          if (columnDataTypeOfRawTable == DataType.FLOAT
+              || columnDataTypeOfRawTable == DataType.DOUBLE) {
+            continue;
+          }
+        } else if (columnDataType == DataType.BOOLEAN
+            || columnDataType == DataType.INT
+            || columnDataType == DataType.BIGINT) {
+          // Handle BOOLEAN, INT and BIGINT similarly to FLOAT and DOUBLE. Regarding BOOLEAN,
+          // some RDBMS use a numeric type as BOOLEAN. Therefore, we leniently treat BOOLEAN as the
+          // same group here.
+          if (columnDataTypeOfRawTable == DataType.BOOLEAN
+              || columnDataTypeOfRawTable == DataType.INT
+              || columnDataTypeOfRawTable == DataType.BIGINT) {
+            continue;
+          }
+        } else if (columnDataType.equals(columnDataTypeOfRawTable)) {
+          continue;
+        }
+
+        throw new IllegalStateException(
+            String.format("The data type of column '%s' are different", columnName));
+      }
+    } catch (IllegalStateException e) {
+      throw new IllegalStateException(
+          String.format(
+              "Failed to repair table since the raw table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDB metadata:%s, Raw table schema:%s, Details:%s",
+              namespace, table, metadata, rdbTableMetadata, e.getMessage()),
+          e);
+    }
+  }
+
   @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+
+    checkRawTableSchemaForRepairTable(namespace, table, metadata);
+
     try (Connection connection = dataSource.getConnection()) {
       createTableInternal(connection, namespace, table, metadata, true);
       addTableMetadata(connection, namespace, table, metadata, true, true);
@@ -898,6 +1147,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private String getIndexName(String schema, String table, String indexedColumn) {
     return String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
+  }
+
+  private String getIndexNamePrefixWithoutColumns(String schema, String table) {
+    return String.join("_", INDEX_NAME_PREFIX, schema, table);
   }
 
   private void updateTableMetadata(

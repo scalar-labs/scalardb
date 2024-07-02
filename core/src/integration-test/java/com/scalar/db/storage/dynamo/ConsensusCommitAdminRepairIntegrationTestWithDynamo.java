@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitAdminRepairIntegrationTestWithDynamo
     extends ConsensusCommitAdminRepairIntegrationTestBase {
@@ -22,4 +23,9 @@ public class ConsensusCommitAdminRepairIntegrationTestWithDynamo
     super.initialize(testName);
     adminTestUtils = new DynamoAdminTestUtils(getProperties(testName));
   }
+
+  @Disabled(
+      "Inconsistency check for the raw table schema and the ScalarDB metadata isn't executed in schemaless database/storage")
+  @Override
+  public void repairCoordinatorTables_OldSchemaCoordinatorTablesExist_ShouldFail() {}
 }

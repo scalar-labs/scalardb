@@ -289,6 +289,58 @@ class RdbEngineOracle implements RdbEngineStrategy {
     }
   }
 
+  /**
+   * Takes JDBC column information and returns a corresponding ScalarDB data type. The data type
+   * mapping logic in this method is based on {@link RdbEngineOracle#getDataTypeForScalarDb} which
+   * is created only for the table import feature and a bit too strict for other usages.
+   *
+   * @param type A JDBC type.
+   * @param typeName A JDBC column type name.
+   * @param columnSize A JDBC column size.
+   * @param digits A JDBC column digits.
+   * @param columnDescription A JDBC column description.
+   * @return A corresponding ScalarDB data type.
+   */
+  @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case NUMERIC:
+        if (digits == 0) {
+          if (columnSize == 1) {
+            return DataType.BOOLEAN;
+          }
+          return DataType.BIGINT;
+        } else {
+          return DataType.DOUBLE;
+        }
+      case REAL:
+        return DataType.FLOAT;
+      case FLOAT:
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case NCHAR:
+      case VARCHAR:
+      case NVARCHAR:
+      case CLOB:
+      case NCLOB:
+      case LONGVARCHAR:
+        return DataType.TEXT;
+      case VARBINARY:
+      case LONGVARBINARY:
+      case BLOB:
+        return DataType.BLOB;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unexpected data type. JDBC type: %s, Type name: %s, Column size: %d, Column digits: %d, Column desc: %s",
+                type, typeName, columnSize, digits, columnDescription));
+    }
+  }
+
   @Override
   public int getSqlTypes(DataType dataType) {
     switch (dataType) {
@@ -335,5 +387,15 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
+  }
+
+  @Override
+  public boolean isIndexInfoSupported() {
+    return false;
+  }
+
+  @Override
+  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+    throw new UnsupportedOperationException();
   }
 }

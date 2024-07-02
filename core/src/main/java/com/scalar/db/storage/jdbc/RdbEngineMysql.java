@@ -289,6 +289,55 @@ class RdbEngineMysql implements RdbEngineStrategy {
     }
   }
 
+  /**
+   * Takes JDBC column information and returns a corresponding ScalarDB data type. The data type
+   * mapping logic in this method is based on {@link RdbEngineMysql#getDataTypeForScalarDb} which is
+   * created only for the table import feature and a bit too strict for other usages.
+   *
+   * @param type A JDBC type.
+   * @param typeName A JDBC column type name.
+   * @param columnSize A JDBC column size.
+   * @param digits A JDBC column digits.
+   * @param columnDescription A JDBC column description.
+   * @return A corresponding ScalarDB data type.
+   */
+  @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BIT:
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case TINYINT:
+      case SMALLINT:
+        return DataType.INT;
+      case INTEGER:
+        if (typeName.toUpperCase().endsWith("UNSIGNED")) {
+          return DataType.BIGINT;
+        }
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case CHAR:
+      case VARCHAR:
+      case LONGVARCHAR:
+        return DataType.TEXT;
+      case BINARY:
+      case VARBINARY:
+      case LONGVARBINARY:
+        return DataType.BLOB;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unexpected data type. JDBC type: %s, Type name: %s, Column size: %d, Column digits: %d, Column desc: %s",
+                type, typeName, columnSize, digits, columnDescription));
+    }
+  }
+
   @Override
   public int getSqlTypes(DataType dataType) {
     switch (dataType) {
@@ -369,5 +418,10 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
     // method is used for filtering.
     return namespace;
+  }
+
+  @Override
+  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+    return indexName.equals("PRIMARY");
   }
 }

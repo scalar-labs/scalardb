@@ -32,6 +32,9 @@ public interface RdbEngineStrategy {
   DataType getDataTypeForScalarDb(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription);
 
+  DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription);
+
   int getSqlTypes(DataType dataType);
 
   String getTextType(int charLength);
@@ -131,4 +134,14 @@ public interface RdbEngineStrategy {
   default @Nullable String getSchemaName(String namespace) {
     return namespace;
   }
+
+  default String getTableName(String namespace, String table) {
+    return table;
+  }
+
+  default boolean isIndexInfoSupported() {
+    return true;
+  }
+
+  boolean isPrimaryKeyIndex(String namespace, String table, String indexName);
 }

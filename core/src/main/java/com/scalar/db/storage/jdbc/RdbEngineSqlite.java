@@ -7,6 +7,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Driver;
 import java.sql.JDBCType;
@@ -136,6 +137,54 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   public DataType getDataTypeForScalarDb(
       JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
     throw new AssertionError("SQLite is not supported");
+  }
+
+  /**
+   * Takes JDBC column information and returns a corresponding ScalarDB data type.
+   *
+   * @param type A JDBC type.
+   * @param typeName A JDBC column type name.
+   * @param columnSize A JDBC column size.
+   * @param digits A JDBC column digits.
+   * @param columnDescription A JDBC column description.
+   * @return A corresponding ScalarDB data type.
+   */
+  @Override
+  public DataType getDataTypeForScalarDbLeniently(
+      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+    switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case INTEGER:
+        if (typeName.equalsIgnoreCase("int")) {
+          return DataType.INT;
+        } else if (typeName.equalsIgnoreCase("boolean")) {
+          return DataType.BOOLEAN;
+        } else if (typeName.equalsIgnoreCase("bigint")) {
+          return DataType.BIGINT;
+        }
+        break;
+      case VARCHAR:
+        if (typeName.equalsIgnoreCase("text")) {
+          return DataType.TEXT;
+        } else if (typeName.equalsIgnoreCase("blob")) {
+          return DataType.BLOB;
+        }
+        break;
+      case FLOAT:
+        if (typeName.equalsIgnoreCase("float")) {
+          return DataType.FLOAT;
+        } else if (typeName.equalsIgnoreCase("double")) {
+          return DataType.DOUBLE;
+        }
+        break;
+      default:
+        break;
+    }
+    throw new IllegalArgumentException(
+        String.format(
+            "Unexpected data type. JDBC type: %s, Type name: %s, Column size: %d, Column digits: %d, Column desc: %s",
+            type, typeName, columnSize, digits, columnDescription));
   }
 
   @Override
@@ -278,5 +327,21 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
+  }
+
+  @Override
+  @Nullable
+  public String getSchemaName(String namespace) {
+    return null;
+  }
+
+  @Override
+  public String getTableName(String namespace, String table) {
+    return namespace + NAMESPACE_SEPARATOR + table;
+  }
+
+  @Override
+  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+    return indexName.equals(String.format("sqlite_autoindex_%s", getTableName(namespace, table)));
   }
 }

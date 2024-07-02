@@ -130,6 +130,15 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void deleteColumn(String namespace, String table, String column) throws Exception {
+    String statement =
+        String.format(
+            "ALTER TABLE %s DROP COLUMN %s",
+            rdbEngine.encloseFullTableName(namespace, table), rdbEngine.enclose(column));
+    execute(statement);
+  }
+
+  @Override
   public void close() throws SQLException {
     dataSource.close();
   }
