@@ -528,8 +528,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
 
       ///////////////////////////////////////////////////////////////////////
-      ResultSet indexInfo = metadata.getIndexInfo(catalogName, schemaName, tableName, false, true);
+      //      ResultSet indexInfo = metadata.getIndexInfo(catalogName, schemaName, tableName, false,
+      // true);
+      ResultSet indexInfo = metadata.getIndexInfo(null, null, tableName, false, true);
       while (indexInfo.next()) {
+        /*
         for (int i = 0; i < indexInfo.getMetaData().getColumnCount(); i++) {
           System.err.printf(
               "### <<<<<<<<<<<<<< Label:%s >>>>>>>>>>>>>>>>>\n",
@@ -541,6 +544,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               "### <<<<<<<<<<<<<< TypeName:%s >>>>>>>>>>>>>>>>>\n",
               indexInfo.getMetaData().getColumnTypeName(i + 1));
         }
+        */
         System.err.printf(
             "<<<<<<<<<<<<<< INDEX_NAME:%s, TYPE:%s, COLUMN_NAME:%s, ASC_OR_DESC:%s >>>>>>>>>>>>>>>>>\n",
             indexInfo.getString("INDEX_NAME"),
