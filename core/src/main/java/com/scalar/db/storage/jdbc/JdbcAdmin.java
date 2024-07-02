@@ -546,7 +546,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
         */
         System.err.printf(
-            "<<<<<<<<<<<<<< TABLE_CAT, TABLE_SCHEM, TABLE_NAME, INDEX_NAME:%s, TYPE:%s, COLUMN_NAME:%s, ASC_OR_DESC:%s >>>>>>>>>>>>>>>>>\n",
+            "<<<<<<<<<<<<<< TABLE_CAT:%s, TABLE_SCHEM:%s, TABLE_NAME:%s, INDEX_NAME:%s, TYPE:%s, COLUMN_NAME:%s, ASC_OR_DESC:%s >>>>>>>>>>>>>>>>>\n",
             indexInfo.getString("TABLE_CAT"),
             indexInfo.getString("TABLE_SCHEM"),
             indexInfo.getString("TABLE_NAME"),
