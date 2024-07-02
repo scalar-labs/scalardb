@@ -83,7 +83,7 @@ public class CrudHandler {
 
   @VisibleForTesting
   void readUnread(Snapshot.Key key, Get get) throws CrudException {
-    if (!snapshot.contains(get)) {
+    if (!snapshot.containsKeyInGetSet(get)) {
       read(key, get);
     }
   }

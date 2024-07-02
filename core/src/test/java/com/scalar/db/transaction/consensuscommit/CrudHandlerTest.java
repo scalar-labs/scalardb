@@ -161,7 +161,7 @@ public class CrudHandlerTest {
     Get get = prepareGet();
     Get getForStorage = toGetForStorageFrom(get);
     Optional<TransactionResult> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
-    when(snapshot.contains(getForStorage)).thenReturn(true);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(true);
     when(snapshot.get(getForStorage)).thenReturn(expected);
     when(snapshot.mergeResult(new Snapshot.Key(getForStorage), expected, Collections.emptySet()))
         .thenReturn(expected);
@@ -187,7 +187,7 @@ public class CrudHandlerTest {
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
     Snapshot.Key key = new Snapshot.Key(getForStorage);
-    when(snapshot.contains(getForStorage)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
     doNothing()
         .when(snapshot)
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
@@ -219,7 +219,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     result = prepareResult(TransactionState.PREPARED);
     Optional<Result> expected = Optional.of(result);
-    when(snapshot.contains(getForStorage)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
 
     // Act Assert
@@ -243,7 +243,7 @@ public class CrudHandlerTest {
     // Arrange
     Get get = prepareGet();
     Get getForStorage = toGetForStorageFrom(get);
-    when(snapshot.contains(getForStorage)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(Optional.empty());
 
     // Act
@@ -259,7 +259,7 @@ public class CrudHandlerTest {
     // Arrange
     Get get = prepareGet();
     Get getForStorage = toGetForStorageFrom(get);
-    when(snapshot.contains(getForStorage)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
     ExecutionException toThrow = mock(ExecutionException.class);
     when(storage.get(getForStorage)).thenThrow(toThrow);
 
@@ -281,7 +281,7 @@ public class CrudHandlerTest {
         .when(snapshot)
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     Snapshot.Key key = new Snapshot.Key(getForStorage);
-    when(snapshot.contains(getForStorage)).thenReturn(false).thenReturn(true);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false).thenReturn(true);
     when(snapshot.get(getForStorage)).thenReturn(expected).thenReturn(expected);
     when(snapshot.mergeResult(key, expected, Collections.emptySet()))
         .thenReturn(expected)
@@ -894,7 +894,7 @@ public class CrudHandlerTest {
             .table(key.getTable())
             .partitionKey(key.getPartitionKey())
             .build();
-    when(snapshot.contains(getForKey)).thenReturn(true);
+    when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(true);
 
     // Act
     handler.readUnread(key, getForKey);
@@ -919,7 +919,7 @@ public class CrudHandlerTest {
             .table(key.getTable())
             .partitionKey(key.getPartitionKey())
             .build();
-    when(snapshot.contains(getForKey)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(false);
     when(storage.get(any())).thenReturn(Optional.empty());
 
     // Act
@@ -947,7 +947,7 @@ public class CrudHandlerTest {
             .partitionKey(key.getPartitionKey())
             .where(mock(ConditionalExpression.class))
             .build();
-    when(snapshot.contains(getForKey)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(false);
     when(storage.get(any())).thenReturn(Optional.empty());
 
     // Act
@@ -979,7 +979,7 @@ public class CrudHandlerTest {
             .table(key.getTable())
             .partitionKey(key.getPartitionKey())
             .build();
-    when(snapshot.contains(getForKey)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(false);
 
     // Act
     handler.readUnread(key, getForKey);
@@ -1009,7 +1009,7 @@ public class CrudHandlerTest {
             .table(key.getTable())
             .partitionKey(key.getPartitionKey())
             .build();
-    when(snapshot.contains(getForKey)).thenReturn(false);
+    when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.readUnread(key, getForKey))

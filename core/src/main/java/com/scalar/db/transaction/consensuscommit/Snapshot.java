@@ -181,8 +181,9 @@ public class Snapshot {
     return mergeResult(key, result)
         .filter(
             r ->
-                // We need to apply conditions if it is a merged result. Of course, we can just
-                // return the result without the condition check if there is no condition.
+                // We need to apply conditions if it is a merged result because the transaction’s
+                // write makes the record no longer match the conditions. Of course, we can just
+                // return the result without checking the condition if there is no condition.
                 !r.isMergedResult()
                     || conjunctions.isEmpty()
                     || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
@@ -212,7 +213,7 @@ public class Snapshot {
     return metadata.getTableMetadata();
   }
 
-  public boolean contains(Get get) {
+  public boolean containsKeyInGetSet(Get get) {
     return getSet.containsKey(get);
   }
 
