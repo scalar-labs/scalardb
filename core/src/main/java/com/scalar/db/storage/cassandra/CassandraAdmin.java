@@ -256,6 +256,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
+    if (systemNamespace.equals(namespace)) {
+      return true;
+    }
+
     try {
       KeyspaceMetadata keyspace =
           clusterManager
