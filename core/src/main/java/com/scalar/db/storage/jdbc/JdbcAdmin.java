@@ -528,7 +528,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
 
       ///////////////////////////////////////////////////////////////////////
-      ResultSet indexInfo = metadata.getIndexInfo(catalogName, schemaName, tableName, false, false);
+      ResultSet indexInfo = metadata.getIndexInfo(catalogName, schemaName, tableName, false, true);
       while (indexInfo.next()) {
         System.err.printf(
             "<<<<<<<<<<<<<< INDEX_NAME:%s, TYPE:%s, COLUMN_NAME:%s, ASC_OR_DESC:%s >>>>>>>>>>>>>>>>>\n",
