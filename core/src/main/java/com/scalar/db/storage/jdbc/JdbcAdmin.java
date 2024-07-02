@@ -527,6 +527,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         builder.addPartitionKey(rawPrimaryKeysWithSeq.get(key));
       }
 
+      ///////////////////////////////////////////////////////////////////////
+      ResultSet indexInfo = metadata.getIndexInfo(catalogName, schemaName, tableName, false, false);
+      while (indexInfo.next()) {
+        System.err.printf(
+            "<<<<<<<<<<<<<< INDEX_NAME:%s, TYPE:%s, COLUMN_NAME:%s, ASC_OR_DESC:%s >>>>>>>>>>>>>>>>>\n",
+            indexInfo.getString("INDEX_NAME"),
+            indexInfo.getString("TYPE"),
+            indexInfo.getString("COLUMN_NAME"),
+            indexInfo.getString("ASC_OR_DESC"));
+
+        //        for (int i = 0; i < indexInfo.getMetaData().getColumnCount(); i++) {
+        //          System.err.printf("<<<<<<<<<<<<<< Label:%s >>>>>>>>>>>>>>>>>\n",
+        // indexInfo.getMetaData().getColumnLabel(i + 1));
+        //          System.err.printf("<<<<<<<<<<<<<< Name:%s >>>>>>>>>>>>>>>>>\n",
+        // indexInfo.getMetaData().getColumnName(i + 1));
+        //          System.err.printf("<<<<<<<<<<<<<< TypeName:%s >>>>>>>>>>>>>>>>>\n",
+        // indexInfo.getMetaData().getColumnTypeName(i + 1));
+        //        }
+      }
+      ///////////////////////////////////////////////////////////////////////
+
       resultSet = metadata.getColumns(catalogName, schemaName, tableName, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
