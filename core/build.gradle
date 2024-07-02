@@ -1,6 +1,7 @@
 plugins {
     id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'base'
 }
 
 sourceSets {
@@ -133,7 +134,6 @@ javadoc {
     title = "Scalar DB"
 }
 
-
 task integrationTestCassandra(type: Test) {
     description = 'Runs the integration tests for Cassandra.'
     group = 'verification'
@@ -141,7 +141,7 @@ task integrationTestCassandra(type: Test) {
     classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
 }
 
@@ -152,7 +152,7 @@ task integrationTestCosmos(type: Test) {
     classpath = sourceSets.integrationTestCosmos.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
     maxParallelForks = 3
     jvmArgs '-XX:MaxDirectMemorySize=2g', '-Xmx4g'
@@ -165,7 +165,7 @@ task integrationTestDynamo(type: Test) {
     classpath = sourceSets.integrationTestDynamo.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
     maxParallelForks = 10
 }
@@ -177,7 +177,7 @@ task integrationTestJdbc(type: Test) {
     classpath = sourceSets.integrationTestJdbc.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
 }
 
@@ -188,7 +188,7 @@ task integrationTestMultiStorage(type: Test) {
     classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties())
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
     }
 }
 
@@ -234,7 +234,9 @@ check.dependsOn += spotbugsMain
 check.dependsOn += spotbugsTest
 check.dependsOn += spotbugsIntegrationTest
 
-archivesBaseName = "scalardb"
+base {
+    archivesName = "scalardb"
+}
 
 // for archiving and uploading to maven central
 if (!project.gradle.startParameter.taskNames.isEmpty() &&
