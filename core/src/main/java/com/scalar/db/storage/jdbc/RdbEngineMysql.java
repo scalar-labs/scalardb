@@ -419,4 +419,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // method is used for filtering.
     return namespace;
   }
+
+  @Override
+  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+    return indexName.equals("PRIMARY");
+  }
 }

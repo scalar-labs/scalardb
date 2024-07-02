@@ -6,6 +6,10 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DATA_TYPE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DECIMAL_DIGITS;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_KEY_SEQ;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_ASC_OR_DESC;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_COLUMN_NAME;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_INDEX_NAME;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_ORDINAL_POSITION;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +41,8 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.RdbTableMetadata.PrimaryKeyColumn;
+import com.scalar.db.storage.jdbc.RdbTableMetadata.SortOrder;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.JDBCType;
@@ -1222,7 +1228,7 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    doReturn(Optional.of(metadata)).when(adminSpy).getRawTableMetadata(namespace, table, false);
+    doReturn(Optional.of(metadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
@@ -1258,7 +1264,7 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    doReturn(Optional.empty()).when(adminSpy).getRawTableMetadata(namespace, table, false);
+    doReturn(Optional.empty()).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
@@ -1294,11 +1300,9 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
-    TableMetadata rawTableMetadata =
+    TableMetadata rdbTableMetadata =
         TableMetadata.newBuilder(metadata).addPartitionKey("c2").build();
-    doReturn(Optional.of(rawTableMetadata))
-        .when(adminSpy)
-        .getRawTableMetadata(namespace, table, false);
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     assertThatThrownBy(
@@ -1339,9 +1343,7 @@ public class JdbcAdminTest {
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
     TableMetadata rawTableMetadata = TableMetadata.newBuilder(metadata).removeColumn("c7").build();
-    doReturn(Optional.of(rawTableMetadata))
-        .when(adminSpy)
-        .getRawTableMetadata(namespace, table, false);
+    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     assertThatThrownBy(
@@ -1383,9 +1385,7 @@ public class JdbcAdminTest {
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
     TableMetadata rawTableMetadata =
         TableMetadata.newBuilder(metadata).removeColumn("c7").addColumn("c7", DataType.INT).build();
-    doReturn(Optional.of(rawTableMetadata))
-        .when(adminSpy)
-        .getRawTableMetadata(namespace, table, false);
+    doReturn(Optional.of(rawTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
 
     // Act
     assertThatThrownBy(
@@ -2726,12 +2726,45 @@ public class JdbcAdminTest {
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
     when(connection.getMetaData()).thenReturn(metadata);
 
+    //  Primary keys
     ResultSet primaryKeyResults = mock(ResultSet.class);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk2").thenReturn("pk1");
     when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(2).thenReturn(1);
     when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
 
+    // Index keys.
+    /*
+         int position = indexInfo.getInt("ORDINAL_POSITION");
+         String colName = indexInfo.getString("COLUMN_NAME");
+         String indexName = indexInfo.getString("INDEX_NAME");
+         String ascOrDesc = indexInfo.getString("ASC_OR_DESC");
+    */
+    ResultSet indexKeyResults = mock(ResultSet.class);
+    when(indexKeyResults.next())
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(false);
+    when(indexKeyResults.getInt(JDBC_INDEX_ORDINAL_POSITION))
+        .thenReturn(2)
+        .thenReturn(3)
+        .thenReturn(1);
+    when(indexKeyResults.getString(JDBC_INDEX_COLUMN_NAME))
+        .thenReturn("pk2")
+        .thenReturn("col2")
+        .thenReturn("pk1");
+    when(indexKeyResults.getString(JDBC_INDEX_INDEX_NAME))
+        .thenReturn("test_primary_key")
+        .thenReturn(String.format("index_%s_%s_%s", NAMESPACE, TABLE, "col2"))
+        .thenReturn("test_primary_key");
+    when(indexKeyResults.getString(JDBC_INDEX_ASC_OR_DESC))
+        .thenReturn("D")
+        .thenReturn("A")
+        .thenReturn("A");
+    when(metadata.getIndexInfo(null, NAMESPACE, TABLE, false, false)).thenReturn(indexKeyResults);
+
+    //  Columns
     ResultSet columnResults = mock(ResultSet.class);
     when(columnResults.next())
         .thenReturn(true)
@@ -2775,21 +2808,25 @@ public class JdbcAdminTest {
         .thenReturn(DataType.TEXT)
         .thenReturn(DataType.FLOAT)
         .thenReturn(DataType.BIGINT);
+    when(rdbEngine.isIndexInfoSupported()).thenReturn(true);
+    when(rdbEngine.isPrimaryKeyIndex(NAMESPACE, TABLE, "test_primary_key")).thenReturn(true);
     JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
 
     // Act
-    Optional<TableMetadata> rawTableMetadata = admin.getRawTableMetadata(NAMESPACE, TABLE, false);
+    Optional<RdbTableMetadata> optRdbTableMetadata = admin.getRdbTableMetadata(NAMESPACE, TABLE);
 
     // Assert
-    assertThat(rawTableMetadata).isPresent();
-    assertThat(rawTableMetadata.get().getPartitionKeyNames()).containsExactly("pk1", "pk2");
-    assertThat(rawTableMetadata.get().getClusteringKeyNames()).isEmpty();
-    assertThat(rawTableMetadata.get().getColumnNames())
-        .containsExactly("pk1", "pk2", "col1", "col2");
-    assertThat(rawTableMetadata.get().getColumnDataType("pk1")).isEqualTo(DataType.INT);
-    assertThat(rawTableMetadata.get().getColumnDataType("pk2")).isEqualTo(DataType.TEXT);
-    assertThat(rawTableMetadata.get().getColumnDataType("col1")).isEqualTo(DataType.FLOAT);
-    assertThat(rawTableMetadata.get().getColumnDataType("col2")).isEqualTo(DataType.BIGINT);
+    assertThat(optRdbTableMetadata).isPresent();
+    RdbTableMetadata rdbTableMetadata = optRdbTableMetadata.get();
+    assertThat(rdbTableMetadata.primaryKeyColumns)
+        .containsExactly(
+            new PrimaryKeyColumn("pk1", SortOrder.ASC),
+            new PrimaryKeyColumn("pk2", SortOrder.DESC));
+    assertThat(rdbTableMetadata.columns.keySet()).containsExactly("pk1", "pk2", "col1", "col2");
+    assertThat(rdbTableMetadata.columns.get("pk1")).isEqualTo(DataType.INT);
+    assertThat(rdbTableMetadata.columns.get("pk2")).isEqualTo(DataType.TEXT);
+    assertThat(rdbTableMetadata.columns.get("col1")).isEqualTo(DataType.FLOAT);
+    assertThat(rdbTableMetadata.columns.get("col2")).isEqualTo(DataType.BIGINT);
     verify(rdbEngine)
         .getDataTypeForScalarDbLeniently(
             eq(JDBCType.INTEGER), eq("intintint"), eq(10), eq(11), anyString());
@@ -2833,7 +2870,7 @@ public class JdbcAdminTest {
     JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
 
     // Act Assert
-    assertThatThrownBy(() -> admin.getRawTableMetadata(NAMESPACE, TABLE, false))
+    assertThatThrownBy(() -> admin.getRdbTableMetadata(NAMESPACE, TABLE))
         .isInstanceOf(IllegalStateException.class);
   }
 

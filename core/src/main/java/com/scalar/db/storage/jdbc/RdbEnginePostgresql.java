@@ -359,4 +359,9 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
   }
+
+  @Override
+  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+    return indexName.equals(table + "_pkey");
+  }
 }

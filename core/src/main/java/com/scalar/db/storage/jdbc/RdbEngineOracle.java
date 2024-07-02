@@ -388,4 +388,14 @@ class RdbEngineOracle implements RdbEngineStrategy {
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
   }
+
+  @Override
+  public boolean isIndexInfoSupported() {
+    return false;
+  }
+
+  @Override
+  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+    throw new UnsupportedOperationException();
+  }
 }

@@ -138,4 +138,10 @@ public interface RdbEngineStrategy {
   default String getTableName(String namespace, String table) {
     return table;
   }
+
+  default boolean isIndexInfoSupported() {
+    return true;
+  }
+
+  boolean isPrimaryKeyIndex(String namespace, String table, String indexName);
 }
