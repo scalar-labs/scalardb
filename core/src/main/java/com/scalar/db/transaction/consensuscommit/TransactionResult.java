@@ -142,6 +142,10 @@ public class TransactionResult extends AbstractResult {
     return getId() == null;
   }
 
+  public boolean isMergedResult() {
+    return result instanceof MergedResult;
+  }
+
   public boolean hasBeforeImage() {
     // We need to check not only before_id but also before_version to determine if the record has
     // the before image or not since we set before_version to 0 for the prepared record when
