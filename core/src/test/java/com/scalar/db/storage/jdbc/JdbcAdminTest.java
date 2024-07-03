@@ -9,7 +9,6 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_ASC_OR_DESC;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_COLUMN_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_INDEX_NAME;
-import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_INDEX_ORDINAL_POSITION;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -2824,10 +2823,6 @@ public class JdbcAdminTest {
         .thenReturn(true)
         .thenReturn(true)
         .thenReturn(false);
-    when(indexKeyResults.getInt(JDBC_INDEX_ORDINAL_POSITION))
-        .thenReturn(2)
-        .thenReturn(3)
-        .thenReturn(1);
     when(indexKeyResults.getString(JDBC_INDEX_COLUMN_NAME))
         .thenReturn("pk2")
         .thenReturn("col2")
@@ -2887,7 +2882,7 @@ public class JdbcAdminTest {
         .thenReturn(DataType.FLOAT)
         .thenReturn(DataType.BIGINT);
     when(rdbEngine.isIndexInfoSupported()).thenReturn(true);
-    when(rdbEngine.isPrimaryKeyIndex(NAMESPACE, TABLE, "test_primary_key")).thenReturn(true);
+    when(rdbEngine.isDefaultPrimaryKeyIndex(NAMESPACE, TABLE, "test_primary_key")).thenReturn(true);
     JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
 
     // Act

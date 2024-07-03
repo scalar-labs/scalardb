@@ -16,6 +16,7 @@ import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -65,9 +66,11 @@ class RdbEngineOracle implements RdbEngineStrategy {
       // Create a unique index for the clustering orders only when both ASC and DESC are contained
       // in the clustering keys. If all the clustering key orders are DESC, the PRIMARY KEY index
       // can be used.
+      Optional<String> primaryKeyIndexName = getPrimaryKeyIndexName(schema, table);
+      assert primaryKeyIndexName.isPresent();
       sqls.add(
           "CREATE UNIQUE INDEX "
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(primaryKeyIndexName.get())
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -395,7 +398,12 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+  public boolean isDefaultPrimaryKeyIndex(String namespace, String table, String indexName) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Optional<String> getPrimaryKeyIndexName(String namespace, String table) {
+    return Optional.of(getFullTableName(namespace, table) + "_clustering_order_idx");
   }
 }

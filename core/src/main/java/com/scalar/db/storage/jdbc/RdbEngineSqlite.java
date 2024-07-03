@@ -341,7 +341,7 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+  public boolean isDefaultPrimaryKeyIndex(String namespace, String table, String indexName) {
     return indexName.equals(String.format("sqlite_autoindex_%s", getTableName(namespace, table)));
   }
 }

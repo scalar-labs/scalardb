@@ -63,7 +63,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
   @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
-  @VisibleForTesting static final String JDBC_INDEX_ORDINAL_POSITION = "ORDINAL_POSITION";
   @VisibleForTesting static final String JDBC_INDEX_COLUMN_NAME = "COLUMN_NAME";
   @VisibleForTesting static final String JDBC_INDEX_INDEX_NAME = "INDEX_NAME";
   @VisibleForTesting static final String JDBC_INDEX_ASC_OR_DESC = "ASC_OR_DESC";
@@ -531,12 +530,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       // Collect the index information for clustering keys and secondary index.
       Map<String, PrimaryKeyColumn> primaryKeyIndex = new HashMap<>();
-      Map<Integer, IndexColumn> normalIndexWithSeq = new HashMap<>();
+      ImmutableSet<IndexColumn> normalIndexColumns = null;
       if (rdbEngine.isIndexInfoSupported()) {
+        Optional<String> primaryKeyIndexName = rdbEngine.getPrimaryKeyIndexName(namespace, table);
+        Set<IndexColumn> normalIndexes = new HashSet<>();
         ResultSet indexInfo =
             metadata.getIndexInfo(catalogName, schemaName, tableName, false, false);
         while (indexInfo.next()) {
-          int position = indexInfo.getInt(JDBC_INDEX_ORDINAL_POSITION);
           String colName = indexInfo.getString(JDBC_INDEX_COLUMN_NAME);
           String indexName = indexInfo.getString(JDBC_INDEX_INDEX_NAME);
           String ascOrDesc = indexInfo.getString(JDBC_INDEX_ASC_OR_DESC);
@@ -551,27 +551,35 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
           }
 
-          if (rdbEngine.isPrimaryKeyIndex(namespace, table, indexName)) {
+          // There are possibly 2 indexes for the primary key. The first one is an index created
+          // with CREATE TABLE (PRIMARY KEY). The second one is a custom index created by CREATE
+          // INDEX for RDB engines that can't create primary keys with different orderings.
+          // If the second index exists, the first index isn't used for the ScalarDB clustering
+          // keys.
+          if (primaryKeyIndexName.isPresent() && indexName.equals(primaryKeyIndexName.get())) {
             primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
+          } else if (rdbEngine.isDefaultPrimaryKeyIndex(namespace, table, indexName)) {
+            if (!primaryKeyIndex.containsKey(colName)) {
+              primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
+            }
           } else if (indexName.equals(getIndexName(namespace, table, colName))) {
-            normalIndexWithSeq.put(position, new IndexColumn(colName, sortOrder));
+            normalIndexes.add(new IndexColumn(colName, sortOrder));
           }
         }
+
+        normalIndexColumns = ImmutableSet.copyOf(normalIndexes);
       }
 
       // Sort the raw primary keys by the key sequence.
-      ImmutableList.Builder<PrimaryKeyColumn> primaryKeyColumnBuilder = ImmutableList.builder();
-      for (int keySeq :
-          rawPrimaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
-        String colName = rawPrimaryKeysWithSeq.get(keySeq);
-        primaryKeyColumnBuilder.add(primaryKeyIndex.get(colName));
-      }
-
-      // Sort the index keys by the position.
-      ImmutableSet.Builder<IndexColumn> indexColumnBuilder = ImmutableSet.builder();
-      for (int position :
-          normalIndexWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
-        indexColumnBuilder.add(normalIndexWithSeq.get(position));
+      ImmutableList<PrimaryKeyColumn> primaryKeyColumns;
+      {
+        ImmutableList.Builder<PrimaryKeyColumn> builder = ImmutableList.builder();
+        for (int keySeq :
+            rawPrimaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
+          String colName = rawPrimaryKeysWithSeq.get(keySeq);
+          builder.add(primaryKeyIndex.get(colName));
+        }
+        primaryKeyColumns = builder.build();
       }
 
       // Collect the column information.
@@ -591,10 +599,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         columnBuilder.put(columnName, scalarDbDataType);
       }
       return Optional.of(
-          new RdbTableMetadata(
-              primaryKeyColumnBuilder.build(),
-              rdbEngine.isIndexInfoSupported() ? indexColumnBuilder.build() : null,
-              columnBuilder.build()));
+          new RdbTableMetadata(primaryKeyColumns, normalIndexColumns, columnBuilder.build()));
     } catch (SQLException e) {
       throw new ExecutionException(
           "Getting a table metadata for the "

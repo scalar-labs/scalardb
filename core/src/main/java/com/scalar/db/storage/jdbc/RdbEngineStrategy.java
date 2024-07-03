@@ -9,6 +9,7 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -143,5 +144,9 @@ public interface RdbEngineStrategy {
     return true;
   }
 
-  boolean isPrimaryKeyIndex(String namespace, String table, String indexName);
+  boolean isDefaultPrimaryKeyIndex(String namespace, String table, String indexName);
+
+  default Optional<String> getPrimaryKeyIndexName(String namespace, String table) {
+    return Optional.empty();
+  }
 }

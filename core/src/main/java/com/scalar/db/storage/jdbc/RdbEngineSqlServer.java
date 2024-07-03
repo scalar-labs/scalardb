@@ -377,7 +377,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isPrimaryKeyIndex(String namespace, String table, String indexName) {
+  public boolean isDefaultPrimaryKeyIndex(String namespace, String table, String indexName) {
     // e.g., "PK__test_tab__323C9DF0ECA233EF"
     return indexName.startsWith(String.format("PK__%s__", table));
   }
