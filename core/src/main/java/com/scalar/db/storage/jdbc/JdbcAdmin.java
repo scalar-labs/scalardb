@@ -993,24 +993,29 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       // Check the normal index.
       if (rdbTableMetadata.indexColumns != null) {
+        // It's possible that users have manually added an index on a scanned column as a
+        // performance tuning. That's why this checks if the RDB engine table indexes includes the
+        // indexes of ScalarDB metadata.
         if (!rdbTableMetadata.indexColumns.stream()
             .map(c -> c.name)
             .collect(Collectors.toSet())
-            .equals(metadata.getSecondaryIndexNames())) {
+            .containsAll(metadata.getSecondaryIndexNames())) {
+          throw new IllegalStateException("There are missing index keys in the RDB table schema");
+        }
+
+        Set<IndexColumn> indexColumnsWithDescOrder =
+            rdbTableMetadata.indexColumns.stream()
+                .filter(c -> c.sortOrder == SortOrder.DESC)
+                .collect(Collectors.toSet());
+        if (!indexColumnsWithDescOrder.isEmpty()) {
           throw new IllegalStateException(
               String.format(
-                  "The index keys are different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
-                  metadata.getSecondaryIndexNames(), rdbTableMetadata.indexColumns));
+                  "There are missing index keys in the RDB table schema. Index columns: %s",
+                  indexColumnsWithDescOrder));
         }
       }
 
       // Check the columns.
-      if (metadata.getColumnNames().size() != rdbTableMetadata.columns.size()) {
-        throw new IllegalStateException(
-            String.format(
-                "The sizes of columns are different between the ScalarDB metadata (%d) and the RDB table schema (%d)",
-                metadata.getColumnNames().size(), rdbTableMetadata.columns.size()));
-      }
       for (String columnName : metadata.getColumnNames()) {
         if (!rdbTableMetadata.columns.containsKey(columnName)) {
           throw new IllegalStateException(

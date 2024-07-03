@@ -59,14 +59,9 @@ class RdbTableMetadata {
     final String name;
     final SortOrder sortOrder;
 
-    public PrimaryKeyColumn(String name, SortOrder sortOrder) {
+    PrimaryKeyColumn(String name, SortOrder sortOrder) {
       this.name = name;
       this.sortOrder = sortOrder;
-    }
-
-    public PrimaryKeyColumn(String name) {
-      // TODO: Revisit this default.
-      this(name, SortOrder.ASC);
     }
 
     @Override
@@ -96,14 +91,9 @@ class RdbTableMetadata {
     final String name;
     final SortOrder sortOrder;
 
-    public IndexColumn(String name, SortOrder sortOrder) {
+    IndexColumn(String name, SortOrder sortOrder) {
       this.name = name;
       this.sortOrder = sortOrder;
-    }
-
-    public IndexColumn(String name) {
-      // TODO: Revisit this default.
-      this(name, SortOrder.ASC);
     }
 
     @Override

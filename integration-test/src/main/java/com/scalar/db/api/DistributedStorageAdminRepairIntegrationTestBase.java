@@ -148,7 +148,7 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
       throws Exception {
     // Arrange
     TableMetadata newMetadata =
-        TableMetadata.newBuilder(TABLE_METADATA).removeColumn(COL_NAME11).build();
+        TableMetadata.newBuilder(TABLE_METADATA).addColumn("unknown_col", DataType.TEXT).build();
 
     // Act Assert
     assertThatThrownBy(
@@ -160,11 +160,26 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
   }
 
   @Test
-  public void repairTable_ForExistingTableAndMetadataWithUnexpectedColumn_ShouldFail()
+  public void repairTable_ForExistingTableAndMetadataWithUnexpectedColumn_ShouldDoNothing()
       throws Exception {
     // Arrange
     TableMetadata newMetadata =
-        TableMetadata.newBuilder(TABLE_METADATA).addColumn("unknown_col", DataType.TEXT).build();
+        TableMetadata.newBuilder(TABLE_METADATA).removeColumn(COL_NAME11).build();
+
+    // Act
+    admin.repairTable(getNamespace(), getTable(), newMetadata, getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(newMetadata);
+  }
+
+  @Test
+  public void repairTable_ForExistingTableAndMetadataWithMissingIndex_ShouldFail()
+      throws Exception {
+    // Arrange
+    TableMetadata newMetadata =
+        TableMetadata.newBuilder(TABLE_METADATA).addSecondaryIndex(COL_NAME3).build();
 
     // Act Assert
     assertThatThrownBy(
@@ -173,6 +188,21 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
 
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+  }
+
+  @Test
+  public void repairTable_ForExistingTableAndMetadataWithUnexpectedIndex_ShouldDoNothing()
+      throws Exception {
+    // Arrange
+    TableMetadata newMetadata =
+        TableMetadata.newBuilder(TABLE_METADATA).removeSecondaryIndex(COL_NAME3).build();
+
+    // Act
+    admin.repairTable(getNamespace(), getTable(), newMetadata, getCreationOptions());
+
+    // Assert
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(newMetadata);
   }
 
   @Test

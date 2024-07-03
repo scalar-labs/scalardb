@@ -52,5 +52,5 @@ public class CosmosAdminRepairIntegrationTest
   @Disabled(
       "Inconsistency check for the raw table schema and the ScalarDB metadata isn't executed in schemaless database/storage")
   @Override
-  public void repairTable_ForExistingTableAndMetadataWithUnexpectedColumn_ShouldFail() {}
+  public void repairTable_ForExistingTableAndMetadataWithMissingIndex_ShouldFail() {}
 }

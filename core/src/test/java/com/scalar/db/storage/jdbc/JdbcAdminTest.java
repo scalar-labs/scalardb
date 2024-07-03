@@ -1204,7 +1204,7 @@ public class JdbcAdminTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void repairTable_WithConsistentRawTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(
+  public void repairTable_WithConsistentRdbTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(
       RdbEngine rdbEngine) throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
@@ -1221,19 +1221,19 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
             .build();
     RdbTableMetadata rdbTableMetadata =
         new RdbTableMetadata(
             ImmutableList.<PrimaryKeyColumn>builder()
-                .add(new PrimaryKeyColumn("c3"))
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
                 .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
                 .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
                 .build(),
             ImmutableSet.<IndexColumn>builder()
-                .add(new IndexColumn("c1"))
-                .add(new IndexColumn("c4"))
+                .add(new IndexColumn("c7", SortOrder.ASC))
+                .add(new IndexColumn("c5", SortOrder.ASC))
                 .build(),
             ImmutableMap.<String, DataType>builder()
                 .put("c1", DataType.TEXT)
@@ -1260,7 +1260,7 @@ public class JdbcAdminTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void repairTable_WithoutRawTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(
+  public void repairTable_WithoutRdbTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(
       RdbEngine rdbEngine) throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
@@ -1277,8 +1277,8 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
             .build();
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
@@ -1296,7 +1296,7 @@ public class JdbcAdminTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void repairTable_WithInconsistentRawTablePrimaryKey_ShouldFail(RdbEngine rdbEngine)
+  public void repairTable_WithInconsistentRdbTablePrimaryKey_ShouldFail(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
@@ -1313,20 +1313,20 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
             .build();
     RdbTableMetadata rdbTableMetadata =
         new RdbTableMetadata(
             ImmutableList.<PrimaryKeyColumn>builder()
-                .add(new PrimaryKeyColumn("c3"))
-                .add(new PrimaryKeyColumn("c2"))
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
+                .add(new PrimaryKeyColumn("c2", SortOrder.ASC)) // Unexpected primary key
                 .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
                 .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
                 .build(),
             ImmutableSet.<IndexColumn>builder()
-                .add(new IndexColumn("c1"))
-                .add(new IndexColumn("c4"))
+                .add(new IndexColumn("c7", SortOrder.ASC))
+                .add(new IndexColumn("c5", SortOrder.ASC))
                 .build(),
             ImmutableMap.<String, DataType>builder()
                 .put("c1", DataType.TEXT)
@@ -1357,7 +1357,7 @@ public class JdbcAdminTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void repairTable_WithInconsistentRawTableColumn_ShouldFail(RdbEngine rdbEngine)
+  public void repairTable_WithInconsistentRdbTableColumn_ShouldFail(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
@@ -1374,19 +1374,19 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
             .build();
     RdbTableMetadata rdbTableMetadata =
         new RdbTableMetadata(
             ImmutableList.<PrimaryKeyColumn>builder()
-                .add(new PrimaryKeyColumn("c3"))
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
                 .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
                 .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
                 .build(),
             ImmutableSet.<IndexColumn>builder()
-                .add(new IndexColumn("c1"))
-                .add(new IndexColumn("c4"))
+                .add(new IndexColumn("c7", SortOrder.ASC))
+                .add(new IndexColumn("c5", SortOrder.ASC))
                 .build(),
             ImmutableMap.<String, DataType>builder()
                 .put("c1", DataType.TEXT)
@@ -1395,6 +1395,7 @@ public class JdbcAdminTest {
                 .put("c4", DataType.BLOB)
                 .put("c5", DataType.INT)
                 .put("c6", DataType.DOUBLE)
+                // c7 is missing.
                 .build());
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
@@ -1416,7 +1417,7 @@ public class JdbcAdminTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
-  public void repairTable_WithInconsistentRawTableColumnType_ShouldFail(RdbEngine rdbEngine)
+  public void repairTable_WithInconsistentRdbTableColumnType_ShouldFail(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
@@ -1433,19 +1434,19 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
             .build();
     RdbTableMetadata rdbTableMetadata =
         new RdbTableMetadata(
             ImmutableList.<PrimaryKeyColumn>builder()
-                .add(new PrimaryKeyColumn("c3"))
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
                 .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
                 .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
                 .build(),
             ImmutableSet.<IndexColumn>builder()
-                .add(new IndexColumn("c1"))
-                .add(new IndexColumn("c4"))
+                .add(new IndexColumn("c7", SortOrder.ASC))
+                .add(new IndexColumn("c5", SortOrder.ASC))
                 .build(),
             ImmutableMap.<String, DataType>builder()
                 .put("c1", DataType.TEXT)
@@ -1474,7 +1475,356 @@ public class JdbcAdminTest {
         .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
   }
 
-  // FIXME: Add more tests
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WithInconsistentRdbTableClusteringKeyOrder_ShouldFail(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
+            .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
+                .add(new PrimaryKeyColumn("c1", SortOrder.ASC)) // Wrong order
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c7", SortOrder.ASC))
+                .add(new IndexColumn("c5", SortOrder.ASC))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+
+    // Act
+    assertThatThrownBy(
+            () -> adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap()))
+        .isInstanceOf(IllegalStateException.class);
+
+    // Assert
+    verify(adminSpy, never())
+        .createTableInternal(any(), anyString(), anyString(), any(), anyBoolean());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WithInconsistentRdbTableMissingIndex_ShouldFail(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
+            .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
+                .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                // c7 is missing
+                .add(new IndexColumn("c5", SortOrder.ASC))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+
+    // Act
+    assertThatThrownBy(
+            () -> adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap()))
+        .isInstanceOf(IllegalStateException.class);
+
+    // Assert
+    verify(adminSpy, never())
+        .createTableInternal(any(), anyString(), anyString(), any(), anyBoolean());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WithInconsistentRdbTableWrongIndexOrder_ShouldFail(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
+            .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
+                .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c7", SortOrder.ASC))
+                .add(new IndexColumn("c5", SortOrder.DESC))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+
+    // Act
+    assertThatThrownBy(
+            () -> adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap()))
+        .isInstanceOf(IllegalStateException.class);
+
+    // Assert
+    verify(adminSpy, never())
+        .createTableInternal(any(), anyString(), anyString(), any(), anyBoolean());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      repairTable_WithConsistentRdbTableAdditionalIndex_ShouldCallCreateTableAndAddTableMetadataCorrectly(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
+            .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3", SortOrder.ASC))
+                .add(new PrimaryKeyColumn("c1", SortOrder.DESC))
+                .add(new PrimaryKeyColumn("c4", SortOrder.ASC))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c7", SortOrder.ASC))
+                .add(
+                    new IndexColumn(
+                        "c6", SortOrder.ASC)) // This might be added by the user for tuning
+                .add(new IndexColumn("c5", SortOrder.ASC))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      repairTable_WithConsistentRdbTableWithoutIndexOrders_ShouldCallCreateTableAndAddTableMetadataCorrectly(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
+            .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3", SortOrder.UNKNOWN))
+                .add(new PrimaryKeyColumn("c1", SortOrder.UNKNOWN))
+                .add(new PrimaryKeyColumn("c4", SortOrder.UNKNOWN))
+                .build(),
+            ImmutableSet.<IndexColumn>builder()
+                .add(new IndexColumn("c7", SortOrder.UNKNOWN))
+                .add(new IndexColumn("c5", SortOrder.UNKNOWN))
+                .build(),
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      repairTable_WithConsistentRdbTableWithoutIndexInfoSupported_ShouldCallCreateTableAndAddTableMetadataCorrectly(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c5")
+            .addSecondaryIndex("c7")
+            .build();
+    RdbTableMetadata rdbTableMetadata =
+        new RdbTableMetadata(
+            ImmutableList.<PrimaryKeyColumn>builder()
+                .add(new PrimaryKeyColumn("c3", SortOrder.UNKNOWN))
+                .add(new PrimaryKeyColumn("c1", SortOrder.UNKNOWN))
+                .add(new PrimaryKeyColumn("c4", SortOrder.UNKNOWN))
+                .build(),
+            null,
+            ImmutableMap.<String, DataType>builder()
+                .put("c1", DataType.TEXT)
+                .put("c2", DataType.BIGINT)
+                .put("c3", DataType.BOOLEAN)
+                .put("c4", DataType.BLOB)
+                .put("c5", DataType.INT)
+                .put("c6", DataType.DOUBLE)
+                .put("c7", DataType.FLOAT)
+                .build());
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doReturn(Optional.of(rdbTableMetadata)).when(adminSpy).getRdbTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
 
   @Test
   public void
@@ -2795,7 +3145,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  void getRdbTableMetadata_shouldReturnProperValue() throws SQLException, ExecutionException {
+  void getRdbTableMetadata_ShouldReturnProperValue() throws SQLException, ExecutionException {
     // Arrange
     Statement checkTableExistStatement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -2803,7 +3153,7 @@ public class JdbcAdminTest {
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
     when(connection.getMetaData()).thenReturn(metadata);
 
-    //  Primary keys
+    //  Primary keys.
     ResultSet primaryKeyResults = mock(ResultSet.class);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk2").thenReturn("pk1");
@@ -2811,12 +3161,6 @@ public class JdbcAdminTest {
     when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
 
     // Index keys.
-    /*
-         int position = indexInfo.getInt("ORDINAL_POSITION");
-         String colName = indexInfo.getString("COLUMN_NAME");
-         String indexName = indexInfo.getString("INDEX_NAME");
-         String ascOrDesc = indexInfo.getString("ASC_OR_DESC");
-    */
     ResultSet indexKeyResults = mock(ResultSet.class);
     when(indexKeyResults.next())
         .thenReturn(true)
@@ -2837,7 +3181,7 @@ public class JdbcAdminTest {
         .thenReturn("A");
     when(metadata.getIndexInfo(null, NAMESPACE, TABLE, false, false)).thenReturn(indexKeyResults);
 
-    //  Columns
+    //  Columns.
     ResultSet columnResults = mock(ResultSet.class);
     when(columnResults.next())
         .thenReturn(true)
@@ -2895,6 +3239,8 @@ public class JdbcAdminTest {
         .containsExactly(
             new PrimaryKeyColumn("pk1", SortOrder.ASC),
             new PrimaryKeyColumn("pk2", SortOrder.DESC));
+    assertThat(rdbTableMetadata.indexColumns)
+        .containsExactly(new IndexColumn("col2", SortOrder.ASC));
     assertThat(rdbTableMetadata.columns.keySet()).containsExactly("pk1", "pk2", "col1", "col2");
     assertThat(rdbTableMetadata.columns.get("pk1")).isEqualTo(DataType.INT);
     assertThat(rdbTableMetadata.columns.get("pk2")).isEqualTo(DataType.TEXT);
@@ -2912,6 +3258,225 @@ public class JdbcAdminTest {
     verify(rdbEngine)
         .getDataTypeForScalarDbLeniently(
             eq(JDBCType.BIGINT), eq("bigintbig"), eq(40), eq(44), anyString());
+  }
+
+  @Test
+  void getRdbTableMetadata_WithoutIndexOrders_ShouldReturnProperValue()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    when(connection.getMetaData()).thenReturn(metadata);
+
+    //  Primary keys.
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk2").thenReturn("pk1");
+    when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(2).thenReturn(1);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+
+    // Index keys.
+    ResultSet indexKeyResults = mock(ResultSet.class);
+    when(indexKeyResults.next())
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(false);
+    when(indexKeyResults.getString(JDBC_INDEX_COLUMN_NAME))
+        .thenReturn("pk2")
+        .thenReturn("col2")
+        .thenReturn("pk1");
+    when(indexKeyResults.getString(JDBC_INDEX_INDEX_NAME))
+        .thenReturn("test_primary_key")
+        .thenReturn(String.format("index_%s_%s_%s", NAMESPACE, TABLE, "col2"))
+        .thenReturn("test_primary_key");
+    // This RDB engine doesn't return index order information.
+    when(indexKeyResults.getString(JDBC_INDEX_ASC_OR_DESC))
+        .thenReturn(null)
+        .thenReturn(null)
+        .thenReturn(null);
+    when(metadata.getIndexInfo(null, NAMESPACE, TABLE, false, false)).thenReturn(indexKeyResults);
+
+    //  Columns.
+    ResultSet columnResults = mock(ResultSet.class);
+    when(columnResults.next())
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME))
+        .thenReturn("pk1")
+        .thenReturn("pk2")
+        .thenReturn("col1")
+        .thenReturn("col2");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+        .thenReturn(Types.INTEGER)
+        .thenReturn(Types.VARCHAR)
+        .thenReturn(Types.FLOAT)
+        .thenReturn(Types.BIGINT);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME))
+        .thenReturn("intintint")
+        .thenReturn("texttext")
+        .thenReturn("floatfloat")
+        .thenReturn("bigintbig");
+    when(columnResults.getInt(JDBC_COL_COLUMN_SIZE))
+        .thenReturn(10)
+        .thenReturn(20)
+        .thenReturn(30)
+        .thenReturn(40);
+    when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS))
+        .thenReturn(11)
+        .thenReturn(22)
+        .thenReturn(33)
+        .thenReturn(44);
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+
+    RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
+    when(rdbEngine.getSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
+    when(rdbEngine.getTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
+    when(rdbEngine.getDataTypeForScalarDbLeniently(
+            any(), anyString(), anyInt(), anyInt(), anyString()))
+        .thenReturn(DataType.INT)
+        .thenReturn(DataType.TEXT)
+        .thenReturn(DataType.FLOAT)
+        .thenReturn(DataType.BIGINT);
+    when(rdbEngine.isIndexInfoSupported(any())).thenReturn(true);
+    when(rdbEngine.isDefaultPrimaryKeyIndex(NAMESPACE, TABLE, "test_primary_key")).thenReturn(true);
+    JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
+
+    // Act
+    Optional<RdbTableMetadata> optRdbTableMetadata = admin.getRdbTableMetadata(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(optRdbTableMetadata).isPresent();
+    RdbTableMetadata rdbTableMetadata = optRdbTableMetadata.get();
+    assertThat(rdbTableMetadata.primaryKeyColumns)
+        .containsExactly(
+            new PrimaryKeyColumn("pk1", SortOrder.UNKNOWN),
+            new PrimaryKeyColumn("pk2", SortOrder.UNKNOWN));
+    assertThat(rdbTableMetadata.indexColumns)
+        .containsExactly(new IndexColumn("col2", SortOrder.UNKNOWN));
+    assertThat(rdbTableMetadata.columns.keySet()).containsExactly("pk1", "pk2", "col1", "col2");
+    assertThat(rdbTableMetadata.columns.get("pk1")).isEqualTo(DataType.INT);
+    assertThat(rdbTableMetadata.columns.get("pk2")).isEqualTo(DataType.TEXT);
+    assertThat(rdbTableMetadata.columns.get("col1")).isEqualTo(DataType.FLOAT);
+    assertThat(rdbTableMetadata.columns.get("col2")).isEqualTo(DataType.BIGINT);
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.INTEGER), eq("intintint"), eq(10), eq(11), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.VARCHAR), eq("texttext"), eq(20), eq(22), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.FLOAT), eq("floatfloat"), eq(30), eq(33), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.BIGINT), eq("bigintbig"), eq(40), eq(44), anyString());
+  }
+
+  @Test
+  void getRdbTableMetadata_WithoutIndexInfoSupported_ShouldReturnProperValue()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement checkTableExistStatement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    when(connection.getMetaData()).thenReturn(metadata);
+
+    //  Primary keys.
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk2").thenReturn("pk1");
+    when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(2).thenReturn(1);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+
+    // Index keys.
+    ResultSet indexKeyResults = mock(ResultSet.class);
+    when(metadata.getIndexInfo(null, NAMESPACE, TABLE, false, false)).thenReturn(indexKeyResults);
+
+    //  Columns.
+    ResultSet columnResults = mock(ResultSet.class);
+    when(columnResults.next())
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME))
+        .thenReturn("pk1")
+        .thenReturn("pk2")
+        .thenReturn("col1")
+        .thenReturn("col2");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+        .thenReturn(Types.INTEGER)
+        .thenReturn(Types.VARCHAR)
+        .thenReturn(Types.FLOAT)
+        .thenReturn(Types.BIGINT);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME))
+        .thenReturn("intintint")
+        .thenReturn("texttext")
+        .thenReturn("floatfloat")
+        .thenReturn("bigintbig");
+    when(columnResults.getInt(JDBC_COL_COLUMN_SIZE))
+        .thenReturn(10)
+        .thenReturn(20)
+        .thenReturn(30)
+        .thenReturn(40);
+    when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS))
+        .thenReturn(11)
+        .thenReturn(22)
+        .thenReturn(33)
+        .thenReturn(44);
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+
+    RdbEngineStrategy rdbEngine = mock(RdbEngineStrategy.class);
+    when(rdbEngine.getSchemaName(NAMESPACE)).thenReturn(NAMESPACE);
+    when(rdbEngine.getTableName(NAMESPACE, TABLE)).thenReturn(TABLE);
+    when(rdbEngine.getDataTypeForScalarDbLeniently(
+            any(), anyString(), anyInt(), anyInt(), anyString()))
+        .thenReturn(DataType.INT)
+        .thenReturn(DataType.TEXT)
+        .thenReturn(DataType.FLOAT)
+        .thenReturn(DataType.BIGINT);
+    // This RDB engine doesn't return proper index information.
+    when(rdbEngine.isIndexInfoSupported(any())).thenReturn(false);
+    when(rdbEngine.isDefaultPrimaryKeyIndex(NAMESPACE, TABLE, "test_primary_key")).thenReturn(true);
+    JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
+
+    // Act
+    Optional<RdbTableMetadata> optRdbTableMetadata = admin.getRdbTableMetadata(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(optRdbTableMetadata).isPresent();
+    RdbTableMetadata rdbTableMetadata = optRdbTableMetadata.get();
+    assertThat(rdbTableMetadata.primaryKeyColumns)
+        .containsExactly(
+            new PrimaryKeyColumn("pk1", SortOrder.UNKNOWN),
+            new PrimaryKeyColumn("pk2", SortOrder.UNKNOWN));
+    assertThat(rdbTableMetadata.indexColumns).isNull();
+    assertThat(rdbTableMetadata.columns.keySet()).containsExactly("pk1", "pk2", "col1", "col2");
+    assertThat(rdbTableMetadata.columns.get("pk1")).isEqualTo(DataType.INT);
+    assertThat(rdbTableMetadata.columns.get("pk2")).isEqualTo(DataType.TEXT);
+    assertThat(rdbTableMetadata.columns.get("col1")).isEqualTo(DataType.FLOAT);
+    assertThat(rdbTableMetadata.columns.get("col2")).isEqualTo(DataType.BIGINT);
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.INTEGER), eq("intintint"), eq(10), eq(11), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.VARCHAR), eq("texttext"), eq(20), eq(22), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.FLOAT), eq("floatfloat"), eq(30), eq(33), anyString());
+    verify(rdbEngine)
+        .getDataTypeForScalarDbLeniently(
+            eq(JDBCType.BIGINT), eq("bigintbig"), eq(40), eq(44), anyString());
+    verify(indexKeyResults, never()).getString(any());
   }
 
   @Test
