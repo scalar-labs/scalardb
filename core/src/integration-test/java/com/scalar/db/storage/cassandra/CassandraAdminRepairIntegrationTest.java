@@ -39,4 +39,8 @@ public class CassandraAdminRepairIntegrationTest
       "Inconsistency check for the raw table schema and the ScalarDB metadata isn't executed in schemaless database/storage")
   @Override
   public void repairTable_ForExistingTableAndMetadataWithMissingIndex_ShouldFail() {}
+
+  @Disabled("The current Repair Table implementation for Cassandra doesn't remove columns")
+  @Override
+  public void repairTable_ForExistingTableAndMetadataWithUnexpectedColumn_ShouldDoNothing() {}
 }

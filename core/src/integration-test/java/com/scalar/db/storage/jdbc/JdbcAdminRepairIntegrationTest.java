@@ -33,4 +33,14 @@ public class JdbcAdminRepairIntegrationTest
     }
     super.waitForDifferentSessionDdl();
   }
+
+  @Override
+  public void repairTable_ForExistingTableAndMetadataWithMissingIndex_ShouldFail()
+      throws Exception {
+    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isMysql(rdbEngine)) {
+      // These RDB engines don't provide proper index information.
+      return;
+    }
+    super.repairTable_ForExistingTableAndMetadataWithMissingIndex_ShouldFail();
+  }
 }

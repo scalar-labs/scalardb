@@ -505,119 +505,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  @VisibleForTesting
-  Optional<RdbTableMetadata> getRdbTableMetadata(String namespace, String table)
-      throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      String catalogName = rdbEngine.getCatalogName(namespace);
-      String schemaName = rdbEngine.getSchemaName(namespace);
-      String tableName = rdbEngine.getTableName(namespace, table);
-
-      if (!tableExistsInternal(connection, namespace, table)) {
-        return Optional.empty();
-      }
-
-      DatabaseMetaData metadata = connection.getMetaData();
-
-      // Collect the primary key for partition keys and clustering keys.
-      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, tableName);
-      Map<Integer, String> primaryKeysWithSeq = new HashMap<>();
-      while (resultSet.next()) {
-        int keySeq = resultSet.getInt(JDBC_COL_KEY_SEQ);
-        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        primaryKeysWithSeq.put(keySeq, columnName);
-      }
-
-      // Collect the index information for clustering keys and secondary index.
-      Map<String, PrimaryKeyColumn> primaryKeyIndex = new HashMap<>();
-      ImmutableSet<IndexColumn> normalIndexColumns = null;
-      if (rdbEngine.isIndexInfoSupported(metadata)) {
-        Optional<String> primaryKeyIndexName = rdbEngine.getPrimaryKeyIndexName(namespace, table);
-        Set<IndexColumn> normalIndexes = new HashSet<>();
-        ResultSet indexInfo =
-            metadata.getIndexInfo(catalogName, schemaName, tableName, false, false);
-        while (indexInfo.next()) {
-          String colName = indexInfo.getString(JDBC_INDEX_COLUMN_NAME);
-          if (colName == null) {
-            continue;
-          }
-          String indexName = indexInfo.getString(JDBC_INDEX_INDEX_NAME);
-          String ascOrDesc = indexInfo.getString(JDBC_INDEX_ASC_OR_DESC);
-          SortOrder sortOrder = SortOrder.UNKNOWN;
-          if (ascOrDesc != null) {
-            if (ascOrDesc.equals("A")) {
-              sortOrder = SortOrder.ASC;
-            } else if (ascOrDesc.equals("D")) {
-              sortOrder = SortOrder.DESC;
-            } else {
-              throw new IllegalStateException("Unexpected value for ASC_OR_DESC: " + ascOrDesc);
-            }
-          }
-
-          // There are possibly 2 indexes for the primary key. The first one is an index created
-          // with CREATE TABLE (PRIMARY KEY). The second one is a custom index created by CREATE
-          // INDEX for RDB engines that can't create primary keys with different orderings.
-          // If the second index exists, the first index isn't used for the ScalarDB clustering
-          // keys.
-          if (primaryKeyIndexName.isPresent() && indexName.equals(primaryKeyIndexName.get())) {
-            primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
-          } else if (rdbEngine.isDefaultPrimaryKeyIndex(namespace, table, indexName)) {
-            if (!primaryKeyIndex.containsKey(colName)) {
-              primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
-            }
-          } else if (indexName.equals(getIndexName(namespace, table, colName))) {
-            normalIndexes.add(new IndexColumn(colName, sortOrder));
-          }
-        }
-
-        normalIndexColumns = ImmutableSet.copyOf(normalIndexes);
-      }
-
-      // Sort the primary keys by the key sequence.
-      ImmutableList<PrimaryKeyColumn> primaryKeyColumns;
-      {
-        ImmutableList.Builder<PrimaryKeyColumn> builder = ImmutableList.builder();
-        for (int keySeq :
-            primaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
-          String colName = primaryKeysWithSeq.get(keySeq);
-          // Use primary key column info if it's already collected with index key column ordering.
-          PrimaryKeyColumn primaryKeyColumn = primaryKeyIndex.get(colName);
-          if (primaryKeyColumn != null) {
-            builder.add(primaryKeyColumn);
-          } else {
-            builder.add(new PrimaryKeyColumn(colName, SortOrder.UNKNOWN));
-          }
-        }
-        primaryKeyColumns = builder.build();
-      }
-
-      // Collect the column information.
-      ImmutableMap.Builder<String, DataType> columnBuilder = ImmutableMap.builder();
-      resultSet = metadata.getColumns(catalogName, schemaName, tableName, "%");
-      while (resultSet.next()) {
-        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        JDBCType jdbcType = getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE));
-        String typeName = resultSet.getString(JDBC_COL_TYPE_NAME);
-        int colSize = resultSet.getInt(JDBC_COL_COLUMN_SIZE);
-        int colDigit = resultSet.getInt(JDBC_COL_DECIMAL_DIGITS);
-        String colDesc = getFullTableName(namespace, table) + " " + columnName;
-        DataType scalarDbDataType;
-        scalarDbDataType =
-            rdbEngine.getDataTypeForScalarDbLeniently(
-                jdbcType, typeName, colSize, colDigit, colDesc);
-        columnBuilder.put(columnName, scalarDbDataType);
-      }
-      return Optional.of(
-          new RdbTableMetadata(primaryKeyColumns, normalIndexColumns, columnBuilder.build()));
-    } catch (SQLException e) {
-      throw new ExecutionException(
-          "Getting a table metadata for the "
-              + getFullTableName(namespace, table)
-              + " table failed",
-          e);
-    }
-  }
-
   @Override
   public TableMetadata getImportTableMetadata(String namespace, String table)
       throws ExecutionException {
@@ -917,6 +804,119 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       upsertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException(String.format("Repairing the %s schema failed", namespace), e);
+    }
+  }
+
+  @VisibleForTesting
+  Optional<RdbTableMetadata> getRdbTableMetadata(String namespace, String table)
+      throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      String catalogName = rdbEngine.getCatalogName(namespace);
+      String schemaName = rdbEngine.getSchemaName(namespace);
+      String tableName = rdbEngine.getTableName(namespace, table);
+
+      if (!tableExistsInternal(connection, namespace, table)) {
+        return Optional.empty();
+      }
+
+      DatabaseMetaData metadata = connection.getMetaData();
+
+      // Collect the primary key for partition keys and clustering keys.
+      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, tableName);
+      Map<Integer, String> primaryKeysWithSeq = new HashMap<>();
+      while (resultSet.next()) {
+        int keySeq = resultSet.getInt(JDBC_COL_KEY_SEQ);
+        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+        primaryKeysWithSeq.put(keySeq, columnName);
+      }
+
+      // Collect the index information for clustering keys and secondary index.
+      Map<String, PrimaryKeyColumn> primaryKeyIndex = new HashMap<>();
+      ImmutableSet<IndexColumn> normalIndexColumns = null;
+      if (rdbEngine.isIndexInfoSupported(metadata)) {
+        Optional<String> primaryKeyIndexName = rdbEngine.getPrimaryKeyIndexName(namespace, table);
+        Set<IndexColumn> normalIndexes = new HashSet<>();
+        ResultSet indexInfo =
+            metadata.getIndexInfo(catalogName, schemaName, tableName, false, false);
+        while (indexInfo.next()) {
+          String colName = indexInfo.getString(JDBC_INDEX_COLUMN_NAME);
+          if (colName == null) {
+            continue;
+          }
+          String indexName = indexInfo.getString(JDBC_INDEX_INDEX_NAME);
+          String ascOrDesc = indexInfo.getString(JDBC_INDEX_ASC_OR_DESC);
+          SortOrder sortOrder = SortOrder.UNKNOWN;
+          if (ascOrDesc != null) {
+            if (ascOrDesc.equals("A")) {
+              sortOrder = SortOrder.ASC;
+            } else if (ascOrDesc.equals("D")) {
+              sortOrder = SortOrder.DESC;
+            } else {
+              throw new IllegalStateException("Unexpected value for ASC_OR_DESC: " + ascOrDesc);
+            }
+          }
+
+          // There are possibly 2 indexes for the primary key. The first one is an index created
+          // with CREATE TABLE (PRIMARY KEY). The second one is a custom index created by CREATE
+          // INDEX for RDB engines that can't create primary keys with different orderings.
+          // If the second index exists, the first index isn't used for the ScalarDB clustering
+          // keys.
+          if (primaryKeyIndexName.isPresent() && indexName.equals(primaryKeyIndexName.get())) {
+            primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
+          } else if (rdbEngine.isDefaultPrimaryKeyIndex(namespace, table, indexName)) {
+            if (!primaryKeyIndex.containsKey(colName)) {
+              primaryKeyIndex.put(colName, new PrimaryKeyColumn(colName, sortOrder));
+            }
+          } else if (indexName.equals(getIndexName(namespace, table, colName))) {
+            normalIndexes.add(new IndexColumn(colName, sortOrder));
+          }
+        }
+
+        normalIndexColumns = ImmutableSet.copyOf(normalIndexes);
+      }
+
+      // Sort the primary keys by the key sequence.
+      ImmutableList<PrimaryKeyColumn> primaryKeyColumns;
+      {
+        ImmutableList.Builder<PrimaryKeyColumn> builder = ImmutableList.builder();
+        for (int keySeq :
+            primaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
+          String colName = primaryKeysWithSeq.get(keySeq);
+          // Use primary key column info if it's already collected with index key column ordering.
+          PrimaryKeyColumn primaryKeyColumn = primaryKeyIndex.get(colName);
+          if (primaryKeyColumn != null) {
+            builder.add(primaryKeyColumn);
+          } else {
+            builder.add(new PrimaryKeyColumn(colName, SortOrder.UNKNOWN));
+          }
+        }
+        primaryKeyColumns = builder.build();
+      }
+
+      // Collect the column information.
+      ImmutableMap.Builder<String, DataType> columnBuilder = ImmutableMap.builder();
+      resultSet = metadata.getColumns(catalogName, schemaName, tableName, "%");
+      while (resultSet.next()) {
+        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+        JDBCType jdbcType = getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE));
+        String typeName = resultSet.getString(JDBC_COL_TYPE_NAME);
+        int colSize = resultSet.getInt(JDBC_COL_COLUMN_SIZE);
+        int colDigit = resultSet.getInt(JDBC_COL_DECIMAL_DIGITS);
+        String colDesc = getFullTableName(namespace, table) + " " + columnName;
+        DataType scalarDbDataType;
+        scalarDbDataType =
+            rdbEngine.getDataTypeForScalarDbLeniently(
+                jdbcType, typeName, colSize, colDigit, colDesc);
+        columnBuilder.put(columnName, scalarDbDataType);
+      }
+      return Optional.of(
+          new RdbTableMetadata(primaryKeyColumns, normalIndexColumns, columnBuilder.build()));
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          "Getting a table metadata for the "
+              + getFullTableName(namespace, table)
+              + " table failed",
+          e);
     }
   }
 
