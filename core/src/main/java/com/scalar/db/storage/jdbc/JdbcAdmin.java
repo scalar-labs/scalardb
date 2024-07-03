@@ -521,11 +521,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       // Collect the primary key for partition keys and clustering keys.
       ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, tableName);
-      Map<Integer, String> rawPrimaryKeysWithSeq = new HashMap<>();
+      Map<Integer, String> primaryKeysWithSeq = new HashMap<>();
       while (resultSet.next()) {
         int keySeq = resultSet.getInt(JDBC_COL_KEY_SEQ);
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        rawPrimaryKeysWithSeq.put(keySeq, columnName);
+        primaryKeysWithSeq.put(keySeq, columnName);
       }
 
       // Collect the index information for clustering keys and secondary index.
@@ -570,14 +570,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         normalIndexColumns = ImmutableSet.copyOf(normalIndexes);
       }
 
-      // Sort the raw primary keys by the key sequence.
+      // Sort the primary keys by the key sequence.
       ImmutableList<PrimaryKeyColumn> primaryKeyColumns;
       {
         ImmutableList.Builder<PrimaryKeyColumn> builder = ImmutableList.builder();
         for (int keySeq :
-            rawPrimaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
-          String colName = rawPrimaryKeysWithSeq.get(keySeq);
-          builder.add(primaryKeyIndex.get(colName));
+            primaryKeysWithSeq.keySet().stream().sorted().collect(Collectors.toList())) {
+          String colName = primaryKeysWithSeq.get(keySeq);
+          // Use primary key column info if it's already collected with index key column ordering.
+          PrimaryKeyColumn primaryKeyColumn = primaryKeyIndex.get(colName);
+          if (primaryKeyColumn != null) {
+            builder.add(primaryKeyColumn);
+          } else {
+            builder.add(new PrimaryKeyColumn(colName, SortOrder.UNKNOWN));
+          }
         }
         primaryKeyColumns = builder.build();
       }
@@ -915,12 +921,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   void checkRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     // Repairing table is supposed to be used for the following purposes:
-    // 1. To create a raw table in the underlying RDBMS with the expected metadata if the table
+    // 1. To create a table in the underlying RDBMS with the expected metadata if the table
     //    doesn't exist.
     // 2. To update the ScalarDB metadata table to synchronize it with the expected state.
     //
-    // Also, the ScalarDB metadata table and the raw table schema must be consistent. Therefore,
-    // the operation should fail if the raw table already exists with inconsistent schema.
+    // Also, the ScalarDB metadata table and the RDB table schema must be consistent. Therefore,
+    // the operation should fail if the RDB table already exists with inconsistent schema.
     Optional<RdbTableMetadata> optRdbTableMetadata = getRdbTableMetadata(namespace, table);
     if (!optRdbTableMetadata.isPresent()) {
       return;
@@ -999,13 +1005,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       if (metadata.getColumnNames().size() != rdbTableMetadata.columns.size()) {
         throw new IllegalStateException(
             String.format(
-                "The sizes of columns are different between the ScalarDB metadata (%d) and the raw table schema (%d)",
+                "The sizes of columns are different between the ScalarDB metadata (%d) and the RDB table schema (%d)",
                 metadata.getColumnNames().size(), rdbTableMetadata.columns.size()));
       }
       for (String columnName : metadata.getColumnNames()) {
         if (!rdbTableMetadata.columns.containsKey(columnName)) {
           throw new IllegalStateException(
-              String.format("Column '%s' doesn't exist in the raw table schema", columnName));
+              String.format("Column '%s' doesn't exist in the RDB table schema", columnName));
         }
 
         DataType columnDataType = metadata.getColumnDataType(columnName);
@@ -1040,7 +1046,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (IllegalStateException e) {
       throw new IllegalStateException(
           String.format(
-              "Failed to repair table since the raw table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDB metadata:%s, Raw table schema:%s, Details:%s",
+              "Failed to repair table since the RDB table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDB metadata:%s, Raw table schema:%s, Details:%s",
               namespace, table, metadata, rdbTableMetadata, e.getMessage()),
           e);
     }

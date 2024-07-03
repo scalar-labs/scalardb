@@ -65,6 +65,7 @@ class RdbTableMetadata {
     }
 
     public PrimaryKeyColumn(String name) {
+      // TODO: Revisit this default.
       this(name, SortOrder.ASC);
     }
 
@@ -101,6 +102,7 @@ class RdbTableMetadata {
     }
 
     public IndexColumn(String name) {
+      // TODO: Revisit this default.
       this(name, SortOrder.ASC);
     }
 
