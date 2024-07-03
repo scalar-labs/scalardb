@@ -396,35 +396,46 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public boolean isIndexInfoSupported(DatabaseMetaData metaData) {
     // `java.sql.DatabaseMetaData.getIndexInfo()` with Oracle returns index information as follows:
-    //
+    // ---------------------------------------------------------------------------------------
     // TABLE_SCHEM:int_test_tx_admin_repair, TABLE_NAME:test_table, INDEX_NAME:null, TYPE:0,
     // COLUMN_NAME:null, ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:int_test_tx_admin_repair, TABLE_NAME:test_table, INDEX_NAME:SYS_C007351, TYPE:1,
     // COLUMN_NAME:c2, ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:int_test_tx_admin_repair, TABLE_NAME:test_table, INDEX_NAME:SYS_C007351, TYPE:1,
     // COLUMN_NAME:c1, ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:int_test_tx_admin_repair, TABLE_NAME:test_table, INDEX_NAME:SYS_C007351, TYPE:1,
     // COLUMN_NAME:c4, ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:int_test_tx_admin_repair, TABLE_NAME:test_table, INDEX_NAME:SYS_C007351, TYPE:1,
     // COLUMN_NAME:c3, ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:SYSTEM, TABLE_NAME:test_table,
     // INDEX_NAME:int_test_tx_admin_repair.test_table_clustering_order_idx, TYPE:1, COLUMN_NAME:c2,
     // ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:SYSTEM, TABLE_NAME:test_table,
     // INDEX_NAME:int_test_tx_admin_repair.test_table_clustering_order_idx, TYPE:1, COLUMN_NAME:c1,
     // ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:SYSTEM, TABLE_NAME:test_table,
     // INDEX_NAME:int_test_tx_admin_repair.test_table_clustering_order_idx, TYPE:1, COLUMN_NAME:c4,
     // ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:SYSTEM, TABLE_NAME:test_table,
     // INDEX_NAME:int_test_tx_admin_repair.test_table_clustering_order_idx, TYPE:1,
     // COLUMN_NAME:SYS_NC00029$, ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:SYSTEM, TABLE_NAME:test_table,
     // INDEX_NAME:index_int_test_tx_admin_repair_test_table_c5, TYPE:1, COLUMN_NAME:c5,
     // ASC_OR_DESC:null
+    //
     // TABLE_SCHEM:SYSTEM, TABLE_NAME:test_table,
     // INDEX_NAME:index_int_test_tx_admin_repair_test_table_c6, TYPE:1, COLUMN_NAME:c6,
     // ASC_OR_DESC:null
+    // ---------------------------------------------------------------------------------------
     //
     // The necessary information spans over 2 schemas, and some index names and column names are
     // `SYS_xxxxxxx`, which are hard to use.

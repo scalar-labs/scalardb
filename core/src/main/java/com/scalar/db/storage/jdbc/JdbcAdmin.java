@@ -821,7 +821,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       DatabaseMetaData metadata = connection.getMetaData();
 
-      // Collect the primary key for partition keys and clustering keys.
+      // Collect the primary key to check the partition keys and clustering keys.
       ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, tableName);
       Map<Integer, String> primaryKeysWithSeq = new HashMap<>();
       while (resultSet.next()) {
@@ -830,7 +830,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         primaryKeysWithSeq.put(keySeq, columnName);
       }
 
-      // Collect the index information for clustering keys and secondary index.
+      // Collect the index information to check the clustering keys and secondary index.
       Map<String, PrimaryKeyColumn> primaryKeyIndex = new HashMap<>();
       ImmutableSet<IndexColumn> normalIndexColumns = null;
       if (rdbEngine.isIndexInfoSupported(metadata)) {
@@ -921,15 +921,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @VisibleForTesting
-  void checkRawTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
+  void checkRdbTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    // Repairing table is supposed to be used for the following purposes:
+    // Repairing table in this class does the following things:
     // 1. To create a table in the underlying RDBMS with the expected metadata if the table
     //    doesn't exist.
     // 2. To update the ScalarDB metadata table to synchronize it with the expected state.
     //
-    // Also, the ScalarDB metadata table and the RDB table schema must be consistent. Therefore,
-    // the operation should fail if the RDB table already exists with inconsistent schema.
+    // The first one is specific to JDBC storage since underlying RDB tables are schemafull.
+    //
+    // The ScalarDB metadata table and the RDB table schema must be consistent. Therefore,
+    // the operation should fail if the RDB table already exists with an unexpected table schema.
     Optional<RdbTableMetadata> optRdbTableMetadata = getRdbTableMetadata(namespace, table);
     if (!optRdbTableMetadata.isPresent()) {
       return;
@@ -1065,7 +1067,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
 
-    checkRawTableSchemaForRepairTable(namespace, table, metadata);
+    checkRdbTableSchemaForRepairTable(namespace, table, metadata);
 
     try (Connection connection = dataSource.getConnection()) {
       createTableInternal(connection, namespace, table, metadata, true);
