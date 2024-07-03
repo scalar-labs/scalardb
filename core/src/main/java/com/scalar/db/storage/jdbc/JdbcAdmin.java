@@ -531,13 +531,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       // Collect the index information for clustering keys and secondary index.
       Map<String, PrimaryKeyColumn> primaryKeyIndex = new HashMap<>();
       ImmutableSet<IndexColumn> normalIndexColumns = null;
-      if (rdbEngine.isIndexInfoSupported()) {
+      if (rdbEngine.isIndexInfoSupported(metadata)) {
         Optional<String> primaryKeyIndexName = rdbEngine.getPrimaryKeyIndexName(namespace, table);
         Set<IndexColumn> normalIndexes = new HashSet<>();
         ResultSet indexInfo =
             metadata.getIndexInfo(catalogName, schemaName, tableName, false, false);
         while (indexInfo.next()) {
           String colName = indexInfo.getString(JDBC_INDEX_COLUMN_NAME);
+          if (colName == null) {
+            continue;
+          }
           String indexName = indexInfo.getString(JDBC_INDEX_INDEX_NAME);
           String ascOrDesc = indexInfo.getString(JDBC_INDEX_ASC_OR_DESC);
           SortOrder sortOrder = SortOrder.UNKNOWN;
@@ -1158,10 +1161,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private String getIndexName(String schema, String table, String indexedColumn) {
     return String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
-  }
-
-  private String getIndexNamePrefixWithoutColumns(String schema, String table) {
-    return String.join("_", INDEX_NAME_PREFIX, schema, table);
   }
 
   private void updateTableMetadata(

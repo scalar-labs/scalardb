@@ -9,6 +9,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
@@ -418,6 +419,17 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
     // method is used for filtering.
     return namespace;
+  }
+
+  @Override
+  public boolean isIndexInfoSupported(DatabaseMetaData metaData) throws SQLException {
+    // https://dev.mysql.com/doc/refman/5.7/en/create-index.html describes as follows:
+    // > A key_part specification can end with ASC or DESC. These keywords are permitted for future
+    //   extensions for specifying ascending or descending index value storage. Currently, they are
+    //   parsed but ignored; index values are always stored in ascending order.
+    //
+    // The document about version 8 doesn't mention such a limitation.
+    return metaData.getDatabaseMajorVersion() >= 8;
   }
 
   @Override

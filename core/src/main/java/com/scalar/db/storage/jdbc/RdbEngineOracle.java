@@ -11,6 +11,7 @@ import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
@@ -393,7 +394,7 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public boolean isIndexInfoSupported() {
+  public boolean isIndexInfoSupported(DatabaseMetaData metaData) {
     return false;
   }
 

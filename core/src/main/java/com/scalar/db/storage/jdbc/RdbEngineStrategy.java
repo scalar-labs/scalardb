@@ -6,6 +6,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
@@ -140,7 +141,7 @@ public interface RdbEngineStrategy {
     return table;
   }
 
-  default boolean isIndexInfoSupported() {
+  default boolean isIndexInfoSupported(DatabaseMetaData metaData) throws SQLException {
     return true;
   }
 

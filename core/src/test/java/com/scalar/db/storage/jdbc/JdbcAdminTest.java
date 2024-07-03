@@ -2881,7 +2881,7 @@ public class JdbcAdminTest {
         .thenReturn(DataType.TEXT)
         .thenReturn(DataType.FLOAT)
         .thenReturn(DataType.BIGINT);
-    when(rdbEngine.isIndexInfoSupported()).thenReturn(true);
+    when(rdbEngine.isIndexInfoSupported(any())).thenReturn(true);
     when(rdbEngine.isDefaultPrimaryKeyIndex(NAMESPACE, TABLE, "test_primary_key")).thenReturn(true);
     JdbcAdmin admin = createJdbcAdminWithMockRdbEngine(rdbEngine);
 
