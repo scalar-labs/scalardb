@@ -69,4 +69,38 @@ public class CheckedDistributedStorageAdminTest {
             () -> checkedAdmin.createTable(namespaceName, tableName, tableMetadata, options))
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void repairTable_ShouldCallAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespaceName = "ns";
+    String tableName = "tbl";
+
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    Map<String, String> options = ImmutableMap.of("name", "value");
+
+    // Act
+    checkedAdmin.repairTable(namespaceName, tableName, tableMetadata, options);
+
+    // Assert
+    verify(admin).repairTable(namespaceName, tableName, tableMetadata, options);
+  }
+
+  @Test
+  public void
+      repairTable_TableMetadataWithEncryptedColumns_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String namespaceName = "ns";
+    String tableName = "tbl";
+
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(tableMetadata.getEncryptedColumnNames()).thenReturn(Collections.singleton("col"));
+
+    Map<String, String> options = ImmutableMap.of("name", "value");
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> checkedAdmin.repairTable(namespaceName, tableName, tableMetadata, options))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
 }
