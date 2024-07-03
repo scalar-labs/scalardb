@@ -185,8 +185,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case BOOLEAN:
         return "BOOLEAN";
       case DOUBLE:
-      case FLOAT:
         return "DOUBLE";
+      case FLOAT:
+        return "REAL";
       case INT:
         return "INT";
       case TEXT:
