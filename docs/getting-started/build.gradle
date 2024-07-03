@@ -11,7 +11,7 @@ application {
 }
 
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.11.2'
+    implementation 'com.scalar-labs:scalardb:3.11.3'
     implementation 'org.slf4j:slf4j-simple:1.7.30'
 }
 
