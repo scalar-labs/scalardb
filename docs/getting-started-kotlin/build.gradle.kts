@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.scalar-labs", "scalardb", "3.10.4")
+    implementation("com.scalar-labs", "scalardb", "3.10.5")
     testImplementation(kotlin("test"))
 }
 
