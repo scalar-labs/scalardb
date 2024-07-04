@@ -852,7 +852,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             } else if (ascOrDesc.equals("D")) {
               sortOrder = SortOrder.DESC;
             } else {
-              throw new IllegalStateException("Unexpected value for ASC_OR_DESC: " + ascOrDesc);
+              throw new IllegalStateException(
+                  String.format(
+                      "Unexpected value for ASC_OR_DESC '%s'. Index name: %s, Column name: %s",
+                      ascOrDesc, indexName, colName));
             }
           }
 
@@ -911,7 +914,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
       return Optional.of(
           new RdbTableMetadata(primaryKeyColumns, normalIndexColumns, columnBuilder.build()));
-    } catch (SQLException e) {
+    } catch (Exception e) {
       throw new ExecutionException(
           "Getting a table metadata for the "
               + getFullTableName(namespace, table)
@@ -923,10 +926,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting
   void checkRdbTableSchemaForRepairTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    // Repairing table in this class does the following things:
-    // 1. To create a table in the underlying RDBMS with the expected metadata if the table
+    // Repairing table in this class does the following:
+    // 1. Creates a table in the underlying RDB with the expected metadata if the table
     //    doesn't exist.
-    // 2. To update the ScalarDB metadata table to synchronize it with the expected state.
+    // 2. Updates the ScalarDB metadata table to synchronize it with the expected state.
     //
     // The first one is specific to JDBC storage since underlying RDB tables are schemafull.
     //
@@ -958,7 +961,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         if (!primaryKeyColumn.name.equals(keyNameInMetadata)) {
           throw new IllegalStateException(
               String.format(
-                  "The primary key name is different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                  "The primary key name is different between the ScalarDB metadata '%s' and the RDB table schema '%s'",
                   keyNameInMetadata, primaryKeyColumn.name));
         }
 
@@ -974,7 +977,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         if (!primaryKeyColumn.name.equals(keyNameInMetadata)) {
           throw new IllegalStateException(
               String.format(
-                  "The primary key name is different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                  "The primary key name is different between the ScalarDB metadata '%s' and the RDB table schema '%s'",
                   keyNameInMetadata, primaryKeyColumn.name));
         }
 
@@ -1012,7 +1015,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         if (!indexColumnsWithDescOrder.isEmpty()) {
           throw new IllegalStateException(
               String.format(
-                  "There are missing index keys in the RDB table schema. Index columns: %s",
+                  "Index keys in the RDB table schema corresponding to the ScalarDB clustering keys must be ASC order. Index columns: %s",
                   indexColumnsWithDescOrder));
         }
       }
@@ -1025,14 +1028,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
 
         DataType columnDataType = metadata.getColumnDataType(columnName);
-        DataType columnDataTypeOfRawTable = rdbTableMetadata.columns.get(columnName);
+        DataType columnDataTypeOfRdbTable = rdbTableMetadata.columns.get(columnName);
         if (columnDataType == DataType.FLOAT || columnDataType == DataType.DOUBLE) {
           // Some RDBMS internally use the same data type for ScalarDB FLOAT and DOUBLE.
           // If either data type is returned from the underlying RDBMS, ScalarDB can't distinguish
           // which ScalarDB data type was actually specified in the table schema. Therefore, we
           // treat FLOAT and DOUBLE as the same group.
-          if (columnDataTypeOfRawTable == DataType.FLOAT
-              || columnDataTypeOfRawTable == DataType.DOUBLE) {
+          if (columnDataTypeOfRdbTable == DataType.FLOAT
+              || columnDataTypeOfRdbTable == DataType.DOUBLE) {
             continue;
           }
         } else if (columnDataType == DataType.BOOLEAN
@@ -1041,22 +1044,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           // Handle BOOLEAN, INT and BIGINT similarly to FLOAT and DOUBLE. Regarding BOOLEAN,
           // some RDBMS use a numeric type as BOOLEAN. Therefore, we leniently treat BOOLEAN as the
           // same group here.
-          if (columnDataTypeOfRawTable == DataType.BOOLEAN
-              || columnDataTypeOfRawTable == DataType.INT
-              || columnDataTypeOfRawTable == DataType.BIGINT) {
+          if (columnDataTypeOfRdbTable == DataType.BOOLEAN
+              || columnDataTypeOfRdbTable == DataType.INT
+              || columnDataTypeOfRdbTable == DataType.BIGINT) {
             continue;
           }
-        } else if (columnDataType.equals(columnDataTypeOfRawTable)) {
+        } else if (columnDataType.equals(columnDataTypeOfRdbTable)) {
           continue;
         }
 
         throw new IllegalStateException(
-            String.format("The data type of column '%s' are different", columnName));
+            String.format(
+                "The data type of column '%s' are different between the ScalarDB metadata (%s) and the RDB table schema (%s)",
+                columnName, columnDataType, columnDataTypeOfRdbTable));
       }
     } catch (IllegalStateException e) {
       throw new IllegalStateException(
           String.format(
-              "Failed to repair table since the RDB table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDB metadata:%s, Raw table schema:%s, Details:%s",
+              "Failed to repair table since the RDB table with inconsistent schema exists. Namespace:%s, Table:%s, ScalarDB metadata:%s, RDB table schema:%s, Details:%s",
               namespace, table, metadata, rdbTableMetadata, e.getMessage()),
           e);
     }
