@@ -8,11 +8,11 @@ public class ConsensusCommitIntegrationTestWithDynamo extends ConsensusCommitInt
 
   @Override
   protected Properties getProps(String testName) {
-    return DynamoEnv.getProperties(testName);
+    return ConsensusCommitDynamoEnv.getProperties(testName);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return DynamoEnv.getCreationOptions();
+    return ConsensusCommitDynamoEnv.getCreationOptions();
   }
 }

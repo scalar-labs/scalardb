@@ -3,6 +3,7 @@ package com.scalar.db.dataloader.core.util;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -68,7 +69,8 @@ class ColumnUtilsTest {
   void createColumnFromValue_validInput_returnsColumn(
       DataType dataType, String columnName, String value, Column<?> expectedColumn)
       throws ColumnParsingException {
-    Column<?> actualColumn = ColumnUtils.createColumnFromValue(dataType, columnName, value);
+    ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
+    Column<?> actualColumn = ColumnUtils.createColumnFromValue(dataType, columnInfo, value);
     assertEquals(expectedColumn, actualColumn);
   }
 
@@ -76,12 +78,15 @@ class ColumnUtilsTest {
   void createColumnFromValue_invalidNumberFormat_throwsNumberFormatException() {
     String columnName = "intColumn";
     String value = "not_a_number";
-    NumberFormatException exception =
+    ColumnInfo columnInfo =
+        ColumnInfo.builder().namespace("ns").tableName("table").columnName(columnName).build();
+    ColumnParsingException exception =
         assertThrows(
-            NumberFormatException.class,
-            () -> ColumnUtils.createColumnFromValue(DataType.INT, columnName, value));
+            ColumnParsingException.class,
+            () -> ColumnUtils.createColumnFromValue(DataType.INT, columnInfo, value));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(columnName),
+        CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
+            columnName, "table", "ns"),
         exception.getMessage());
   }
 
@@ -89,12 +94,15 @@ class ColumnUtilsTest {
   void createColumnFromValue_invalidBase64_throwsBase64Exception() {
     String columnName = "blobColumn";
     String value = "invalid_base64";
+    ColumnInfo columnInfo =
+        ColumnInfo.builder().namespace("ns").tableName("table").columnName(columnName).build();
     ColumnParsingException exception =
         assertThrows(
             ColumnParsingException.class,
-            () -> ColumnUtils.createColumnFromValue(DataType.BLOB, columnName, value));
+            () -> ColumnUtils.createColumnFromValue(DataType.BLOB, columnInfo, value));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(columnName),
+        CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
+            columnName, "table", "ns"),
         exception.getMessage());
   }
 }

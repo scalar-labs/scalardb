@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import com.scalar.db.api.DistributedStorageAdminRepairIntegrationTestBase;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -15,16 +14,6 @@ public class CosmosAdminRepairIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return CosmosEnv.getProperties(testName);
-  }
-
-  @Override
-  protected String getNamespace() {
-    return getNamespace(super.getNamespace());
-  }
-
-  private String getNamespace(String namespace) {
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }
 
   @Override

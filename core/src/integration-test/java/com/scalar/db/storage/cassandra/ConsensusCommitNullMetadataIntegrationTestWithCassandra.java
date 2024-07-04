@@ -10,7 +10,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithCassandra
 
   @Override
   protected Properties getProperties(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

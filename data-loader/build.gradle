@@ -1,6 +1,7 @@
 subprojects {
     group = "scalardb.dataloader"
 
+
     ext {
         apacheCommonsLangVersion = '3.14.0'
         apacheCommonsIoVersion = '2.16.1'

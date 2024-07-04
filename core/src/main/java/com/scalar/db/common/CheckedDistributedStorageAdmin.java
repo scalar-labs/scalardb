@@ -56,6 +56,11 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
               ScalarDbUtils.getFullTableName(namespace, table)));
     }
 
+    if (!metadata.getEncryptedColumnNames().isEmpty()) {
+      throw new UnsupportedOperationException(
+          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage());
+    }
+
     try {
       admin.createTable(namespace, table, metadata, options);
     } catch (ExecutionException e) {
@@ -251,6 +256,11 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    if (!metadata.getEncryptedColumnNames().isEmpty()) {
+      throw new UnsupportedOperationException(
+          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage());
+    }
+
     try {
       admin.repairTable(namespace, table, metadata, options);
     } catch (ExecutionException e) {

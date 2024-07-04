@@ -35,6 +35,26 @@ public class DistributedStorageIntegrationTestWithServer
     }
   }
 
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetWithMatchedConjunctionsGiven_ShouldRetrieveSingleResult() {}
+
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetWithUnmatchedConjunctionsGiven_ShouldReturnEmpty() {}
+
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetGivenForIndexedColumnWithMatchedConjunctions_ShouldGet() {}
+
+  @Disabled("ScalarDB Server doesn't support get() with conjunctions")
+  @Override
+  @Test
+  public void get_GetGivenForIndexedColumnWithUnmatchedConjunctions_ShouldReturnEmpty() {}
+
   @Disabled("ScalarDB Server doesn't support scan() with conjunctions")
   @Override
   @Test

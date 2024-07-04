@@ -140,12 +140,12 @@ public class TableSchemaTest {
   }
 
   @Test
-  public void buildTableMetadata_ProperFormatTableDefinitionGiven_ShouldReturnProperTableMetadata()
-      throws SchemaLoaderException {
+  public void
+      buildTableMetadata_ProperFormatTableDefinitionGiven_ShouldReturnProperTableMetadata() {
     String tableDefinitionJson =
         "{\"transaction\": false,"
             + "\"partition-key\": [\"c1\"],"
-            + "\"clustering-key\": [\"c3\",\"c4 ASC\",\"c6 DESC\"],"
+            + "\"clustering-key\": [\"c3\",\"c4 ASC\",\"c6  DESC\"],"
             + "\"columns\": {"
             + "  \"c1\": \"INT\","
             + "  \"c2\": \"TEXT\","
@@ -183,6 +183,44 @@ public class TableSchemaTest {
   }
 
   @Test
+  public void
+      buildTableMetadata_ProperFormatTableDefinitionWithEncryptedColumnsGiven_ShouldReturnProperTableMetadata() {
+    String tableDefinitionJson =
+        "{\"transaction\": false,"
+            + "\"partition-key\": [\"c1\"],"
+            + "\"clustering-key\": [\"c3\",\"c4 ASC\",\"c6  DESC\"],"
+            + "\"columns\": {"
+            + "  \"c1\": \"INT\","
+            + "  \"c2\": \"TEXT ENCRYPTED\","
+            + "  \"c3\": \"BLOB\","
+            + "  \"c4\": \"INT\","
+            + "  \"c5\": \"BOOLEAN  ENCRYPTED\","
+            + "  \"c6\": \"INT\""
+            + "}}";
+    JsonObject tableDefinition = JsonParser.parseString(tableDefinitionJson).getAsJsonObject();
+
+    TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
+    tableBuilder.addPartitionKey("c1");
+    tableBuilder.addClusteringKey("c3");
+    tableBuilder.addClusteringKey("c4");
+    tableBuilder.addClusteringKey("c6", Order.DESC);
+    tableBuilder.addColumn("c1", DataType.INT);
+    tableBuilder.addColumn("c2", DataType.TEXT, true);
+    tableBuilder.addColumn("c3", DataType.BLOB);
+    tableBuilder.addColumn("c4", DataType.INT);
+    tableBuilder.addColumn("c5", DataType.BOOLEAN, true);
+    tableBuilder.addColumn("c6", DataType.INT);
+    TableMetadata expectedTableMetadata = tableBuilder.build();
+
+    // Act
+    TableMetadata tableMetadata =
+        new TableSchema("ns.tb", tableDefinition, Collections.emptyMap()).getTableMetadata();
+
+    // Assert
+    Assertions.assertThat(tableMetadata).isEqualTo(expectedTableMetadata);
+  }
+
+  @Test
   public void Table_WrongFormatTableFullNameGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     String tableFullName = "namespace_and_table_without_dot_separator";
@@ -194,11 +232,11 @@ public class TableSchemaTest {
   }
 
   @Test
-  public void constructor_TableDefinitionWithoutTransactionGiven_ShouldConstructProperTableSchema()
-      throws SchemaLoaderException {
+  public void
+      constructor_TableDefinitionWithoutTransactionGiven_ShouldConstructProperTableSchema() {
     String tableDefinitionJson =
         "{\"partition-key\": [\"c1\"],"
-            + "\"clustering-key\": [\"c3\",\"c4 ASC\",\"c6 DESC\"],"
+            + "\"clustering-key\": [\"c3\",\"c4 ASC\",\"c6  DESC\"],"
             + "\"columns\": {"
             + "  \"c1\": \"INT\","
             + "  \"c2\": \"TEXT\","

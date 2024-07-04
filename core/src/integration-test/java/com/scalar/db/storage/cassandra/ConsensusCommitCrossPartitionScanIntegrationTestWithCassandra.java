@@ -13,7 +13,7 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithCassandra
 
   @Override
   protected Properties getProps(String testName) {
-    Properties properties = CassandraEnv.getProperties(testName);
+    Properties properties = ConsensusCommitCassandraEnv.getProperties(testName);
     properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     return properties;
   }

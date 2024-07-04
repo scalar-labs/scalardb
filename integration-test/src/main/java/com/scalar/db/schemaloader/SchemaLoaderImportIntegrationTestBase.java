@@ -181,6 +181,54 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   }
 
   @Test
+  public void importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly()
+      throws Exception {
+    // Arrange
+    waitForDifferentSessionDdl();
+    transactionAdmin.createNamespace(namespace1);
+
+    waitForDifferentSessionDdl();
+    storageAdmin.createNamespace(namespace2);
+
+    waitForDifferentSessionDdl();
+    createImportableTable(namespace1, TABLE_1);
+
+    waitForDifferentSessionDdl();
+    createImportableTable(namespace2, TABLE_2);
+
+    // Create non-related tables.
+    waitForDifferentSessionDdl();
+    createNonImportableTable(namespace1, TABLE_2);
+    waitForDifferentSessionDdl();
+    createNonImportableTable(namespace2, TABLE_1);
+
+    try {
+      // Act
+      waitForDifferentSessionDdl();
+      int exitCode =
+          executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
+
+      // Assert
+      assertThat(exitCode).isEqualTo(0);
+      assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
+      assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
+      assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
+    } finally {
+      try {
+        dropNonImportableTable(namespace1, TABLE_2);
+      } catch (Exception e) {
+        logger.warn("Failed to drop non-importable table. {}.{}", namespace1, TABLE_2, e);
+      }
+
+      try {
+        dropNonImportableTable(namespace2, TABLE_1);
+      } catch (Exception e) {
+        logger.warn("Failed to drop non-importable table. {}.{}", namespace2, TABLE_1, e);
+      }
+    }
+  }
+
+  @Test
   public void importTables_NonImportableTablesGiven_ShouldThrowIllegalArgumentException()
       throws Exception {
     // Arrange

@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.util;
 
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -25,14 +26,16 @@ public final class ColumnUtils {
    * need to be base64 encoded.
    *
    * @param dataType Data type of the specified column
-   * @param columnName ScalarDB table column name
+   * @param columnInfo ScalarDB table column information
    * @param value Value for the ScalarDB column
    * @return ScalarDB column
    * @throws ColumnParsingException if an error occurs while creating the column and parsing the
    *     value
    */
   public static Column<?> createColumnFromValue(
-      DataType dataType, String columnName, @Nullable String value) throws ColumnParsingException {
+      DataType dataType, ColumnInfo columnInfo, @Nullable String value)
+      throws ColumnParsingException {
+    String columnName = columnInfo.getColumnName();
     try {
       switch (dataType) {
         case BOOLEAN:
@@ -67,10 +70,13 @@ public final class ColumnUtils {
       }
     } catch (NumberFormatException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(columnName), e);
+          CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
+              columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
+          e);
     } catch (IllegalArgumentException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(columnName),
+          CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
+              columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     }
   }

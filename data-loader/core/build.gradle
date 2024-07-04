@@ -2,6 +2,7 @@ plugins {
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
+    id("io.freefair.lombok") version "8.6"
 }
 
 archivesBaseName = "scalardb-data-loader-core"
@@ -9,7 +10,7 @@ archivesBaseName = "scalardb-data-loader-core"
 dependencies {
     // ScalarDB core
     implementation project(':core')
-    
+
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"

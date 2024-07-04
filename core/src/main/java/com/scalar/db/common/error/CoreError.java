@@ -190,8 +190,8 @@ public enum CoreError implements ScalarDbError {
   SCAN_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
       Category.USER_ERROR,
       "0037",
-      "This operation is supported only when no conditions are specified at all. "
-          + "If you want to modify the condition, please use clearConditions() to remove all existing conditions first",
+      "This operation is supported only when no conditions are specified. "
+          + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
   TABLE_METADATA_BUILD_ERROR_NO_COLUMNS_SPECIFIED(
@@ -640,16 +640,37 @@ public enum CoreError implements ScalarDbError {
       "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
       "",
       ""),
-  DATA_LOADER_INVALID_COLUMN_NON_EXISTENT(
+  GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
       Category.USER_ERROR,
       "0142",
+      "This operation is supported only when no conditions are specified. "
+          + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
+      "",
+      ""),
+  ENCRYPTED_COLUMNS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0143",
+      "Encrypted columns are not supported in the ScalarDB Community edition",
+      "",
+      ""),
+  DATA_LOADER_INVALID_COLUMN_NON_EXISTENT(
+      Category.USER_ERROR,
+      "0144",
       "Invalid key: Column %s does not exist in the table %s in namespace %s.",
       "",
       ""),
   DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
-      Category.USER_ERROR, "0143", "Invalid base64 encoding for blob value for column %s", "", ""),
+      Category.USER_ERROR,
+      "0145",
+      "Invalid base64 encoding for blob value for column %s in table %s in namespace %s",
+      "",
+      ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
-      Category.USER_ERROR, "0144", "Invalid number specified for column %s", "", ""),
+      Category.USER_ERROR,
+      "0146",
+      "Invalid number specified for column %s in table %s in namespace %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

@@ -1,3 +1,9 @@
+> [!CAUTION]
+> 
+> This documentation has been moved to the centralized ScalarDB documentation repository, [docs-internal-scalardb](https://github.com/scalar-labs/docs-internal-scalardb). Please update this documentation in that repository instead.
+> 
+> To view the ScalarDB documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/).
+
 # ScalarDB Schema Loader
 
 ScalarDB has its own data model and schema that maps to the implementation-specific data model and schema. In addition, ScalarDB stores internal metadata, such as transaction IDs, record versions, and transaction statuses, to manage transaction logs and statuses when you use the Consensus Commit transaction manager.
@@ -619,9 +625,9 @@ The following table shows the supported data types in ScalarDB and their mapping
 | ScalarDB  | Cassandra | Cosmos DB for NoSQL | DynamoDB | MySQL    | PostgreSQL/YugabyteDB | Oracle         | SQL Server      | SQLite  |
 |-----------|-----------|---------------------|----------|----------|-----------------------|----------------|-----------------|---------|
 | BOOLEAN   | boolean   | boolean (JSON)      | BOOL     | boolean  | boolean               | number(1)      | bit             | boolean |
-| INT       | int       | number (JSON)       | N        | int      | int                   | int            | int             | int     |
+| INT       | int       | number (JSON)       | N        | int      | int                   | number(10)     | int             | int     |
 | BIGINT    | bigint    | number (JSON)       | N        | bigint   | bigint                | number(19)     | bigint          | bigint  |
-| FLOAT     | float     | number (JSON)       | N        | double   | float                 | binary_float   | float(24)       | float   |
+| FLOAT     | float     | number (JSON)       | N        | real     | real                  | binary_float   | float(24)       | float   |
 | DOUBLE    | double    | number (JSON)       | N        | double   | double precision      | binary_double  | float           | double  |
 | TEXT      | text      | string (JSON)       | S        | longtext | text                  | varchar2(4000) | varchar(8000)   | text    |
 | BLOB      | blob      | string (JSON)       | B        | longblob | bytea                 | RAW(2000)      | varbinary(8000) | blob    |

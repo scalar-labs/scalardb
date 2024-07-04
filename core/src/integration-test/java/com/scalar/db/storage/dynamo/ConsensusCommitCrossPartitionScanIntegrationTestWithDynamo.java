@@ -12,14 +12,14 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithDynamo
 
   @Override
   protected Properties getProps(String testName) {
-    Properties properties = DynamoEnv.getProperties(testName);
+    Properties properties = ConsensusCommitDynamoEnv.getProperties(testName);
     properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     return properties;
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return DynamoEnv.getCreationOptions();
+    return ConsensusCommitDynamoEnv.getCreationOptions();
   }
 
   @Test

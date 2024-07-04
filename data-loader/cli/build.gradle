@@ -3,6 +3,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
     id 'application'
+    id("io.freefair.lombok") version "8.6"
 }
 
 application {
