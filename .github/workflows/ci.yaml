@@ -66,15 +66,15 @@ jobs:
           cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
           cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
 
-      - name: Save SpotBugs reports
-        if: always()
-        run: |
-          mkdir -p /tmp/gradle_spotbugs_reports/core
-          mkdir -p /tmp/gradle_spotbugs_reports/server
-          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
-          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
-          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+#      - name: Save SpotBugs reports
+#        if: always()
+#        run: |
+#          mkdir -p /tmp/gradle_spotbugs_reports/core
+#          mkdir -p /tmp/gradle_spotbugs_reports/server
+#          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
+#          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
+#          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
+#          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
 
       - name: Upload Gradle test reports
         if: always()
@@ -83,12 +83,12 @@ jobs:
           name: gradle_check_reports
           path: /tmp/gradle_test_reports
 
-      - name: Upload Spotbugs reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: gradle_spotbugs_reports
-          path: /tmp/gradle_spotbugs_reports
+#      - name: Upload Spotbugs reports
+#        if: always()
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: gradle_spotbugs_reports
+#          path: /tmp/gradle_spotbugs_reports
 
   integration-test-for-cassandra-3-0:
     name: Cassandra 3.0 integration test
