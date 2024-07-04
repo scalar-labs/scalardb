@@ -192,7 +192,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
       case FLOAT:
         return "BINARY_FLOAT";
       case INT:
-        return "INT";
+        return "NUMBER(10)";
       case TEXT:
         return "VARCHAR2(4000)";
       default:

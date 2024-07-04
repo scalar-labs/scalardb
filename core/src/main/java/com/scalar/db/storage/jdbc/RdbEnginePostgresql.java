@@ -190,7 +190,7 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
       case DOUBLE:
         return "DOUBLE PRECISION";
       case FLOAT:
-        return "FLOAT";
+        return "REAL";
       case INT:
         return "INT";
       case TEXT:
