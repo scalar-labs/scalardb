@@ -26,14 +26,14 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
 
   @Override
   protected String getCoordinatorNamespaceName(String testName) {
-    return new ConsensusCommitConfig(new DatabaseConfig(getProps(testName)))
+    return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
         .getCoordinatorNamespace()
         .orElse(Coordinator.NAMESPACE);
   }
 
   @Override
   protected boolean isGroupCommitEnabled(String testName) {
-    return new ConsensusCommitConfig(new DatabaseConfig(getProps(testName)))
+    return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
         .isCoordinatorGroupCommitEnabled();
   }
 
