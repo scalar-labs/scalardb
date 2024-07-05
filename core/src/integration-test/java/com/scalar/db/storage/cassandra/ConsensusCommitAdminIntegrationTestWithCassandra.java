@@ -32,4 +32,7 @@ public class ConsensusCommitAdminIntegrationTestWithCassandra
     return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
         .isCoordinatorGroupCommitEnabled();
   }
+
+  @Override
+  protected void extraCheckOnCoordinatorTable() {}
 }

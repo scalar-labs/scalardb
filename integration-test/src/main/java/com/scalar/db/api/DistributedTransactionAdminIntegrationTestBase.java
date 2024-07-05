@@ -784,6 +784,19 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  protected void extraCheckOnCoordinatorTable() throws ExecutionException {
+    TableMetadata expectedMetadata;
+    if (isGroupCommitEnabled(getTestName())) {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
+    } else {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
+    }
+    assertThat(
+            storageAdmin.getTableMetadata(
+                getCoordinatorNamespaceName(getTestName()), Coordinator.TABLE))
+        .isEqualTo(expectedMetadata);
+  }
+
   @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
@@ -796,16 +809,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     // Assert
     assertThat(admin.coordinatorTablesExist()).isTrue();
 
-    TableMetadata expectedMetadata;
-    if (isGroupCommitEnabled(getTestName())) {
-      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
-    } else {
-      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
-    }
-    assertThat(
-            storageAdmin.getTableMetadata(
-                getCoordinatorNamespaceName(getTestName()), Coordinator.TABLE))
-        .isEqualTo(expectedMetadata);
+    extraCheckOnCoordinatorTable();
   }
 
   @Test
