@@ -390,44 +390,45 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
 
-    if (!namespaceExists(metadataSchema)) {
-      return null;
-    }
+    try (Connection connection = dataSource.getConnection()) {
+      if (!namespaceExistsInternal(connection, metadataSchema)) {
+        return null;
+      }
 
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(getSelectColumnsStatement())) {
-      preparedStatement.setString(1, getFullTableName(namespace, table));
+      try (PreparedStatement preparedStatement =
+          connection.prepareStatement(getSelectColumnsStatement())) {
+        preparedStatement.setString(1, getFullTableName(namespace, table));
 
-      try (ResultSet resultSet = preparedStatement.executeQuery()) {
-        while (resultSet.next()) {
-          tableExists = true;
+        try (ResultSet resultSet = preparedStatement.executeQuery()) {
+          while (resultSet.next()) {
+            tableExists = true;
 
-          String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
-          DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
-          builder.addColumn(columnName, dataType);
+            String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
+            DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
+            builder.addColumn(columnName, dataType);
 
-          boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
-          if (indexed) {
-            builder.addSecondaryIndex(columnName);
-          }
+            boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
+            if (indexed) {
+              builder.addSecondaryIndex(columnName);
+            }
 
-          String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
-          if (keyType == null) {
-            continue;
-          }
+            String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
+            if (keyType == null) {
+              continue;
+            }
 
-          switch (KeyType.valueOf(keyType)) {
-            case PARTITION:
-              builder.addPartitionKey(columnName);
-              break;
-            case CLUSTERING:
-              Scan.Ordering.Order clusteringOrder =
-                  Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
-              builder.addClusteringKey(columnName, clusteringOrder);
-              break;
-            default:
-              throw new AssertionError("Invalid key type: " + keyType);
+            switch (KeyType.valueOf(keyType)) {
+              case PARTITION:
+                builder.addPartitionKey(columnName);
+                break;
+              case CLUSTERING:
+                Scan.Ordering.Order clusteringOrder =
+                    Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
+                builder.addClusteringKey(columnName, clusteringOrder);
+                break;
+              default:
+                throw new AssertionError("Invalid key type: " + keyType);
+            }
           }
         }
       }
@@ -560,14 +561,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(namespaceExistsStatement)) {
-      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
-      return preparedStatement.executeQuery().next();
+    if (metadataSchema.equals(namespace)) {
+      return true;
+    }
+
+    try (Connection connection = dataSource.getConnection()) {
+      return namespaceExistsInternal(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException("Checking if the namespace exists failed", e);
+    }
+  }
+
+  private boolean namespaceExistsInternal(Connection connection, String namespace)
+      throws SQLException {
+    String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
+    try (PreparedStatement preparedStatement =
+        connection.prepareStatement(namespaceExistsStatement)) {
+      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
+      return preparedStatement.executeQuery().next();
     }
   }
 

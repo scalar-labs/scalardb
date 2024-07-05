@@ -1360,6 +1360,25 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
+  public void namespaceExists_WithMetadataSchema_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    JdbcAdmin adminForMySql = createJdbcAdminFor(RdbEngine.MYSQL);
+    JdbcAdmin adminForPostgresql = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+    JdbcAdmin adminForOracle = createJdbcAdminFor(RdbEngine.ORACLE);
+    JdbcAdmin adminForSqlServer = createJdbcAdminFor(RdbEngine.SQL_SERVER);
+    JdbcAdmin adminForSqlite = createJdbcAdminFor(RdbEngine.SQLITE);
+    JdbcAdmin adminForYugabyte = createJdbcAdminFor(RdbEngine.YUGABYTE);
+
+    // Act Assert
+    assertThat(adminForMySql.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForPostgresql.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForOracle.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForSqlServer.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForSqlite.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForYugabyte.namespaceExists(tableMetadataSchemaName)).isTrue();
+  }
+
+  @Test
   public void createIndex_ForColumnTypeWithoutRequiredAlterationForMysql_ShouldCreateIndexProperly()
       throws Exception {
     createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(

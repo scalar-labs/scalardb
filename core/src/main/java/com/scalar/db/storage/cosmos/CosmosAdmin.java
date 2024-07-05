@@ -461,6 +461,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
+    if (metadataDatabase.equals(namespace)) {
+      return true;
+    }
+
     return databaseExists(namespace);
   }
 
