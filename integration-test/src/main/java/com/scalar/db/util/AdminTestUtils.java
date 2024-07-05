@@ -49,10 +49,9 @@ public abstract class AdminTestUtils {
    * @throws Exception if an error occurs
    */
   public boolean areTableMetadataForCoordinatorTablesPresent() throws Exception {
-    String coordinatorNamespace =
-        new ConsensusCommitConfig(new DatabaseConfig(coordinatorStorageProperties))
-            .getCoordinatorNamespace()
-            .orElse(Coordinator.NAMESPACE);
+    ConsensusCommitConfig config =
+        new ConsensusCommitConfig(new DatabaseConfig(coordinatorStorageProperties));
+    String coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     String coordinatorTable = Coordinator.TABLE;
     // Use the DistributedStorageAdmin instead of the DistributedTransactionAdmin because the latter
     // expects the table to hold transaction table metadata columns which is not the case for the
@@ -66,6 +65,12 @@ public abstract class AdminTestUtils {
     if (tableMetadata == null) {
       return false;
     }
-    return tableMetadata.equals(Coordinator.TABLE_METADATA);
+    TableMetadata expectedMetadata;
+    if (config.isCoordinatorGroupCommitEnabled()) {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
+    } else {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
+    }
+    return tableMetadata.equals(expectedMetadata);
   }
 }

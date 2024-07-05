@@ -55,4 +55,7 @@ public class ConsensusCommitAdminIntegrationTestWithServer
   @Test
   @Disabled("Retrieving the namespace names is not supported in ScalarDB Server")
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() {}
+
+  @Override
+  protected void extraCheckOnCoordinatorTable() {}
 }

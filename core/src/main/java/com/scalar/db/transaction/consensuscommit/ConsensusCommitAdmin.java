@@ -27,6 +27,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
+  private final ConsensusCommitConfig config;
   private final DistributedStorageAdmin admin;
   private final String coordinatorNamespace;
   private final boolean isIncludeMetadataEnabled;
@@ -35,7 +36,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Inject
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.admin = admin;
-    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
+    config = new ConsensusCommitConfig(databaseConfig);
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
@@ -44,7 +45,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
     admin = storageFactory.getStorageAdmin();
 
-    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
+    config = new ConsensusCommitConfig(databaseConfig);
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
   }
@@ -54,6 +55,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
       boolean isIncludeMetadataEnabled) {
+    this.config = config;
     this.admin = admin;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
@@ -67,7 +69,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     }
 
     admin.createNamespace(coordinatorNamespace, options);
-    admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+    admin.createTable(
+        coordinatorNamespace, Coordinator.TABLE, getCoordinatorTableMetadata(), options);
   }
 
   @Override
@@ -207,7 +210,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
-    admin.repairTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+    admin.repairTable(
+        coordinatorNamespace, Coordinator.TABLE, getCoordinatorTableMetadata(), options);
   }
 
   @Override
@@ -274,6 +278,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     if (namespace.equals(coordinatorNamespace)) {
       throw new IllegalArgumentException(
           CoreError.CONSENSUS_COMMIT_COORDINATOR_NAMESPACE_SPECIFIED.buildMessage(namespace));
+    }
+  }
+
+  private TableMetadata getCoordinatorTableMetadata() {
+    if (config.isCoordinatorGroupCommitEnabled()) {
+      return Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
+    } else {
+      return Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
     }
   }
 }

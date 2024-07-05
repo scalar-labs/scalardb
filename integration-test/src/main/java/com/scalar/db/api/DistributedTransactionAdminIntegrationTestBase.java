@@ -8,7 +8,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,6 +71,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   protected TransactionFactory transactionFactory;
   protected DistributedTransactionAdmin admin;
+  protected DistributedStorageAdmin storageAdmin;
   protected String systemNamespaceName;
   protected String namespace1;
   protected String namespace2;
@@ -81,6 +84,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     Properties properties = getProperties(testName);
     transactionFactory = TransactionFactory.create(properties);
     admin = transactionFactory.getTransactionAdmin();
+    storageAdmin = StorageFactory.create(properties).getStorageAdmin();
     systemNamespaceName = getSystemNamespaceName(properties);
     namespace1 = getNamespaceBaseName() + testName + "1";
     namespace2 = getNamespaceBaseName() + testName + "2";
@@ -99,6 +103,14 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   protected abstract String getSystemNamespaceName(Properties properties);
+
+  protected String getCoordinatorNamespaceName(String testName) {
+    throw new AssertionError("Shouldn't be called");
+  }
+
+  protected boolean isGroupCommitEnabled(String testName) {
+    return false;
+  }
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
@@ -121,6 +133,14 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       dropTables();
     } catch (Exception e) {
       logger.warn("Failed to drop tables", e);
+    }
+
+    try {
+      if (storageAdmin != null) {
+        storageAdmin.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage admin", e);
     }
 
     try {
@@ -764,6 +784,19 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  protected void extraCheckOnCoordinatorTable() throws ExecutionException {
+    TableMetadata expectedMetadata;
+    if (isGroupCommitEnabled(getTestName())) {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
+    } else {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
+    }
+    assertThat(
+            storageAdmin.getTableMetadata(
+                getCoordinatorNamespaceName(getTestName()), Coordinator.TABLE))
+        .isEqualTo(expectedMetadata);
+  }
+
   @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
@@ -775,6 +808,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
     // Assert
     assertThat(admin.coordinatorTablesExist()).isTrue();
+
+    extraCheckOnCoordinatorTable();
   }
 
   @Test

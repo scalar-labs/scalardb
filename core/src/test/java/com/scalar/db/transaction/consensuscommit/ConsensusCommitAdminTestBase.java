@@ -47,6 +47,7 @@ public abstract class ConsensusCommitAdminTestBase {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(config.getCoordinatorNamespace()).thenReturn(getCoordinatorNamespaceConfig());
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(false);
     admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
     coordinatorNamespaceName = getCoordinatorNamespaceConfig().orElse(Coordinator.NAMESPACE);
   }
@@ -68,7 +69,29 @@ public abstract class ConsensusCommitAdminTestBase {
         .createTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED,
+            Collections.emptyMap());
+  }
+
+  @Test
+  public void createCoordinatorTables_WithGroupCommitEnabled_shouldCreateCoordinatorTableProperly()
+      throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithGroupCommit =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    // Act
+    adminWithGroupCommit.createCoordinatorTables();
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .createNamespace(coordinatorNamespaceName, Collections.emptyMap());
+    verify(distributedStorageAdmin)
+        .createTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
             Collections.emptyMap());
   }
 
@@ -98,7 +121,34 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, options);
     verify(distributedStorageAdmin)
         .createTable(
-            coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED,
+            options);
+  }
+
+  @Test
+  public void
+      createCoordinatorTables_WithOptionsWithGroupCommitEnabled_shouldCreateCoordinatorTableProperly()
+          throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithGroupCommit =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    Map<String, String> options = ImmutableMap.of("name", "value");
+
+    // Act
+    adminWithGroupCommit.createCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, options);
+    verify(distributedStorageAdmin)
+        .createTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            options);
   }
 
   @Test
@@ -570,7 +620,32 @@ public abstract class ConsensusCommitAdminTestBase {
     // Assert
     verify(distributedStorageAdmin)
         .repairTable(
-            coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED,
+            options);
+  }
+
+  @Test
+  public void repairCoordinatorTables_WithGroupCommitEnabled_ShouldCallJdbcAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithGroupCommit =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    adminWithGroupCommit.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            options);
   }
 
   @Test
