@@ -3,6 +3,8 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -12,7 +14,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
 
   @Override
   protected Properties getProps(String testName) {
-    return JdbcEnv.getProperties(testName);
+    return ConsensusCommitJdbcEnv.getProperties(testName);
   }
 
   @Override
@@ -20,6 +22,19 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     return new JdbcConfig(new DatabaseConfig(properties))
         .getTableMetadataSchema()
         .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+  }
+
+  @Override
+  protected String getCoordinatorNamespaceName(String testName) {
+    return new ConsensusCommitConfig(new DatabaseConfig(getProps(testName)))
+        .getCoordinatorNamespace()
+        .orElse(Coordinator.NAMESPACE);
+  }
+
+  @Override
+  protected boolean isGroupCommitEnabled(String testName) {
+    return new ConsensusCommitConfig(new DatabaseConfig(getProps(testName)))
+        .isCoordinatorGroupCommitEnabled();
   }
 
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are

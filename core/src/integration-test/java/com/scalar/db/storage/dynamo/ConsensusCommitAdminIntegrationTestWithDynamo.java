@@ -2,6 +2,8 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -12,12 +14,12 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
 
   @Override
   protected Properties getProps(String testName) {
-    return DynamoEnv.getProperties(testName);
+    return ConsensusCommitDynamoEnv.getProperties(testName);
   }
 
   @Override
   protected Map<String, String> getCreationOptions() {
-    return DynamoEnv.getCreationOptions();
+    return ConsensusCommitDynamoEnv.getCreationOptions();
   }
 
   @Override
@@ -30,6 +32,19 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
     return new DynamoConfig(new DatabaseConfig(properties))
         .getTableMetadataNamespace()
         .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+  }
+
+  @Override
+  protected String getCoordinatorNamespaceName(String testName) {
+    return new ConsensusCommitConfig(new DatabaseConfig(getProps(testName)))
+        .getCoordinatorNamespace()
+        .orElse(Coordinator.NAMESPACE);
+  }
+
+  @Override
+  protected boolean isGroupCommitEnabled(String testName) {
+    return new ConsensusCommitConfig(new DatabaseConfig(getProps(testName)))
+        .isCoordinatorGroupCommitEnabled();
   }
 
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are
