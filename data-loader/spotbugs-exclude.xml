@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<FindBugsFilter>
+    <Match>
+        <Bug pattern="SAME_NAME_BUT_DIFFERENT"/>
+    </Match>
+</FindBugsFilter>
