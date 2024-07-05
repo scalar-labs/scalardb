@@ -10,8 +10,13 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(CheckedDistributedStorageAdmin.class);
 
   private final DistributedStorageAdmin admin;
 
@@ -322,6 +327,11 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
+    logger.warn(
+        "getNamespaceNames() extracts the namespace names of user tables dynamically. As a result, "
+            + "only namespaces that contain tables are returned. Starting from ScalarDB 4.0, we "
+            + "plan to improve the design to remove this limitation.");
+
     try {
       return admin.getNamespaceNames();
     } catch (ExecutionException e) {
