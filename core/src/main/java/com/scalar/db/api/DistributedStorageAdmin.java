@@ -40,7 +40,7 @@ import com.scalar.db.io.DataType;
  * admin.dropNamespace(NAMESPACE);
  * }</pre>
  */
-public interface DistributedStorageAdmin extends Admin {
+public interface DistributedStorageAdmin extends Admin, AutoCloseable {
 
   /**
    * Get import table metadata in the ScalarDB format.
@@ -68,5 +68,6 @@ public interface DistributedStorageAdmin extends Admin {
       throws ExecutionException;
 
   /** Closes connections to the storage. */
+  @Override
   void close();
 }
