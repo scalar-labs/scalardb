@@ -218,6 +218,18 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void namespaceExists_WithMetadataNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+
+    // Act Assert
+    assertThat(
+            admin.namespaceExists(
+                getTableMetadataNamespaceConfig()
+                    .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME)))
+        .isTrue();
+  }
+
+  @Test
   public void createTable_WhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable()
       throws ExecutionException {
     // Arrange

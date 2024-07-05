@@ -913,4 +913,26 @@ public abstract class CosmosAdminTestBase {
     verify(tableMetadataContainer).read();
     assertThat(actual).containsOnly(metadataDatabaseName);
   }
+
+  @Test
+  public void namespaceExists_WithExistingNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    CosmosDatabase database = mock(CosmosDatabase.class);
+    when(client.getDatabase(namespace)).thenReturn(database);
+
+    // Act
+    boolean actual = admin.namespaceExists(namespace);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void namespaceExists_WithMetadataDatabase_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+
+    // Act Assert
+    assertThat(admin.namespaceExists(metadataDatabaseName)).isTrue();
+  }
 }

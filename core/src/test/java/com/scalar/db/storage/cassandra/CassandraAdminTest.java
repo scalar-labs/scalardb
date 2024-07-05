@@ -487,6 +487,15 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void namespaceExists_WithSystemNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+
+    // Act Assert
+    assertThat(cassandraAdmin.namespaceExists(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME))
+        .isTrue();
+  }
+
+  @Test
   public void createIndex_ShouldExecuteProperCql() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";

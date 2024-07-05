@@ -1132,6 +1132,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String nonPrefixedNamespace) throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    if (metadataNamespace.equals(namespace.prefixed())) {
+      return true;
+    }
+
     try {
       boolean namespaceExists = false;
       String lastEvaluatedTableName = null;
@@ -1141,7 +1146,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         ListTablesResponse listTablesResponse = client.listTables(listTablesRequest);
         lastEvaluatedTableName = listTablesResponse.lastEvaluatedTableName();
         List<String> tableNames = listTablesResponse.tableNames();
-        Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
         for (String tableName : tableNames) {
           if (tableName.startsWith(namespace.prefixed() + ".")) {
             namespaceExists = true;
