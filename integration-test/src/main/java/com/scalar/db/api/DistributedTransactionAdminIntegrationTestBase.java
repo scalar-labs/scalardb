@@ -71,7 +71,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   protected TransactionFactory transactionFactory;
   protected DistributedTransactionAdmin admin;
-  protected DistributedStorageAdmin storageAdmin;
   protected String systemNamespaceName;
   protected String namespace1;
   protected String namespace2;
@@ -84,7 +83,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     Properties properties = getProperties(testName);
     transactionFactory = TransactionFactory.create(properties);
     admin = transactionFactory.getTransactionAdmin();
-    storageAdmin = StorageFactory.create(properties).getStorageAdmin();
     systemNamespaceName = getSystemNamespaceName(properties);
     namespace1 = getNamespaceBaseName() + testName + "1";
     namespace2 = getNamespaceBaseName() + testName + "2";
@@ -133,14 +131,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       dropTables();
     } catch (Exception e) {
       logger.warn("Failed to drop tables", e);
-    }
-
-    try {
-      if (storageAdmin != null) {
-        storageAdmin.close();
-      }
-    } catch (Exception e) {
-      logger.warn("Failed to close storage admin", e);
     }
 
     try {
@@ -791,10 +781,14 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     } else {
       expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
     }
-    assertThat(
-            storageAdmin.getTableMetadata(
-                getCoordinatorNamespaceName(getTestName()), Coordinator.TABLE))
-        .isEqualTo(expectedMetadata);
+
+    try (DistributedStorageAdmin storageAdmin =
+        StorageFactory.create(getProperties(getTestName())).getStorageAdmin()) {
+      assertThat(
+              storageAdmin.getTableMetadata(
+                  getCoordinatorNamespaceName(getTestName()), Coordinator.TABLE))
+          .isEqualTo(expectedMetadata);
+    }
   }
 
   @Test
