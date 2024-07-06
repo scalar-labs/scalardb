@@ -67,7 +67,7 @@ import java.util.Optional;
  *
  * @author Hiroyuki Yamada
  */
-public interface DistributedStorage {
+public interface DistributedStorage extends AutoCloseable {
   /**
    * Sets the specified namespace and the table name as default values in the instance.
    *
@@ -190,5 +190,6 @@ public interface DistributedStorage {
    * Closes connections to the cluster. The connections are shared among multiple services such as
    * StorageService and TransactionService, thus this should only be used when closing applications.
    */
+  @Override
   void close();
 }
