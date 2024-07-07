@@ -168,12 +168,6 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void repairNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    distributedTransactionAdmin.repairNamespace(namespace, options);
-  }
-
-  @Override
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -204,11 +198,6 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return distributedTransactionAdmin.getNamespaceNames();
-  }
-
-  @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    distributedTransactionAdmin.upgrade(options);
   }
 
   @Override
