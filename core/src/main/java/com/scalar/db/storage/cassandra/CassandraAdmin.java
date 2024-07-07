@@ -70,12 +70,20 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    // Create the system namespace if it does not exist
+    createKeyspace(systemNamespace, true, options);
+
     createTableInternal(namespace, table, metadata, options);
     createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), options);
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    createKeyspace(namespace, false, options);
+  }
+
+  private void createKeyspace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
     CreateKeyspace query = SchemaBuilder.createKeyspace(quoteIfNecessary(namespace));
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
@@ -90,6 +98,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } else if (replicationStrategy == ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY) {
       replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
       replicationOptions.put("dc1", replicationFactor);
+    }
+    if (ifNotExists) {
+      query.ifNotExists();
     }
     try {
       clusterManager
