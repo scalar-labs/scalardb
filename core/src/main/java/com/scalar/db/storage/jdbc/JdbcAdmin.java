@@ -98,9 +98,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
+      // Create the metadata schema and table first if they do not exist
+      createMetadataSchemaAndTableIfNotExists(connection);
+
       createTableInternal(connection, namespace, table, metadata);
       createIndex(connection, namespace, table, metadata);
-      addTableMetadata(connection, namespace, table, metadata, true);
+      addTableMetadata(connection, namespace, table, metadata, false);
     } catch (SQLException e) {
       throw new ExecutionException(
           "Creating the table failed: " + getFullTableName(namespace, table), e);
