@@ -647,6 +647,12 @@ public enum CoreError implements ScalarDbError {
           + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
+  ENCRYPTED_COLUMNS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0143",
+      "Encrypted columns are not supported in the ScalarDB Community edition",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
