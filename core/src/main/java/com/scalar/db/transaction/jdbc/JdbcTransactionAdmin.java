@@ -162,6 +162,11 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    return jdbcAdmin.getNamespaceNames();
+  }
+
+  @Override
   public void close() {
     jdbcAdmin.close();
   }

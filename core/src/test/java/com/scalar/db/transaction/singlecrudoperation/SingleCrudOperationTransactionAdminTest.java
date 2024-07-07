@@ -245,4 +245,19 @@ public class SingleCrudOperationTransactionAdminTest {
     // Assert
     verify(distributedStorageAdmin).importTable(namespace, table, Collections.emptyMap());
   }
+
+  @Test
+  public void getNamespaceNames_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.getNamespaceNames())
+        .thenReturn(ImmutableSet.of("ns1", "ns2", "ns3"));
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(distributedStorageAdmin).getNamespaceNames();
+    assertThat(actual).containsOnly("ns1", "ns2", "ns3");
+  }
 }

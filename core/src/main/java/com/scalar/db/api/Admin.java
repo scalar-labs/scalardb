@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
@@ -404,6 +405,30 @@ public interface Admin {
       throws ExecutionException;
 
   /**
+   * Adds a new column to an existing table. The new column cannot be a partition or clustering key.
+   * <br>
+   * See {@link #addNewColumnToTable(String, String, String, DataType)} for more information.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the new column
+   * @param columnType the type of the new column
+   * @param encrypted whether the new column should be encrypted
+   * @throws IllegalArgumentException if the table does not exist or the column already exists
+   * @throws ExecutionException if the operation fails
+   */
+  default void addNewColumnToTable(
+      String namespace, String table, String columnName, DataType columnType, boolean encrypted)
+      throws ExecutionException {
+    if (encrypted) {
+      throw new UnsupportedOperationException(
+          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage());
+    } else {
+      addNewColumnToTable(namespace, table, columnName, columnType);
+    }
+  }
+
+  /**
    * Imports an existing table that is not managed by ScalarDB.
    *
    * @param namespace an existing namespace
@@ -415,4 +440,13 @@ public interface Admin {
    */
   void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException;
+
+  /**
+   * Returns the names of the existing namespaces. However, only namespaces that contain tables are
+   * returned. From ScalarDB 4.0, we plan to improve the design to suppress this limitation.
+   *
+   * @return a set of namespaces names, an empty set if no namespaces exist
+   * @throws ExecutionException if the operation fails
+   */
+  Set<String> getNamespaceNames() throws ExecutionException;
 }

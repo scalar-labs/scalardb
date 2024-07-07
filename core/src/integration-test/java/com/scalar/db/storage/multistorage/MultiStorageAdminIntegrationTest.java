@@ -10,8 +10,10 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.cassandra.CassandraConfig;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,7 @@ public class MultiStorageAdminIntegrationTest {
   private DistributedStorageAdmin cassandraAdmin;
   private DistributedStorageAdmin jdbcAdmin;
   private MultiStorageAdmin multiStorageAdmin;
+  private String systemNamespaceName;
 
   @BeforeAll
   public void beforeAll() throws ExecutionException {
@@ -45,8 +48,8 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   private void initCassandraAdmin() throws ExecutionException {
-    StorageFactory factory =
-        StorageFactory.create(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
+    Properties properties = MultiStorageEnv.getPropertiesForCassandra(TEST_NAME);
+    StorageFactory factory = StorageFactory.create(properties);
     cassandraAdmin = factory.getAdmin();
 
     // create tables
@@ -67,6 +70,11 @@ public class MultiStorageAdminIntegrationTest {
 
     cassandraAdmin.createNamespace(NAMESPACE2, true);
     cassandraAdmin.createTable(NAMESPACE2, TABLE1, tableMetadata, true);
+
+    systemNamespaceName =
+        new CassandraConfig(new DatabaseConfig(properties))
+            .getSystemNamespaceName()
+            .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   private void initJdbcAdmin() throws ExecutionException {
@@ -340,5 +348,16 @@ public class MultiStorageAdminIntegrationTest {
     assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isNull();
 
     assertThat(tableMetadata.getSecondaryIndexNames()).isEmpty();
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnExistingNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = multiStorageAdmin.getNamespaceNames();
+
+    // Assert
+    assertThat(namespaces).containsOnly(NAMESPACE1, NAMESPACE2, systemNamespaceName);
   }
 }

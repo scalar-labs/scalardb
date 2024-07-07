@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -40,26 +41,49 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
 
   private final ClusterManager clusterManager;
+  private final String systemNamespace;
 
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
+    systemNamespace =
+        new CassandraConfig(config)
+            .getSystemNamespaceName()
+            .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   CassandraAdmin(ClusterManager clusterManager) {
     this.clusterManager = clusterManager;
+    systemNamespace = DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME;
+  }
+
+  @VisibleForTesting
+  CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
+    this.clusterManager = clusterManager;
+    systemNamespace =
+        new CassandraConfig(config)
+            .getSystemNamespaceName()
+            .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    // Create the system namespace if it does not exist
+    createKeyspace(systemNamespace, true, options);
+
     createTableInternal(namespace, table, metadata, options);
     createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), options);
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    createKeyspace(namespace, false, options);
+  }
+
+  private void createKeyspace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
     CreateKeyspace query = SchemaBuilder.createKeyspace(quoteIfNecessary(namespace));
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
@@ -74,6 +98,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     } else if (replicationStrategy == ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY) {
       replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
       replicationOptions.put("dc1", replicationFactor);
+    }
+    if (ifNotExists) {
+      query.ifNotExists();
     }
     try {
       clusterManager
@@ -240,6 +267,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
+    if (systemNamespace.equals(namespace)) {
+      return true;
+    }
+
     try {
       KeyspaceMetadata keyspace =
           clusterManager
@@ -284,6 +315,23 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           String.format(
               "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
+    }
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      // Retrieve user keyspace and filter out system ones. A downside is that this may include
+      // keyspace not created by ScalarDB.
+      return Stream.concat(
+              clusterManager.getSession().getCluster().getMetadata().getKeyspaces().stream()
+                  .map(KeyspaceMetadata::getName)
+                  .filter(name -> !name.startsWith("system")),
+              Stream.of(systemNamespace))
+          .collect(Collectors.toSet());
+
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Retrieving the existing keyspace names failed", e);
     }
   }
 

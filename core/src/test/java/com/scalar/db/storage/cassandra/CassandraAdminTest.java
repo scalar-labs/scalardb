@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
@@ -36,10 +37,13 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -483,6 +487,15 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void namespaceExists_WithSystemNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+
+    // Act Assert
+    assertThat(cassandraAdmin.namespaceExists(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME))
+        .isTrue();
+  }
+
+  @Test
   public void createIndex_ShouldExecuteProperCql() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
@@ -613,5 +626,65 @@ public class CassandraAdminTest {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"my_system_ns", ""})
+  public void getNamespaceNames_withExistingTables_ShouldWorkProperly(String systemNamespaceName)
+      throws ExecutionException {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(CassandraConfig.SYSTEM_NAMESPACE_NAME, systemNamespaceName);
+    cassandraAdmin = new CassandraAdmin(clusterManager, new DatabaseConfig(properties));
+
+    Cluster cluster = mock(Cluster.class);
+    Metadata metadata = mock(Metadata.class);
+    KeyspaceMetadata keyspace1 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace3 = mock(KeyspaceMetadata.class);
+    KeyspaceMetadata keyspace4 = mock(KeyspaceMetadata.class);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspaces()).thenReturn(ImmutableList.of(keyspace1, keyspace3, keyspace4));
+    when(keyspace1.getName()).thenReturn("system_foo");
+    when(keyspace3.getName()).thenReturn("ks1");
+    when(keyspace4.getName()).thenReturn("ks2");
+
+    // Act
+    Set<String> actual = cassandraAdmin.getNamespaceNames();
+
+    // Assert
+    if (systemNamespaceName.isEmpty()) {
+      assertThat(actual).containsOnly("ks1", "ks2", DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    } else {
+      assertThat(actual).containsOnly("ks1", "ks2", systemNamespaceName);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"my_system_ns", ""})
+  public void getNamespaceNames_withoutExistingTables_ShouldReturnSystemNamespaceOnly(
+      String systemNamespaceName) throws ExecutionException {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(CassandraConfig.SYSTEM_NAMESPACE_NAME, systemNamespaceName);
+    cassandraAdmin = new CassandraAdmin(clusterManager, new DatabaseConfig(properties));
+
+    Cluster cluster = mock(Cluster.class);
+    Metadata metadata = mock(Metadata.class);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspaces()).thenReturn(Collections.emptyList());
+
+    // Act
+    Set<String> actual = cassandraAdmin.getNamespaceNames();
+
+    // Assert
+    if (systemNamespaceName.isEmpty()) {
+      assertThat(actual).containsOnly(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    } else {
+      assertThat(actual).containsOnly(systemNamespaceName);
+    }
   }
 }

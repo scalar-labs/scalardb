@@ -1,7 +1,6 @@
 package com.scalar.db.storage.multistorage;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import java.util.Properties;
 
@@ -63,7 +62,8 @@ public final class MultiStorageEnv {
 
     // Add testName as a metadata schema suffix
     properties.setProperty(
-        JdbcConfig.TABLE_METADATA_SCHEMA, JdbcAdmin.METADATA_SCHEMA + "_" + testName);
+        JdbcConfig.TABLE_METADATA_SCHEMA,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return properties;
   }

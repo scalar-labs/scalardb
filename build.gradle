@@ -18,7 +18,7 @@ subprojects {
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'com.scalar.db.jdk-configuration'
 
-    project.version = '3.13.0-SNAPSHOT'
+    project.version = '3.14.0-SNAPSHOT'
 
     ext {
         guiceVersion = '5.1.0'
@@ -44,7 +44,7 @@ subprojects {
         prometheusVersion = '0.16.0'
         commonsTextVersion = '1.12.0'
         jettyVersion = '9.4.54.v20240208'
-        junitVersion = '5.10.2'
+        junitVersion = '5.10.3'
         commonsLangVersion = '3.14.0'
         assertjVersion = '3.26.0'
         mockitoVersion = '4.11.0'

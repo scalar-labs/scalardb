@@ -51,7 +51,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public static final String NO_SCALING = "no-scaling";
   public static final String DEFAULT_NO_SCALING = "false";
 
-  public static final String METADATA_DATABASE = "scalardb";
   public static final String METADATA_CONTAINER = "metadata";
   private static final String ID = "id";
   private static final String CONCATENATED_PARTITION_KEY = "concatenatedPartitionKey";
@@ -70,12 +69,14 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public CosmosAdmin(DatabaseConfig databaseConfig) {
     CosmosConfig config = new CosmosConfig(databaseConfig);
     client = CosmosUtils.buildCosmosClient(config);
-    metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
+    metadataDatabase =
+        config.getTableMetadataDatabase().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   CosmosAdmin(CosmosClient client, CosmosConfig config) {
     this.client = client;
-    metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
+    metadataDatabase =
+        config.getTableMetadataDatabase().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Override
@@ -84,8 +85,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     checkMetadata(metadata);
     try {
+      // Create the metadata database and container first if they do not exist
+      createMetadataDatabaseAndContainerIfNotExists();
+
       createContainer(namespace, table, metadata);
-      putTableMetadata(namespace, table, metadata);
+      putTableMetadata(namespace, table, metadata, false);
     } catch (RuntimeException e) {
       throw new ExecutionException("Creating the container failed", e);
     }
@@ -209,10 +213,16 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     return indexingPolicy;
   }
 
-  private void putTableMetadata(String namespace, String table, TableMetadata metadata)
+  private void putTableMetadata(
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean createMetadataDatabaseAndContainerIfNotExists)
       throws ExecutionException {
     try {
-      createMetadataDatabaseAndContainerIfNotExists();
+      if (createMetadataDatabaseAndContainerIfNotExists) {
+        createMetadataDatabaseAndContainerIfNotExists();
+      }
 
       CosmosTableMetadata cosmosTableMetadata =
           convertToCosmosTableMetadata(getFullTableName(namespace, table), metadata);
@@ -343,7 +353,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     updateIndexingPolicy(namespace, table, newTableMetadata);
 
     // update metadata
-    putTableMetadata(namespace, table, newTableMetadata);
+    putTableMetadata(namespace, table, newTableMetadata, true);
   }
 
   @Override
@@ -356,7 +366,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     updateIndexingPolicy(namespace, table, newTableMetadata);
 
     // update metadata
-    putTableMetadata(namespace, table, newTableMetadata);
+    putTableMetadata(namespace, table, newTableMetadata, true);
   }
 
   private void updateIndexingPolicy(
@@ -460,6 +470,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
+    if (metadataDatabase.equals(namespace)) {
+      return true;
+    }
+
     return databaseExists(namespace);
   }
 
@@ -479,7 +493,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         }
       }
       createMetadataDatabaseAndContainerIfNotExists();
-      putTableMetadata(namespace, table, metadata);
+      putTableMetadata(namespace, table, metadata, true);
       if (!storedProcedureExists(namespace, table)) {
         addStoredProcedure(namespace, table);
       }
@@ -537,7 +551,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
-      putTableMetadata(namespace, table, updatedTableMetadata);
+      putTableMetadata(namespace, table, updatedTableMetadata, true);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
@@ -560,6 +574,32 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public void importTable(String namespace, String table, Map<String, String> options) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try {
+      if (!metadataContainerExists()) {
+        return Collections.singleton(metadataDatabase);
+      }
+
+      Set<String> namespaceNames =
+          getMetadataContainer()
+              .queryItems(
+                  "SELECT container.id FROM container",
+                  new CosmosQueryRequestOptions(),
+                  CosmosTableMetadata.class)
+              .stream()
+              .map(
+                  tableMetadata ->
+                      tableMetadata.getId().substring(0, tableMetadata.getId().indexOf('.')))
+              .collect(Collectors.toSet());
+      namespaceNames.add(metadataDatabase);
+
+      return namespaceNames;
+    } catch (RuntimeException e) {
+      throw new ExecutionException("Retrieving the existing namespace names failed", e);
+    }
   }
 
   private boolean metadataContainerExists() {

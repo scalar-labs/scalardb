@@ -8,7 +8,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,6 +71,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .build();
   protected TransactionFactory transactionFactory;
   protected DistributedTransactionAdmin admin;
+  protected String systemNamespaceName;
   protected String namespace1;
   protected String namespace2;
   protected String namespace3;
@@ -80,6 +83,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     Properties properties = getProperties(testName);
     transactionFactory = TransactionFactory.create(properties);
     admin = transactionFactory.getTransactionAdmin();
+    systemNamespaceName = getSystemNamespaceName(properties);
     namespace1 = getNamespaceBaseName() + testName + "1";
     namespace2 = getNamespaceBaseName() + testName + "2";
     namespace3 = getNamespaceBaseName() + testName + "3";
@@ -94,6 +98,16 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   protected String getNamespaceBaseName() {
     return NAMESPACE_BASE_NAME;
+  }
+
+  protected abstract String getSystemNamespaceName(Properties properties);
+
+  protected String getCoordinatorNamespaceName(String testName) {
+    throw new AssertionError("Shouldn't be called");
+  }
+
+  protected boolean isGroupCommitEnabled(String testName) {
+    return false;
   }
 
   private void createTables() throws ExecutionException {
@@ -760,6 +774,23 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  protected void extraCheckOnCoordinatorTable() throws ExecutionException {
+    TableMetadata expectedMetadata;
+    if (isGroupCommitEnabled(getTestName())) {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
+    } else {
+      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
+    }
+
+    try (DistributedStorageAdmin storageAdmin =
+        StorageFactory.create(getProperties(getTestName())).getStorageAdmin()) {
+      assertThat(
+              storageAdmin.getTableMetadata(
+                  getCoordinatorNamespaceName(getTestName()), Coordinator.TABLE))
+          .isEqualTo(expectedMetadata);
+    }
+  }
+
   @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
@@ -771,6 +802,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
     // Assert
     assertThat(admin.coordinatorTablesExist()).isTrue();
+
+    extraCheckOnCoordinatorTable();
   }
 
   @Test
@@ -837,6 +870,17 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     } finally {
       admin.createCoordinatorTables(true, getCreationOptions());
     }
+  }
+
+  @Test
+  public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
+    // Arrange
+
+    // Act
+    Set<String> namespaces = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(namespaces).containsOnly(namespace1, namespace2, systemNamespaceName);
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {

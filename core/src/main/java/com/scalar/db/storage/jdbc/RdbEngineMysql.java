@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,8 +182,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case BOOLEAN:
         return "BOOLEAN";
       case DOUBLE:
-      case FLOAT:
         return "DOUBLE";
+      case FLOAT:
+        return "REAL";
       case INT:
         return "INT";
       case TEXT:
@@ -345,5 +347,20 @@ class RdbEngineMysql implements RdbEngineStrategy {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? "\\" : escape;
+  }
+
+  @Nullable
+  @Override
+  public String getCatalogName(String namespace) {
+    return namespace;
+  }
+
+  @Nullable
+  @Override
+  public String getSchemaName(String namespace) {
+    // This can be null. However, we return the namespace from this method just in case since users
+    // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
+    // method is used for filtering.
+    return namespace;
   }
 }

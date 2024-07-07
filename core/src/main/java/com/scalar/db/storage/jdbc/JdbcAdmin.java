@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
-  public static final String METADATA_SCHEMA = "scalardb";
   public static final String METADATA_TABLE = "metadata";
 
   @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
@@ -67,14 +66,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     JdbcConfig config = new JdbcConfig(databaseConfig);
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema =
+        config.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
-    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
+    metadataSchema =
+        config.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
   @Override
@@ -97,9 +98,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
+      // Create the metadata schema and table first if they do not exist
+      createMetadataSchemaAndTableIfNotExists(connection);
+
       createTableInternal(connection, namespace, table, metadata);
       createIndex(connection, namespace, table, metadata);
-      addTableMetadata(connection, namespace, table, metadata, true);
+      addTableMetadata(connection, namespace, table, metadata, false);
     } catch (SQLException e) {
       throw new ExecutionException(
           "Creating the table failed: " + getFullTableName(namespace, table), e);
@@ -389,44 +393,45 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
 
-    if (!namespaceExists(metadataSchema)) {
-      return null;
-    }
+    try (Connection connection = dataSource.getConnection()) {
+      if (!namespaceExistsInternal(connection, metadataSchema)) {
+        return null;
+      }
 
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(getSelectColumnsStatement())) {
-      preparedStatement.setString(1, getFullTableName(namespace, table));
+      try (PreparedStatement preparedStatement =
+          connection.prepareStatement(getSelectColumnsStatement())) {
+        preparedStatement.setString(1, getFullTableName(namespace, table));
 
-      try (ResultSet resultSet = preparedStatement.executeQuery()) {
-        while (resultSet.next()) {
-          tableExists = true;
+        try (ResultSet resultSet = preparedStatement.executeQuery()) {
+          while (resultSet.next()) {
+            tableExists = true;
 
-          String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
-          DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
-          builder.addColumn(columnName, dataType);
+            String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
+            DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
+            builder.addColumn(columnName, dataType);
 
-          boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
-          if (indexed) {
-            builder.addSecondaryIndex(columnName);
-          }
+            boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
+            if (indexed) {
+              builder.addSecondaryIndex(columnName);
+            }
 
-          String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
-          if (keyType == null) {
-            continue;
-          }
+            String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
+            if (keyType == null) {
+              continue;
+            }
 
-          switch (KeyType.valueOf(keyType)) {
-            case PARTITION:
-              builder.addPartitionKey(columnName);
-              break;
-            case CLUSTERING:
-              Scan.Ordering.Order clusteringOrder =
-                  Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
-              builder.addClusteringKey(columnName, clusteringOrder);
-              break;
-            default:
-              throw new AssertionError("Invalid key type: " + keyType);
+            switch (KeyType.valueOf(keyType)) {
+              case PARTITION:
+                builder.addPartitionKey(columnName);
+                break;
+              case CLUSTERING:
+                Scan.Ordering.Order clusteringOrder =
+                    Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
+                builder.addClusteringKey(columnName, clusteringOrder);
+                break;
+              default:
+                throw new AssertionError("Invalid key type: " + keyType);
+            }
           }
         }
       }
@@ -453,13 +458,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
+      String catalogName = rdbEngine.getCatalogName(namespace);
+      String schemaName = rdbEngine.getSchemaName(namespace);
+
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
             CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
 
       DatabaseMetaData metadata = connection.getMetaData();
-      ResultSet resultSet = metadata.getPrimaryKeys(null, namespace, table);
+      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
       while (resultSet.next()) {
         primaryKeyExists = true;
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
@@ -472,7 +480,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 getFullTableName(namespace, table)));
       }
 
-      resultSet = metadata.getColumns(null, namespace, table, "%");
+      resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
         builder.addColumn(
@@ -556,14 +564,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(namespaceExistsStatement)) {
-      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
-      return preparedStatement.executeQuery().next();
+    if (metadataSchema.equals(namespace)) {
+      return true;
+    }
+
+    try (Connection connection = dataSource.getConnection()) {
+      return namespaceExistsInternal(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException("Checking if the namespace exists failed", e);
+    }
+  }
+
+  private boolean namespaceExistsInternal(Connection connection, String namespace)
+      throws SQLException {
+    String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
+    try (PreparedStatement preparedStatement =
+        connection.prepareStatement(namespaceExistsStatement)) {
+      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
+      return preparedStatement.executeQuery().next();
     }
   }
 
@@ -771,6 +789,35 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           String.format(
               "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
+    }
+  }
+
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    String selectAllTableNames =
+        "SELECT DISTINCT "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(metadataSchema, METADATA_TABLE);
+    try (Connection connection = dataSource.getConnection();
+        Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
+      Set<String> namespaceOfExistingTables = new HashSet<>();
+      while (rs.next()) {
+        String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
+        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        namespaceOfExistingTables.add(namespaceName);
+      }
+      namespaceOfExistingTables.add(metadataSchema);
+
+      return namespaceOfExistingTables;
+    } catch (SQLException e) {
+      // An exception will be thrown if the namespace table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return Collections.singleton(metadataSchema);
+      }
+      throw new ExecutionException("Getting the existing schema names failed", e);
     }
   }
 

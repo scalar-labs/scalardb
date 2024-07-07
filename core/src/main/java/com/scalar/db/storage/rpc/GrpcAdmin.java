@@ -345,6 +345,12 @@ public class GrpcAdmin implements DistributedStorageAdmin {
         "Import-related functionality is not supported in ScalarDB Server");
   }
 
+  @Override
+  public Set<String> getNamespaceNames() {
+    throw new UnsupportedOperationException(
+        "Retrieving the namespace names is not supported in ScalarDB Server");
+  }
+
   private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)
       throws ExecutionException {
     try {

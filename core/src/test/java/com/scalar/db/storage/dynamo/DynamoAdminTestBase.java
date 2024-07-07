@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
@@ -76,6 +77,7 @@ public abstract class DynamoAdminTestBase {
   @Mock private DynamoConfig config;
   @Mock private DynamoDbClient client;
   @Mock private ApplicationAutoScalingClient applicationAutoScalingClient;
+  @Mock private DescribeTableResponse tableIsActiveResponse;
   private DynamoAdmin admin;
 
   @BeforeEach
@@ -112,7 +114,7 @@ public abstract class DynamoAdminTestBase {
 
   private String getFullMetadataTableName() {
     return getNamespacePrefixConfig().orElse("")
-        + getTableMetadataNamespaceConfig().orElse(DynamoAdmin.METADATA_NAMESPACE)
+        + getTableMetadataNamespaceConfig().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME)
         + "."
         + DynamoAdmin.METADATA_TABLE;
   }
@@ -216,6 +218,18 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void namespaceExists_WithMetadataNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+
+    // Act Assert
+    assertThat(
+            admin.namespaceExists(
+                getTableMetadataNamespaceConfig()
+                    .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME)))
+        .isTrue();
+  }
+
+  @Test
   public void createTable_WhenMetadataTableNotExist_ShouldCreateTableAndMetadataTable()
       throws ExecutionException {
     // Arrange
@@ -272,7 +286,7 @@ public abstract class DynamoAdminTestBase {
     List<CreateTableRequest> actualCreateTableRequests = createTableRequestCaptor.getAllValues();
 
     List<AttributeDefinition> attributeDefinitions =
-        actualCreateTableRequests.get(0).attributeDefinitions();
+        actualCreateTableRequests.get(1).attributeDefinitions();
     assertThat(attributeDefinitions.size()).isEqualTo(3);
     assertThat(attributeDefinitions.get(0).attributeName()).isEqualTo(DynamoAdmin.PARTITION_KEY);
     assertThat(attributeDefinitions.get(0).attributeType()).isEqualTo(ScalarAttributeType.B);
@@ -281,24 +295,24 @@ public abstract class DynamoAdminTestBase {
     assertThat(attributeDefinitions.get(2).attributeName()).isEqualTo("c4");
     assertThat(attributeDefinitions.get(2).attributeType()).isEqualTo(ScalarAttributeType.B);
 
-    assertThat(actualCreateTableRequests.get(0).keySchema().size()).isEqualTo(2);
-    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).attributeName())
+    assertThat(actualCreateTableRequests.get(1).keySchema().size()).isEqualTo(2);
+    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).attributeName())
         .isEqualTo(DynamoAdmin.PARTITION_KEY);
-    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).keyType())
+    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).keyType())
         .isEqualTo(KeyType.HASH);
-    assertThat(actualCreateTableRequests.get(0).keySchema().get(1).attributeName())
+    assertThat(actualCreateTableRequests.get(1).keySchema().get(1).attributeName())
         .isEqualTo(DynamoAdmin.CLUSTERING_KEY);
-    assertThat(actualCreateTableRequests.get(0).keySchema().get(1).keyType())
+    assertThat(actualCreateTableRequests.get(1).keySchema().get(1).keyType())
         .isEqualTo(KeyType.RANGE);
 
-    assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().size()).isEqualTo(1);
-    assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().get(0).indexName())
+    assertThat(actualCreateTableRequests.get(1).globalSecondaryIndexes().size()).isEqualTo(1);
+    assertThat(actualCreateTableRequests.get(1).globalSecondaryIndexes().get(0).indexName())
         .isEqualTo(getFullTableName() + ".global_index.c4");
-    assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().get(0).keySchema().size())
+    assertThat(actualCreateTableRequests.get(1).globalSecondaryIndexes().get(0).keySchema().size())
         .isEqualTo(1);
     assertThat(
             actualCreateTableRequests
-                .get(0)
+                .get(1)
                 .globalSecondaryIndexes()
                 .get(0)
                 .keySchema()
@@ -307,7 +321,7 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo("c4");
     assertThat(
             actualCreateTableRequests
-                .get(0)
+                .get(1)
                 .globalSecondaryIndexes()
                 .get(0)
                 .keySchema()
@@ -316,7 +330,7 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo(KeyType.HASH);
     assertThat(
             actualCreateTableRequests
-                .get(0)
+                .get(1)
                 .globalSecondaryIndexes()
                 .get(0)
                 .projection()
@@ -324,7 +338,7 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo(ProjectionType.ALL);
     assertThat(
             actualCreateTableRequests
-                .get(0)
+                .get(1)
                 .globalSecondaryIndexes()
                 .get(0)
                 .provisionedThroughput()
@@ -332,39 +346,39 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo(10);
     assertThat(
             actualCreateTableRequests
-                .get(0)
+                .get(1)
                 .globalSecondaryIndexes()
                 .get(0)
                 .provisionedThroughput()
                 .writeCapacityUnits())
         .isEqualTo(10);
 
-    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().writeCapacityUnits())
+    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().writeCapacityUnits())
         .isEqualTo(10);
-    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().readCapacityUnits())
+    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().readCapacityUnits())
         .isEqualTo(10);
 
-    assertThat(actualCreateTableRequests.get(0).tableName()).isEqualTo(getFullTableName());
+    assertThat(actualCreateTableRequests.get(1).tableName()).isEqualTo(getFullTableName());
 
     // for the table metadata table
-    attributeDefinitions = actualCreateTableRequests.get(1).attributeDefinitions();
+    attributeDefinitions = actualCreateTableRequests.get(0).attributeDefinitions();
     assertThat(attributeDefinitions.size()).isEqualTo(1);
     assertThat(attributeDefinitions.get(0).attributeName())
         .isEqualTo(DynamoAdmin.METADATA_ATTR_TABLE);
     assertThat(attributeDefinitions.get(0).attributeType()).isEqualTo(ScalarAttributeType.S);
 
-    assertThat(actualCreateTableRequests.get(1).keySchema().size()).isEqualTo(1);
-    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).attributeName())
+    assertThat(actualCreateTableRequests.get(0).keySchema().size()).isEqualTo(1);
+    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).attributeName())
         .isEqualTo(DynamoAdmin.METADATA_ATTR_TABLE);
-    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).keyType())
+    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).keyType())
         .isEqualTo(KeyType.HASH);
 
-    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().writeCapacityUnits())
+    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().writeCapacityUnits())
         .isEqualTo(1);
-    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().readCapacityUnits())
+    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().readCapacityUnits())
         .isEqualTo(1);
 
-    assertThat(actualCreateTableRequests.get(1).tableName()).isEqualTo(getFullMetadataTableName());
+    assertThat(actualCreateTableRequests.get(0).tableName()).isEqualTo(getFullMetadataTableName());
 
     ArgumentCaptor<PutItemRequest> putItemRequestCaptor =
         ArgumentCaptor.forClass(PutItemRequest.class);
@@ -414,8 +428,8 @@ public abstract class DynamoAdminTestBase {
     List<UpdateContinuousBackupsRequest> updateContinuousBackupsRequests =
         updateContinuousBackupsRequestCaptor.getAllValues();
     assertThat(updateContinuousBackupsRequests.size()).isEqualTo(2);
-    assertThat(updateContinuousBackupsRequests.get(0).tableName()).isEqualTo(getFullTableName());
-    assertThat(updateContinuousBackupsRequests.get(1).tableName())
+    assertThat(updateContinuousBackupsRequests.get(1).tableName()).isEqualTo(getFullTableName());
+    assertThat(updateContinuousBackupsRequests.get(0).tableName())
         .isEqualTo(getFullMetadataTableName());
   }
 
@@ -1190,5 +1204,79 @@ public abstract class DynamoAdminTestBase {
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getNamespaceNames_WithExistingTables_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenReturn(mock(DescribeTableResponse.class))
+        .thenThrow(mock(ResourceNotFoundException.class))
+        .thenReturn(tableIsActiveResponse);
+
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+    Map<String, AttributeValue> lastEvaluatedKeyFirstIteration =
+        ImmutableMap.of("", AttributeValue.builder().build());
+    Map<String, AttributeValue> lastEvaluatedKeySecondIteration = ImmutableMap.of();
+    when(scanResponse.lastEvaluatedKey())
+        .thenReturn(lastEvaluatedKeyFirstIteration)
+        .thenReturn(lastEvaluatedKeySecondIteration);
+    when(scanResponse.items())
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns1.tbl1").build())))
+        .thenReturn(
+            ImmutableList.of(
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns1.tbl2").build()),
+                ImmutableMap.of(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s("ns2.tbl3").build())));
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build());
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .exclusiveStartKey(null)
+                .build());
+    verify(client)
+        .scan(
+            ScanRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .exclusiveStartKey(lastEvaluatedKeyFirstIteration)
+                .build());
+    String metadataNamespace =
+        getTableMetadataNamespaceConfig().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    assertThat(actual).containsOnly("ns1", "ns2", metadataNamespace);
+  }
+
+  @Test
+  public void getNamespaceNames_WithoutExistingTables_ShouldReturnMetadataNamespaceOnly()
+      throws ExecutionException {
+    // Arrange
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenThrow(mock(ResourceNotFoundException.class));
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(client)
+        .describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build());
+    String metadataNamespace =
+        getTableMetadataNamespaceConfig().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    assertThat(actual).containsOnly(metadataNamespace);
   }
 }

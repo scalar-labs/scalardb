@@ -19,7 +19,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
     config = new JdbcConfig(new DatabaseConfig(properties));
-    metadataSchema = config.getTableMetadataSchema().orElse(JdbcAdmin.METADATA_SCHEMA);
+    metadataSchema =
+        config.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     rdbEngine = RdbEngineFactory.create(config);
   }
 

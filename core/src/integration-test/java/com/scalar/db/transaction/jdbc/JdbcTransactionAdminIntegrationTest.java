@@ -26,6 +26,13 @@ public class JdbcTransactionAdminIntegrationTest
     return properties;
   }
 
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    return new JdbcConfig(new DatabaseConfig(properties))
+        .getTableMetadataSchema()
+        .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+  }
+
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are
   // different from the other adapters. So disable several tests that check such behaviors.
 

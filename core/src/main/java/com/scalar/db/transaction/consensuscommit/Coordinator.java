@@ -37,7 +37,14 @@ import org.slf4j.LoggerFactory;
 public class Coordinator {
   public static final String NAMESPACE = "coordinator";
   public static final String TABLE = "state";
-  public static final TableMetadata TABLE_METADATA =
+  public static final TableMetadata TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED =
+      TableMetadata.newBuilder()
+          .addColumn(Attribute.ID, DataType.TEXT)
+          .addColumn(Attribute.STATE, DataType.INT)
+          .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
+          .addPartitionKey(Attribute.ID)
+          .build();
+  public static final TableMetadata TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED =
       TableMetadata.newBuilder()
           .addColumn(Attribute.ID, DataType.TEXT)
           .addColumn(Attribute.CHILD_IDS, DataType.TEXT)

@@ -239,9 +239,20 @@ public abstract class JdbcAdminTestBase {
 
   public ResultSet mockResultSet(List<GetColumnsResultSetMocker.Row> rows) throws SQLException {
     ResultSet resultSet = mock(ResultSet.class);
-    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
+    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call is
     // mocked to return the current row data
     doAnswer(new GetColumnsResultSetMocker(rows)).when(resultSet).next();
+    return resultSet;
+  }
+
+  public ResultSet mockResultSet(SelectFullTableNameFromMetadataTableResultSetMocker.Row... rows)
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call is
+    // mocked to return the current row data
+    doAnswer(new SelectFullTableNameFromMetadataTableResultSetMocker(Arrays.asList(rows)))
+        .when(resultSet)
+        .next();
     return resultSet;
   }
 
@@ -353,9 +364,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `" + tableMetadataSchemaName + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + tableMetadataSchemaName
@@ -368,6 +376,9 @@ public abstract class JdbcAdminTestBase {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3`,`c1`,`c4`))",
+        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
@@ -396,9 +407,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"" + tableMetadataSchemaName + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + tableMetadataSchemaName
@@ -411,6 +419,9 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
@@ -439,10 +450,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [" + tableMetadataSchemaName + "]",
         "CREATE TABLE ["
             + tableMetadataSchemaName
@@ -455,6 +462,10 @@ public abstract class JdbcAdminTestBase {
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
+        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "INSERT INTO ["
             + tableMetadataSchemaName
             + "].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
@@ -483,15 +494,15 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
-        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
@@ -520,9 +531,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
         "CREATE TABLE IF NOT EXISTS \""
             + tableMetadataSchemaName
             + "$metadata\"("
@@ -534,6 +542,9 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "$metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,FALSE,1)",
@@ -605,9 +616,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
-        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `" + tableMetadataSchemaName + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + tableMetadataSchemaName
@@ -620,6 +628,9 @@ public abstract class JdbcAdminTestBase {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
@@ -648,10 +659,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"" + tableMetadataSchemaName + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + tableMetadataSchemaName
@@ -664,6 +671,10 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
@@ -692,10 +703,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
-        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [" + tableMetadataSchemaName + "]",
         "CREATE TABLE ["
             + tableMetadataSchemaName
@@ -708,6 +715,10 @@ public abstract class JdbcAdminTestBase {
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
+        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "INSERT INTO ["
             + tableMetadataSchemaName
             + "].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
@@ -736,16 +747,16 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
-        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
         "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
@@ -774,9 +785,6 @@ public abstract class JdbcAdminTestBase {
       throws ExecutionException, SQLException {
     createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
         "CREATE TABLE IF NOT EXISTS \""
             + tableMetadataSchemaName
             + "$metadata\"("
@@ -788,6 +796,9 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "$metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,FALSE,1)",
@@ -1346,6 +1357,25 @@ public abstract class JdbcAdminTestBase {
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(selectStatement).setString(1, namespace + namespacePlaceholderSuffix);
+  }
+
+  @Test
+  public void namespaceExists_WithMetadataSchema_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    JdbcAdmin adminForMySql = createJdbcAdminFor(RdbEngine.MYSQL);
+    JdbcAdmin adminForPostgresql = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+    JdbcAdmin adminForOracle = createJdbcAdminFor(RdbEngine.ORACLE);
+    JdbcAdmin adminForSqlServer = createJdbcAdminFor(RdbEngine.SQL_SERVER);
+    JdbcAdmin adminForSqlite = createJdbcAdminFor(RdbEngine.SQLITE);
+    JdbcAdmin adminForYugabyte = createJdbcAdminFor(RdbEngine.YUGABYTE);
+
+    // Act Assert
+    assertThat(adminForMySql.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForPostgresql.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForOracle.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForSqlServer.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForSqlite.namespaceExists(tableMetadataSchemaName)).isTrue();
+    assertThat(adminForYugabyte.namespaceExists(tableMetadataSchemaName)).isTrue();
   }
 
   @Test
@@ -2091,7 +2121,7 @@ public abstract class JdbcAdminTestBase {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
+        "ALTER TABLE \"ns\".\"table\" ADD \"c2\" NUMBER(10)",
         "DELETE FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
@@ -2256,8 +2286,14 @@ public abstract class JdbcAdminTestBase {
         .thenReturn("");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
 
     Map<String, DataType> expectedColumns = new LinkedHashMap<>();
     expectedColumns.put("pk1", DataType.TEXT);
@@ -2340,7 +2376,13 @@ public abstract class JdbcAdminTestBase {
     when(connection.createStatement()).thenReturn(checkTableExistStatement);
     when(connection.getMetaData()).thenReturn(metadata);
     when(primaryKeyResults.next()).thenReturn(false);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    }
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     String description = "database engine specific test failed: " + rdbEngine;
 
@@ -2382,8 +2424,16 @@ public abstract class JdbcAdminTestBase {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("timestamp");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
     String description = "database engine specific test failed: " + rdbEngine;
 
@@ -2501,8 +2551,14 @@ public abstract class JdbcAdminTestBase {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
-    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
-    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
     List<Statement> expectedStatements = new ArrayList<>();
     for (int i = 0; i < expectedSqlStatements.size(); i++) {
       Statement expectedStatement = mock(Statement.class);
@@ -2614,6 +2670,145 @@ public abstract class JdbcAdminTestBase {
     assertThat(hasDifferentClusteringOrders(metadata2)).isTrue();
   }
 
+  @Test
+  public void getNamespaceNames_ForMysql_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT DISTINCT `full_table_name` FROM `" + tableMetadataSchemaName + "`.`metadata`");
+  }
+
+  @Test
+  public void getNamespaceNames_Posgresql_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_Oracle_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_SqlServer_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT DISTINCT [full_table_name] FROM [" + tableMetadataSchemaName + "].[metadata]");
+  }
+
+  @Test
+  public void getNamespaceNames_Sqlite_WithExistingTables_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "$metadata\"");
+  }
+
+  private void getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+      RdbEngine rdbEngine, String getTableMetadataNamespacesStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
+
+    when(connection.createStatement()).thenReturn(getTableMetadataNamespacesStatementMock);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns1.tbl1"),
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns1.tbl2"),
+            new SelectFullTableNameFromMetadataTableResultSetMocker.Row("ns2.tbl3"));
+    when(getTableMetadataNamespacesStatementMock.executeQuery(anyString())).thenReturn(resultSet);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(connection).createStatement();
+    verify(getTableMetadataNamespacesStatementMock)
+        .executeQuery(getTableMetadataNamespacesStatement);
+    assertThat(actual).containsOnly("ns1", "ns2", tableMetadataSchemaName);
+  }
+
+  @Test
+  public void getNamespaceNames_ForMysql_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.MYSQL,
+        "SELECT DISTINCT `full_table_name` FROM `" + tableMetadataSchemaName + "`.`metadata`");
+  }
+
+  @Test
+  public void getNamespaceNames_Posgresql_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.POSTGRESQL,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_Oracle_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.ORACLE,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"");
+  }
+
+  @Test
+  public void getNamespaceNames_SqlServer_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.SQL_SERVER,
+        "SELECT DISTINCT [full_table_name] FROM [" + tableMetadataSchemaName + "].[metadata]");
+  }
+
+  @Test
+  public void getNamespaceNames_Sqlite_WithoutExistingTables_ShouldReturnMetadataSchemaOnly()
+      throws SQLException, ExecutionException {
+    getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+        RdbEngine.SQLITE,
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "$metadata\"");
+  }
+
+  private void getNamespaceNames_ForX_WithoutExistingTables_ShouldReturnMetadataSchemaOnly(
+      RdbEngine rdbEngine, String getTableMetadataNamespacesStatement)
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
+
+    when(connection.createStatement()).thenReturn(getTableMetadataNamespacesStatementMock);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    SQLException sqlException = mock(SQLException.class);
+    mockUndefinedTableError(rdbEngine, sqlException);
+    when(getTableMetadataNamespacesStatementMock.executeQuery(anyString())).thenThrow(sqlException);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    Set<String> actual = admin.getNamespaceNames();
+
+    // Assert
+    verify(connection).createStatement();
+    verify(getTableMetadataNamespacesStatementMock)
+        .executeQuery(getTableMetadataNamespacesStatement);
+    assertThat(actual).containsOnly(tableMetadataSchemaName);
+  }
+
   private PreparedStatement prepareStatementForNamespaceCheck() throws SQLException {
     return prepareStatementForNamespaceCheck(true);
   }
@@ -2654,11 +2849,18 @@ public abstract class JdbcAdminTestBase {
 
   private String prepareSqlForAlterTableAddColumn(RdbEngine rdbEngine, String column) {
     RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    String intType;
+    if (rdbEngineStrategy instanceof RdbEngineOracle) {
+      intType = "NUMBER(10)";
+    } else {
+      intType = "INT";
+    }
     return "ALTER TABLE "
         + rdbEngineStrategy.encloseFullTableName(NAMESPACE, TABLE)
         + " ADD "
         + rdbEngineStrategy.enclose(column)
-        + " INT";
+        + " "
+        + intType;
   }
 
   private List<String> prepareSqlForCreateSchemaStatements(RdbEngine rdbEngine) {
@@ -2866,6 +3068,42 @@ public abstract class JdbcAdminTestBase {
         return false;
       }
       GetTablesNamesResultSetMocker.Row currentRow = rows.get(row);
+      ResultSet mock = (ResultSet) invocation.getMock();
+      when(mock.getString(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME))
+          .thenReturn(currentRow.fullTableName);
+      return true;
+    }
+
+    static class Row {
+
+      final String fullTableName;
+
+      public Row(String fullTableName) {
+        this.fullTableName = fullTableName;
+      }
+    }
+  }
+
+  // Utility class used to mock ResultSet for a "select full_table_name from" query on the metadata
+  // table
+  static class SelectFullTableNameFromMetadataTableResultSetMocker
+      implements org.mockito.stubbing.Answer<Object> {
+
+    final List<SelectFullTableNameFromMetadataTableResultSetMocker.Row> rows;
+    int row = -1;
+
+    public SelectFullTableNameFromMetadataTableResultSetMocker(
+        List<SelectFullTableNameFromMetadataTableResultSetMocker.Row> rows) {
+      this.rows = rows;
+    }
+
+    @Override
+    public Object answer(InvocationOnMock invocation) throws Throwable {
+      row++;
+      if (row >= rows.size()) {
+        return false;
+      }
+      SelectFullTableNameFromMetadataTableResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
       when(mock.getString(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME))
           .thenReturn(currentRow.fullTableName);
