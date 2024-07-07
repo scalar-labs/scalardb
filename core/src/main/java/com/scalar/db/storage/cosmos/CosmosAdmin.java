@@ -85,8 +85,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     checkMetadata(metadata);
     try {
+      // Create the metadata database and container first if they do not exist
+      createMetadataDatabaseAndContainerIfNotExists();
+
       createContainer(namespace, table, metadata);
-      putTableMetadata(namespace, table, metadata);
+      putTableMetadata(namespace, table, metadata, false);
     } catch (RuntimeException e) {
       throw new ExecutionException("Creating the container failed", e);
     }
@@ -210,10 +213,16 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     return indexingPolicy;
   }
 
-  private void putTableMetadata(String namespace, String table, TableMetadata metadata)
+  private void putTableMetadata(
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean createMetadataDatabaseAndContainerIfNotExists)
       throws ExecutionException {
     try {
-      createMetadataDatabaseAndContainerIfNotExists();
+      if (createMetadataDatabaseAndContainerIfNotExists) {
+        createMetadataDatabaseAndContainerIfNotExists();
+      }
 
       CosmosTableMetadata cosmosTableMetadata =
           convertToCosmosTableMetadata(getFullTableName(namespace, table), metadata);
@@ -344,7 +353,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     updateIndexingPolicy(namespace, table, newTableMetadata);
 
     // update metadata
-    putTableMetadata(namespace, table, newTableMetadata);
+    putTableMetadata(namespace, table, newTableMetadata, true);
   }
 
   @Override
@@ -357,7 +366,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     updateIndexingPolicy(namespace, table, newTableMetadata);
 
     // update metadata
-    putTableMetadata(namespace, table, newTableMetadata);
+    putTableMetadata(namespace, table, newTableMetadata, true);
   }
 
   private void updateIndexingPolicy(
@@ -484,7 +493,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         }
       }
       createMetadataDatabaseAndContainerIfNotExists();
-      putTableMetadata(namespace, table, metadata);
+      putTableMetadata(namespace, table, metadata, true);
       if (!storedProcedureExists(namespace, table)) {
         addStoredProcedure(namespace, table);
       }
@@ -542,7 +551,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
-      putTableMetadata(namespace, table, updatedTableMetadata);
+      putTableMetadata(namespace, table, updatedTableMetadata, true);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
