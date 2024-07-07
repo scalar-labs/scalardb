@@ -228,6 +228,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     checkMetadata(metadata);
 
+    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
+
+    // Create the metadata table first if it does not exist
+    createMetadataTableIfNotExists(noBackup);
+
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
 
     CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
@@ -250,12 +255,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       enableAutoScaling(namespace, table, metadata.getSecondaryIndexNames(), ru);
     }
 
-    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
     if (!noBackup) {
       enableContinuousBackup(namespace, table);
     }
 
-    createMetadataTableIfNotExists(noBackup);
     putTableMetadata(namespace, table, metadata);
   }
 
