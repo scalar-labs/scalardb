@@ -6,6 +6,7 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionMetaColumns;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -19,6 +20,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -279,30 +281,41 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void upgrade(Map<String, String> options) throws ExecutionException {
     admin.upgrade(options);
 
-    upgradeCoordinatorTableIfNeeded();
+    upgradeCoordinatorTable();
   }
 
-  private void upgradeCoordinatorTableIfNeeded() throws ExecutionException {
+  private void upgradeCoordinatorTable() throws ExecutionException {
     TableMetadata currentMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
     if (currentMetadata == null) {
       return;
     }
-    TableMetadata expectedMetadata = Coordinator.TABLE_METADATA;
-    for (String columnName : expectedMetadata.getColumnNames()) {
+    // It's likely `tx_child_ids` column introduced for the group commit doesn't exist in the
+    // coordinator table.
+    List<String> potentialMissingColumnNames = ImmutableList.of(Attribute.CHILD_IDS);
+    TableMetadata coordinatorTableMetadata = Coordinator.TABLE_METADATA;
+
+    // Verify the potentially missing columns.
+    for (String columnName : potentialMissingColumnNames) {
       if (currentMetadata.getColumnNames().contains(columnName)) {
         continue;
       }
       // If there is a column that exists in the expected metadata and doesn't exist in the current
       // metadata table, it should be added as long as it's not a key.
-      if (expectedMetadata.getPartitionKeyNames().contains(columnName)
-          || expectedMetadata.getClusteringKeyNames().contains(columnName)
-          || expectedMetadata.getSecondaryIndexNames().contains(columnName)) {
+      if (coordinatorTableMetadata.getPartitionKeyNames().contains(columnName)
+          || coordinatorTableMetadata.getClusteringKeyNames().contains(columnName)
+          || coordinatorTableMetadata.getSecondaryIndexNames().contains(columnName)) {
         throw new IllegalStateException(
             String.format(
                 "Failed to upgrade the coordinator table schema. Column '%s' that is defined in the latest metadata and doesn't exist in the current table is also defined as a key",
                 columnName));
       }
-      DataType columnDataType = expectedMetadata.getColumnDataType(columnName);
+    }
+
+    for (String columnName : potentialMissingColumnNames) {
+      if (currentMetadata.getColumnNames().contains(columnName)) {
+        continue;
+      }
+      DataType columnDataType = coordinatorTableMetadata.getColumnDataType(columnName);
       admin.addNewColumnToTable(
           coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
     }

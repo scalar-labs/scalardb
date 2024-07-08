@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -13,7 +14,13 @@ public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTest
 
   @Override
   protected Properties getProperties(String testName) {
-    return JdbcEnv.getProperties(testName);
+    Properties properties = JdbcEnv.getProperties(testName);
+
+    // TODO: This should be called in ConsensusCommitJdbcEnv?
+    // Add testName as a coordinator schema suffix
+    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+
+    return properties;
   }
 
   @Override

@@ -1,6 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 
@@ -8,7 +9,12 @@ public class CosmosSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
 
   @Override
   protected Properties getProperties(String testName) {
-    return CosmosEnv.getProperties(testName);
+    Properties properties = CosmosEnv.getProperties(testName);
+
+    // Add testName as a coordinator schema suffix
+    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+
+    return properties;
   }
 
   @Override
