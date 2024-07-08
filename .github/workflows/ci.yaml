@@ -56,10 +56,8 @@ jobs:
         if: always()
         run: |
           mkdir -p /tmp/gradle_test_reports/core
-          mkdir -p /tmp/gradle_test_reports/server
           mkdir -p /tmp/gradle_test_reports/schema-loader
           cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
-          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
           cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
 
       - name: Upload Gradle test reports
@@ -73,11 +71,9 @@ jobs:
         if: always()
         run: |
           mkdir -p /tmp/gradle_spotbugs_reports/core
-          mkdir -p /tmp/gradle_spotbugs_reports/server
           mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
           mkdir -p /tmp/gradle_spotbugs_reports/integration-test
           cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
           cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
           cp -a integration-test/build/reports/spotbugs /tmp/gradle_spotbugs_reports/integration-test/
 
@@ -100,11 +96,6 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Dockerfile Lint for ScalarDB Server
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: ':server:dockerfileLint'
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
         if: always()
@@ -1250,39 +1241,3 @@ jobs:
         with:
           name: multi_storage_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestMultiStorage
-
-  integration-test-for-scalardb-server:
-    name: ScalarDB Server integration test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Run MySQL 8
-        run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestScalarDbServer -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v4
-        if : always()
-        with:
-          name: scalardb_server_integration_test_reports
-          path: server/build/reports/tests/integrationTestScalarDbServer

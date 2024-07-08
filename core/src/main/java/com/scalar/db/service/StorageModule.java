@@ -16,8 +16,6 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
-import com.scalar.db.storage.rpc.GrpcAdmin;
-import com.scalar.db.storage.rpc.GrpcStorage;
 
 /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
 @Deprecated
@@ -53,10 +51,6 @@ public class StorageModule extends AbstractModule {
       case "multi-storage":
         storageClass = MultiStorage.class;
         storageAdminClass = MultiStorageAdmin.class;
-        break;
-      case "grpc":
-        storageClass = GrpcStorage.class;
-        storageAdminClass = GrpcAdmin.class;
         break;
       default:
         throw new IllegalArgumentException("Storage '" + config.getStorage() + "' isn't supported");
