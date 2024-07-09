@@ -515,10 +515,12 @@ public abstract class SchemaLoaderIntegrationTestBase {
         getCoordinatorNamespaceName(), Coordinator.TABLE, oldCoordinatorTableMetadata);
 
     // Act
+    waitForCreationIfNecessary();
     int exitCode = executeWithArgs(getCommandArgsForUpgrade(CONFIG_FILE_PATH));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
+    waitForCreationIfNecessary();
     assertThat(transactionAdmin.coordinatorTablesExist()).isTrue();
     assertThat(storageAdmin.getTableMetadata(getCoordinatorNamespaceName(), Coordinator.TABLE))
         .isEqualTo(Coordinator.TABLE_METADATA);
