@@ -498,7 +498,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   @Test
-  void upgrade_WithOldCoordinatorTableSchema_ShouldProperlyUpdateTheSchema()
+  public void upgrade_WithOldCoordinatorTableSchema_ShouldProperlyUpdateTheSchema()
       throws ExecutionException {
     // Arrange
     TableMetadata oldCoordinatorTableMetadata =
