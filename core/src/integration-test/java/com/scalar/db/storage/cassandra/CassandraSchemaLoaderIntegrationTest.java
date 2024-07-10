@@ -3,7 +3,6 @@ package com.scalar.db.storage.cassandra;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
 import com.scalar.db.util.AdminTestUtils;
 import java.nio.file.Path;
 import java.util.List;
@@ -14,12 +13,7 @@ public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegratio
 
   @Override
   protected Properties getProperties(String testName) {
-    Properties properties = CassandraEnv.getProperties(testName);
-
-    // Add testName as a coordinator schema suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
-    return properties;
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

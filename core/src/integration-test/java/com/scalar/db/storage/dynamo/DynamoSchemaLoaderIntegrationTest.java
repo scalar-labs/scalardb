@@ -3,7 +3,6 @@ package com.scalar.db.storage.dynamo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
 import com.scalar.db.util.AdminTestUtils;
 import java.nio.file.Path;
 import java.util.List;
@@ -14,12 +13,7 @@ public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
 
   @Override
   protected Properties getProperties(String testName) {
-    Properties properties = DynamoEnv.getProperties(testName);
-
-    // Add testName as a coordinator schema suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
-    return properties;
+    return ConsensusCommitDynamoEnv.getProperties(testName);
   }
 
   @Override
