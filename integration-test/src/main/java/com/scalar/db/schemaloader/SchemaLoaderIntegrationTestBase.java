@@ -325,6 +325,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     transactionAdmin.dropTable(namespace1, TABLE_1, true);
     transactionAdmin.dropNamespace(namespace1, true);
     transactionAdmin.dropCoordinatorTables(true);
+    waitForCreationIfNecessary();
     storageAdmin.dropTable(namespace2, TABLE_2, true);
     storageAdmin.dropNamespace(namespace2, true);
   }
@@ -364,6 +365,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
+    waitForCreationIfNecessary();
     assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isFalse();
     assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isFalse();
     assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
