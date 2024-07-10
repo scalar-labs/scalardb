@@ -66,9 +66,15 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
 
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new MultiStorageAdminTestUtils(
-        MultiStorageEnv.getPropertiesForCassandra(testName),
-        MultiStorageEnv.getPropertiesForJdbc(testName));
+    Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(testName);
+    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(
+        propertiesForCassandra, testName);
+
+    Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(testName);
+    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(
+        propertiesForJdbc, testName);
+
+    return new MultiStorageAdminTestUtils(propertiesForCassandra, propertiesForJdbc);
   }
 
   @Override
