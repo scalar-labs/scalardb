@@ -131,6 +131,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
     return getProperties(TEST_NAME).getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
   }
 
+  protected Map<String, String> storageOption() {
+    return Collections.emptyMap();
+  }
+
   protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   protected Map<String, Object> getSchemaJsonMap() {
@@ -510,9 +514,12 @@ public abstract class SchemaLoaderIntegrationTestBase {
             .addPartitionKey(Attribute.ID)
             .build();
 
-    storageAdmin.createNamespace(getCoordinatorNamespaceName());
+    storageAdmin.createNamespace(getCoordinatorNamespaceName(), storageOption());
     storageAdmin.createTable(
-        getCoordinatorNamespaceName(), Coordinator.TABLE, oldCoordinatorTableMetadata);
+        getCoordinatorNamespaceName(),
+        Coordinator.TABLE,
+        oldCoordinatorTableMetadata,
+        storageOption());
 
     // Act
     waitForCreationIfNecessary();
