@@ -1,3 +1,9 @@
+> [!CAUTION]
+> 
+> This documentation has been moved to the centralized ScalarDB documentation repository, [docs-internal-scalardb](https://github.com/scalar-labs/docs-internal-scalardb). Please update this documentation in that repository instead.
+> 
+> To view the ScalarDB documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/).
+
 # Requirements and Recommendations for the Underlying Databases of ScalarDB
 
 This document explains the requirements and recommendations in the underlying databases of ScalarDB to make ScalarDB applications work correctly and efficiently.
