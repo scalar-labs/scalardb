@@ -289,24 +289,24 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     if (currentMetadata == null) {
       return;
     }
-    // It's likely `tx_child_ids` column introduced for the group commit doesn't exist in the
-    // coordinator table.
+    // These columns were recently added. Therefore, it's possible Coordinator tables created
+    // earlier don't have these columns.
     List<String> potentialMissingColumnNames = ImmutableList.of(Attribute.CHILD_IDS);
-    TableMetadata coordinatorTableMetadata = Coordinator.TABLE_METADATA;
 
     // Verify the potentially missing columns.
     for (String columnName : potentialMissingColumnNames) {
       if (currentMetadata.getColumnNames().contains(columnName)) {
         continue;
       }
-      // If there is a column that exists in the expected metadata and doesn't exist in the current
-      // metadata table, it should be added as long as it's not a key.
-      if (coordinatorTableMetadata.getPartitionKeyNames().contains(columnName)
-          || coordinatorTableMetadata.getClusteringKeyNames().contains(columnName)
-          || coordinatorTableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      // `upgrade` command doesn't migrate key columns.
+      if (Coordinator.TABLE_METADATA.getPartitionKeyNames().contains(columnName)
+          || Coordinator.TABLE_METADATA.getClusteringKeyNames().contains(columnName)
+          || Coordinator.TABLE_METADATA.getSecondaryIndexNames().contains(columnName)) {
+        // This doesn't happen at the moment in practice. Special handling would be needed if we add
+        // a key column in the Coordinator table metadata in the future.
         throw new IllegalStateException(
             String.format(
-                "Failed to upgrade the coordinator table schema. Column '%s' that is defined in the latest metadata and doesn't exist in the current table is also defined as a key",
+                "Failed to upgrade the Coordinator table schema. Key columns can't be migrated. Column: %s",
                 columnName));
       }
     }
@@ -315,7 +315,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       if (currentMetadata.getColumnNames().contains(columnName)) {
         continue;
       }
-      DataType columnDataType = coordinatorTableMetadata.getColumnDataType(columnName);
+      DataType columnDataType = Coordinator.TABLE_METADATA.getColumnDataType(columnName);
       admin.addNewColumnToTable(
           coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
     }
