@@ -32,6 +32,15 @@ env:
   JAVA_VENDOR: 'temurin'
   INT_TEST_JAVA_RUNTIME_VERSION: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
   INT_TEST_JAVA_RUNTIME_VENDOR: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
+  # Gradle will parse 'ORG_GRADLE_PROJECT_<project_property_name>' environment variables as project properties.
+  # The following variables configure the 'com.scalar.db.jdk-configuration' Gradle plugin.
+  ORG_GRADLE_PROJECT_javaVersion: '8'
+  ORG_GRADLE_PROJECT_javaVendor: 'temurin'
+  ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
+  ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
+  # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
+  SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
+  SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ (inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')) &&  'true' || 'false' }}"
 
 jobs:
   check:
@@ -49,7 +58,7 @@ jobs:
       - name: Setup and execute Gradle 'check' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: check buildSrc:check -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }}
+          arguments: check buildSrc:check
 
       - name: Save Gradle test reports
         if: always()
@@ -181,15 +190,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestCassandra
 
       - name: Upload Gradle test reports
         if: always()
@@ -222,15 +246,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestCassandra' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCassandra -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestCassandra
 
       - name: Upload Gradle test reports
         if: always()
@@ -254,10 +293,34 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          $container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
+          docker cp "${container_id}:oracle-jdk.exe" .
+          docker rm "$container_id"
+          Write-Host "Install Oracle JDK"
+          Start-Process "oracle-jdk.exe" -NoNewWindow -Wait -ArgumentList "/s"
+          Write-Host "Oracle JDK installation successful"
+          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+            $jdk_root_dir = "jdk-1.8"
+          } else {
+            $jdk_root_dir = "jdk-11"
+          }
+          echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
 
       - name: Start Azure Cosmos DB emulator
         run: |
@@ -289,7 +352,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestCosmos' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestCosmos -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dfile.encoding=UTF-8
+          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dfile.encoding=UTF-8
 
       - name: Upload Gradle test reports
         if: always()
@@ -319,15 +382,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestDynamo' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestDynamo -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestDynamo
 
       - name: Upload Gradle test reports
         if: always()
@@ -355,15 +433,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
@@ -391,16 +484,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
@@ -428,15 +535,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
@@ -469,15 +591,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -510,15 +647,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -551,15 +703,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -592,15 +759,31 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -639,15 +822,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -686,15 +884,31 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -747,15 +961,22 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Stop Oracle 23 container
         if: always()
@@ -794,10 +1015,25 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3
@@ -806,7 +1042,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -841,10 +1077,25 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19 10 3
@@ -853,7 +1104,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -888,10 +1139,25 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22 10 3
@@ -900,7 +1166,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -924,10 +1190,25 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
       - name: Set up SQLite3
         run: sudo apt-get install -y sqlite3
@@ -935,7 +1216,7 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }} -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
 
       - name: Upload Gradle test reports
         if: always()
@@ -963,16 +1244,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
+          arguments: integrationTestJdbc
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -1008,15 +1303,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestMultiStorage' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestMultiStorage -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestMultiStorage
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4
@@ -1044,15 +1354,30 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ !(env.INT_TEST_JAVA_RUNTIME_VERSION == env.JAVA_VERSION && env.INT_TEST_JAVA_RUNTIME_VENDOR == env.JAVA_VENDOR) }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
       - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestScalarDbServer -PjavaVersion=${{ env.JAVA_VERSION }} -PjavaVendor=${{ env.JAVA_VENDOR }} -PintegrationTestJavaRuntimeVersion=${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} -PintegrationTestJavaRuntimeVendor=${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          arguments: integrationTestScalarDbServer
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4
