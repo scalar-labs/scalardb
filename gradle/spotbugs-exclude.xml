@@ -1,37 +1,37 @@
 <FindBugsFilter>
-    <!-- For all code !-->
-    <Match>
-        <Or>
-            <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
-            <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
-            <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
-            <!-- Temporarily excluded. See https://github.com/spotbugs/spotbugs/issues/1694 -->
-            <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
-            <!-- To exclude Lombok thrown warnings -->
-            <Bug pattern="SAME_NAME_BUT_DIFFERENT"/>
-        </Or>
-    </Match>
+  <!-- For all code !-->
+  <Match>
+    <Or>
+      <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
+      <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
+      <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
+      <!-- Temporarily excluded. See https://github.com/spotbugs/spotbugs/issues/1694 -->
+      <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
+      <!-- To exclude Lombok thrown warnings -->
+      <Bug pattern="SAME_NAME_BUT_DIFFERENT"/>
+    </Or>
+  </Match>
 
-    <!-- For test code !-->
-    <Match>
-        <Or>
-            <Class name="~.*\.*Test"/>
-            <Class name="~.*\.*Test\$.*"/>
-            <Class name="~.*\.*Test\..*"/>
-            <Class name="~.*\.*TestBase"/>
-            <Class name="~.*\.*TestBase\$.*"/>
-            <Class name="~.*\.*TestBase\..*"/>
-            <Class name="~.*\.*TestUtils"/>
-            <Class name="~.*\.*TestUtils\$.*"/>
-            <Class name="~.*\.*IntegrationTest.*"/>
-        </Or>
-        <Or>
-            <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
-            <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
-            <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
-            <Bug pattern="EC_UNRELATED_TYPES"/>
-            <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
-            <Bug pattern="ODR_OPEN_DATABASE_RESOURCE"/>
-        </Or>
-    </Match>
+  <!-- For test code !-->
+  <Match>
+    <Or>
+      <Class name="~.*\.*Test"/>
+      <Class name="~.*\.*Test\$.*"/>
+      <Class name="~.*\.*Test\..*"/>
+      <Class name="~.*\.*TestBase"/>
+      <Class name="~.*\.*TestBase\$.*"/>
+      <Class name="~.*\.*TestBase\..*"/>
+      <Class name="~.*\.*TestUtils"/>
+      <Class name="~.*\.*TestUtils\$.*"/>
+      <Class name="~.*\.*IntegrationTest.*"/>
+    </Or>
+    <Or>
+      <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+      <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+      <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+      <Bug pattern="EC_UNRELATED_TYPES"/>
+      <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+      <Bug pattern="ODR_OPEN_DATABASE_RESOURCE"/>
+    </Or>
+  </Match>
 </FindBugsFilter>
