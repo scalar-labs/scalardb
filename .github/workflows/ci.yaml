@@ -867,7 +867,7 @@ jobs:
 #          path: core/build/reports/tests/integrationTestJdbc
 #
   integration-test-for-jdbc-oracle-19:
-    name: Oracle 19 integration test (${{ matrix.mode.label }})
+    name: Oracle 19 integration test
     runs-on: ubuntu-latest
 
     services:
@@ -921,7 +921,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oracle_19_integration_test_reports_${{ matrix.mode.label }}
+          name: oracle_19_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 #
 #  integration-test-for-jdbc-oracle-21:
@@ -1397,7 +1397,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mariadb_11.4_integration_test_reports_${{ matrix.mode.label }}
+          name: mariadb_11.4_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 #
 #  integration-test-for-multi-storage:
