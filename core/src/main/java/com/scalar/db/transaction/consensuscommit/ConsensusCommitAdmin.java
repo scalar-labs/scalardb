@@ -298,11 +298,11 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       if (currentMetadata.getColumnNames().contains(columnName)) {
         continue;
       }
-      // `upgrade` command doesn't migrate key columns.
+      // The `upgrade` command doesn't migrate key columns.
       if (Coordinator.TABLE_METADATA.getPartitionKeyNames().contains(columnName)
           || Coordinator.TABLE_METADATA.getClusteringKeyNames().contains(columnName)
           || Coordinator.TABLE_METADATA.getSecondaryIndexNames().contains(columnName)) {
-        // This doesn't happen at the moment in practice. Special handling would be needed if we add
+        // In practice, this currently doesn't happen. Special handling would be needed if we add
         // a key column in the Coordinator table metadata in the future.
         throw new IllegalStateException(
             String.format(
