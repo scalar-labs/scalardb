@@ -867,7 +867,7 @@ jobs:
 #          path: core/build/reports/tests/integrationTestJdbc
 #
   integration-test-for-jdbc-oracle-19:
-    name: Oracle 19 integration test (${{ matrix.mode.label }})
+    name: Oracle 19 integration test
     runs-on: ubuntu-latest
 
     services:
@@ -921,7 +921,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oracle_19_integration_test_reports_${{ matrix.mode.label }}
+          name: oracle_19_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 #
 #  integration-test-for-jdbc-oracle-21:
@@ -1350,17 +1350,8 @@ jobs:
 #          path: core/build/reports/tests/integrationTestJdbc
 #
   integration-test-for-jdbc-mariadb-11-4:
-    name: MariaDB 11.4 integration test (${{ matrix.mode.label }})
+    name: MariaDB 11.4 integration test
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
 
     steps:
       - name: Run MariaDB 11.4
@@ -1400,13 +1391,13 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+          arguments: integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mariadb_11.4_integration_test_reports_${{ matrix.mode.label }}
+          name: mariadb_11.4_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
 #
 #  integration-test-for-multi-storage:
