@@ -880,78 +880,7 @@ jobs:
         with:
           name: postgresql_15_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-oracle-18:
-    name: Oracle 18 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18
-        credentials:
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-        env:
-          ORACLE_PWD: Oracle
-        ports:
-          - 1521:1521
-        options: >-
-          --health-cmd "/opt/oracle/checkDBStatus.sh"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 120
-
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
-        run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
-
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: oracle_18_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
+  
   integration-test-for-jdbc-oracle-19:
     name: Oracle 19 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
