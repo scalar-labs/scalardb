@@ -62,4 +62,9 @@ public class SchemaLoaderIntegrationTestWithServer extends SchemaLoaderIntegrati
       throws Exception {
     super.createThenDropNamespacesTableThenUpgrade_ShouldCreateNamespacesTableCorrectly();
   }
+
+  @Test
+  @Disabled("upgrade is not supported with ScalarDB Server")
+  @Override
+  public void upgrade_WithOldCoordinatorTableSchema_ShouldProperlyUpdateTheSchema() {}
 }
