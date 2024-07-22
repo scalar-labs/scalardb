@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
@@ -12,12 +13,20 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.common.ResultImpl;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -491,5 +500,115 @@ public class ScalarDbUtilsTest {
 
   private LikeExpression prepareNotLike(String pattern, String escape) {
     return ConditionBuilder.column("col1").isNotLikeText(pattern, escape);
+  }
+
+  @Test
+  public void getPartitionKey_ShouldReturnPartitionKey() {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.INT)
+            .addColumn("c3", DataType.INT)
+            .addColumn("c4", DataType.BIGINT)
+            .addColumn("c5", DataType.DOUBLE)
+            .addPartitionKey("c1")
+            .addPartitionKey("c2")
+            .addClusteringKey("c3")
+            .addClusteringKey("c4")
+            .build();
+
+    Result result =
+        new ResultImpl(
+            ImmutableMap.of(
+                "c1", TextColumn.of("c1", "v1"),
+                "c2", IntColumn.of("c2", 2),
+                "c3", IntColumn.of("c3", 3),
+                "c4", BigIntColumn.of("c4", 4L),
+                "c5", DoubleColumn.of("c5", 5.0)),
+            tableMetadata);
+
+    // Act
+    Key actual = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+
+    // Assert
+    assertThat(actual.getColumns().size()).isEqualTo(2);
+    assertThat(actual.getColumns().get(0)).isInstanceOf(TextColumn.class);
+    assertThat(actual.getColumns().get(0).getName()).isEqualTo("c1");
+    assertThat(actual.getColumns().get(0).getTextValue()).isEqualTo("v1");
+    assertThat(actual.getColumns().get(1)).isInstanceOf(IntColumn.class);
+    assertThat(actual.getColumns().get(1).getName()).isEqualTo("c2");
+    assertThat(actual.getColumns().get(1).getIntValue()).isEqualTo(2);
+  }
+
+  @Test
+  public void getClusteringKey_ShouldReturnClusteringKey() {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.INT)
+            .addColumn("c3", DataType.INT)
+            .addColumn("c4", DataType.BIGINT)
+            .addColumn("c5", DataType.DOUBLE)
+            .addPartitionKey("c1")
+            .addPartitionKey("c2")
+            .addClusteringKey("c3")
+            .addClusteringKey("c4")
+            .build();
+
+    Result result =
+        new ResultImpl(
+            ImmutableMap.of(
+                "c1", TextColumn.of("c1", "v1"),
+                "c2", IntColumn.of("c2", 2),
+                "c3", IntColumn.of("c3", 3),
+                "c4", BigIntColumn.of("c4", 4L),
+                "c5", DoubleColumn.of("c5", 5.0)),
+            tableMetadata);
+
+    // Act
+    Optional<Key> actual = ScalarDbUtils.getClusteringKey(result, tableMetadata);
+
+    // Assert
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getColumns().size()).isEqualTo(2);
+    assertThat(actual.get().getColumns().get(0)).isInstanceOf(IntColumn.class);
+    assertThat(actual.get().getColumns().get(0).getName()).isEqualTo("c3");
+    assertThat(actual.get().getColumns().get(0).getIntValue()).isEqualTo(3);
+    assertThat(actual.get().getColumns().get(1)).isInstanceOf(BigIntColumn.class);
+    assertThat(actual.get().getColumns().get(1).getName()).isEqualTo("c4");
+    assertThat(actual.get().getColumns().get(1).getBigIntValue()).isEqualTo(4L);
+  }
+
+  @Test
+  public void getClusteringKey_TableMetadataWithoutClusteringKey_ShouldReturnClusteringKey() {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.INT)
+            .addColumn("c3", DataType.INT)
+            .addColumn("c4", DataType.BIGINT)
+            .addColumn("c5", DataType.DOUBLE)
+            .addPartitionKey("c1")
+            .addPartitionKey("c2")
+            .build();
+
+    Result result =
+        new ResultImpl(
+            ImmutableMap.of(
+                "c1", TextColumn.of("c1", "v1"),
+                "c2", IntColumn.of("c2", 2),
+                "c3", IntColumn.of("c3", 3),
+                "c4", BigIntColumn.of("c4", 4L),
+                "c5", DoubleColumn.of("c5", 5.0)),
+            tableMetadata);
+
+    // Act
+    Optional<Key> actual = ScalarDbUtils.getClusteringKey(result, tableMetadata);
+
+    // Assert
+    assertThat(actual).isNotPresent();
   }
 }
