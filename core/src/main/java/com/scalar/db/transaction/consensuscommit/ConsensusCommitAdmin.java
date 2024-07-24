@@ -6,6 +6,7 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.removeTransactionMetaColumns;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
@@ -19,6 +20,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -278,6 +280,45 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     admin.upgrade(options);
+
+    upgradeCoordinatorTable();
+  }
+
+  private void upgradeCoordinatorTable() throws ExecutionException {
+    TableMetadata currentMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+    if (currentMetadata == null) {
+      return;
+    }
+    // These columns were recently added. Therefore, it's possible Coordinator tables created
+    // earlier don't have these columns.
+    List<String> potentialMissingColumnNames = ImmutableList.of(Attribute.CHILD_IDS);
+
+    // Verify the potentially missing columns.
+    for (String columnName : potentialMissingColumnNames) {
+      if (currentMetadata.getColumnNames().contains(columnName)) {
+        continue;
+      }
+      // The `upgrade` command doesn't migrate key columns.
+      if (Coordinator.TABLE_METADATA.getPartitionKeyNames().contains(columnName)
+          || Coordinator.TABLE_METADATA.getClusteringKeyNames().contains(columnName)
+          || Coordinator.TABLE_METADATA.getSecondaryIndexNames().contains(columnName)) {
+        // In practice, this currently doesn't happen. Special handling would be needed if we add
+        // a key column in the Coordinator table metadata in the future.
+        throw new IllegalStateException(
+            String.format(
+                "Failed to upgrade the Coordinator table schema. Key columns can't be migrated. Column: %s",
+                columnName));
+      }
+    }
+
+    for (String columnName : potentialMissingColumnNames) {
+      if (currentMetadata.getColumnNames().contains(columnName)) {
+        continue;
+      }
+      DataType columnDataType = Coordinator.TABLE_METADATA.getColumnDataType(columnName);
+      admin.addNewColumnToTable(
+          coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
+    }
   }
 
   @Override

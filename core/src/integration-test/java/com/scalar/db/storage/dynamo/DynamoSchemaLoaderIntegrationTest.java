@@ -1,17 +1,19 @@
 package com.scalar.db.storage.dynamo;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
 
   @Override
   protected Properties getProperties(String testName) {
-    return DynamoEnv.getProperties(testName);
+    return ConsensusCommitDynamoEnv.getProperties(testName);
   }
 
   @Override
@@ -43,6 +45,14 @@ public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
     return ImmutableList.<String>builder()
         .addAll(super.getCommandArgsForUpgrade(configFilePath))
         .add("--no-backup")
+        .build();
+  }
+
+  @Override
+  protected Map<String, String> storageOption() {
+    return ImmutableMap.<String, String>builder()
+        .put(DynamoAdmin.NO_BACKUP, "true")
+        .put(DynamoAdmin.NO_SCALING, "true")
         .build();
   }
 }
