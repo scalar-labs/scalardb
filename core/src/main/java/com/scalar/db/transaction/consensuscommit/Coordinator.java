@@ -146,6 +146,24 @@ public class Coordinator {
     put(put);
   }
 
+  public void putStateForLazyRecoveryRollback(String id) throws CoordinatorException {
+    if (!keyManipulator.isFullKey(id)) {
+      putState(new Coordinator.State(id, TransactionState.ABORTED));
+      return;
+    }
+
+    Keys<String, String, String> keys = keyManipulator.keysFromFullKey(id);
+    // This record is to prevent a group commit that has the same parent ID regardless if the
+    // transaction is group committed or committed alone.
+    putStateForGroupCommit(
+        keys.parentKey,
+        Collections.emptyList(),
+        TransactionState.ABORTED,
+        System.currentTimeMillis());
+    // This record is to clarify the transaction is aborted.
+    putState(new Coordinator.State(id, TransactionState.ABORTED));
+  }
+
   private Get createGetWith(String id) {
     return new Get(new Key(Attribute.toIdValue(id)))
         .withConsistency(Consistency.LINEARIZABLE)

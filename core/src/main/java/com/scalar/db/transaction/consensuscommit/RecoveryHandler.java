@@ -93,7 +93,8 @@ public class RecoveryHandler {
     }
 
     try {
-      coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
+      //      coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
+      coordinator.putStateForLazyRecoveryRollback(result.getId());
       rollbackRecord(selection, result);
     } catch (CoordinatorException e) {
       logger.warn("Coordinator tries to abort {}, but failed", result.getId(), e);
