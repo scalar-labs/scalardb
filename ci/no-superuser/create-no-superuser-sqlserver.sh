@@ -21,7 +21,12 @@ do
 
     echo "INFO: Retry count: ${COUNT}"
 
-    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "SELECT 1"
+    if [[ "$1" -eq "sqlserver22" ]]; then
+        docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "SELECT 1"
+    else
+        docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "SELECT 1"
+    fi
+
     if [[ $? -eq 0 ]]; then
         break
     else
@@ -40,40 +45,72 @@ echo "INFO: sqlcmd command succeeded. Continue creating no superuser."
 
 # Create login
 echo "INFO: Create login start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "CREATE LOGIN no_superuser WITH PASSWORD = 'no_superuser_password', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "CREATE LOGIN no_superuser WITH PASSWORD = 'no_superuser_password', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "CREATE LOGIN no_superuser WITH PASSWORD = 'no_superuser_password', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF"
+fi
 echo "INFO: Create login end"
 
 # Create database
 echo "INFO: Create database start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2"
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2"
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d master -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2"
+fi
 echo "INFO: Create database end"
 
 # Create no_superuser
 echo "INFO: Create no_superuser start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "CREATE USER no_superuser FOR LOGIN no_superuser"
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "CREATE USER no_superuser FOR LOGIN no_superuser"
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "CREATE USER no_superuser FOR LOGIN no_superuser"
+fi
 echo "INFO: Create no_superuser end"
 
 # Add roles
 echo "INFO: Add role db_ddladmin start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_ddladmin', @membername = 'no_superuser'"
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_ddladmin', @membername = 'no_superuser'"
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_ddladmin', @membername = 'no_superuser'"
+fi
 echo "INFO: Add role db_ddladmin end"
 
 echo "INFO: Add role db_datawriter start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_datawriter', @membername = 'no_superuser'"
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_datawriter', @membername = 'no_superuser'"
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_datawriter', @membername = 'no_superuser'"
+fi
 echo "INFO: Add role db_datawriter end"
 
 echo "INFO: Add role db_datareader start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_datareader', @membername = 'no_superuser'"
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_datareader', @membername = 'no_superuser'"
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQL_SERVER_PASSWORD} -d test_db -Q "EXEC sp_addrolemember @rolename = 'db_datareader', @membername = 'no_superuser'"
+fi
 echo "INFO: Add role db_datareader end"
 
 # Check the collation of test_db (for debugging purposes)
 echo "INFO: Check collation start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U no_superuser -P no_superuser_password -d test_db -Q "SELECT name, collation_name FROM sys.databases" -W
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U no_superuser -P no_superuser_password -d test_db -Q "SELECT name, collation_name FROM sys.databases" -W
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U no_superuser -P no_superuser_password -d test_db -Q "SELECT name, collation_name FROM sys.databases" -W
+fi
 echo "INFO: Check collation end"
 
 # Check if no_superuser can access SQL Server (for debugging purposes)
 echo "INFO: SELECT @@version start"
-docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U no_superuser -P no_superuser_password -d test_db -Q "SELECT @@version"
+if [[ "$1" -eq "sqlserver22" ]]; then
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools18/bin/sqlcmd -S localhost -U no_superuser -P no_superuser_password -d test_db -Q "SELECT @@version"
+else
+    docker exec -t ${SQL_SERVER_CONTAINER_NAME} /opt/mssql-tools/bin/sqlcmd -S localhost -U no_superuser -P no_superuser_password -d test_db -Q "SELECT @@version"
+fi
 echo "INFO: SELECT @@version end"
 
 echo "INFO: Creating no superuser succeeded."
