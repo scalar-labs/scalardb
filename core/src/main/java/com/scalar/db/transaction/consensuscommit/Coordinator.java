@@ -116,6 +116,11 @@ public class Coordinator {
           if (s.getChildIds().contains(childId)) {
             return state;
           }
+          logger.warn(
+              "Got the state, but the child ID isn't found. ParentID:{}, ChildIDs:{}, Target-ChildID:{}",
+              parentId,
+              s.getChildIds(),
+              childId);
           return Optional.empty();
         });
   }
