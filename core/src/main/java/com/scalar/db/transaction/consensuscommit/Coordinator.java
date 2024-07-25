@@ -153,15 +153,28 @@ public class Coordinator {
     }
 
     Keys<String, String, String> keys = keyManipulator.keysFromFullKey(id);
-    // This record is to prevent a group commit that has the same parent ID regardless if the
-    // transaction is group committed or committed alone.
-    putStateForGroupCommit(
-        keys.parentKey,
-        Collections.emptyList(),
-        TransactionState.ABORTED,
-        System.currentTimeMillis());
+    try {
+      // This record is to prevent a group commit that has the same parent ID regardless if the
+      // transaction is group committed or committed alone.
+      putStateForGroupCommit(
+          keys.parentKey,
+          Collections.emptyList(),
+          TransactionState.ABORTED,
+          System.currentTimeMillis());
+      // logger.info("LazyRollback: Inserted Parent ID: {}", keys.parentKey);
+    } catch (CoordinatorConflictException e) {
+      Optional<State> optState = getState(keys.parentKey);
+      if (!optState.isPresent()) {
+        throw new AssertionError();
+      }
+      State state = optState.get();
+      if (state.getState() != TransactionState.ABORTED) {
+        throw e;
+      }
+    }
     // This record is to clarify the transaction is aborted.
     putState(new Coordinator.State(id, TransactionState.ABORTED));
+    // logger.info("LazyRollback: Inserted Full ID: {}", id);
   }
 
   private Get createGetWith(String id) {
