@@ -18,7 +18,9 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -29,17 +31,18 @@ import org.slf4j.LoggerFactory;
 public class CommitMutationComposer extends AbstractMutationComposer {
   private static final Logger logger = LoggerFactory.getLogger(CommitMutationComposer.class);
 
-  public CommitMutationComposer(String id) {
-    super(id);
+  public CommitMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
+    super(id, tableMetadataManager);
   }
 
   @VisibleForTesting
-  CommitMutationComposer(String id, long current) {
-    super(id, current);
+  CommitMutationComposer(
+      String id, long current, TransactionTableMetadataManager tableMetadataManager) {
+    super(id, current, tableMetadataManager);
   }
 
   @Override
-  public void add(Operation base, @Nullable TransactionResult result) {
+  public void add(Operation base, @Nullable TransactionResult result) throws ExecutionException {
     if (base instanceof Put) {
       // for usual commit
       add((Put) base, result);
@@ -52,15 +55,15 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private void add(Put base, @Nullable TransactionResult result) {
+  private void add(Put base, @Nullable TransactionResult result) throws ExecutionException {
     mutations.add(composePut(base, result));
   }
 
-  private void add(Delete base, @Nullable TransactionResult result) {
+  private void add(Delete base, @Nullable TransactionResult result) throws ExecutionException {
     mutations.add(composeDelete(base, result));
   }
 
-  private void add(Selection base, @Nullable TransactionResult result) {
+  private void add(Selection base, @Nullable TransactionResult result) throws ExecutionException {
     if (result == null) {
       // for deleting non-existing record that was prepared with DELETED for Serializable with
       // Extra-write
@@ -79,7 +82,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private Put composePut(Operation base, @Nullable TransactionResult result) {
+  private Put composePut(Operation base, @Nullable TransactionResult result)
+      throws ExecutionException {
     return new Put(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
@@ -93,7 +97,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         .withValue(Attribute.toStateValue(TransactionState.COMMITTED));
   }
 
-  private Delete composeDelete(Operation base, @Nullable TransactionResult result) {
+  private Delete composeDelete(Operation base, @Nullable TransactionResult result)
+      throws ExecutionException {
     return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
@@ -105,7 +110,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
                     STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
   }
 
-  private Key getPartitionKey(Operation base, @Nullable TransactionResult result) {
+  private Key getPartitionKey(Operation base, @Nullable TransactionResult result)
+      throws ExecutionException {
     if (base instanceof Mutation) {
       // for usual commit
       return base.getPartitionKey();
@@ -113,7 +119,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       assert base instanceof Selection;
       if (result != null) {
         // for rollforward in lazy recovery
-        return result.getPartitionKey().get();
+        TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
+        return ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
       } else {
         // for deleting non-existing record that was prepared with DELETED for Serializable with
         // Extra-write
@@ -123,7 +130,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private Optional<Key> getClusteringKey(Operation base, @Nullable TransactionResult result) {
+  private Optional<Key> getClusteringKey(Operation base, @Nullable TransactionResult result)
+      throws ExecutionException {
     if (base instanceof Mutation) {
       // for usual commit
       return base.getClusteringKey();
@@ -131,7 +139,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       assert base instanceof Selection;
       if (result != null) {
         // for rollforward in lazy recovery
-        return result.getClusteringKey();
+        TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
+        return ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
       } else {
         // for deleting non-existing record that was prepared with DELETED for Serializable with
         // Extra-write

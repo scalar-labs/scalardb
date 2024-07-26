@@ -5,7 +5,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -38,26 +37,29 @@ public class ProjectedResult extends AbstractResult {
   @Deprecated
   @Override
   public Optional<Key> getPartitionKey() {
-    return getKey(original.getPartitionKey());
+    Optional<Key> partitionKey = original.getPartitionKey();
+    checkKey(partitionKey);
+    return partitionKey;
   }
 
   /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<Key> getClusteringKey() {
-    return getKey(original.getClusteringKey());
+    Optional<Key> clusteringKey = original.getClusteringKey();
+    checkKey(clusteringKey);
+    return clusteringKey;
   }
 
-  private Optional<Key> getKey(Optional<Key> key) {
+  private void checkKey(Optional<Key> key) {
     if (!key.isPresent()) {
-      return Optional.empty();
+      return;
     }
-    for (Value<?> value : key.get()) {
-      if (!containedColumnNames.contains(value.getName())) {
-        throw new IllegalStateException(CoreError.COLUMN_NOT_FOUND.buildMessage(value.getName()));
+    for (Column<?> column : key.get().getColumns()) {
+      if (!containedColumnNames.contains(column.getName())) {
+        throw new IllegalStateException(CoreError.COLUMN_NOT_FOUND.buildMessage(column.getName()));
       }
     }
-    return key;
   }
 
   @Override

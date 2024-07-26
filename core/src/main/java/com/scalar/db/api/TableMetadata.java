@@ -209,6 +209,7 @@ public class TableMetadata {
       clusteringKeyNames.addAll(prototype.clusteringKeyNames);
       clusteringOrders.putAll(prototype.clusteringOrders);
       secondaryIndexNames.addAll(prototype.secondaryIndexNames);
+      encryptedColumnNames.addAll(prototype.encryptedColumnNames);
     }
 
     /**
@@ -246,6 +247,7 @@ public class TableMetadata {
      */
     public Builder removeColumn(String name) {
       columns.remove(name);
+      encryptedColumnNames.remove(name);
       return this;
     }
 
