@@ -31,7 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
-    extends TransactionDecorationTwoPhaseCommitTransactionManager {
+    extends TransactionDecorationTwoPhaseCommitTransactionManager
+    implements TwoPhaseCommitTransactionExpirationHandlerSettable {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
@@ -63,6 +64,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
             });
   }
 
+  @Override
   public void setTransactionExpirationHandler(
       BiConsumer<String, TwoPhaseCommitTransaction> handler) {
     transactionExpirationHandler.set(handler);
