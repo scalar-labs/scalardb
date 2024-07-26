@@ -170,7 +170,8 @@ public class CommitHandler {
 
   public void commitRecords(Snapshot snapshot) {
     try {
-      CommitMutationComposer composer = new CommitMutationComposer(snapshot.getId());
+      CommitMutationComposer composer =
+          new CommitMutationComposer(snapshot.getId(), tableMetadataManager);
       snapshot.to(composer);
       PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
