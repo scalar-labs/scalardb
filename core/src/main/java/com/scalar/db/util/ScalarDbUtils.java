@@ -159,9 +159,9 @@ public final class ScalarDbUtils {
     }
 
     // We need to keep this for backward compatibility. We will remove it in release 5.0.0.
-    List<Value<?>> keyValues = selection.getPartitionKey().get();
-    if (keyValues.size() == 1) {
-      String name = keyValues.get(0).getName();
+    List<Column<?>> columns = selection.getPartitionKey().getColumns();
+    if (columns.size() == 1) {
+      String name = columns.get(0).getName();
       return metadata.getSecondaryIndexNames().contains(name);
     }
 
@@ -169,12 +169,13 @@ public final class ScalarDbUtils {
   }
 
   public static void addProjectionsForKeys(Selection selection, TableMetadata metadata) {
-    if (selection.getProjections().isEmpty()) { // meaning projecting all
+    List<String> projections = selection.getProjections();
+    if (projections.isEmpty()) { // meaning projecting all
       return;
     }
     Streams.concat(
             metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
-        .filter(n -> !selection.getProjections().contains(n))
+        .filter(n -> !projections.contains(n))
         .forEach(selection::withProjection);
   }
 
@@ -300,10 +301,11 @@ public final class ScalarDbUtils {
 
   public static Get copyAndPrepareForDynamicFiltering(Get get) {
     Get ret = Get.newBuilder(get).build(); // copy
-    if (!ret.getProjections().isEmpty()) {
+    List<String> projections = ret.getProjections();
+    if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
       ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
-          .filter(columnName -> !ret.getProjections().contains(columnName))
+          .filter(columnName -> !projections.contains(columnName))
           .forEach(ret::withProjection);
     }
     return ret;
@@ -312,10 +314,11 @@ public final class ScalarDbUtils {
   public static Scan copyAndPrepareForDynamicFiltering(Scan scan) {
     // Ignore limit to control it during dynamic filtering
     Scan ret = Scan.newBuilder(scan).limit(0).build(); // copy
-    if (!ret.getProjections().isEmpty()) {
+    List<String> projections = ret.getProjections();
+    if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
       ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
-          .filter(columnName -> !ret.getProjections().contains(columnName))
+          .filter(columnName -> !projections.contains(columnName))
           .forEach(ret::withProjection);
     }
     return ret;
