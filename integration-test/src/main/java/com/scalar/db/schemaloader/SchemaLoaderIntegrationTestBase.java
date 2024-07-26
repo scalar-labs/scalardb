@@ -14,6 +14,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.Attribute;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -122,6 +125,14 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   protected String getNamespace2() {
     return NAMESPACE_2;
+  }
+
+  private String getCoordinatorNamespaceName() {
+    return getProperties(TEST_NAME).getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
+  }
+
+  protected Map<String, String> storageOption() {
+    return Collections.emptyMap();
   }
 
   protected abstract AdminTestUtils getAdminTestUtils(String testName);
@@ -314,6 +325,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     transactionAdmin.dropTable(namespace1, TABLE_1, true);
     transactionAdmin.dropNamespace(namespace1, true);
     transactionAdmin.dropCoordinatorTables(true);
+    waitForCreationIfNecessary();
     storageAdmin.dropTable(namespace2, TABLE_2, true);
     storageAdmin.dropNamespace(namespace2, true);
   }
@@ -353,6 +365,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
+    waitForCreationIfNecessary();
     assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isFalse();
     assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isFalse();
     assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
@@ -488,6 +501,38 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
     assertThat(transactionAdmin.coordinatorTablesExist()).isTrue();
+  }
+
+  @Test
+  public void upgrade_WithOldCoordinatorTableSchema_ShouldProperlyUpdateTheSchema()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata oldCoordinatorTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(Attribute.ID, DataType.TEXT)
+            // `tx_child_ids` is missing.
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
+            .addPartitionKey(Attribute.ID)
+            .build();
+
+    storageAdmin.createNamespace(getCoordinatorNamespaceName(), storageOption());
+    storageAdmin.createTable(
+        getCoordinatorNamespaceName(),
+        Coordinator.TABLE,
+        oldCoordinatorTableMetadata,
+        storageOption());
+
+    // Act
+    waitForCreationIfNecessary();
+    int exitCode = executeWithArgs(getCommandArgsForUpgrade(CONFIG_FILE_PATH));
+
+    // Assert
+    assertThat(exitCode).isEqualTo(0);
+    waitForCreationIfNecessary();
+    assertThat(transactionAdmin.coordinatorTablesExist()).isTrue();
+    assertThat(storageAdmin.getTableMetadata(getCoordinatorNamespaceName(), Coordinator.TABLE))
+        .isEqualTo(Coordinator.TABLE_METADATA);
   }
 
   private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {
