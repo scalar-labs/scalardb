@@ -2,11 +2,10 @@ package com.scalar.db.common;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
+import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,29 +28,14 @@ public class ResultImpl extends AbstractResult {
   @Deprecated
   @Override
   public Optional<Key> getPartitionKey() {
-    return getKey(metadata.getPartitionKeyNames());
+    return Optional.of(ScalarDbUtils.getPartitionKey(this, metadata));
   }
 
   /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Optional<Key> getClusteringKey() {
-    return getKey(metadata.getClusteringKeyNames());
-  }
-
-  private Optional<Key> getKey(LinkedHashSet<String> names) {
-    if (names.isEmpty()) {
-      return Optional.empty();
-    }
-    Key.Builder builder = Key.newBuilder();
-    for (String name : names) {
-      Column<?> column = columns.get(name);
-      if (column == null) {
-        throw new IllegalStateException(CoreError.COLUMN_NOT_FOUND.buildMessage(name));
-      }
-      builder.add(column);
-    }
-    return Optional.of(builder.build());
+    return ScalarDbUtils.getClusteringKey(this, metadata);
   }
 
   @Override

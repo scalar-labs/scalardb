@@ -23,6 +23,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -36,14 +37,12 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class RollbackMutationComposer extends AbstractMutationComposer {
 
   private final DistributedStorage storage;
-  private final TransactionTableMetadataManager tableMetadataManager;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public RollbackMutationComposer(
       String id, DistributedStorage storage, TransactionTableMetadataManager tableMetadataManager) {
-    super(id);
+    super(id, tableMetadataManager);
     this.storage = storage;
-    this.tableMetadataManager = tableMetadataManager;
   }
 
   /** rollback in either prepare phase in commit or lazy recovery phase in read */
@@ -99,28 +98,37 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
               }
             });
 
+    Key partitionKey = ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
+    Optional<Key> clusteringKey =
+        ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
+
     PutBuilder.Buildable putBuilder =
         Put.newBuilder()
             .namespace(base.forNamespace().get())
             .table(base.forTable().get())
-            .partitionKey(result.getPartitionKey().get())
+            .partitionKey(partitionKey)
             .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(id))
                     .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
                     .build())
             .consistency(Consistency.LINEARIZABLE);
-    result.getClusteringKey().ifPresent(putBuilder::clusteringKey);
+    clusteringKey.ifPresent(putBuilder::clusteringKey);
     columns.forEach(putBuilder::value);
 
     return putBuilder.build();
   }
 
-  private Delete composeDelete(Operation base, TransactionResult result) {
+  private Delete composeDelete(Operation base, TransactionResult result) throws ExecutionException {
     assert result != null
         && (result.getState().equals(TransactionState.PREPARED)
             || result.getState().equals(TransactionState.DELETED));
 
-    return new Delete(result.getPartitionKey().get(), result.getClusteringKey().orElse(null))
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
+    Key partitionKey = ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
+    Optional<Key> clusteringKey =
+        ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
+
+    return new Delete(partitionKey, clusteringKey.orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withCondition(
@@ -133,7 +141,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   private Optional<TransactionResult> getLatestResult(
       Operation operation, @Nullable TransactionResult result) throws ExecutionException {
     Key partitionKey;
-    Key clusteringKey;
+    @Nullable Key clusteringKey;
     if (operation instanceof Mutation) {
       // for usual rollback
       partitionKey = operation.getPartitionKey();
@@ -142,8 +150,11 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       assert operation instanceof Selection;
       if (result != null) {
         // for rollback in lazy recovery
-        partitionKey = result.getPartitionKey().get();
-        clusteringKey = result.getClusteringKey().orElse(null);
+        TransactionTableMetadata metadata =
+            tableMetadataManager.getTransactionTableMetadata(operation);
+        partitionKey = ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
+        clusteringKey =
+            ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata()).orElse(null);
       } else {
         // for deleting non-existing record that was prepared with DELETED for Serializable with
         // Extra-write

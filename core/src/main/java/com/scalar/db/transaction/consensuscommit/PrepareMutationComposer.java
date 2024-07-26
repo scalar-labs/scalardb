@@ -26,18 +26,14 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
 
-  private final TransactionTableMetadataManager tableMetadataManager;
-
   public PrepareMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
-    super(id);
-    this.tableMetadataManager = tableMetadataManager;
+    super(id, tableMetadataManager);
   }
 
   @VisibleForTesting
   PrepareMutationComposer(
       String id, long current, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, current);
-    this.tableMetadataManager = tableMetadataManager;
+    super(id, current, tableMetadataManager);
   }
 
   @Override
