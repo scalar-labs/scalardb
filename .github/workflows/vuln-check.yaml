@@ -86,37 +86,6 @@ jobs:
           VERSION=$(./gradlew :core:properties -q | grep "version:" | awk '{print $2}')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Run Trivy vulnerability scanner for ScalarDB Server
-        if: always()
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-          timeout: '60m'
-
-      - name: Post Trivy vulnerability check failure for ScalarDB Server to Slack
-        if: failure()
-        uses: slackapi/slack-github-action@v1.26.0
-        with:
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":octagonal_sign: The vulnerability check for ScalarDB Server on `${{ github.repository }}` <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|failed> with `${{ steps.prepare-target-ref.outputs.target-ref }}`"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-
       - name: Run Trivy vulnerability scanner for ScalarDB Schema Loader
         if: always()
         uses: aquasecurity/trivy-action@master

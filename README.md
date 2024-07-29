@@ -50,7 +50,6 @@ To add a dependency using Maven:
 * Javadoc
     * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - ScalarDB: A universal transaction manager that achieves database-agnostic transactions and distributed transactions that span multiple databases
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - ScalarDB RPC libraries
-    * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - ScalarDB Server: A gRPC interface of ScalarDB
     * [scalardb-schema-loader](https://javadoc.io/doc/com.scalar-labs/scalardb-schema-loader/latest/index.html) - ScalarDB Schema Loader: A tool for schema creation and schema deletion in ScalarDB
 * [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
 * [TLA+](tla+/consensus-commit/README.md)

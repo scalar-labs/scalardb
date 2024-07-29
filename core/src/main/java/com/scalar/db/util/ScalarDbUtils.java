@@ -47,10 +47,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -176,27 +174,6 @@ public final class ScalarDbUtils {
             metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
         .filter(n -> !selection.getProjections().contains(n))
         .forEach(selection::withProjection);
-  }
-
-  public static <E> E pollUninterruptibly(BlockingQueue<E> queue, long timeout, TimeUnit unit) {
-    boolean interrupted = false;
-    try {
-      long remainingNanos = unit.toNanos(timeout);
-      long end = System.nanoTime() + remainingNanos;
-
-      while (true) {
-        try {
-          return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-          interrupted = true;
-          remainingNanos = end - System.nanoTime();
-        }
-      }
-    } finally {
-      if (interrupted) {
-        Thread.currentThread().interrupt();
-      }
-    }
   }
 
   public static <T> Future<T> takeUninterruptibly(CompletionService<T> completionService) {
