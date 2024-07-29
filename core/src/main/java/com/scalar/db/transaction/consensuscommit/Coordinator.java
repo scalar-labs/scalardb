@@ -171,6 +171,7 @@ public class Coordinator {
       if (state.getState() != TransactionState.ABORTED) {
         throw e;
       }
+      // TODO: Check if the `tx_child_ids` contains `id`.
     }
     // This record is to clarify the transaction is aborted.
     putState(new Coordinator.State(id, TransactionState.ABORTED));
