@@ -14,11 +14,6 @@ jobs:
     uses: ./.github/workflows/upload-artifacts.yaml
     secrets:
       CR_PAT: ${{ secrets.CR_PAT }}
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_USER: ${{ secrets.ACR_USER }}
-      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-      AWS_MARKETPLACE_ROLE_OIDC: ${{ secrets.AWS_MARKETPLACE_ROLE_OIDC }}
-      AWS_MARKETPLACE_ECR_ID: ${{ secrets.AWS_MARKETPLACE_ECR_ID }}
       SIGNING_SECRET_KEY_RING: ${{ secrets.SIGNING_SECRET_KEY_RING }}
       SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
       SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
