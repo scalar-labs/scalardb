@@ -62,19 +62,6 @@ jobs:
       - name: Checkout the current repository
         uses: actions/checkout@v4
 
-      - name: Build scalardb-server zip
-        run: ./gradlew :server:distZip
-
-      - name: Upload scalardb-server zip
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: server/build/distributions/scalardb-server-${{ steps.version.outputs.version }}.zip
-          asset_name: scalardb-server-${{ steps.version.outputs.version }}.zip
-          asset_content_type: application/zip
-
       - name: Build scalardb-schema-loader jar
         run: ./gradlew :schema-loader:shadowJar
 
