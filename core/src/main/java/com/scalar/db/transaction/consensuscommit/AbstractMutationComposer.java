@@ -12,18 +12,22 @@ public abstract class AbstractMutationComposer implements MutationComposer {
   protected final String id;
   protected final List<Mutation> mutations;
   protected final long current;
+  protected final TransactionTableMetadataManager tableMetadataManager;
 
-  public AbstractMutationComposer(String id) {
+  public AbstractMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
     this.id = id;
     this.mutations = new ArrayList<>();
     this.current = System.currentTimeMillis();
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   @VisibleForTesting
-  AbstractMutationComposer(String id, long current) {
+  AbstractMutationComposer(
+      String id, long current, TransactionTableMetadataManager tableMetadataManager) {
     this.id = id;
     this.mutations = new ArrayList<>();
     this.current = current;
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   @Override

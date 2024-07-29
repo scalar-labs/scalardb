@@ -12,6 +12,7 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
@@ -36,18 +37,18 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -173,27 +174,6 @@ public final class ScalarDbUtils {
             metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
         .filter(n -> !selection.getProjections().contains(n))
         .forEach(selection::withProjection);
-  }
-
-  public static <E> E pollUninterruptibly(BlockingQueue<E> queue, long timeout, TimeUnit unit) {
-    boolean interrupted = false;
-    try {
-      long remainingNanos = unit.toNanos(timeout);
-      long end = System.nanoTime() + remainingNanos;
-
-      while (true) {
-        try {
-          return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-          interrupted = true;
-          remainingNanos = end - System.nanoTime();
-        }
-      }
-    } finally {
-      if (interrupted) {
-        Thread.currentThread().interrupt();
-      }
-    }
   }
 
   public static <T> Future<T> takeUninterruptibly(CompletionService<T> completionService) {
@@ -427,5 +407,30 @@ public final class ScalarDbUtils {
     }
 
     return "(?s)" + out; // (?s) enables dotall mode, causing "." to match new lines
+  }
+
+  public static Key getPartitionKey(Result result, TableMetadata metadata) {
+    Optional<Key> key = getKey(result.getColumns(), metadata.getPartitionKeyNames());
+    assert key.isPresent();
+    return key.get();
+  }
+
+  public static Optional<Key> getClusteringKey(Result result, TableMetadata metadata) {
+    return getKey(result.getColumns(), metadata.getClusteringKeyNames());
+  }
+
+  private static Optional<Key> getKey(Map<String, Column<?>> columns, LinkedHashSet<String> names) {
+    if (names.isEmpty()) {
+      return Optional.empty();
+    }
+    Key.Builder builder = Key.newBuilder();
+    for (String name : names) {
+      Column<?> column = columns.get(name);
+      if (column == null) {
+        throw new IllegalStateException(CoreError.COLUMN_NOT_FOUND.buildMessage(name));
+      }
+      builder.add(column);
+    }
+    return Optional.of(builder.build());
   }
 }

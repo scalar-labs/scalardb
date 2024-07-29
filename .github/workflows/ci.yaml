@@ -65,10 +65,8 @@ jobs:
         if: always()
         run: |
           mkdir -p /tmp/gradle_test_reports/core
-          mkdir -p /tmp/gradle_test_reports/server
           mkdir -p /tmp/gradle_test_reports/schema-loader
           cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
-          cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
           cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
 
       - name: Upload Gradle test reports
@@ -82,11 +80,9 @@ jobs:
         if: always()
         run: |
           mkdir -p /tmp/gradle_spotbugs_reports/core
-          mkdir -p /tmp/gradle_spotbugs_reports/server
           mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
           mkdir -p /tmp/gradle_spotbugs_reports/integration-test
           cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
-          cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
           cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
           cp -a integration-test/build/reports/spotbugs /tmp/gradle_spotbugs_reports/integration-test/
 
@@ -109,11 +105,6 @@ jobs:
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Dockerfile Lint for ScalarDB Server
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: ':server:dockerfileLint'
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
         if: always()
@@ -880,26 +871,19 @@ jobs:
         with:
           name: postgresql_15_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-oracle-18:
-    name: Oracle 18 integration test (${{ matrix.mode.label }})
+  
+  integration-test-for-jdbc-oracle-19:
+    name: Oracle 19 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
     services:
       oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:18
+        image: ghcr.io/scalar-labs/oracle/db-prebuilt:19
         credentials:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
-        env:
-          ORACLE_PWD: Oracle
         ports:
           - 1521:1521
-        options: >-
-          --health-cmd "/opt/oracle/checkDBStatus.sh"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 120
 
     strategy:
       matrix:
@@ -943,13 +927,13 @@ jobs:
       - name: Setup and execute Gradle 'integrationTestJdbc' task
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oracle_18_integration_test_reports_${{ matrix.mode.label }}
+          name: oracle_19_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-oracle-21:
@@ -1431,6 +1415,66 @@ jobs:
           name: mariadb_10_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
+  integration-test-for-jdbc-mariadb-11-4:
+    name: MariaDB 11.4 integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+
+    steps:
+      - name: Run MariaDB 11.4
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:11.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
+          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
+          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+
+      - name: Setup and execute Gradle 'integrationTestJdbc' task
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb_11.4_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestJdbc
+
   integration-test-for-jdbc-yugabytedb-2:
     name: YugabyteDB 2 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
@@ -1557,54 +1601,3 @@ jobs:
         with:
           name: multi_storage_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestMultiStorage
-
-  integration-test-for-scalardb-server:
-    name: ScalarDB Server integration test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Run MySQL 8
-        run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
-        run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
-
-      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestScalarDbServer
-
-      - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v4
-        if : always()
-        with:
-          name: scalardb_server_integration_test_reports
-          path: server/build/reports/tests/integrationTestScalarDbServer
