@@ -20,9 +20,12 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 public abstract class DecoratedDistributedTransactionManager
-    implements DistributedTransactionManager {
+    implements DistributedTransactionManager,
+        DistributedTransactionDecoratorAddable,
+        DistributedTransactionExpirationHandlerSettable {
 
   private final DistributedTransactionManager transactionManager;
 
@@ -224,5 +227,21 @@ public abstract class DecoratedDistributedTransactionManager
           .getOriginalTransactionManager();
     }
     return transactionManager;
+  }
+
+  @Override
+  public void addTransactionDecorator(DistributedTransactionDecorator transactionDecorator) {
+    if (transactionManager instanceof DistributedTransactionDecoratorAddable) {
+      ((DistributedTransactionDecoratorAddable) transactionManager)
+          .addTransactionDecorator(transactionDecorator);
+    }
+  }
+
+  @Override
+  public void setTransactionExpirationHandler(BiConsumer<String, DistributedTransaction> handler) {
+    if (transactionManager instanceof DistributedTransactionExpirationHandlerSettable) {
+      ((DistributedTransactionExpirationHandlerSettable) transactionManager)
+          .setTransactionExpirationHandler(handler);
+    }
   }
 }
