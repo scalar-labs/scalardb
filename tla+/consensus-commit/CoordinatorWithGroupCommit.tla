@@ -29,46 +29,46 @@ define
 
     AllResponseToClientsAreValid == \A client \in response_to_clients : ResponseToClientIsValid(client)
 
-    CoordinatorRecordIsValid(record) ==
-        (record.tx_id = <<normal_group_key>> /\ record.state = "committed" /\ record.tx_child_ids \ all_tx_child_ids = {})
-        \/ (record.tx_id = <<normal_group_key>> /\ record.state = "aborted" /\ record.tx_child_ids = {})
-        \/ (record.tx_id = <<normal_group_key, "tx1">> /\ record.state \in {"committed", "aborted"} /\ record.tx_child_ids = {})
-        \/ (record.tx_id = <<normal_group_key, "tx2">> /\ record.state \in {"committed", "aborted"} /\ record.tx_child_ids = {})
-        \/ (record.tx_id = <<normal_group_key, "tx3">> /\ record.state \in {"committed", "aborted"} /\ record.tx_child_ids = {})
+    CoordinatorStateIsValid(coord_state) ==
+        (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "committed" /\ coord_state["tx_child_ids"] \ all_tx_child_ids = {})
+        \/ (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "aborted" /\ coord_state["tx_child_ids"] = {})
+        \/ (coord_state["tx_id"] = <<normal_group_key, "tx1">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
+        \/ (coord_state["tx_id"] = <<normal_group_key, "tx2">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
+        \/ (coord_state["tx_id"] = <<normal_group_key, "tx3">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
 
-    AllCoordinatorRecordsAreValid == \A record \in coordinator_table : CoordinatorRecordIsValid(record)
+    AllCoordinatorRecordsAreValid == \A coord_state \in coordinator_table : CoordinatorStateIsValid(coord_state)
 
     CoordinatorStateIsSameAs(tx_child_id, expected_state) ==
-        (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key>>
-        /\ tx_child_id \in record["tx_child_ids"]
-        /\ record["state"] = expected_state)
+        (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>>
+        /\ tx_child_id \in coord_state["tx_child_ids"]
+        /\ coord_state["state"] = expected_state)
         \/
-        (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>>
-        /\ record["tx_child_ids"] = {}
-        /\ record["state"] = expected_state)
+        (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>>
+        /\ coord_state["tx_child_ids"] = {}
+        /\ coord_state["state"] = expected_state)
 
     StateInCoordinatorState(tx_child_id) ==
-        IF \E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>> /\ record["tx_child_ids"] = {} THEN
+        IF \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>> /\ coord_state["tx_child_ids"] = {} THEN
             LET
-                record == CHOOSE record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>> /\ record["tx_child_ids"] = {}
+                coord_state == CHOOSE coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>> /\ coord_state["tx_child_ids"] = {}
             IN
-                record["state"]
-        ELSE IF \E record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"] THEN
+                coord_state["state"]
+        ELSE IF \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"] THEN
             LET
-                record == CHOOSE record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"]
+                coord_state == CHOOSE coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"]
             IN
-                record["state"]
+                coord_state["state"]
         ELSE
             Null
 
     CoordinatorStateShouldContainAnyRecord(tx_child_id) ==
-        (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"])
-        \/ \E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>>
+        (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"])
+        \/ \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>>
 
     CoordinatorStateShouldNotContainMultipleRecords(tx_child_id) ==
         ~(
-            (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"])
-            /\ \E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>>
+            (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"])
+            /\ \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>>
         )
 
     StateInResponseToClient(tx_child_id) ==
@@ -118,8 +118,6 @@ begin Client:
             with ready_tx \in delayed_groups do
                 delayed_groups := {IF tx.tx_child_id = ready_tx.tx_child_id THEN [tx EXCEPT !.state = "ready"] ELSE tx : tx \in delayed_groups};
             end with;
-        or
-            skip;
         end either;
     end while;
 end process;
@@ -141,7 +139,7 @@ begin GroupCommit:
             \* Commit ready transactions in the normal group.
             if normal_group_slots /= {} /\ \A tx \in normal_group_slots: tx["state"] = "ready" then
                 if \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> then
-                    \* The existing record must be created by lazy-recovery.
+                    \* The existing coordinator state must be created by lazy-recovery.
                     assert ~(\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["tx_child_ids"] /= {});
                     assert ~(\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] /= "aborted");
                     \* The client must not have received any response.
@@ -204,7 +202,9 @@ begin GroupCommit:
                 end if;
             end if;
         or
-            skip;
+            \* Emulate a crash.
+            normal_group_slots := {};
+            delayed_groups := {};
         end either;
     end while;
 end process;
@@ -226,7 +226,7 @@ begin LazyRecovery:
             if \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tmp_tx_child_id \in ctx["tx_child_ids"] then
                 \* This transaction is already committed.
                 already_committed := TRUE;
-            elsif \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tmp_tx_child_id \notin ctx["tx_child_ids"] then
+            elsif \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" then
                 \* The normal group was committed, but this transaction isn't committed.
                 already_committed := FALSE;
             elsif \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "aborted" /\ ctx["tx_child_ids"] = {} then
@@ -259,7 +259,7 @@ begin LazyRecovery:
 end process;
 
 end algorithm *)
-\* BEGIN TRANSLATION (chksum(pcal) = "1afdeb5c" /\ chksum(tla) = "99012cfc")
+\* BEGIN TRANSLATION (chksum(pcal) = "eee4969c" /\ chksum(tla) = "5170139a")
 \* Label Client of process Client at line 111 col 5 changed to Client_
 \* Label LazyRecovery of process LazyRecovery at line 219 col 5 changed to LazyRecovery_
 VARIABLES all_tx_child_ids, normal_group_key, normal_group_slots, 
@@ -282,46 +282,46 @@ ResponseToClientIsValid(client) ==
 
 AllResponseToClientsAreValid == \A client \in response_to_clients : ResponseToClientIsValid(client)
 
-CoordinatorRecordIsValid(record) ==
-    (record.tx_id = <<normal_group_key>> /\ record.state = "committed" /\ record.tx_child_ids \ all_tx_child_ids = {})
-    \/ (record.tx_id = <<normal_group_key>> /\ record.state = "aborted" /\ record.tx_child_ids = {})
-    \/ (record.tx_id = <<normal_group_key, "tx1">> /\ record.state \in {"committed", "aborted"} /\ record.tx_child_ids = {})
-    \/ (record.tx_id = <<normal_group_key, "tx2">> /\ record.state \in {"committed", "aborted"} /\ record.tx_child_ids = {})
-    \/ (record.tx_id = <<normal_group_key, "tx3">> /\ record.state \in {"committed", "aborted"} /\ record.tx_child_ids = {})
+CoordinatorStateIsValid(coord_state) ==
+    (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "committed" /\ coord_state["tx_child_ids"] \ all_tx_child_ids = {})
+    \/ (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "aborted" /\ coord_state["tx_child_ids"] = {})
+    \/ (coord_state["tx_id"] = <<normal_group_key, "tx1">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
+    \/ (coord_state["tx_id"] = <<normal_group_key, "tx2">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
+    \/ (coord_state["tx_id"] = <<normal_group_key, "tx3">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
 
-AllCoordinatorRecordsAreValid == \A record \in coordinator_table : CoordinatorRecordIsValid(record)
+AllCoordinatorRecordsAreValid == \A coord_state \in coordinator_table : CoordinatorStateIsValid(coord_state)
 
 CoordinatorStateIsSameAs(tx_child_id, expected_state) ==
-    (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key>>
-    /\ tx_child_id \in record["tx_child_ids"]
-    /\ record["state"] = expected_state)
+    (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>>
+    /\ tx_child_id \in coord_state["tx_child_ids"]
+    /\ coord_state["state"] = expected_state)
     \/
-    (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>>
-    /\ record["tx_child_ids"] = {}
-    /\ record["state"] = expected_state)
+    (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>>
+    /\ coord_state["tx_child_ids"] = {}
+    /\ coord_state["state"] = expected_state)
 
 StateInCoordinatorState(tx_child_id) ==
-    IF \E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>> /\ record["tx_child_ids"] = {} THEN
+    IF \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>> /\ coord_state["tx_child_ids"] = {} THEN
         LET
-            record == CHOOSE record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>> /\ record["tx_child_ids"] = {}
+            coord_state == CHOOSE coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>> /\ coord_state["tx_child_ids"] = {}
         IN
-            record["state"]
-    ELSE IF \E record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"] THEN
+            coord_state["state"]
+    ELSE IF \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"] THEN
         LET
-            record == CHOOSE record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"]
+            coord_state == CHOOSE coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"]
         IN
-            record["state"]
+            coord_state["state"]
     ELSE
         Null
 
 CoordinatorStateShouldContainAnyRecord(tx_child_id) ==
-    (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"])
-    \/ \E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>>
+    (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"])
+    \/ \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>>
 
 CoordinatorStateShouldNotContainMultipleRecords(tx_child_id) ==
     ~(
-        (\E record \in coordinator_table : record["tx_id"] = <<normal_group_key>> /\ tx_child_id \in record["tx_child_ids"])
-        /\ \E record \in coordinator_table : record["tx_id"] = <<normal_group_key, tx_child_id>>
+        (\E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key>> /\ tx_child_id \in coord_state["tx_child_ids"])
+        /\ \E coord_state \in coordinator_table : coord_state["tx_id"] = <<normal_group_key, tx_child_id>>
     )
 
 StateInResponseToClient(tx_child_id) ==
@@ -393,8 +393,6 @@ Client_ == /\ pc["client"] = "Client_"
                          \/ /\ \E ready_tx \in delayed_groups:
                                  delayed_groups' = {IF tx.tx_child_id = ready_tx.tx_child_id THEN [tx EXCEPT !.state = "ready"] ELSE tx : tx \in delayed_groups}
                             /\ UNCHANGED normal_group_slots
-                         \/ /\ TRUE
-                            /\ UNCHANGED <<normal_group_slots, delayed_groups>>
                       /\ pc' = [pc EXCEPT !["client"] = "Client_"]
                  ELSE /\ pc' = [pc EXCEPT !["client"] = "Done"]
                       /\ UNCHANGED << normal_group_slots, delayed_groups >>
@@ -419,11 +417,11 @@ GroupCommit == /\ pc["group-committer"] = "GroupCommit"
                              \/ /\ IF normal_group_slots /= {} /\ \A tx \in normal_group_slots: tx["state"] = "ready"
                                       THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>>
                                                  THEN /\ Assert(~(\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["tx_child_ids"] /= {}), 
-                                                                "Failure of assertion at line 145, column 21.")
+                                                                "Failure of assertion at line 143, column 21.")
                                                       /\ Assert(~(\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] /= "aborted"), 
-                                                                "Failure of assertion at line 146, column 21.")
+                                                                "Failure of assertion at line 144, column 21.")
                                                       /\ Assert(~({tx["tx_child_id"] : tx \in normal_group_slots} \subseteq {client["tx_child_id"] : client \in response_to_clients}), 
-                                                                "Failure of assertion at line 148, column 21.")
+                                                                "Failure of assertion at line 146, column 21.")
                                                       /\ response_to_clients' = (                       response_to_clients \union {
                                                                                      [tx_child_id |-> tx["tx_child_id"], state |-> "aborted"] : tx \in normal_group_slots
                                                                                  })
@@ -448,7 +446,7 @@ GroupCommit == /\ pc["group-committer"] = "GroupCommit"
                                 /\ IF tmp_tx'["state"] = "ready"
                                       THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, tmp_tx'["tx_child_id"]>>
                                                  THEN /\ Assert(~({tmp_tx'["tx_child_id"]} \subseteq {client["tx_child_id"] : client \in response_to_clients}), 
-                                                                "Failure of assertion at line 181, column 21.")
+                                                                "Failure of assertion at line 179, column 21.")
                                                       /\ response_to_clients' = (                       response_to_clients \union {
                                                                                      [tx_child_id |-> tmp_tx'["tx_child_id"], state |-> "aborted"]
                                                                                  })
@@ -468,9 +466,10 @@ GroupCommit == /\ pc["group-committer"] = "GroupCommit"
                                                            coordinator_table, 
                                                            response_to_clients >>
                                 /\ UNCHANGED normal_group_slots
-                             \/ /\ TRUE
+                             \/ /\ normal_group_slots' = {}
+                                /\ delayed_groups' = {}
                                 /\ pc' = [pc EXCEPT !["group-committer"] = "GroupCommit"]
-                                /\ UNCHANGED <<normal_group_slots, delayed_groups, coordinator_table, response_to_clients, tmp_tx>>
+                                /\ UNCHANGED <<coordinator_table, response_to_clients, tmp_tx>>
                      ELSE /\ pc' = [pc EXCEPT !["group-committer"] = "Done"]
                           /\ UNCHANGED << normal_group_slots, delayed_groups, 
                                           coordinator_table, 
@@ -523,7 +522,7 @@ LazyRecovery_ == /\ pc["lazy-recovery"] = "LazyRecovery_"
                             /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>>
                                   THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tmp_tx_child_id' \in ctx["tx_child_ids"]
                                              THEN /\ already_committed' = TRUE
-                                             ELSE /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tmp_tx_child_id' \notin ctx["tx_child_ids"]
+                                             ELSE /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed"
                                                         THEN /\ already_committed' = FALSE
                                                         ELSE /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "aborted" /\ ctx["tx_child_ids"] = {}
                                                                    THEN /\ already_committed' = FALSE
@@ -581,5 +580,5 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 =============================================================================
 \* Modification History
-\* Last modified Mon Jul 29 20:07:02 JST 2024 by mitsunorikomatsu
+\* Last modified Tue Jul 30 11:25:19 JST 2024 by mitsunorikomatsu
 \* Created Thu Jul 25 17:04:35 JST 2024 by mitsunorikomatsu
