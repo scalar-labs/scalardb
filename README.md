@@ -63,5 +63,5 @@ When contributing to this project, please follow these guidelines.
 
 ScalarDB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.
 You may select, at your option, one of the above-listed licenses.
-The commercial license includes several enterprise-grade features such as ScalarDB Server, management tools, and declarative query interfaces like GraphQL and SQL interfaces.
-Regarding the commercial license, please [contact us](https://www.scalar-labs.com/ja/contact-jp) for more information.
+The commercial license includes several enterprise-grade features such as ScalarDB Cluster, management tools, and declarative query interfaces like GraphQL and SQL interfaces.
+For more information about the commercial license, please [contact us](https://www.scalar-labs.com/contact).
