@@ -152,6 +152,19 @@ public class Coordinator {
       return;
     }
 
+    // The strategy of the lazy recovery for PREPARE record created by the group commit feature is
+    // as follows:
+    // 1. The point is lazy recoveries don't know the transaction that created the PREPARE record
+    //    is using a parent ID or a full ID as `tx_id` partition key.
+    //    a) If the transaction gets "ready for commit" in time, it'll be committed in a group with
+    //    a parent ID as `tx_id`.
+    //    b) If the transaction is delayed, it'll be committed in an isolated group with a full ID
+    //    as `tx_id`.
+    // 2. Lazy recoveries can detect whether the transaction conflicts with the original commit in
+    //    case of 1-b, but can't detect conflicts in case of 1-a. Therefore, lazy recoveries need to
+    //    insert a record to the Coordinator table with a parent ID with empty `tx_child_ids`. This
+    //    record is only for blocking a potential group commit by 1-a, and doesn't make sense in
+    //    terms of finding the coordinator state due to the empty `tx_child_ids`.
     Keys<String, String, String> keys = keyManipulator.keysFromFullKey(id);
     try {
       // This record is to prevent a group commit that has the same parent ID regardless if the
