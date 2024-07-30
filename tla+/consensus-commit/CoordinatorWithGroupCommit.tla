@@ -1,20 +1,19 @@
 --------------------- MODULE CoordinatorWithGroupCommit ---------------------
 EXTENDS Integers, Sequences, TLC
-CONSTANT Null
+CONSTANT Null, AllTxChildIds
 
 (* --algorithm CoordinatorWithGroupCommit 
 variables
-    all_tx_child_ids = {"tx1", "tx2", "tx3"},
     normal_group_key = "p0",
-    normal_group_slots = {[tx_child_id |-> tx_child_id, state |-> "not_ready"] : tx_child_id \in all_tx_child_ids},
+    normal_group_slots = {[tx_child_id |-> child_id, state |-> "not_ready"] : child_id \in AllTxChildIds},
     delayed_groups = {},
     coordinator_table = {},
-    response_to_clients = {}
-    ;
+    response_to_clients = {},
+    tx_child_ids_in_prepared_records = AllTxChildIds
 
 define
     TransactionIsValid(tx) ==
-        tx["tx_child_id"] \in all_tx_child_ids /\ tx["state"] \in {"ready", "not_ready"}
+        tx["tx_child_id"] \in AllTxChildIds /\ tx["state"] \in {"ready", "not_ready"}
 
     TransactionsInNormalGroupAreValid ==
         \A tx \in normal_group_slots : TransactionIsValid(tx)
@@ -25,16 +24,14 @@ define
     AllTransactionsAreValid == TransactionsInNormalGroupAreValid /\ TransactionsInDelayedGroupsAreValid
 
     ResponseToClientIsValid(client) ==
-        client["tx_child_id"] \in all_tx_child_ids /\ client["state"] \in {"committed", "aborted"}
+        client["tx_child_id"] \in AllTxChildIds /\ client["state"] \in {"committed", "aborted"}
 
     AllResponseToClientsAreValid == \A client \in response_to_clients : ResponseToClientIsValid(client)
 
     CoordinatorStateIsValid(coord_state) ==
-        (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "committed" /\ coord_state["tx_child_ids"] \ all_tx_child_ids = {})
+        (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "committed" /\ coord_state["tx_child_ids"] \ AllTxChildIds = {})
         \/ (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "aborted" /\ coord_state["tx_child_ids"] = {})
-        \/ (coord_state["tx_id"] = <<normal_group_key, "tx1">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
-        \/ (coord_state["tx_id"] = <<normal_group_key, "tx2">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
-        \/ (coord_state["tx_id"] = <<normal_group_key, "tx3">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
+        \/ (\E tx_child_id \in AllTxChildIds : coord_state["tx_id"] = <<normal_group_key, tx_child_id>> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
 
     AllCoordinatorRecordsAreValid == \A coord_state \in coordinator_table : CoordinatorStateIsValid(coord_state)
 
@@ -94,12 +91,12 @@ define
                 FALSE
 
     Invariant == AllTransactionsAreValid /\ AllResponseToClientsAreValid /\ AllCoordinatorRecordsAreValid
-                    /\ \A tx_child_id \in all_tx_child_ids : CoordinatorStateAndResponseToClient(tx_child_id)
+                    /\ \A tx_child_id \in AllTxChildIds : CoordinatorStateAndResponseToClient(tx_child_id)
 
     ExpectedState ==
         normal_group_slots = {}
         /\ delayed_groups = {}
-        /\ (\A tx_child_id \in {"tx1", "tx2", "tx3"} :
+        /\ (\A tx_child_id \in AllTxChildIds :
                 CoordinatorStateShouldContainAnyRecord(tx_child_id)
                 /\ CoordinatorStateShouldNotContainMultipleRecords(tx_child_id))
 
@@ -107,7 +104,7 @@ define
 end define;
 
 fair process Client = "client"
-begin Client:
+begin MakeTransactionReady:
     while normal_group_slots /= {} \/ delayed_groups /= {} do
         \* Make transactions ready.
         either
@@ -124,7 +121,7 @@ end process;
 
 fair process GroupCommitter = "group-committer"
 variable
-    tmp_tx = Null
+    delayed_tx = Null
 begin GroupCommit:
     while normal_group_slots /= {} \/ delayed_groups /= {} do
         either
@@ -145,9 +142,15 @@ begin GroupCommit:
                     \* The client must not have received any response.
                     assert ~({tx["tx_child_id"] : tx \in normal_group_slots} \subseteq {client["tx_child_id"] : client \in response_to_clients});
 
-                    response_to_clients := response_to_clients \union {
-                        [tx_child_id |-> tx["tx_child_id"], state |-> "aborted"] : tx \in normal_group_slots
-                    };
+                    \* These operations can fail.
+                    either
+                        \* Don't abort the PREPARED records in this case.
+                        response_to_clients := response_to_clients \union {
+                            [tx_child_id |-> tx["tx_child_id"], state |-> "aborted"] : tx \in normal_group_slots
+                        };
+                    or
+                        skip;
+                    end either;
                     normal_group_slots := {};
                 else
                     coordinator_table := coordinator_table \union {[
@@ -157,10 +160,18 @@ begin GroupCommit:
                     ]};
 
                     SendCommitToClientForNormalGroupCommit:
+                    \* These operations can fail.
                     either
-                        response_to_clients := response_to_clients \union {
-                            [tx_child_id |-> tx["tx_child_id"], state |-> "committed"] : tx \in normal_group_slots
-                        };
+                        \* Committing the PREPARED records.
+                        tx_child_ids_in_prepared_records := tx_child_ids_in_prepared_records \ {tx["tx_child_id"] : tx \in normal_group_slots};
+                        either
+                            \* Reponsing to the client can fail.
+                            response_to_clients := response_to_clients \union {
+                                [tx_child_id |-> tx["tx_child_id"], state |-> "committed"] : tx \in normal_group_slots
+                            };
+                        or
+                            skip;
+                        end either;
                     or
                         skip;
                     end either;
@@ -170,35 +181,43 @@ begin GroupCommit:
         or
             \* Commit ready transactions in the delayed groups.
             with tx \in delayed_groups do
-                tmp_tx := tx;
+                delayed_tx := tx;
             end with;
 
-            if tmp_tx["state"] = "ready" then
-                if \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, tmp_tx["tx_child_id"]>> then
+            if delayed_tx["state"] = "ready" then
+                if \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, delayed_tx["tx_child_id"]>> then
                     \* The client must not have received any response.
-                    assert ~({tmp_tx["tx_child_id"]} \subseteq {client["tx_child_id"] : client \in response_to_clients});
+                    assert ~({delayed_tx["tx_child_id"]} \subseteq {client["tx_child_id"] : client \in response_to_clients});
 
                     response_to_clients := response_to_clients \union {
-                        [tx_child_id |-> tmp_tx["tx_child_id"], state |-> "aborted"]
+                        [tx_child_id |-> delayed_tx["tx_child_id"], state |-> "aborted"]
                     };
-                    delayed_groups := delayed_groups \ {tmp_tx};
+                    delayed_groups := delayed_groups \ {delayed_tx};
                 else
                     coordinator_table := coordinator_table \union {[
-                        tx_id |-> <<normal_group_key, tmp_tx["tx_child_id"]>>,
+                        tx_id |-> <<normal_group_key, delayed_tx["tx_child_id"]>>,
                         tx_child_ids |-> {},
                         state |-> "committed"
                     ]};
 
                     SendCommitToClientForDelayedGroupCommit:
+                    \* These operations can fail.
                     either
-                        response_to_clients := response_to_clients \union {
-                            [tx_child_id |-> tmp_tx["tx_child_id"], state |-> "committed"]
-                        };
+                        \* Committing the PREPARED records.
+                        tx_child_ids_in_prepared_records := tx_child_ids_in_prepared_records \ {delayed_tx["tx_child_id"]};
+                        either
+                            \* Reponsing to the client can fail.
+                            response_to_clients := response_to_clients \union {
+                                [tx_child_id |-> delayed_tx["tx_child_id"], state |-> "committed"]
+                            };
+                        or
+                            skip;
+                        end either;
                     or
                         skip;
                     end either;
 
-                    delayed_groups := delayed_groups \ {tmp_tx};
+                    delayed_groups := delayed_groups \ {delayed_tx};
                 end if;
             end if;
         or
@@ -211,19 +230,18 @@ end process;
 
 fair process LazyRecovery = "lazy-recovery"
 variable
-    tx_child_ids_in_prepared_records = all_tx_child_ids,
-    tmp_tx_child_id = Null,
-    already_committed = FALSE;
+    tx_child_id = Null,
+    already_committed = FALSE
 begin LazyRecovery:
     \* Make transactions abort.
     while ~ExpectedState do
-        with tx_child_id \in tx_child_ids_in_prepared_records do
-            tmp_tx_child_id := tx_child_id;
+        with tmp_tx_child_id \in tx_child_ids_in_prepared_records do
+            tx_child_id := tmp_tx_child_id;
         end with;
 
         \* First, abort with the parent ID.
         if \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> then
-            if \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tmp_tx_child_id \in ctx["tx_child_ids"] then
+            if \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tx_child_id \in ctx["tx_child_ids"] then
                 \* This transaction is already committed.
                 already_committed := TRUE;
             elsif \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" then
@@ -245,29 +263,29 @@ begin LazyRecovery:
 
         \* Then, abort with the full ID.
         AbortWithFullId:
-        if already_committed \/ (\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, tmp_tx_child_id>>) then
+        if already_committed \/ (\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, tx_child_id>>) then
             \* This transaction is already committed or aborted.
         else
             coordinator_table := coordinator_table \union {[
-                tx_id |-> <<normal_group_key, tmp_tx_child_id>>,
+                tx_id |-> <<normal_group_key, tx_child_id>>,
                 tx_child_ids |-> {},
                 state |-> "aborted"
             ]};
         end if;
-        tx_child_ids_in_prepared_records := tx_child_ids_in_prepared_records \ {tmp_tx_child_id};
+        tx_child_ids_in_prepared_records := tx_child_ids_in_prepared_records \ {tx_child_id};
     end while;
 end process;
 
 end algorithm *)
-\* BEGIN TRANSLATION (chksum(pcal) = "eee4969c" /\ chksum(tla) = "5170139a")
-\* Label Client of process Client at line 111 col 5 changed to Client_
-\* Label LazyRecovery of process LazyRecovery at line 219 col 5 changed to LazyRecovery_
-VARIABLES all_tx_child_ids, normal_group_key, normal_group_slots, 
-          delayed_groups, coordinator_table, response_to_clients, pc
+\* BEGIN TRANSLATION (chksum(pcal) = "8093f521" /\ chksum(tla) = "e64033ee")
+\* Label LazyRecovery of process LazyRecovery at line 237 col 5 changed to LazyRecovery_
+VARIABLES normal_group_key, normal_group_slots, delayed_groups, 
+          coordinator_table, response_to_clients, 
+          tx_child_ids_in_prepared_records, pc
 
 (* define statement *)
 TransactionIsValid(tx) ==
-    tx["tx_child_id"] \in all_tx_child_ids /\ tx["state"] \in {"ready", "not_ready"}
+    tx["tx_child_id"] \in AllTxChildIds /\ tx["state"] \in {"ready", "not_ready"}
 
 TransactionsInNormalGroupAreValid ==
     \A tx \in normal_group_slots : TransactionIsValid(tx)
@@ -278,16 +296,14 @@ TransactionsInDelayedGroupsAreValid ==
 AllTransactionsAreValid == TransactionsInNormalGroupAreValid /\ TransactionsInDelayedGroupsAreValid
 
 ResponseToClientIsValid(client) ==
-    client["tx_child_id"] \in all_tx_child_ids /\ client["state"] \in {"committed", "aborted"}
+    client["tx_child_id"] \in AllTxChildIds /\ client["state"] \in {"committed", "aborted"}
 
 AllResponseToClientsAreValid == \A client \in response_to_clients : ResponseToClientIsValid(client)
 
 CoordinatorStateIsValid(coord_state) ==
-    (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "committed" /\ coord_state["tx_child_ids"] \ all_tx_child_ids = {})
+    (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "committed" /\ coord_state["tx_child_ids"] \ AllTxChildIds = {})
     \/ (coord_state["tx_id"] = <<normal_group_key>> /\ coord_state["state"] = "aborted" /\ coord_state["tx_child_ids"] = {})
-    \/ (coord_state["tx_id"] = <<normal_group_key, "tx1">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
-    \/ (coord_state["tx_id"] = <<normal_group_key, "tx2">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
-    \/ (coord_state["tx_id"] = <<normal_group_key, "tx3">> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
+    \/ (\E tx_child_id \in AllTxChildIds : coord_state["tx_id"] = <<normal_group_key, tx_child_id>> /\ coord_state["state"] \in {"committed", "aborted"} /\ coord_state["tx_child_ids"] = {})
 
 AllCoordinatorRecordsAreValid == \A coord_state \in coordinator_table : CoordinatorStateIsValid(coord_state)
 
@@ -347,61 +363,61 @@ CoordinatorStateAndResponseToClient(tx_child_id) ==
             FALSE
 
 Invariant == AllTransactionsAreValid /\ AllResponseToClientsAreValid /\ AllCoordinatorRecordsAreValid
-                /\ \A tx_child_id \in all_tx_child_ids : CoordinatorStateAndResponseToClient(tx_child_id)
+                /\ \A tx_child_id \in AllTxChildIds : CoordinatorStateAndResponseToClient(tx_child_id)
 
 ExpectedState ==
     normal_group_slots = {}
     /\ delayed_groups = {}
-    /\ (\A tx_child_id \in {"tx1", "tx2", "tx3"} :
+    /\ (\A tx_child_id \in AllTxChildIds :
             CoordinatorStateShouldContainAnyRecord(tx_child_id)
             /\ CoordinatorStateShouldNotContainMultipleRecords(tx_child_id))
 
 EventualExpectedState == <>[]ExpectedState
 
-VARIABLES tmp_tx, tx_child_ids_in_prepared_records, tmp_tx_child_id, 
-          already_committed
+VARIABLES delayed_tx, tx_child_id, already_committed
 
-vars == << all_tx_child_ids, normal_group_key, normal_group_slots, 
-           delayed_groups, coordinator_table, response_to_clients, pc, tmp_tx, 
-           tx_child_ids_in_prepared_records, tmp_tx_child_id, 
+vars == << normal_group_key, normal_group_slots, delayed_groups, 
+           coordinator_table, response_to_clients, 
+           tx_child_ids_in_prepared_records, pc, delayed_tx, tx_child_id, 
            already_committed >>
 
 ProcSet == {"client"} \cup {"group-committer"} \cup {"lazy-recovery"}
 
 Init == (* Global variables *)
-        /\ all_tx_child_ids = {"tx1", "tx2", "tx3"}
         /\ normal_group_key = "p0"
-        /\ normal_group_slots = {[tx_child_id |-> tx_child_id, state |-> "not_ready"] : tx_child_id \in all_tx_child_ids}
+        /\ normal_group_slots = {[tx_child_id |-> child_id, state |-> "not_ready"] : child_id \in AllTxChildIds}
         /\ delayed_groups = {}
         /\ coordinator_table = {}
         /\ response_to_clients = {}
+        /\ tx_child_ids_in_prepared_records = AllTxChildIds
         (* Process GroupCommitter *)
-        /\ tmp_tx = Null
+        /\ delayed_tx = Null
         (* Process LazyRecovery *)
-        /\ tx_child_ids_in_prepared_records = all_tx_child_ids
-        /\ tmp_tx_child_id = Null
+        /\ tx_child_id = Null
         /\ already_committed = FALSE
-        /\ pc = [self \in ProcSet |-> CASE self = "client" -> "Client_"
+        /\ pc = [self \in ProcSet |-> CASE self = "client" -> "MakeTransactionReady"
                                         [] self = "group-committer" -> "GroupCommit"
                                         [] self = "lazy-recovery" -> "LazyRecovery_"]
 
-Client_ == /\ pc["client"] = "Client_"
-           /\ IF normal_group_slots /= {} \/ delayed_groups /= {}
-                 THEN /\ \/ /\ \E ready_tx \in normal_group_slots:
-                                 normal_group_slots' = {IF tx.tx_child_id = ready_tx.tx_child_id THEN [tx EXCEPT !.state = "ready"] ELSE tx : tx \in normal_group_slots}
-                            /\ UNCHANGED delayed_groups
-                         \/ /\ \E ready_tx \in delayed_groups:
-                                 delayed_groups' = {IF tx.tx_child_id = ready_tx.tx_child_id THEN [tx EXCEPT !.state = "ready"] ELSE tx : tx \in delayed_groups}
-                            /\ UNCHANGED normal_group_slots
-                      /\ pc' = [pc EXCEPT !["client"] = "Client_"]
-                 ELSE /\ pc' = [pc EXCEPT !["client"] = "Done"]
-                      /\ UNCHANGED << normal_group_slots, delayed_groups >>
-           /\ UNCHANGED << all_tx_child_ids, normal_group_key, 
-                           coordinator_table, response_to_clients, tmp_tx, 
-                           tx_child_ids_in_prepared_records, tmp_tx_child_id, 
-                           already_committed >>
+MakeTransactionReady == /\ pc["client"] = "MakeTransactionReady"
+                        /\ IF normal_group_slots /= {} \/ delayed_groups /= {}
+                              THEN /\ \/ /\ \E ready_tx \in normal_group_slots:
+                                              normal_group_slots' = {IF tx.tx_child_id = ready_tx.tx_child_id THEN [tx EXCEPT !.state = "ready"] ELSE tx : tx \in normal_group_slots}
+                                         /\ UNCHANGED delayed_groups
+                                      \/ /\ \E ready_tx \in delayed_groups:
+                                              delayed_groups' = {IF tx.tx_child_id = ready_tx.tx_child_id THEN [tx EXCEPT !.state = "ready"] ELSE tx : tx \in delayed_groups}
+                                         /\ UNCHANGED normal_group_slots
+                                   /\ pc' = [pc EXCEPT !["client"] = "MakeTransactionReady"]
+                              ELSE /\ pc' = [pc EXCEPT !["client"] = "Done"]
+                                   /\ UNCHANGED << normal_group_slots, 
+                                                   delayed_groups >>
+                        /\ UNCHANGED << normal_group_key, coordinator_table, 
+                                        response_to_clients, 
+                                        tx_child_ids_in_prepared_records, 
+                                        delayed_tx, tx_child_id, 
+                                        already_committed >>
 
-Client == Client_
+Client == MakeTransactionReady
 
 GroupCommit == /\ pc["group-committer"] = "GroupCommit"
                /\ IF normal_group_slots /= {} \/ delayed_groups /= {}
@@ -413,18 +429,20 @@ GroupCommit == /\ pc["group-committer"] = "GroupCommit"
                                              /\ UNCHANGED << normal_group_slots, 
                                                              delayed_groups >>
                                 /\ pc' = [pc EXCEPT !["group-committer"] = "GroupCommit"]
-                                /\ UNCHANGED <<coordinator_table, response_to_clients, tmp_tx>>
+                                /\ UNCHANGED <<coordinator_table, response_to_clients, delayed_tx>>
                              \/ /\ IF normal_group_slots /= {} /\ \A tx \in normal_group_slots: tx["state"] = "ready"
                                       THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>>
                                                  THEN /\ Assert(~(\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["tx_child_ids"] /= {}), 
-                                                                "Failure of assertion at line 143, column 21.")
+                                                                "Failure of assertion at line 140, column 21.")
                                                       /\ Assert(~(\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] /= "aborted"), 
-                                                                "Failure of assertion at line 144, column 21.")
+                                                                "Failure of assertion at line 141, column 21.")
                                                       /\ Assert(~({tx["tx_child_id"] : tx \in normal_group_slots} \subseteq {client["tx_child_id"] : client \in response_to_clients}), 
-                                                                "Failure of assertion at line 146, column 21.")
-                                                      /\ response_to_clients' = (                       response_to_clients \union {
-                                                                                     [tx_child_id |-> tx["tx_child_id"], state |-> "aborted"] : tx \in normal_group_slots
-                                                                                 })
+                                                                "Failure of assertion at line 143, column 21.")
+                                                      /\ \/ /\ response_to_clients' = (                       response_to_clients \union {
+                                                                                           [tx_child_id |-> tx["tx_child_id"], state |-> "aborted"] : tx \in normal_group_slots
+                                                                                       })
+                                                         \/ /\ TRUE
+                                                            /\ UNCHANGED response_to_clients
                                                       /\ normal_group_slots' = {}
                                                       /\ pc' = [pc EXCEPT !["group-committer"] = "GroupCommit"]
                                                       /\ UNCHANGED coordinator_table
@@ -440,21 +458,21 @@ GroupCommit == /\ pc["group-committer"] = "GroupCommit"
                                            /\ UNCHANGED << normal_group_slots, 
                                                            coordinator_table, 
                                                            response_to_clients >>
-                                /\ UNCHANGED <<delayed_groups, tmp_tx>>
+                                /\ UNCHANGED <<delayed_groups, delayed_tx>>
                              \/ /\ \E tx \in delayed_groups:
-                                     tmp_tx' = tx
-                                /\ IF tmp_tx'["state"] = "ready"
-                                      THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, tmp_tx'["tx_child_id"]>>
-                                                 THEN /\ Assert(~({tmp_tx'["tx_child_id"]} \subseteq {client["tx_child_id"] : client \in response_to_clients}), 
-                                                                "Failure of assertion at line 179, column 21.")
+                                     delayed_tx' = tx
+                                /\ IF delayed_tx'["state"] = "ready"
+                                      THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, delayed_tx'["tx_child_id"]>>
+                                                 THEN /\ Assert(~({delayed_tx'["tx_child_id"]} \subseteq {client["tx_child_id"] : client \in response_to_clients}), 
+                                                                "Failure of assertion at line 190, column 21.")
                                                       /\ response_to_clients' = (                       response_to_clients \union {
-                                                                                     [tx_child_id |-> tmp_tx'["tx_child_id"], state |-> "aborted"]
+                                                                                     [tx_child_id |-> delayed_tx'["tx_child_id"], state |-> "aborted"]
                                                                                  })
-                                                      /\ delayed_groups' = delayed_groups \ {tmp_tx'}
+                                                      /\ delayed_groups' = delayed_groups \ {delayed_tx'}
                                                       /\ pc' = [pc EXCEPT !["group-committer"] = "GroupCommit"]
                                                       /\ UNCHANGED coordinator_table
                                                  ELSE /\ coordinator_table' = (                     coordinator_table \union {[
-                                                                                   tx_id |-> <<normal_group_key, tmp_tx'["tx_child_id"]>>,
+                                                                                   tx_id |-> <<normal_group_key, delayed_tx'["tx_child_id"]>>,
                                                                                    tx_child_ids |-> {},
                                                                                    state |-> "committed"
                                                                                ]})
@@ -469,47 +487,49 @@ GroupCommit == /\ pc["group-committer"] = "GroupCommit"
                              \/ /\ normal_group_slots' = {}
                                 /\ delayed_groups' = {}
                                 /\ pc' = [pc EXCEPT !["group-committer"] = "GroupCommit"]
-                                /\ UNCHANGED <<coordinator_table, response_to_clients, tmp_tx>>
+                                /\ UNCHANGED <<coordinator_table, response_to_clients, delayed_tx>>
                      ELSE /\ pc' = [pc EXCEPT !["group-committer"] = "Done"]
                           /\ UNCHANGED << normal_group_slots, delayed_groups, 
                                           coordinator_table, 
-                                          response_to_clients, tmp_tx >>
-               /\ UNCHANGED << all_tx_child_ids, normal_group_key, 
-                               tx_child_ids_in_prepared_records, 
-                               tmp_tx_child_id, already_committed >>
+                                          response_to_clients, delayed_tx >>
+               /\ UNCHANGED << normal_group_key, 
+                               tx_child_ids_in_prepared_records, tx_child_id, 
+                               already_committed >>
 
 SendCommitToClientForNormalGroupCommit == /\ pc["group-committer"] = "SendCommitToClientForNormalGroupCommit"
-                                          /\ \/ /\ response_to_clients' = (                       response_to_clients \union {
-                                                                               [tx_child_id |-> tx["tx_child_id"], state |-> "committed"] : tx \in normal_group_slots
-                                                                           })
+                                          /\ \/ /\ tx_child_ids_in_prepared_records' = tx_child_ids_in_prepared_records \ {tx["tx_child_id"] : tx \in normal_group_slots}
+                                                /\ \/ /\ response_to_clients' = (                       response_to_clients \union {
+                                                                                     [tx_child_id |-> tx["tx_child_id"], state |-> "committed"] : tx \in normal_group_slots
+                                                                                 })
+                                                   \/ /\ TRUE
+                                                      /\ UNCHANGED response_to_clients
                                              \/ /\ TRUE
-                                                /\ UNCHANGED response_to_clients
+                                                /\ UNCHANGED <<response_to_clients, tx_child_ids_in_prepared_records>>
                                           /\ normal_group_slots' = {}
                                           /\ pc' = [pc EXCEPT !["group-committer"] = "GroupCommit"]
-                                          /\ UNCHANGED << all_tx_child_ids, 
-                                                          normal_group_key, 
+                                          /\ UNCHANGED << normal_group_key, 
                                                           delayed_groups, 
                                                           coordinator_table, 
-                                                          tmp_tx, 
-                                                          tx_child_ids_in_prepared_records, 
-                                                          tmp_tx_child_id, 
+                                                          delayed_tx, 
+                                                          tx_child_id, 
                                                           already_committed >>
 
 SendCommitToClientForDelayedGroupCommit == /\ pc["group-committer"] = "SendCommitToClientForDelayedGroupCommit"
-                                           /\ \/ /\ response_to_clients' = (                       response_to_clients \union {
-                                                                                [tx_child_id |-> tmp_tx["tx_child_id"], state |-> "committed"]
-                                                                            })
+                                           /\ \/ /\ tx_child_ids_in_prepared_records' = tx_child_ids_in_prepared_records \ {delayed_tx["tx_child_id"]}
+                                                 /\ \/ /\ response_to_clients' = (                       response_to_clients \union {
+                                                                                      [tx_child_id |-> delayed_tx["tx_child_id"], state |-> "committed"]
+                                                                                  })
+                                                    \/ /\ TRUE
+                                                       /\ UNCHANGED response_to_clients
                                               \/ /\ TRUE
-                                                 /\ UNCHANGED response_to_clients
-                                           /\ delayed_groups' = delayed_groups \ {tmp_tx}
+                                                 /\ UNCHANGED <<response_to_clients, tx_child_ids_in_prepared_records>>
+                                           /\ delayed_groups' = delayed_groups \ {delayed_tx}
                                            /\ pc' = [pc EXCEPT !["group-committer"] = "GroupCommit"]
-                                           /\ UNCHANGED << all_tx_child_ids, 
-                                                           normal_group_key, 
+                                           /\ UNCHANGED << normal_group_key, 
                                                            normal_group_slots, 
                                                            coordinator_table, 
-                                                           tmp_tx, 
-                                                           tx_child_ids_in_prepared_records, 
-                                                           tmp_tx_child_id, 
+                                                           delayed_tx, 
+                                                           tx_child_id, 
                                                            already_committed >>
 
 GroupCommitter == GroupCommit \/ SendCommitToClientForNormalGroupCommit
@@ -517,17 +537,17 @@ GroupCommitter == GroupCommit \/ SendCommitToClientForNormalGroupCommit
 
 LazyRecovery_ == /\ pc["lazy-recovery"] = "LazyRecovery_"
                  /\ IF ~ExpectedState
-                       THEN /\ \E tx_child_id \in tx_child_ids_in_prepared_records:
-                                 tmp_tx_child_id' = tx_child_id
+                       THEN /\ \E tmp_tx_child_id \in tx_child_ids_in_prepared_records:
+                                 tx_child_id' = tmp_tx_child_id
                             /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>>
-                                  THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tmp_tx_child_id' \in ctx["tx_child_ids"]
+                                  THEN /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed" /\ tx_child_id' \in ctx["tx_child_ids"]
                                              THEN /\ already_committed' = TRUE
                                              ELSE /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "committed"
                                                         THEN /\ already_committed' = FALSE
                                                         ELSE /\ IF \E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key>> /\ ctx["state"] = "aborted" /\ ctx["tx_child_ids"] = {}
                                                                    THEN /\ already_committed' = FALSE
                                                                    ELSE /\ Assert(FALSE, 
-                                                                                  "Failure of assertion at line 236, column 17.")
+                                                                                  "Failure of assertion at line 254, column 17.")
                                                                         /\ UNCHANGED already_committed
                                        /\ UNCHANGED coordinator_table
                                   ELSE /\ coordinator_table' = (                     coordinator_table \union {[
@@ -538,27 +558,25 @@ LazyRecovery_ == /\ pc["lazy-recovery"] = "LazyRecovery_"
                                        /\ UNCHANGED already_committed
                             /\ pc' = [pc EXCEPT !["lazy-recovery"] = "AbortWithFullId"]
                        ELSE /\ pc' = [pc EXCEPT !["lazy-recovery"] = "Done"]
-                            /\ UNCHANGED << coordinator_table, tmp_tx_child_id, 
+                            /\ UNCHANGED << coordinator_table, tx_child_id, 
                                             already_committed >>
-                 /\ UNCHANGED << all_tx_child_ids, normal_group_key, 
-                                 normal_group_slots, delayed_groups, 
-                                 response_to_clients, tmp_tx, 
-                                 tx_child_ids_in_prepared_records >>
+                 /\ UNCHANGED << normal_group_key, normal_group_slots, 
+                                 delayed_groups, response_to_clients, 
+                                 tx_child_ids_in_prepared_records, delayed_tx >>
 
 AbortWithFullId == /\ pc["lazy-recovery"] = "AbortWithFullId"
-                   /\ IF already_committed \/ (\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, tmp_tx_child_id>>)
+                   /\ IF already_committed \/ (\E ctx \in coordinator_table : ctx["tx_id"] = <<normal_group_key, tx_child_id>>)
                          THEN /\ UNCHANGED coordinator_table
                          ELSE /\ coordinator_table' = (                     coordinator_table \union {[
-                                                           tx_id |-> <<normal_group_key, tmp_tx_child_id>>,
+                                                           tx_id |-> <<normal_group_key, tx_child_id>>,
                                                            tx_child_ids |-> {},
                                                            state |-> "aborted"
                                                        ]})
-                   /\ tx_child_ids_in_prepared_records' = tx_child_ids_in_prepared_records \ {tmp_tx_child_id}
+                   /\ tx_child_ids_in_prepared_records' = tx_child_ids_in_prepared_records \ {tx_child_id}
                    /\ pc' = [pc EXCEPT !["lazy-recovery"] = "LazyRecovery_"]
-                   /\ UNCHANGED << all_tx_child_ids, normal_group_key, 
-                                   normal_group_slots, delayed_groups, 
-                                   response_to_clients, tmp_tx, 
-                                   tmp_tx_child_id, already_committed >>
+                   /\ UNCHANGED << normal_group_key, normal_group_slots, 
+                                   delayed_groups, response_to_clients, 
+                                   delayed_tx, tx_child_id, already_committed >>
 
 LazyRecovery == LazyRecovery_ \/ AbortWithFullId
 
@@ -580,5 +598,5 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 =============================================================================
 \* Modification History
-\* Last modified Tue Jul 30 11:25:19 JST 2024 by mitsunorikomatsu
+\* Last modified Tue Jul 30 12:21:13 JST 2024 by mitsunorikomatsu
 \* Created Thu Jul 25 17:04:35 JST 2024 by mitsunorikomatsu
