@@ -2,6 +2,20 @@
 EXTENDS Integers, Sequences, TLC
 CONSTANT Null, AllTxChildIds
 
+(*
+   This specification tests the behaviors of the group commit feature for the Coordinator table and lazy recovery in ScalarDB.
+   It starts with a situation where arbitrary transactions with the group commit feature enabled have created PREPARED records.
+   Then, it confirms the Coordinator state table and responses to the clients remain consistent even in the presense of some failures,
+   with the following actors.
+
+   - Client: Changes the state of its own transaction to "ready for commit".
+   - Group Committer: Moves delayed transactions from a normal group to an isolated delayed group,
+     or commits the normal group with all the ready transactions or a delayed group with a ready transaction.
+   - Lazy Recovery: Aborts a PREPARED record.
+
+   Note: This specification focuses on situations that lazy recovery might happen before the original commit.
+*)
+
 (* --algorithm CoordinatorWithGroupCommit 
 variables
     normal_group_key = "p0",
