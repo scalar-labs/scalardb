@@ -1,9 +1,0 @@
-# Note: This file is used only for redirecting visitors from the old ScalarDB docs site hosted in this repository to the new ScalarDB docs site. This file can be deleted after the old ScalarDB docs site hosted in this repository is no longer deployed.
-google_analytics: "G-Q4TKS77KCP"
-
-defaults:
-  - scope:
-      path: "" # Specifies where the docs are located.
-      type: "default" # Defines the type for docs.
-    values:
-      layout: default # Defines the template type used for docs (templates are located in the "_layouts" folder). 
