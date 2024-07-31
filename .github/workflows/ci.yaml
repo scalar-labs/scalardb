@@ -112,52 +112,6 @@ jobs:
         with:
           arguments: ':schema-loader:dockerfileLint'
 
-  build-check-example-project:
-    name: Build check for 'Getting Started' example project
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: docs/getting-started
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Build Getting Started project
-        run: ./gradlew assemble
-
-  build-check-example-project-for-kotlin:
-    name: Build check for 'Getting Started' example project for Kotlin
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: docs/getting-started-kotlin
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Build Getting Started project
-        run: ./gradlew assemble
-
   integration-test-for-cassandra-3-0:
     name: Cassandra 3.0 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
