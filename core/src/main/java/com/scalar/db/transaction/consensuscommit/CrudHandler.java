@@ -295,9 +295,9 @@ public class CrudHandler {
       if (metadata == null) {
         assert operation.forNamespace().isPresent() && operation.forTable().isPresent();
         throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(
-                ScalarDbUtils.getFullTableName(
-                    operation.forNamespace().get(), operation.forTable().get())));
+            "The specified table is not found: "
+                + ScalarDbUtils.getFullTableName(
+                    operation.forNamespace().get(), operation.forTable().get()));
       }
       return metadata;
     } catch (ExecutionException e) {
