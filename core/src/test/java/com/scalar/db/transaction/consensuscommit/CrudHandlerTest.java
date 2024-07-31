@@ -330,6 +330,26 @@ public class CrudHandlerTest {
   }
 
   @Test
+  public void get_ForNonExistingTable_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
+
+    when(tableMetadataManager.getTransactionTableMetadata(get)).thenReturn(null);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.get(get)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void scan_ResultGivenFromStorage_ShouldUpdateSnapshotAndReturn()
       throws ExecutionException, CrudException {
     // Arrange
