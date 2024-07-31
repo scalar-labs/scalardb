@@ -6,6 +6,7 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -121,6 +122,7 @@ public class CrudHandler {
 
   private List<Result> createScanResults(Scan scan, List<String> projections, List<Result> results)
       throws CrudException {
+    assert scan.forNamespace().isPresent() && scan.forTable().isPresent();
     TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
     return results.stream()
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled))
@@ -142,7 +144,7 @@ public class CrudHandler {
       // retrieve all the columns
       if (!isIncludeMetadataEnabled) {
         LinkedHashSet<String> afterImageColumnNames =
-            tableMetadataManager.getTransactionTableMetadata(get).getAfterImageColumnNames();
+            getTransactionTableMetadata(get).getAfterImageColumnNames();
         get.withProjections(afterImageColumnNames);
       }
       get.withConsistency(Consistency.LINEARIZABLE);
@@ -159,11 +161,29 @@ public class CrudHandler {
       // retrieve all the columns
       if (!isIncludeMetadataEnabled) {
         LinkedHashSet<String> afterImageColumnNames =
-            tableMetadataManager.getTransactionTableMetadata(scan).getAfterImageColumnNames();
+            getTransactionTableMetadata(scan).getAfterImageColumnNames();
         scan.withProjections(afterImageColumnNames);
       }
       scan.withConsistency(Consistency.LINEARIZABLE);
       return storage.scan(scan);
+    } catch (ExecutionException e) {
+      throw new CrudException("scan failed", e, snapshot.getId());
+    }
+  }
+
+  private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
+      throws CrudException {
+    try {
+      TransactionTableMetadata metadata =
+          tableMetadataManager.getTransactionTableMetadata(operation);
+      if (metadata == null) {
+        assert operation.forNamespace().isPresent() && operation.forTable().isPresent();
+        throw new IllegalArgumentException(
+            "The specified table is not found: "
+                + ScalarDbUtils.getFullTableName(
+                    operation.forNamespace().get(), operation.forTable().get()));
+      }
+      return metadata;
     } catch (ExecutionException e) {
       throw new CrudException("scan failed", e, snapshot.getId());
     }
