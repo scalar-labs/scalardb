@@ -8,6 +8,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -186,6 +187,7 @@ public class CrudHandler {
   private List<Result> createScanResults(
       Scan scan, List<String> projections, Map<Snapshot.Key, TransactionResult> results)
       throws CrudException {
+    assert scan.forNamespace().isPresent() && scan.forTable().isPresent();
     TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
     return results.values().stream()
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled))
@@ -282,17 +284,31 @@ public class CrudHandler {
   }
 
   private Selection prepareStorageSelection(Selection selection) throws CrudException {
+    selection.clearProjections();
+    // Retrieve only the after images columns when including the metadata is disabled, otherwise
+    // retrieve all the columns
+    if (!isIncludeMetadataEnabled) {
+      LinkedHashSet<String> afterImageColumnNames =
+          getTransactionTableMetadata(selection).getAfterImageColumnNames();
+      selection.withProjections(afterImageColumnNames);
+    }
+    selection.withConsistency(Consistency.LINEARIZABLE);
+    return selection;
+  }
+
+  private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
+      throws CrudException {
     try {
-      selection.clearProjections();
-      // Retrieve only the after images columns when including the metadata is disabled, otherwise
-      // retrieve all the columns
-      if (!isIncludeMetadataEnabled) {
-        LinkedHashSet<String> afterImageColumnNames =
-            tableMetadataManager.getTransactionTableMetadata(selection).getAfterImageColumnNames();
-        selection.withProjections(afterImageColumnNames);
+      TransactionTableMetadata metadata =
+          tableMetadataManager.getTransactionTableMetadata(operation);
+      if (metadata == null) {
+        assert operation.forNamespace().isPresent() && operation.forTable().isPresent();
+        throw new IllegalArgumentException(
+            CoreError.TABLE_NOT_FOUND.buildMessage(
+                ScalarDbUtils.getFullTableName(
+                    operation.forNamespace().get(), operation.forTable().get())));
       }
-      selection.withConsistency(Consistency.LINEARIZABLE);
-      return selection;
+      return metadata;
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(), e, snapshot.getId());
