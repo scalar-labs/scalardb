@@ -134,7 +134,7 @@ public class RecoveryHandlerTest {
     handler.recover(selection, result);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
     verify(handler).rollbackRecord(selection, result);
   }
 }

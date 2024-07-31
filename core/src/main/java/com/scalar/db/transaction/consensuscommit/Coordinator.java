@@ -147,11 +147,16 @@ public class Coordinator {
   }
 
   public void putStateForLazyRecoveryRollback(String id) throws CoordinatorException {
-    if (!keyManipulator.isFullKey(id)) {
-      putState(new Coordinator.State(id, TransactionState.ABORTED));
+    if (keyManipulator.isFullKey(id)) {
+      putStateForLazyRecoveryRollbackForGroupCommit(id);
       return;
     }
 
+    putState(new Coordinator.State(id, TransactionState.ABORTED));
+  }
+
+  private void putStateForLazyRecoveryRollbackForGroupCommit(String id)
+      throws CoordinatorException {
     // Lazy recoveries don't know which the transaction that created the PREPARE record is using, a
     // parent ID or a full ID as `tx_id` partition key.
     //
@@ -197,7 +202,7 @@ public class Coordinator {
     // - The original commit with `tx_id: <full tx ID>` succeeds
     // - `lazy-recovery-abort-with-parent-id` succeeds
     // - `lazy-recovery-abort-with-full-id` fails
-    // - The transaction is treated as committed since the commit's `tx_id` is the transaction full
+    // - The transaction is treated as committed since the commit `tx_id` is the transaction full
     // ID
     //
     // D. The original commit with `tx_id: <full tx ID>` is in-progress in case #b, and lazy
@@ -210,28 +215,35 @@ public class Coordinator {
     // - The transaction is treated as aborted because of `lazy-recovery-abort-with-full-id`
     Keys<String, String, String> keys = keyManipulator.keysFromFullKey(id);
     try {
-      // This record is to prevent a group commit that has the same parent ID regardless if the
-      // transaction is group committed or committed alone.
+      // This record is to prevent a group commit that has the same parent ID considering case #a
+      // regardless if the transaction is actually in a group commit (case #a) or a delayed commit
+      // (case #b).
       putStateForGroupCommit(
           keys.parentKey,
           Collections.emptyList(),
           TransactionState.ABORTED,
           System.currentTimeMillis());
-      // logger.info("LazyRollback: Inserted Parent ID: {}", keys.parentKey);
     } catch (CoordinatorConflictException e) {
+      // The group commit finished already, although there may be ongoing delayed groups.
+
+      // If the group commit contains the transaction, follow the state.
+      // Otherwise, continue to insert a record with the full ID.
       Optional<State> optState = getState(keys.parentKey);
       if (!optState.isPresent()) {
         throw new AssertionError();
       }
       State state = optState.get();
-      if (state.getState() != TransactionState.ABORTED) {
-        throw e;
+      if (state.getChildIds().contains(keys.childKey)) {
+        if (state.getState() == TransactionState.ABORTED) {
+          return;
+        } else {
+          // Conflicted.
+          throw e;
+        }
       }
-      // TODO: Check if the `tx_child_ids` contains `id`.
     }
-    // This record is to clarify the transaction is aborted.
+    // This record is to intend the transaction is aborted.
     putState(new Coordinator.State(id, TransactionState.ABORTED));
-    // logger.info("LazyRollback: Inserted Full ID: {}", id);
   }
 
   private Get createGetWith(String id) {

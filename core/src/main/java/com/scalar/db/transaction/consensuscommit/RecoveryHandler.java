@@ -93,7 +93,6 @@ public class RecoveryHandler {
     }
 
     try {
-      //      coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
       coordinator.putStateForLazyRecoveryRollback(result.getId());
       rollbackRecord(selection, result);
     } catch (CoordinatorException e) {
