@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ue
+set -u
 
 # Get container name and password from arguments
 SQL_SERVER_CONTAINER_NAME=$1
@@ -8,9 +8,12 @@ MAX_RETRY_COUNT=$3
 RETRY_INTERVAL=$4
 COUNT=0
 
-if [[ "$SQL_SERVER_CONTAINER_NAME" = "sqlserver22" ]]; then
+# Check if the `/opt/mssql-tools18/bin/sqlcmd` command exists or not.
+docker exec -t ${SQL_SERVER_CONTAINER_NAME} ls /opt/mssql-tools18/bin/sqlcmd
+if [[ $? -eq 0 ]]; then
   SQLCMD=/opt/mssql-tools18/bin/sqlcmd
 else
+  # If there is no `/opt/mssql-tools18/bin/sqlcmd` command, we use old command.
   SQLCMD=/opt/mssql-tools/bin/sqlcmd
 fi
 
