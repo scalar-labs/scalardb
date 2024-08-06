@@ -6,12 +6,29 @@ import static com.scalar.db.util.retry.Retry.executeWithRetries;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CrudConflictException;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateRequest;
@@ -23,7 +40,10 @@ import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcUtils;
 import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.ThrowableFunction;
 import io.grpc.ManagedChannel;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -138,6 +158,134 @@ public class GrpcTwoPhaseCommitTransactionManager
   @VisibleForTesting
   GrpcTwoPhaseCommitTransactionOnBidirectionalStream getStream() {
     return new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
+  }
+
+  @Override
+  public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)));
+  }
+
+  @Override
+  public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
+    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
+  }
+
+  @Deprecated
+  @Override
+  public void put(Put put) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.put(copyAndSetTargetToIfNot(put));
+          return null;
+        });
+  }
+
+  @Deprecated
+  @Override
+  public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.put(copyAndSetTargetToIfNot(puts));
+          return null;
+        });
+  }
+
+  @Override
+  public void insert(Insert insert) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.insert(copyAndSetTargetToIfNot(insert));
+          return null;
+        });
+  }
+
+  @Override
+  public void upsert(Upsert upsert) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.upsert(copyAndSetTargetToIfNot(upsert));
+          return null;
+        });
+  }
+
+  @Override
+  public void update(Update update) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.update(copyAndSetTargetToIfNot(update));
+          return null;
+        });
+  }
+
+  @Override
+  public void delete(Delete delete) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.delete(copyAndSetTargetToIfNot(delete));
+          return null;
+        });
+  }
+
+  @Deprecated
+  @Override
+  public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.delete(copyAndSetTargetToIfNot(deletes));
+          return null;
+        });
+  }
+
+  @Override
+  public void mutate(List<? extends Mutation> mutations)
+      throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.mutate(copyAndSetTargetToIfNot(mutations));
+          return null;
+        });
+  }
+
+  private <R> R executeTransaction(
+      ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction)
+      throws CrudException, UnknownTransactionStatusException {
+    TwoPhaseCommitTransaction transaction;
+    try {
+      transaction = begin();
+    } catch (TransactionNotFoundException e) {
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (TransactionException e) {
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    }
+
+    try {
+      R result = throwableFunction.apply(transaction);
+      transaction.prepare();
+      transaction.validate();
+      transaction.commit();
+      return result;
+    } catch (CrudException e) {
+      rollbackTransaction(transaction);
+      throw e;
+    } catch (PreparationConflictException
+        | ValidationConflictException
+        | CommitConflictException e) {
+      rollbackTransaction(transaction);
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (UnknownTransactionStatusException e) {
+      throw e;
+    } catch (TransactionException e) {
+      rollbackTransaction(transaction);
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    }
+  }
+
+  private void rollbackTransaction(TwoPhaseCommitTransaction transaction) {
+    try {
+      transaction.rollback();
+    } catch (RollbackException e) {
+      logger.warn("Rolling back the transaction failed", e);
+    }
   }
 
   @Override
