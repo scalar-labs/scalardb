@@ -3,10 +3,15 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -671,5 +676,186 @@ public class CoordinatorTest {
                 spiedCoordinator.putStateForGroupCommit(
                     parentId, fullIds, transactionState, current))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void putStateForLazyRecoveryRollback_NormalIdGiven_ShouldCallPutState()
+      throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(ANY_ID_1);
+
+    // Assert
+    verify(spiedCoordinator).putState(new State(ANY_ID_1, TransactionState.ABORTED));
+  }
+
+  @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsNotCommitted_ShouldInsertTwoRecordsWithParentIdAndFullId()
+          throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsCommitted_ShouldThrowCoordinatorConflictException()
+          throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList(ANY_ID_1),
+                    TransactionState.COMMITTED,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+
+    // Act
+    assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
+        .isInstanceOf(CoordinatorConflictException.class);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsAbort_ShouldDoNothing()
+          throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList(ANY_ID_1),
+                    TransactionState.ABORTED,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitFinished_ShouldInsertRecordWithFullId(
+          TransactionState transactionState) throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList("other-id"),
+                    transactionState,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitAndDelayedGroupCommitFinished_ShouldCoordinatorConflictException(
+          TransactionState transactionState) throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList("other-id"),
+                    transactionState,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putState(new State(fullId, TransactionState.ABORTED));
+
+    // Act
+    assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
+        .isInstanceOf(CoordinatorConflictException.class);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
   }
 }

@@ -146,6 +146,106 @@ public class Coordinator {
     put(put);
   }
 
+  public void putStateForLazyRecoveryRollback(String id) throws CoordinatorException {
+    if (keyManipulator.isFullKey(id)) {
+      putStateForLazyRecoveryRollbackForGroupCommit(id);
+      return;
+    }
+
+    putState(new Coordinator.State(id, TransactionState.ABORTED));
+  }
+
+  private void putStateForLazyRecoveryRollbackForGroupCommit(String id)
+      throws CoordinatorException {
+    // Lazy recoveries don't know which the transaction that created the PREPARE record is using, a
+    // parent ID or a full ID as `tx_id` partition key.
+    //
+    // Case a) If a transaction becomes "ready for commit" in time, it'll be committed in a group
+    // with `tx_id: <parent tx ID>`.
+    // Case b) If a transaction is delayed, it'll be committed in an isolated group with a full ID
+    // as `tx_id: <full tx ID>`.
+    //
+    // If lazy recoveries only insert a record with `tx_id: <full tx ID>` to abort the transaction,
+    // it will not conflict with the group commit using `tx_id: <parent tx ID>` in case #a.
+    // Therefore, lazy recoveries first need to insert a record with `tx_id: <parent tx ID>` and
+    // empty `tx_child_ids` to the Coordinator table. We'll call this insertion
+    // `lazy-recovery-abort-with-parent-id`. This record is intended to conflict with a potential
+    // group commit considering case#1, even though it doesn't help in finding the coordinator state
+    // since `tx_child_ids` is empty.
+    //
+    // Once the record insertion with `tx_id: <parent tx ID>` succeeds, the lazy recovery will
+    // insert another record with `tx_id: <full tx ID>`. We'll call this insertion
+    // `lazy-recovery-abort-with-full-id`. This record insertion is needed to conflict with a
+    // potential delayed group commit that has `tx_id: <full tx ID>` in case #b, and indicates the
+    // transaction is aborted.
+    //
+    // Let's walk through all the cases.
+    //
+    // A. The original commit with `tx_id: <parent tx ID>` succeeds in case #a, and then lazy
+    // recovery happens
+    // - The original commit with `tx_id: <parent tx ID>` succeeds
+    // - `lazy-recovery-abort-with-parent-id` fails
+    // - The transaction is treated as committed since the commit's `tx_child_ids` contains the
+    // transaction child ID
+    //
+    // B. The original commit with `tx_id: <parent tx ID>` is in-progress in case #a, and lazy
+    // recovery happens first
+    // - `lazy-recovery-abort-with-parent-id` succeeds
+    // - The original commit with `tx_id: <parent tx ID>` fails
+    // - (If the lazy recovery crashes here, another lazy recovery will insert the below
+    // `lazy-recovery-abort-with-full-id` later)
+    // - `lazy-recovery-abort-with-full-id` succeeds
+    // - The transaction is treated as aborted because of `lazy-recovery-abort-with-full-id`
+    //
+    // C. The original commit with `tx_id: <full tx ID>` is done in case #b, and then lazy recovery
+    // happens
+    // - The original commit with `tx_id: <full tx ID>` succeeds
+    // - `lazy-recovery-abort-with-parent-id` succeeds
+    // - `lazy-recovery-abort-with-full-id` fails
+    // - The transaction is treated as committed since the commit `tx_id` is the transaction full
+    // ID
+    //
+    // D. The original commit with `tx_id: <full tx ID>` is in-progress in case #b, and lazy
+    // recovery happens first
+    // - `lazy-recovery-abort-with-parent-id` succeeds
+    // - (If the lazy recovery crashes here and the original commit happens, the situation will be
+    // the same as C)
+    // - `lazy-recovery-abort-with-full-id` succeeds
+    // - The original commit with `tx_id: <full tx ID>` fails
+    // - The transaction is treated as aborted because of `lazy-recovery-abort-with-full-id`
+    Keys<String, String, String> keys = keyManipulator.keysFromFullKey(id);
+    try {
+      // This record is to prevent a group commit that has the same parent ID considering case #a
+      // regardless if the transaction is actually in a group commit (case #a) or a delayed commit
+      // (case #b).
+      putStateForGroupCommit(
+          keys.parentKey,
+          Collections.emptyList(),
+          TransactionState.ABORTED,
+          System.currentTimeMillis());
+    } catch (CoordinatorConflictException e) {
+      // The group commit finished already, although there may be ongoing delayed groups.
+
+      // If the group commit contains the transaction, follow the state.
+      // Otherwise, continue to insert a record with the full ID.
+      Optional<State> optState = getState(keys.parentKey);
+      if (!optState.isPresent()) {
+        throw new AssertionError();
+      }
+      State state = optState.get();
+      if (state.getChildIds().contains(keys.childKey)) {
+        if (state.getState() == TransactionState.ABORTED) {
+          return;
+        } else {
+          // Conflicted.
+          throw e;
+        }
+      }
+    }
+    // This record is to intend the transaction is aborted.
+    putState(new Coordinator.State(id, TransactionState.ABORTED));
+  }
+
   private Get createGetWith(String id) {
     return new Get(new Key(Attribute.toIdValue(id)))
         .withConsistency(Consistency.LINEARIZABLE)
