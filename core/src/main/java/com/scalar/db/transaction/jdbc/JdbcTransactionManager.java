@@ -2,16 +2,31 @@ package com.scalar.db.transaction.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Isolation;
+import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CrudConflictException;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
@@ -19,7 +34,10 @@ import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
+import com.scalar.db.util.ThrowableFunction;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -76,12 +94,16 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
 
   @Override
   public DistributedTransaction begin(String txId) throws TransactionException {
+    return begin(txId, true);
+  }
+
+  private DistributedTransaction begin(String txId, boolean decorate) throws TransactionException {
     try {
       JdbcTransaction transaction =
           new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
-      return decorate(transaction);
+      return decorate ? decorate(transaction) : transaction;
     } catch (SQLException e) {
       throw new TransactionException(
           CoreError.JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED.buildMessage(e.getMessage()),
@@ -140,6 +162,136 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
   public DistributedTransaction start(
       String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
     return begin(txId);
+  }
+
+  @Override
+  public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)));
+  }
+
+  @Override
+  public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
+    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
+  }
+
+  @Deprecated
+  @Override
+  public void put(Put put) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.put(copyAndSetTargetToIfNot(put));
+          return null;
+        });
+  }
+
+  @Deprecated
+  @Override
+  public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.put(copyAndSetTargetToIfNot(puts));
+          return null;
+        });
+  }
+
+  @Override
+  public void insert(Insert insert) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.insert(copyAndSetTargetToIfNot(insert));
+          return null;
+        });
+  }
+
+  @Override
+  public void upsert(Upsert upsert) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.upsert(copyAndSetTargetToIfNot(upsert));
+          return null;
+        });
+  }
+
+  @Override
+  public void update(Update update) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.update(copyAndSetTargetToIfNot(update));
+          return null;
+        });
+  }
+
+  @Override
+  public void delete(Delete delete) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.delete(copyAndSetTargetToIfNot(delete));
+          return null;
+        });
+  }
+
+  @Deprecated
+  @Override
+  public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.delete(copyAndSetTargetToIfNot(deletes));
+          return null;
+        });
+  }
+
+  @Override
+  public void mutate(List<? extends Mutation> mutations)
+      throws CrudException, UnknownTransactionStatusException {
+    executeTransaction(
+        t -> {
+          t.mutate(copyAndSetTargetToIfNot(mutations));
+          return null;
+        });
+  }
+
+  private <R> R executeTransaction(
+      ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction)
+      throws CrudException, UnknownTransactionStatusException {
+    DistributedTransaction transaction;
+    try {
+      transaction = beginInternal();
+    } catch (TransactionNotFoundException e) {
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (TransactionException e) {
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    }
+
+    try {
+      R result = throwableFunction.apply(transaction);
+      transaction.commit();
+      return result;
+    } catch (CrudException e) {
+      rollbackTransaction(transaction);
+      throw e;
+    } catch (CommitConflictException e) {
+      rollbackTransaction(transaction);
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (UnknownTransactionStatusException e) {
+      throw e;
+    } catch (TransactionException e) {
+      rollbackTransaction(transaction);
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    }
+  }
+
+  @VisibleForTesting
+  DistributedTransaction beginInternal() throws TransactionException {
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, false);
+  }
+
+  private void rollbackTransaction(DistributedTransaction transaction) {
+    try {
+      transaction.rollback();
+    } catch (RollbackException e) {
+      logger.warn("Rolling back the transaction failed", e);
+    }
   }
 
   @Override

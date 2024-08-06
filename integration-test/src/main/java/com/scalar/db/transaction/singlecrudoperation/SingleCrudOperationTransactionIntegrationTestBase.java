@@ -406,7 +406,8 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 
-  @Disabled("Single CRUD operation transactions don't multiple mutations")
+  @Disabled(
+      "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
   @Override
   @Test
   public void manager_mutate_DefaultNamespaceGiven_ShouldWorkProperly() {}
