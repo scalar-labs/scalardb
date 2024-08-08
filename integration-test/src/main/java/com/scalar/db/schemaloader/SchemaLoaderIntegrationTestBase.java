@@ -100,7 +100,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     storageAdmin = factory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
     transactionAdmin = transactionFactory.getTransactionAdmin();
-    systemNamespaceName = new DatabaseConfig(properties).getSystemNamespaceName();
+    systemNamespaceName = DatabaseConfig.getSystemNamespaceName(properties);
     adminTestUtils = getAdminTestUtils(TEST_NAME);
   }
 
