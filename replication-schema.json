@@ -45,7 +45,8 @@
       "namespace",
       "table",
       "pk",
-      "ck"
+      "ck",
+      "transaction_id"
     ],
     "columns": {
       "partition_id": "INT",
@@ -53,7 +54,8 @@
       "namespace": "TEXT",
       "table": "TEXT",
       "pk": "TEXT",
-      "ck": "TEXT"
+      "ck": "TEXT",
+      "transaction_id": "TEXT"
     }
   },
   "replication.records": {

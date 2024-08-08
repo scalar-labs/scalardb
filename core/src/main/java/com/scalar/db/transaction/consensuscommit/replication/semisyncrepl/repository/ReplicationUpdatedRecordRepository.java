@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repos
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
@@ -14,8 +15,13 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ReplicationUpdatedRecordRepository {
+  private static final Logger logger =
+      LoggerFactory.getLogger(ReplicationUpdatedRecordRepository.class);
+
   private final DistributedStorage replicationDbStorage;
   private final ObjectMapper objectMapper;
   private final String replicationDbNamespace;
@@ -43,28 +49,36 @@ public class ReplicationUpdatedRecordRepository {
                 .ordering(Ordering.asc("updated_at"))
                 .limit(fetchSize)
                 .build())) {
-      return scan.all().stream()
-          .map(
-              result -> {
-                try {
-                  return new UpdatedRecord(
-                      partitionId,
-                      result.getText("namespace"),
-                      result.getText("table"),
-                      objectMapper.readValue(
-                          result.getText("pk"),
-                          com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model
-                              .Key.class),
-                      objectMapper.readValue(
-                          result.getText("ck"),
-                          com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model
-                              .Key.class),
-                      Instant.ofEpochMilli(result.getBigInt("updated_at")));
-                } catch (JsonProcessingException e) {
-                  throw new RuntimeException(e);
-                }
-              })
-          .collect(Collectors.toList());
+      List<UpdatedRecord> updatedRecords =
+          scan.all().stream()
+              .map(
+                  result -> {
+                    try {
+                      return new UpdatedRecord(
+                          partitionId,
+                          result.getText("namespace"),
+                          result.getText("table"),
+                          objectMapper.readValue(
+                              result.getText("pk"),
+                              com.scalar.db.transaction.consensuscommit.replication.semisyncrepl
+                                  .model.Key.class),
+                          objectMapper.readValue(
+                              result.getText("ck"),
+                              com.scalar.db.transaction.consensuscommit.replication.semisyncrepl
+                                  .model.Key.class),
+                          result.getText("transaction_id"),
+                          Instant.ofEpochMilli(result.getBigInt("updated_at")));
+                    } catch (JsonProcessingException e) {
+                      throw new RuntimeException(e);
+                    }
+                  })
+              .collect(Collectors.toList());
+
+      if (!updatedRecords.isEmpty()) {
+        logger.debug("[scan]\n  partitionId:{}\n  records:{}", partitionId, updatedRecords);
+      }
+
+      return updatedRecords;
     }
   }
 
@@ -81,15 +95,45 @@ public class ReplicationUpdatedRecordRepository {
                   .addText("table", updatedRecord.table)
                   .addText("pk", objectMapper.writeValueAsString(updatedRecord.pk))
                   .addText("ck", objectMapper.writeValueAsString(updatedRecord.ck))
+                  .addText("transaction_id", updatedRecord.transactionId)
                   .build())
           .build();
     } catch (JsonProcessingException e) {
       throw new RuntimeException(
-          String.format("Failed to create a key for record. UpdatedRecord:%s", updatedRecord), e);
+          String.format(
+              "Failed to create the updated record information. UpdatedRecord:%s", updatedRecord),
+          e);
     }
   }
 
   public void add(UpdatedRecord updatedRecord) throws ExecutionException {
     replicationDbStorage.put(createPutFromUpdatedRecord(updatedRecord));
+    logger.debug("[add]\n  record:{}", updatedRecord);
+  }
+
+  public void delete(UpdatedRecord updatedRecord) throws ExecutionException {
+    try {
+      replicationDbStorage.delete(
+          Delete.newBuilder()
+              .namespace(replicationDbNamespace)
+              .table(replicationDbUpdatedRecordTable)
+              .partitionKey(Key.ofInt("partition_id", updatedRecord.partitionId))
+              .clusteringKey(
+                  Key.newBuilder()
+                      .addBigInt("updated_at", updatedRecord.updatedAt.toEpochMilli())
+                      .addText("namespace", updatedRecord.namespace)
+                      .addText("table", updatedRecord.table)
+                      .addText("pk", objectMapper.writeValueAsString(updatedRecord.pk))
+                      .addText("ck", objectMapper.writeValueAsString(updatedRecord.ck))
+                      .addText("transaction_id", updatedRecord.transactionId)
+                      .build())
+              .build());
+      logger.debug("[delete]\n  record:{}", updatedRecord);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(
+          String.format(
+              "Failed to delete the updated record information. UpdatedRecord:%s", updatedRecord),
+          e);
+    }
   }
 }

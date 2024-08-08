@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DistributedStorage;
@@ -22,34 +21,50 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
-import java.io.Closeable;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RecordWriterThread implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(RecordWriterThread.class);
+public class RecordHandlerWorker extends BaseHandlerWorker {
+  private static final Logger logger = LoggerFactory.getLogger(RecordHandlerWorker.class);
 
-  private final ExecutorService executorService;
-  private final int threadSize;
-  private final BlockingQueue<Key> recordWriterQueue;
+  private final Configuration conf;
+  private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
+  private final ReplicationRecordRepository replicationRecordRepository;
   private final KeyHandler keyHandler;
+  private final MetricsLogger metricsLogger;
+
+  @Immutable
+  public static class Configuration extends BaseHandlerWorker.Configuration {
+    private final int fetchSize;
+
+    public Configuration(
+        int replicationDbPartitionSize, int threadSize, int waitMillisPerPartition, int fetchSize) {
+      super(replicationDbPartitionSize, threadSize, waitMillisPerPartition);
+      this.fetchSize = fetchSize;
+    }
+  }
+
+  enum ResultOfHandlingKey {
+    NO_VALUES_PROCESSED,
+    PARTIAL_VALUES_PROCESSED,
+    ALL_VALUES_PROCESSED
+  }
 
   static class KeyHandler {
     private final ReplicationRecordRepository replicationRecordRepository;
@@ -230,12 +245,12 @@ public class RecordWriterThread implements Closeable {
     }
 
     @VisibleForTesting
-    boolean handleKey(Key key, boolean logicalDelete) throws ExecutionException {
+    ResultOfHandlingKey handleKey(Key key, boolean logicalDelete) throws ExecutionException {
       Optional<Record> recordOpt =
           metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
       if (!recordOpt.isPresent()) {
         logger.warn("key:{} is not found", key);
-        return false;
+        return ResultOfHandlingKey.NO_VALUES_PROCESSED;
       }
 
       Record record = recordOpt.get();
@@ -244,7 +259,7 @@ public class RecordWriterThread implements Closeable {
 
       if (nextValue == null) {
         logger.debug("A next value is not found. key:{}", key);
-        return false;
+        return ResultOfHandlingKey.NO_VALUES_PROCESSED;
       }
       Value lastValue = nextValue.nextValue;
 
@@ -347,7 +362,11 @@ public class RecordWriterThread implements Closeable {
                   nextValue.insertTxIds);
               return null;
             });
-        return nextValue.shouldHandleTheSameKey;
+        if (nextValue.shouldHandleTheSameKey) {
+          return ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED;
+        } else {
+          return ResultOfHandlingKey.ALL_VALUES_PROCESSED;
+        }
       } catch (Exception e) {
         throw new RuntimeException(
             String.format(
@@ -398,76 +417,47 @@ public class RecordWriterThread implements Closeable {
     }
   }
 
-  public RecordWriterThread(
-      int threadSize,
+  public RecordHandlerWorker(
+      Configuration conf,
+      ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
       DistributedStorage backupScalarDbStorage,
-      BlockingQueue<Key> recordWriterQueue,
       MetricsLogger metricsLogger) {
-    this.threadSize = threadSize;
-    this.executorService =
-        Executors.newFixedThreadPool(
-            threadSize,
-            new ThreadFactoryBuilder()
-                .setNameFormat("log-record-writer-%d")
-                .setUncaughtExceptionHandler(
-                    (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
-                .build());
-    this.recordWriterQueue = recordWriterQueue;
+    super(conf, "record", metricsLogger);
+    this.conf = conf;
     this.keyHandler =
         new KeyHandler(replicationRecordRepository, backupScalarDbStorage, metricsLogger);
-  }
-
-  public RecordWriterThread run() {
-    for (int i = 0; i < threadSize; i++) {
-      executorService.execute(
-          () -> {
-            while (!executorService.isShutdown()) {
-              Key key;
-              try {
-                key = recordWriterQueue.poll(500, TimeUnit.MILLISECONDS);
-                if (key == null) {
-                  continue;
-                }
-              } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.warn("Interrupted", e);
-                break;
-              }
-
-              try {
-                if (keyHandler.handleKey(key, true)) {
-                  recordWriterQueue.add(key);
-                }
-              } catch (Throwable e) {
-                recordWriterQueue.add(key);
-                logger.error("Caught an exception. Retrying...\n  key:{}", key, e);
-                try {
-                  // Avoid busy loop
-                  TimeUnit.MILLISECONDS.sleep(100);
-                } catch (InterruptedException ex) {
-                  Thread.currentThread().interrupt();
-                  logger.warn("Interrupted", ex);
-                  break;
-                }
-              }
-            }
-          });
-    }
-    return this;
+    this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
+    this.replicationRecordRepository = replicationRecordRepository;
+    this.metricsLogger = metricsLogger;
   }
 
   @Override
-  public void close() {
-    executorService.shutdown();
-    // TODO: Make this configurable
-    try {
-      if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
-        executorService.shutdownNow();
+  protected boolean handle(int partitionId) throws ExecutionException {
+    List<UpdatedRecord> scannedUpdatedRecords =
+        metricsLogger.execFetchUpdatedRecords(
+            () -> replicationUpdatedRecordRepository.scan(partitionId, conf.fetchSize));
+    for (UpdatedRecord updatedRecord : scannedUpdatedRecords) {
+      ResultOfHandlingKey result =
+          keyHandler.handleKey(
+              replicationRecordRepository.createKey(
+                  updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
+              true);
+      switch (result) {
+        case NO_VALUES_PROCESSED:
+          break;
+        case ALL_VALUES_PROCESSED:
+          // TODO: Measure the latency.
+          replicationUpdatedRecordRepository.delete(updatedRecord);
+          break;
+        case PARTIAL_VALUES_PROCESSED:
+          // TODO: Measure the latency.
+          replicationUpdatedRecordRepository.delete(updatedRecord);
+          break;
       }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      logger.warn("Interrupted", e);
     }
+
+    // TODO: Consider all the results from `handleKey()`.
+    return scannedUpdatedRecords.size() >= conf.fetchSize;
   }
 }

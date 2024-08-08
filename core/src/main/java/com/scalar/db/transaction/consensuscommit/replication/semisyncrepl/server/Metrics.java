@@ -14,6 +14,8 @@ class Metrics {
   public final AtomicLong totalDurationInMillisToFetchTransaction = new AtomicLong();
   public final AtomicInteger totalCountToFetchTransaction = new AtomicInteger();
   public final AtomicLong totalDurationInMillisToFetchBulkTransaction = new AtomicLong();
+  public final AtomicInteger totalCountToFetchUpdatedRecords = new AtomicInteger();
+  public final AtomicLong totalDurationInMillisToFetchUpdatedRecords = new AtomicLong();
   public final AtomicInteger totalCountToFetchBulkTransaction = new AtomicInteger();
   public final AtomicLong totalDurationInMillisToAppendValueToRecord = new AtomicLong();
   public final AtomicInteger totalCountToAppendValueToRecord = new AtomicInteger();

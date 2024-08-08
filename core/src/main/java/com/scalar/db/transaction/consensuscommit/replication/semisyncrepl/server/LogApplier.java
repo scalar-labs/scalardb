@@ -8,6 +8,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.reposi
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationBulkTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -16,6 +17,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class LogApplier {
   private static final String ENV_VAR_BACKUP_SCALARDB_CONFIG = "LOG_APPLIER_BACKUP_SCALARDB_CONFIG";
@@ -34,7 +36,7 @@ public class LogApplier {
 
   private static final int REPLICATION_DB_PARTITION_SIZE = 256;
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException, InterruptedException {
     String backupScalarDbConfigPath = System.getenv(ENV_VAR_BACKUP_SCALARDB_CONFIG);
     if (backupScalarDbConfigPath == null) {
       throw new IllegalArgumentException(
@@ -96,6 +98,13 @@ public class LogApplier {
             "replication",
             "records");
 
+    ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository =
+        new ReplicationUpdatedRecordRepository(
+            StorageFactory.create(replicationDbConfigPath).getStorage(),
+            objectMapper,
+            "replication",
+            "updated_records");
+
     ReplicationTransactionRepository replicationTransactionRepository =
         new ReplicationTransactionRepository(
             StorageFactory.create(replicationDbConfigPath).getStorage(),
@@ -118,14 +127,19 @@ public class LogApplier {
         Files.newInputStream(Paths.get(backupScalarDbConfigPath), StandardOpenOption.READ)) {
       backupScalarDbProps.load(in);
     }
-    RecordWriterThread recordWriter =
-        new RecordWriterThread(
-            numOfRecordWriterThreads,
+
+    RecordHandlerWorker recordHandlerWorker =
+        new RecordHandlerWorker(
+            new RecordHandlerWorker.Configuration(
+                REPLICATION_DB_PARTITION_SIZE,
+                numOfDistributorThreads,
+                waitMillisPerPartition,
+                transactionFetchSize),
+            replicationUpdatedRecordRepository,
             replicationRecordRepository,
             StorageFactory.create(backupScalarDbProps).getStorage(),
-            recordWriterQueue,
             metricsLogger);
-    recordWriter.run();
+    recordHandlerWorker.run();
 
     BulkTransactionHandlerWorker bulkTransactionHandlerWorker =
         new BulkTransactionHandlerWorker(
@@ -149,17 +163,13 @@ public class LogApplier {
                 thresholdMillisForOldTransaction),
             coordinatorStateRepository,
             replicationTransactionRepository,
+            replicationUpdatedRecordRepository,
             replicationRecordRepository,
-            recordWriterQueue,
             metricsLogger);
     transactionHandlerWorker.run();
 
-    Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread(
-                () -> {
-                  bulkTransactionHandlerWorker.close();
-                  recordWriter.close();
-                }));
+    while (true) {
+      TimeUnit.MINUTES.sleep(1);
+    }
   }
 }

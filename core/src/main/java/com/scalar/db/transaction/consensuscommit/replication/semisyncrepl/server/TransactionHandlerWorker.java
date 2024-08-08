@@ -8,15 +8,16 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.InsertedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.WrittenTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.Queue;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +26,10 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
   private static final Logger logger = LoggerFactory.getLogger(TransactionHandlerWorker.class);
 
   private final TransactionHandlerWorker.Configuration conf;
-  private final ReplicationRecordRepository replicationRecordRepository;
-  private final ReplicationTransactionRepository replicationTransactionRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
-  private final Queue<Key> recordWriterQueue;
+  private final ReplicationTransactionRepository replicationTransactionRepository;
+  private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
+  private final ReplicationRecordRepository replicationRecordRepository;
   private final MetricsLogger metricsLogger;
 
   @Immutable
@@ -52,20 +53,20 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
       Configuration conf,
       CoordinatorStateRepository coordinatorStateRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
+      ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
-      Queue<Key> recordWriterQueue,
       MetricsLogger metricsLogger) {
     super(conf, "tx", metricsLogger);
     this.conf = conf;
-    this.replicationTransactionRepository = replicationTransactionRepository;
     this.coordinatorStateRepository = coordinatorStateRepository;
+    this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
+    this.replicationTransactionRepository = replicationTransactionRepository;
     this.replicationRecordRepository = replicationRecordRepository;
-    this.recordWriterQueue = recordWriterQueue;
     this.metricsLogger = metricsLogger;
   }
 
   private void handleWrittenTuple(
-      String transactionId, WrittenTuple writtenTuple, Instant committedAt) {
+      int partitionId, String transactionId, WrittenTuple writtenTuple, Instant committedAt) {
     Key key =
         replicationRecordRepository.createKey(
             writtenTuple.namespace,
@@ -114,6 +115,17 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
     try {
       metricsLogger.execAppendValueToRecord(
           () -> {
+            // Notify downstream workers.
+            replicationUpdatedRecordRepository.add(
+                new UpdatedRecord(
+                    partitionId,
+                    writtenTuple.namespace,
+                    writtenTuple.table,
+                    writtenTuple.partitionKey,
+                    writtenTuple.clusteringKey,
+                    transactionId,
+                    Instant.now()));
+
             replicationRecordRepository.upsertWithNewValue(key, newValue);
             return null;
           });
@@ -124,8 +136,6 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
               key, transactionId, newValue);
       throw new RuntimeException(message, e);
     }
-
-    recordWriterQueue.add(key);
   }
 
   /**
@@ -157,7 +167,10 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
     // Copy written tuples to `records` table
     for (WrittenTuple writtenTuple : transaction.writtenTuples) {
       handleWrittenTuple(
-          transaction.transactionId, writtenTuple, coordinatorState.get().txCommittedAt);
+          transaction.partitionId,
+          transaction.transactionId,
+          writtenTuple,
+          coordinatorState.get().txCommittedAt);
     }
     metricsLogger.incrementHandledCommittedTransactions();
     return true;

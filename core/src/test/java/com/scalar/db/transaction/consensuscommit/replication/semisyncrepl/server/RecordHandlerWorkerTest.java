@@ -27,7 +27,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordWriterThread.KeyHandler;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.KeyHandler;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -44,7 +44,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class RecordWriterThreadTest {
+class RecordHandlerWorkerTest {
   private final com.scalar.db.io.Key key =
       com.scalar.db.io.Key.newBuilder()
           .add(TextColumn.of("pk", "pk1"))
