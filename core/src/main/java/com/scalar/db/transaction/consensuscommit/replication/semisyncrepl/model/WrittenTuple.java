@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.MoreObjects;
 import javax.annotation.Nullable;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -31,5 +32,17 @@ public class WrittenTuple {
     this.txPreparedAtInMillis = txPreparedAtInMillis;
     this.partitionKey = partitionKey;
     this.clusteringKey = clusteringKey;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", namespace)
+        .add("table", table)
+        .add("txVersion", txVersion)
+        .add("txPreparedAtInMillis", txPreparedAtInMillis)
+        .add("partitionKey", partitionKey)
+        .add("clusteringKey", clusteringKey)
+        .toString();
   }
 }

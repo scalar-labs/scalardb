@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import java.time.Instant;
 import java.util.Collection;
 import javax.annotation.concurrent.Immutable;
@@ -28,5 +29,17 @@ public class Transaction {
     this.updatedAt = updatedAt;
     this.transactionId = transactionId;
     this.writtenTuples = writtenTuples;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("partitionId", partitionId)
+        .add("createdAt", createdAt)
+        .add("updatedAt", updatedAt)
+        .add("transactionId", transactionId)
+        .add("writtenTuples", writtenTuples)
+        .add("type", type)
+        .toString();
   }
 }

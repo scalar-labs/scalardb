@@ -1,8 +1,9 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
+import static com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.Utils.*;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -261,6 +262,9 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
         logger.debug("A next value is not found. key:{}", key);
         return ResultOfHandlingKey.NO_VALUES_PROCESSED;
       }
+      logger.debug(
+          "[handleKey]\n  key:{}\n  nextValue:{}\n", key, nextValue.toStringOnlyWithMetadata());
+
       Value lastValue = nextValue.nextValue;
 
       if (record.prepTxId == null) {
@@ -345,7 +349,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
                   record.toStringOnlyWithMetadata(),
                   nextValue.toStringOnlyWithMetadata(),
                   convPutOperationMetadataToString(putBuilder.build()),
-                  convOptResultMetadataToString(result)),
+                  convOptBackupDbTableResultMetadataToString(result)),
               e);
         }
       }
@@ -376,44 +380,6 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
                 convPutOperationMetadataToString(putBuilder.build())),
             e);
       }
-    }
-
-    private String convPutOperationMetadataToString(Put put) {
-      return MoreObjects.toStringHelper(put)
-          .add("namespace", put.forNamespace())
-          .add("table", put.forTable())
-          .add("partitionKey", put.getPartitionKey())
-          .add("clusteringKey", put.getClusteringKey())
-          .add(
-              "columns",
-              ImmutableMap.builder()
-                  .put("tx_id", put.getColumns().get("tx_id"))
-                  .put("tx_version", put.getColumns().get("tx_version"))
-                  .put("tx_state", put.getColumns().get("tx_state"))
-                  .put("tx_prepared_at", put.getColumns().get("tx_prepared_at"))
-                  .put("tx_committed_at", put.getColumns().get("tx_committed_at"))
-                  .build())
-          .add("consistency", put.getConsistency())
-          .add("condition", put.getCondition())
-          .toString();
-    }
-
-    private String convOptResultMetadataToString(Optional<Result> optResult) {
-      return optResult.map(this::convResultMetadataToString).orElse("None");
-    }
-
-    private String convResultMetadataToString(Result result) {
-      return MoreObjects.toStringHelper(result)
-          .add(
-              "columns",
-              ImmutableMap.builder()
-                  .put("tx_id", result.getColumns().get("tx_id"))
-                  .put("tx_version", result.getColumns().get("tx_version"))
-                  .put("tx_state", result.getColumns().get("tx_state"))
-                  .put("tx_prepared_at", result.getColumns().get("tx_prepared_at"))
-                  .put("tx_committed_at", result.getColumns().get("tx_committed_at"))
-                  .build())
-          .toString();
     }
   }
 

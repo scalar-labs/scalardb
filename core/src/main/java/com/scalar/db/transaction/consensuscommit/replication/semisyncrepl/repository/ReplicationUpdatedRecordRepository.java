@@ -75,7 +75,10 @@ public class ReplicationUpdatedRecordRepository {
               .collect(Collectors.toList());
 
       if (!updatedRecords.isEmpty()) {
-        logger.debug("[scan]\n  partitionId:{}\n  records:{}", partitionId, updatedRecords);
+        logger.debug(
+            "[scan]\n  partitionId:{}\n  records:{}\n",
+            partitionId,
+            updatedRecords.stream().map(UpdatedRecord::toString).collect(Collectors.joining(",")));
       }
 
       return updatedRecords;
@@ -107,12 +110,15 @@ public class ReplicationUpdatedRecordRepository {
   }
 
   public void add(UpdatedRecord updatedRecord) throws ExecutionException {
+    logger.debug("[add]\n  record:{}\n", updatedRecord);
+
     replicationDbStorage.put(createPutFromUpdatedRecord(updatedRecord));
-    logger.debug("[add]\n  record:{}", updatedRecord);
   }
 
   public void delete(UpdatedRecord updatedRecord) throws ExecutionException {
     try {
+      logger.debug("[delete]\n  record:{}\n", updatedRecord);
+
       replicationDbStorage.delete(
           Delete.newBuilder()
               .namespace(replicationDbNamespace)
@@ -128,7 +134,6 @@ public class ReplicationUpdatedRecordRepository {
                       .addText("transaction_id", updatedRecord.transactionId)
                       .build())
               .build());
-      logger.debug("[delete]\n  record:{}", updatedRecord);
     } catch (JsonProcessingException e) {
       throw new RuntimeException(
           String.format(

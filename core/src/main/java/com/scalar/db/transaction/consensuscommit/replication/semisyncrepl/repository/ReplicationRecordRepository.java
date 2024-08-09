@@ -14,6 +14,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.Utils;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import java.time.Instant;
@@ -24,7 +25,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,6 +88,11 @@ public class ReplicationRecordRepository {
                 .partitionKey(key)
                 .build());
 
+    logger.debug(
+        "[get]\n  key:{}\n  record:{}\n",
+        key,
+        Utils.convOptReplDbRecordsTableResultMetadataToString(result));
+
     return result.flatMap(
         r -> {
           try {
@@ -113,7 +118,8 @@ public class ReplicationRecordRepository {
                     Instant.ofEpochMilli(r.getBigInt("appended_at")),
                     Instant.ofEpochMilli(r.getBigInt("shrinked_at")));
 
-            logger.debug("[get]\n  key:{}\n  record:{}", key, record.toStringOnlyWithMetadata());
+            logger.debug(
+                "[get(details)]\n  key:{}\n  record:{}\n", key, record.toStringOnlyWithMetadata());
 
             return Optional.of(record);
           } catch (JsonProcessingException e) {
@@ -159,13 +165,8 @@ public class ReplicationRecordRepository {
 
     try {
       logger.debug(
-          "[appendValue]\n  key:{}\n  values={}",
-          key,
-          "["
-              + values.stream()
-                  .map(Value::toStringOnlyWithMetadata)
-                  .collect(Collectors.joining(","))
-              + "]");
+          "[upsertWithNewValue]\n  key:{}\n  values=[{}]\n", key, Utils.convValuesToString(values));
+
       replicationDbStorage.put(
           putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
     } catch (JsonProcessingException e) {
@@ -205,16 +206,12 @@ public class ReplicationRecordRepository {
 
     try {
       logger.debug(
-          "[updateValues]\n  key:{}\n  curVer:{}\n  newTxId:{}\n  prepTxId:{}\n  values={}",
+          "[updateWithValues]\n  key:{}\n  record:{}\n  newTxId:{}\n  values=[{}]\n",
           key,
-          record.version,
+          record.toStringOnlyWithMetadata(),
           newTxId,
-          record.prepTxId,
-          "["
-              + values.stream()
-                  .map(Value::toStringOnlyWithMetadata)
-                  .collect(Collectors.joining(","))
-              + "]");
+          values);
+
       replicationDbStorage.put(
           putBuilder
               .textValue("values", objectMapper.writeValueAsString(values))
@@ -245,7 +242,10 @@ public class ReplicationRecordRepository {
                     TextColumn.of("prep_tx_id", null), Operator.IS_NULL))));
 
     logger.debug(
-        "[updatePrepTxId]\n  key:{}\n  curVer:{}\n  prepTxId:{}", key, record.version, prepTxId);
+        "[updatePrepTxId]\n  key:{}\n  record:{}\n  prepTxId:{}\n",
+        key,
+        record.toStringOnlyWithMetadata(),
+        prepTxId);
 
     replicationDbStorage.put(putBuilder.textValue("prep_tx_id", prepTxId).build());
   }

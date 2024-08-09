@@ -18,8 +18,12 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ReplicationTransactionRepository {
+  private static final Logger logger =
+      LoggerFactory.getLogger(ReplicationTransactionRepository.class);
 
   private final TypeReference<List<WrittenTuple>> typeReferenceForWrittenTuples =
       new TypeReference<List<WrittenTuple>>() {};
@@ -107,6 +111,8 @@ public class ReplicationTransactionRepository {
   }
 
   public void add(Transaction transaction) throws ExecutionException {
+    logger.debug("[add]\n  transaction:{}\n", transaction);
+
     replicationDbStorage.put(createPutFromTransaction(transaction));
   }
 
@@ -119,12 +125,16 @@ public class ReplicationTransactionRepository {
             transaction.transactionId,
             transaction.writtenTuples);
 
+    logger.debug("[updateUpdatedAt]\n  transaction:{}\n", transaction);
+
     add(newTxn);
     // It's okay if deleting the old record remains
     delete(transaction);
   }
 
   public void delete(Transaction transaction) throws ExecutionException {
+    logger.debug("[delete]\n  transaction:{}\n", transaction);
+
     replicationDbStorage.delete(
         Delete.newBuilder()
             .namespace(replicationDbNamespace)
