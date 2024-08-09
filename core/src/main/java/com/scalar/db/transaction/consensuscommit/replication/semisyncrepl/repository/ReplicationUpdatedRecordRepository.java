@@ -141,4 +141,22 @@ public class ReplicationUpdatedRecordRepository {
           e);
     }
   }
+
+  public void updateUpdatedAt(UpdatedRecord updatedRecord) throws ExecutionException {
+    UpdatedRecord newUpdatedRecord =
+        new UpdatedRecord(
+            updatedRecord.partitionId,
+            updatedRecord.namespace,
+            updatedRecord.table,
+            updatedRecord.ck,
+            updatedRecord.pk,
+            updatedRecord.transactionId,
+            Instant.now());
+
+    logger.debug("[updateUpdatedAt]\n  updatedRecord:{}\n", updatedRecord);
+
+    add(newUpdatedRecord);
+    // It's okay if deleting the old record remains
+    delete(updatedRecord);
+  }
 }

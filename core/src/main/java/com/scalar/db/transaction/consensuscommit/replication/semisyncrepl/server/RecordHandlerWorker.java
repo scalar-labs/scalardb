@@ -411,6 +411,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
               true);
       switch (result) {
         case NO_VALUES_PROCESSED:
+          replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
           break;
         case ALL_VALUES_PROCESSED:
           // TODO: Measure the latency.

@@ -152,6 +152,7 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
       metricsLogger.incrementUncommittedTransactions();
       Instant now = Instant.now();
       if (transaction.updatedAt.isBefore(now.minusMillis(conf.thresholdMillisForOldTransaction))) {
+        // TODO: Maybe always updating `updated_at` works better.
         logger.info(
             "Updating an old transaction to be handled later. txId:{}", transaction.transactionId);
         replicationTransactionRepository.updateUpdatedAt(transaction);
