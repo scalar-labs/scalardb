@@ -33,17 +33,20 @@ public class CommitHandler {
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+  private final boolean throwExceptionIfCommittedTransactionExists;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      boolean throwExceptionIfCommittedTransactionExists) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.throwExceptionIfCommittedTransactionExists = throwExceptionIfCommittedTransactionExists;
   }
 
   protected void onPrepareFailure(Snapshot snapshot) {}
@@ -95,6 +98,14 @@ public class CommitHandler {
               CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(),
               cause,
               snapshot.getId());
+        } else if (state.equals(TransactionState.COMMITTED)) {
+          if (throwExceptionIfCommittedTransactionExists) {
+            throw new CommitConflictException(
+                CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_BY_ALREADY_COMMITTED_TRANSACTION
+                    .buildMessage(),
+                cause,
+                snapshot.getId());
+          }
         }
       } else {
         throw new UnknownTransactionStatusException(

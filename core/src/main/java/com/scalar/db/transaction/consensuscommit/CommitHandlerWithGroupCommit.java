@@ -28,8 +28,14 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      CoordinatorGroupCommitter groupCommitter) {
-    super(storage, coordinator, tableMetadataManager, parallelExecutor);
+      CoordinatorGroupCommitter groupCommitter,
+      boolean throwExceptionIfCommittedTransactionExists) {
+    super(
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        throwExceptionIfCommittedTransactionExists);
 
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().

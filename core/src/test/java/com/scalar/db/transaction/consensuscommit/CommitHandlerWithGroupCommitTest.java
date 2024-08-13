@@ -51,9 +51,19 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
   @Override
   protected CommitHandler createCommitHandler() {
+    return createCommitHandler(true);
+  }
+
+  @Override
+  protected CommitHandler createCommitHandler(boolean throwExceptionIfCommittedTransactionExists) {
     createGroupCommitterIfNotExists();
     return new CommitHandlerWithGroupCommit(
-        storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        groupCommitter,
+        throwExceptionIfCommittedTransactionExists);
   }
 
   private String anyGroupCommitParentId() {

@@ -50,7 +50,7 @@ public class TwoPhaseConsensusCommitManager
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, false);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -67,7 +67,10 @@ public class TwoPhaseConsensusCommitManager
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    // Create CommitHandler with throwExceptionIfCommittedTransactionExists false different from the
+    // case for ConsensusCommitManager because each service tries to put the state ‘committed’ in
+    // the two-phase commit transaction, and we want to ignore the existing committed state record.
+    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, false);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }

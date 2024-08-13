@@ -181,9 +181,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter, true);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, true);
     }
   }
 
@@ -2112,6 +2112,22 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  void commit_TransactionsWithSameTransactionIdCommitted_ShouldThrowCommitConflictException()
+      throws TransactionException {
+    // Arrange
+    Put put1 = preparePut(0, 0, namespace1, TABLE_1);
+    Put put2 = preparePut(0, 1, namespace1, TABLE_1);
+    DistributedTransaction transaction1 = manager.begin("txId");
+    transaction1.put(put1);
+    transaction1.commit();
+    DistributedTransaction transaction2 = manager.begin("txId"); // same transaction ID
+    transaction2.put(put2);
+
+    // Act Assert
+    assertThatThrownBy(transaction2::commit).isInstanceOf(CommitConflictException.class);
   }
 
   @Test

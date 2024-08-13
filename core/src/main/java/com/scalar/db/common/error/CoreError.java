@@ -709,7 +709,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE(
       Category.CONCURRENCY_ERROR,
       "0015",
-      "The committing state in the coordinator failed. The transaction has been aborted",
+      "A transaction conflict occurred when committing the state to the coordinator failed. The transaction has been aborted",
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ(
@@ -764,6 +764,8 @@ public enum CoreError implements ScalarDbError {
       "A transaction conflict occurred in the Insert operation",
       "",
       ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_BY_ALREADY_COMMITTED_TRANSACTION(
+      Category.CONCURRENCY_ERROR, "0026", "The transaction has already been committed", "", ""),
 
   //
   // Errors for the internal error category
