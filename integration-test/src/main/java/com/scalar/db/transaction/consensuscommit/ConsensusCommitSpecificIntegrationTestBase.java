@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -2115,6 +2116,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  @DisabledIf(
+      value = "isGroupCommitEnabled",
+      disabledReason =
+          "When the group commit is enabled, ScalarDB internally creates different transaction IDs for this case.")
   void commit_TransactionsWithSameTransactionIdCommitted_ShouldThrowCommitConflictException()
       throws TransactionException {
     // Arrange
@@ -2128,6 +2133,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(transaction2::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      commit_TransactionsWithSameTransactionIdGivenWithGroupCommitEnabled_ShouldNotThrowCommitConflictException()
+          throws TransactionException {
+    // Arrange
+    Put put1 = preparePut(0, 0, namespace1, TABLE_1);
+    Put put2 = preparePut(0, 1, namespace1, TABLE_1);
+    DistributedTransaction transaction1 = manager.begin("txId");
+    transaction1.put(put1);
+    transaction1.commit();
+    DistributedTransaction transaction2 = manager.begin("txId"); // same transaction ID
+    transaction2.put(put2);
+
+    // Act Assert
+    assertDoesNotThrow(transaction2::commit);
   }
 
   @Test
