@@ -91,7 +91,6 @@ configurations {
 }
 
 dependencies {
-    implementation project(':rpc')
     implementation "com.google.guava:guava:${guavaVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
