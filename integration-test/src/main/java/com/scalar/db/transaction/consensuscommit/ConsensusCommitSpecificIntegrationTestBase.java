@@ -2119,7 +2119,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @DisabledIf(
       value = "isGroupCommitEnabled",
       disabledReason =
-          "When the group commit is enabled, ScalarDB internally creates different transaction IDs for this case.")
+          "When group commit is enabled, ScalarDB internally creates different transaction IDs for this case.")
   void commit_TransactionsWithSameTransactionIdCommitted_ShouldThrowCommitConflictException()
       throws TransactionException {
     // Arrange

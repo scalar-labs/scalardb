@@ -91,8 +91,9 @@ public class TwoPhaseConsensusCommitManager
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     // Create CommitHandler with throwExceptionIfCommittedTransactionExists false different from the
-    // case for ConsensusCommitManager because each service tries to put the state ‘committed’ in
-    // the two-phase commit transaction, and we want to ignore the existing committed state record.
+    // case for ConsensusCommitManager because each service tries to put the state 'committed' in
+    // the transaction with a two-phase commit interface, and we want to ignore the existing
+    // committed state record.
     commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, false);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
