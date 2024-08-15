@@ -125,8 +125,8 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
 
   // `groupCommitter` must be set before calling this method.
   private CommitHandler createCommitHandler() {
-    // Create CommitHandler(WithGroupCommit) with throwExceptionIfCommittedTransactionExists true
-    // because we want to detect committing a transaction with the duplicated transaction ID.
+    // Create a CommitHandler(WithGroupCommit) with throwExceptionIfCommittedTransactionExists true
+    // because we want to detect committing a transaction with a duplicated transaction ID.
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
           storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter, true);
