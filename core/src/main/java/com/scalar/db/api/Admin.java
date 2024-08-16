@@ -422,7 +422,7 @@ public interface Admin {
       throws ExecutionException {
     if (encrypted) {
       throw new UnsupportedOperationException(
-          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage());
+          CoreError.TRANSPARENT_DATA_ENCRYPTION_NOT_ENABLED.buildMessage());
     } else {
       addNewColumnToTable(namespace, table, columnName, columnType);
     }
