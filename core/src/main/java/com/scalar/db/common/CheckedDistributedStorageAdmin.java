@@ -66,7 +66,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
 
     if (!metadata.getEncryptedColumnNames().isEmpty()) {
       throw new UnsupportedOperationException(
-          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage());
+          CoreError.TRANSPARENT_DATA_ENCRYPTION_NOT_ENABLED.buildMessage());
     }
 
     try {
@@ -249,7 +249,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     if (!metadata.getEncryptedColumnNames().isEmpty()) {
       throw new UnsupportedOperationException(
-          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage());
+          CoreError.TRANSPARENT_DATA_ENCRYPTION_NOT_ENABLED.buildMessage());
     }
 
     try {
