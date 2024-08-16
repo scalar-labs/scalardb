@@ -87,7 +87,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
-    systemNamespaceName = new DatabaseConfig(properties).getSystemNamespaceName();
+    systemNamespaceName = DatabaseConfig.getSystemNamespaceName(properties);
     createTables();
   }
 

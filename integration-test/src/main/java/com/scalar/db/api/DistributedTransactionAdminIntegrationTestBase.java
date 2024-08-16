@@ -86,7 +86,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     namespace1 = getNamespaceBaseName() + testName + "1";
     namespace2 = getNamespaceBaseName() + testName + "2";
     namespace3 = getNamespaceBaseName() + testName + "3";
-    systemNamespaceName = new DatabaseConfig(properties).getSystemNamespaceName();
+    systemNamespaceName = DatabaseConfig.getSystemNamespaceName(properties);
     createTables();
   }
 
