@@ -148,8 +148,8 @@ public class ReplicationUpdatedRecordRepository {
             updatedRecord.partitionId,
             updatedRecord.namespace,
             updatedRecord.table,
-            updatedRecord.ck,
             updatedRecord.pk,
+            updatedRecord.ck,
             updatedRecord.transactionId,
             Instant.now());
 
