@@ -181,10 +181,10 @@ public class MetricsLogger {
         });
   }
 
-  public void execUpdateRecord(Task<Void> task) {
-    ResultWithDuration<Void> resultWithDuration = captureDuration(task);
+  public long execUpdateRecord(Task<Long> task) {
+    ResultWithDuration<Long> resultWithDuration = captureDuration(task);
     if (!isEnabled) {
-      return;
+      return resultWithDuration.result;
     }
     withPrintAndCleanup(
         metrics -> {
@@ -192,5 +192,6 @@ public class MetricsLogger {
           metrics.totalDurationInMillisToUpdateRecord.addAndGet(
               resultWithDuration.durationInMillis);
         });
+    return resultWithDuration.result;
   }
 }

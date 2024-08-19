@@ -68,6 +68,19 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     ALL_VALUES_PROCESSED
   }
 
+  private static class ResultOfKeyHandling {
+    final boolean remainingValueExists;
+    final boolean nextConnectedValueExists;
+    final Long currentRecordVersion;
+
+    ResultOfKeyHandling(
+        boolean remainingValueExists, boolean nextConnectedValueExists, Long currentRecordVersion) {
+      this.remainingValueExists = remainingValueExists;
+      this.nextConnectedValueExists = nextConnectedValueExists;
+      this.currentRecordVersion = currentRecordVersion;
+    }
+  }
+
   static class KeyHandler {
     private final ReplicationRecordRepository replicationRecordRepository;
     private final DistributedStorage backupScalarDbStorage;
@@ -251,31 +264,23 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     }
 
     @VisibleForTesting
-    ResultOfHandlingKey handleKey(Key key, Long version, boolean logicalDelete)
+    ResultOfKeyHandling handleKey(Key key, Long version, boolean logicalDelete)
         throws ExecutionException {
       Optional<Record> recordOpt =
           metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
       if (!recordOpt.isPresent()) {
         logger.warn("Key:{} is not found", key);
-        return ResultOfHandlingKey.NO_VALUES_PROCESSED;
+        return new ResultOfKeyHandling(false, false, null);
       }
 
       Record record = recordOpt.get();
-      if (version < record.version) {
-        logger.debug(
-            "Ignoring an old version. Key:{}, Version:{}, Record:{}",
-            key,
-            version,
-            record.toStringOnlyWithMetadata());
-        return ResultOfHandlingKey.OLD_VERSION_IGNORED;
-      }
 
       NextValue nextValue = findNextValue(key, record);
 
       if (nextValue == null) {
         logger.debug(
             "A next value is not found. Key:{}, Record:{}", key, record.toStringOnlyWithMetadata());
-        return ResultOfHandlingKey.NO_VALUES_PROCESSED;
+        return new ResultOfKeyHandling(!record.values.isEmpty(), false, record.version);
       }
       logger.debug(
           "[handleKey]\n  Key:{}\n  NextValue:{}\n", key, nextValue.toStringOnlyWithMetadata());
@@ -371,22 +376,18 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
       }
 
       try {
-        metricsLogger.execUpdateRecord(
-            () -> {
-              replicationRecordRepository.updateWithValues(
-                  key,
-                  record,
-                  lastValue.txId,
-                  nextValue.deleted,
-                  nextValue.restValues,
-                  nextValue.insertTxIds);
-              return null;
-            });
-        if (nextValue.shouldHandleTheSameKey) {
-          return ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED;
-        } else {
-          return ResultOfHandlingKey.ALL_VALUES_PROCESSED;
-        }
+        long newVersion =
+            metricsLogger.execUpdateRecord(
+                () ->
+                    replicationRecordRepository.updateWithValues(
+                        key,
+                        record,
+                        lastValue.txId,
+                        nextValue.deleted,
+                        nextValue.restValues,
+                        nextValue.insertTxIds));
+        return new ResultOfKeyHandling(
+            !nextValue.restValues.isEmpty(), nextValue.shouldHandleTheSameKey, newVersion);
       } catch (Exception e) {
         throw new RuntimeException(
             String.format(
@@ -420,26 +421,17 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
         metricsLogger.execFetchUpdatedRecords(
             () -> replicationUpdatedRecordRepository.scan(partitionId, conf.fetchSize));
     for (UpdatedRecord updatedRecord : scannedUpdatedRecords) {
-      ResultOfHandlingKey result =
+      ResultOfKeyHandling result =
           keyHandler.handleKey(
               replicationRecordRepository.createKey(
                   updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
               updatedRecord.version,
               true);
-      switch (result) {
-        case OLD_VERSION_IGNORED:
-          // TODO: Measure the latency.
-          //          replicationUpdatedRecordRepository.delete(updatedRecord);
-          break;
-        case NO_VALUES_PROCESSED:
-          // TODO: Measure the latency.
-          replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-          break;
-        case ALL_VALUES_PROCESSED:
-        case PARTIAL_VALUES_PROCESSED:
-          //           replicationUpdatedRecordRepository.delete(updatedRecord);
-          replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-          break;
+      if (result.currentRecordVersion == null) {
+        replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
+      } else if (result.currentRecordVersion > updatedRecord.version
+          && !result.remainingValueExists) {
+        replicationUpdatedRecordRepository.delete(updatedRecord);
       }
     }
 
