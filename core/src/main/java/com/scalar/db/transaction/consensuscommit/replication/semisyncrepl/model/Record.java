@@ -57,19 +57,19 @@ public class Record {
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (!(o instanceof Value)) {
-        return false;
-      }
+      if (this == o) return true;
+      if (!(o instanceof Value)) return false;
       Value value = (Value) o;
-      return Objects.equals(txId, value.txId);
+      return txVersion == value.txVersion
+          && Objects.equals(prevTxId, value.prevTxId)
+          && Objects.equals(txId, value.txId)
+          && Objects.equals(type, value.type)
+          && Objects.equals(columns, value.columns);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(txId);
+      return Objects.hash(prevTxId, txId, txVersion, type, columns);
     }
 
     @Override

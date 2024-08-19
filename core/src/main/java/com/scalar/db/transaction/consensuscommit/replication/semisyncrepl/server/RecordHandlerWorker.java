@@ -88,7 +88,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
       public final Value nextValue;
       public final boolean deleted;
       public final Set<Value> restValues;
-      public final Collection<Column<?>> updatedColumns;
+      public final Map<String, Column<?>> updatedColumns;
       public final Collection<String> insertTxIds;
       public final boolean shouldHandleTheSameKey;
 
@@ -96,7 +96,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
           Value nextValue,
           boolean deleted,
           Set<Value> restValues,
-          Collection<Column<?>> updatedColumns,
+          Map<String, Column<?>> updatedColumns,
           Collection<String> insertTxIds,
           boolean shouldHandleTheSameKey) {
         this.nextValue = nextValue;
@@ -156,7 +156,8 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
       boolean suspendFollowingOperation = false;
       Value lastValue = null;
       boolean deleted = record.deleted;
-      Set<Column<?>> updatedColumns = new HashSet<>();
+      // Set<Column<?>> can not be used since it uses `value` in `equals()` and `hashcode()`.
+      Map<String, Column<?>> updatedColumns = new HashMap<>();
       Set<String> insertTxIds = new HashSet<>();
       @Nullable String currentTxId = record.currentTxId;
       while (!suspendFollowingOperation) {
@@ -202,14 +203,17 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
                 key);
             continue;
           }
-          updatedColumns.addAll(value.columns);
+          for (Column<?> column : value.columns) {
+            updatedColumns.put(column.name, column);
+          }
           insertTxIds.add(value.txId);
           // TODO: [Optimization] Should check the rest of the values.
           suspendFollowingOperation = true;
           deleted = false;
         } else if (value.type.equals("update")) {
-          updatedColumns.removeAll(value.columns);
-          updatedColumns.addAll(value.columns);
+          for (Column<?> column : value.columns) {
+            updatedColumns.put(column.name, column);
+          }
           deleted = false;
         } else if (value.type.equals("delete")) {
           updatedColumns.clear();
@@ -319,7 +323,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
         }
       } else {
         putBuilder.intValue("tx_state", TransactionState.COMMITTED.get());
-        for (Column<?> column : nextValue.updatedColumns) {
+        for (Column<?> column : nextValue.updatedColumns.values()) {
           putBuilder.value(Column.toScalarDbColumn(column));
         }
       }
@@ -343,6 +347,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
         if (result.isPresent() && result.get().getText("tx_id").equals(lastValue.txId)) {
           // The backup DB table is already updated.
         } else {
+          // TODO: Revisit this exception type.
           throw new RuntimeException(
               String.format(
                   "Failed to update the secondary DB table. Record: %s, Next value: %s, Put operator: %s, Result: %s",

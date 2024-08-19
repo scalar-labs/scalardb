@@ -53,18 +53,14 @@ public class Column<T> {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof Column)) {
-      return false;
-    }
+    if (this == o) return true;
+    if (!(o instanceof Column)) return false;
     Column<?> column = (Column<?>) o;
-    return Objects.equals(name, column.name);
+    return Objects.equals(name, column.name) && Objects.equals(value, column.value);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name);
+    return Objects.hash(name, value);
   }
 }

@@ -28,6 +28,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.KeyHandler;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.ResultOfHandlingKey;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -128,10 +129,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx1");
@@ -194,10 +195,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -247,10 +248,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -295,10 +296,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -348,10 +349,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx3");
@@ -443,10 +444,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(result)).when(storage).get(any(Get.class));
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx3");
@@ -548,8 +549,7 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(result)).when(storage).get(any(Get.class));
 
     // Act Assert
-    assertThatThrownBy(() -> keyHandler.handleKey(key, true))
-        .isInstanceOf(NoMutationException.class);
+    assertThatThrownBy(() -> keyHandler.handleKey(key, true)).isInstanceOf(RuntimeException.class);
 
     // Assert
     verify(replRecordRepo).get(key);
@@ -633,10 +633,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx2");
@@ -714,10 +714,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -767,10 +767,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isFalse();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx3");
@@ -851,10 +851,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isTrue();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -952,10 +952,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isTrue();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx4");
@@ -1035,10 +1035,10 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    boolean shouldHandleTheSameKey = keyHandler.handleKey(key, true);
+    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(shouldHandleTheSameKey).isTrue();
+    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED);
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());

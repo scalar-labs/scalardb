@@ -8,6 +8,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import java.util.Collection;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 public final class Utils {
 
@@ -37,16 +38,20 @@ public final class Utils {
     return optResult.map(Utils::convBackupDbTableResultMetadataToString).orElse("None");
   }
 
+  private static String nullableStr(@Nullable Object v) {
+    return v != null ? v.toString() : "null";
+  }
+
   public static String convBackupDbTableResultMetadataToString(Result result) {
     return MoreObjects.toStringHelper(result)
         .add(
             "columns",
             ImmutableMap.builder()
-                .put("tx_id", result.getColumns().get("tx_id"))
-                .put("tx_version", result.getColumns().get("tx_version"))
-                .put("tx_state", result.getColumns().get("tx_state"))
-                .put("tx_prepared_at", result.getColumns().get("tx_prepared_at"))
-                .put("tx_committed_at", result.getColumns().get("tx_committed_at"))
+                .put("tx_id", nullableStr(result.getColumns().get("tx_id")))
+                .put("tx_version", nullableStr(result.getColumns().get("tx_version")))
+                .put("tx_state", nullableStr(result.getColumns().get("tx_state")))
+                .put("tx_prepared_at", nullableStr(result.getColumns().get("tx_prepared_at")))
+                .put("tx_committed_at", nullableStr(result.getColumns().get("tx_committed_at")))
                 .build())
         .toString();
   }
