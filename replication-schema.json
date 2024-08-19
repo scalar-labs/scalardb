@@ -55,7 +55,8 @@
       "table": "TEXT",
       "pk": "TEXT",
       "ck": "TEXT",
-      "transaction_id": "TEXT"
+      "transaction_id": "TEXT",
+      "version": "BIGINT"
     }
   },
   "replication.records": {

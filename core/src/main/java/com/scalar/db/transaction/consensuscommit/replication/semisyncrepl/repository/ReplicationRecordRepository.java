@@ -143,9 +143,13 @@ public class ReplicationRecordRepository {
     }
   }
 
-  public void upsertWithNewValue(Key key, Value newValue) throws ExecutionException {
-    Optional<Record> recordOpt = get(key);
+  public long nextVersion(Optional<Record> recordOpt) {
+    // This logic must be always along with the one in `setCasCondition()`.
+    return recordOpt.map(record -> record.version + 1).orElse(1L);
+  }
 
+  public void upsertWithNewValue(Key key, Optional<Record> recordOpt, Value newValue)
+      throws ExecutionException {
     Buildable putBuilder =
         Put.newBuilder()
             .namespace(replicationDbNamespace)
