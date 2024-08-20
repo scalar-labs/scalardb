@@ -61,10 +61,25 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     }
   }
 
+  /*
   enum ResultOfHandlingKey {
     NO_VALUES_PROCESSED,
     PARTIAL_VALUES_PROCESSED,
     ALL_VALUES_PROCESSED
+  }
+   */
+
+  private static class ResultOfKeyHandling {
+    final boolean recordExists;
+    final boolean remainingValueExists;
+    final boolean nextConnectedValueExists;
+
+    ResultOfKeyHandling(
+        boolean recordExists, boolean remainingValueExists, boolean nextConnectedValueExists) {
+      this.recordExists = recordExists;
+      this.remainingValueExists = remainingValueExists;
+      this.nextConnectedValueExists = nextConnectedValueExists;
+    }
   }
 
   static class KeyHandler {
@@ -250,12 +265,12 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     }
 
     @VisibleForTesting
-    ResultOfHandlingKey handleKey(Key key, boolean logicalDelete) throws ExecutionException {
+    ResultOfKeyHandling handleKey(Key key, boolean logicalDelete) throws ExecutionException {
       Optional<Record> recordOpt =
           metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
       if (!recordOpt.isPresent()) {
         logger.warn("key:{} is not found", key);
-        return ResultOfHandlingKey.NO_VALUES_PROCESSED;
+        return new ResultOfKeyHandling(false, false, false);
       }
 
       Record record = recordOpt.get();
@@ -264,7 +279,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
 
       if (nextValue == null) {
         logger.debug("A next value is not found. key:{}", key);
-        return ResultOfHandlingKey.NO_VALUES_PROCESSED;
+        return new ResultOfKeyHandling(true, !record.values.isEmpty(), false);
       }
       logger.debug(
           "[handleKey]\n  key:{}\n  nextValue:{}\n", key, nextValue.toStringOnlyWithMetadata());
@@ -371,11 +386,9 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
                   nextValue.insertTxIds);
               return null;
             });
-        if (nextValue.shouldHandleTheSameKey) {
-          return ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED;
-        } else {
-          return ResultOfHandlingKey.ALL_VALUES_PROCESSED;
-        }
+
+        return new ResultOfKeyHandling(
+            true, !nextValue.restValues.isEmpty(), nextValue.shouldHandleTheSameKey);
       } catch (Exception e) {
         throw new RuntimeException(
             String.format(
@@ -409,23 +422,27 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
         metricsLogger.execFetchUpdatedRecords(
             () -> replicationUpdatedRecordRepository.scan(partitionId, conf.fetchSize));
     for (UpdatedRecord updatedRecord : scannedUpdatedRecords) {
-      ResultOfHandlingKey result =
+      ResultOfKeyHandling result =
           keyHandler.handleKey(
               replicationRecordRepository.createKey(
                   updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
               true);
-      switch (result) {
-        case NO_VALUES_PROCESSED:
-          replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-          break;
-        case ALL_VALUES_PROCESSED:
-          // TODO: Measure the latency.
+      if (result.recordExists) {
+        if (result.remainingValueExists) {
+          // There are remaining values. Don't remove the notification.
+          if (result.nextConnectedValueExists) {
+            // There are connected values to handle immediately. No wait is needed.
+          } else {
+            // There are no connected values. Wait for a while so that dependent values may be
+            // processed.
+            replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
+          }
+        } else {
+          // There are no remaining values. Remove the notification.
           replicationUpdatedRecordRepository.delete(updatedRecord);
-          break;
-        case PARTIAL_VALUES_PROCESSED:
-          // TODO: Measure the latency.
-          replicationUpdatedRecordRepository.delete(updatedRecord);
-          break;
+        }
+      } else {
+        // It's possible that only the notification was handled before writing the record.
       }
     }
 
