@@ -438,9 +438,11 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
           }
         } else {
           // There are no remaining values. Remove the notification if it's old.
-          if (result.currentRecordVersion >= updatedRecord.version) {
-            replicationUpdatedRecordRepository.delete(updatedRecord);
-          }
+
+          // Probably this version comparison isn't needed.
+          // if (result.currentRecordVersion >= updatedRecord.version) {
+          replicationUpdatedRecordRepository.delete(updatedRecord);
+          // }
         }
       } else {
         // The record doesn't exist yet.
