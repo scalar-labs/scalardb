@@ -413,6 +413,9 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     List<UpdatedRecord> scannedUpdatedRecords =
         metricsLogger.execFetchUpdatedRecords(
             () -> replicationUpdatedRecordRepository.scan(partitionId, conf.fetchSize));
+
+    boolean isImmediateRetryNeeded = false;
+
     for (UpdatedRecord updatedRecord : scannedUpdatedRecords) {
       ResultOfKeyHandling result =
           keyHandler.handleKey(
@@ -426,6 +429,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
           // There are remaining values. Don't remove the notification.
           if (result.nextConnectedValueExists) {
             // There are connected values to handle immediately. No wait is needed.
+            isImmediateRetryNeeded = true;
           } else {
             // There are no connected values. Wait for a while so that dependent values may be
             // processed.
@@ -440,10 +444,10 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
       } else {
         // The record doesn't exist yet.
         // It's possible that only the notification was handled before writing the record.
+        isImmediateRetryNeeded = true;
       }
     }
 
-    // TODO: Consider all the results from `handleKey()`.
-    return scannedUpdatedRecords.size() >= conf.fetchSize;
+    return isImmediateRetryNeeded;
   }
 }

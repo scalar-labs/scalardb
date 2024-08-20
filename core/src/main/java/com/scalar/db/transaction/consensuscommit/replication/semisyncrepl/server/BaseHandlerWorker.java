@@ -97,7 +97,8 @@ public abstract class BaseHandlerWorker {
 
                 try {
                   if (handle(partitionId)) {
-                    // Fetched the maximum size entries. Enter no-wait mode.
+                    // Fetched the maximum size entries or immediate retry is needed. Enter no-wait
+                    // mode.
                     partitionIdHavingMoreEnntries = partitionId;
                   }
                 } catch (Throwable e) {
