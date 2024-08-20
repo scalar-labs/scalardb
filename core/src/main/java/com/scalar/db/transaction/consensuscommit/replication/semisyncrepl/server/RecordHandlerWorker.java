@@ -429,7 +429,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
               true);
       if (result.currentRecordVersion == null) {
         replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-      } else if (result.currentRecordVersion > updatedRecord.version
+      } else if (result.currentRecordVersion >= updatedRecord.version
           && !result.remainingValueExists) {
         replicationUpdatedRecordRepository.delete(updatedRecord);
       }
