@@ -414,6 +414,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
 
   @Override
   protected void handleQueuedItem(UpdatedRecord updatedRecord) throws ExecutionException {
+    logger.debug("[handleQueuedItem]\n  updatedRecord: {}\n", updatedRecord);
     handleUpdatedRecord(updatedRecord);
   }
 
@@ -440,10 +441,10 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
       } else {
         // There are no remaining values. Remove the notification if it's old.
 
-        // Probably this version comparison isn't needed.
-        // if (result.currentRecordVersion >= updatedRecord.version) {
-        replicationUpdatedRecordRepository.delete(updatedRecord);
-        // }
+        // This version comparison is needed in case of a bit too early notification.
+        if (result.currentRecordVersion >= updatedRecord.version) {
+          replicationUpdatedRecordRepository.delete(updatedRecord);
+        }
       }
     } else {
       // The record doesn't exist yet.

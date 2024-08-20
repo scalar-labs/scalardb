@@ -82,8 +82,10 @@ public abstract class BaseHandlerWorker<T> {
             () -> {
               T dequeuedItem = null;
               try {
-                dequeuedItem = getQueueToConsume().take();
-                handleQueuedItem(dequeuedItem);
+                while (true) {
+                  dequeuedItem = getQueueToConsume().take();
+                  handleQueuedItem(dequeuedItem);
+                }
               } catch (InterruptedException e) {
                 // TODO: Error handling.
                 Thread.currentThread().interrupt();
