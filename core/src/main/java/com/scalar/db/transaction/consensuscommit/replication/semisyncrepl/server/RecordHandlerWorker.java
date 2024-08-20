@@ -257,8 +257,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     }
 
     @VisibleForTesting
-    ResultOfKeyHandling handleKey(Key key, Long version, boolean logicalDelete)
-        throws ExecutionException {
+    ResultOfKeyHandling handleKey(Key key, boolean logicalDelete) throws ExecutionException {
       Optional<Record> recordOpt =
           metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
       if (!recordOpt.isPresent()) {
@@ -422,7 +421,6 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
           keyHandler.handleKey(
               replicationRecordRepository.createKey(
                   updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
-              updatedRecord.version,
               true);
 
       if (result.currentRecordVersion != null) {
