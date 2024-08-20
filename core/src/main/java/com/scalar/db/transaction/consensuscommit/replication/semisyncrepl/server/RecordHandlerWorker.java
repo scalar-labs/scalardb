@@ -268,6 +268,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
 
       Record record = recordOpt.get();
 
+      // TODO: Garbage collect too old values.
       NextValue nextValue = findNextValue(key, record);
 
       if (nextValue == null) {
@@ -434,6 +435,8 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
             // There are no connected values. Wait for a while so that dependent values may be
             // processed.
             replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
+
+            // TODO: Garbage collect by comparing `updated_at` and current timestamp.
           }
         } else {
           // There are no remaining values. Remove the notification if it's old.
