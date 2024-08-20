@@ -128,24 +128,31 @@ public class ReplicationRecordRepository {
         });
   }
 
-  private void setCasCondition(Buildable buildable, Optional<Record> existingRecord) {
+  private long setCasCondition(Buildable buildable, Optional<Record> existingRecord) {
     if (existingRecord.isPresent()) {
       long currentVersion = existingRecord.get().version;
-      buildable.value(BigIntColumn.of("version", currentVersion + 1));
+      long newVersion = currentVersion + 1;
+      buildable.value(BigIntColumn.of("version", newVersion));
       buildable.condition(
           ConditionBuilder.putIf(
                   ConditionBuilder.buildConditionalExpression(
                       BigIntColumn.of("version", currentVersion), Operator.EQ))
               .build());
+      return newVersion;
     } else {
       buildable.value(BigIntColumn.of("version", 1));
       buildable.condition(ConditionBuilder.putIfNotExists());
+      return 1;
     }
   }
 
-  public void upsertWithNewValue(Key key, Value newValue) throws ExecutionException {
-    Optional<Record> recordOpt = get(key);
+  public long nextVersion(Optional<Record> recordOpt) {
+    // This logic must be always along with the one in `setCasCondition()`.
+    return recordOpt.map(record -> record.version + 1).orElse(1L);
+  }
 
+  public void upsertWithNewValue(Key key, Optional<Record> recordOpt, Value newValue)
+      throws ExecutionException {
     Buildable putBuilder =
         Put.newBuilder()
             .namespace(replicationDbNamespace)
@@ -174,7 +181,7 @@ public class ReplicationRecordRepository {
     }
   }
 
-  public void updateWithValues(
+  public long updateWithValues(
       Key key,
       Record record,
       @Nullable String newTxId,
@@ -187,7 +194,7 @@ public class ReplicationRecordRepository {
             .namespace(replicationDbNamespace)
             .table(replicationDbRecordsTable)
             .partitionKey(key);
-    setCasCondition(putBuilder, Optional.of(record));
+    long nextVersion = setCasCondition(putBuilder, Optional.of(record));
 
     if (newTxId != null && newTxId.equals(record.currentTxId)) {
       logger.warn("`tx_id` isn't changed. old:{}, new:{}", record.currentTxId, newTxId);
@@ -220,6 +227,7 @@ public class ReplicationRecordRepository {
               .textValue("prep_tx_id", null)
               .booleanValue("deleted", deleted)
               .build());
+      return nextVersion;
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to serialize `values` for key:" + key, e);
     }

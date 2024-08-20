@@ -9,6 +9,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import java.io.IOException;
@@ -67,7 +68,8 @@ public class ReplicationUpdatedRecordRepository {
                               com.scalar.db.transaction.consensuscommit.replication.semisyncrepl
                                   .model.Key.class),
                           result.getText("transaction_id"),
-                          Instant.ofEpochMilli(result.getBigInt("updated_at")));
+                          Instant.ofEpochMilli(result.getBigInt("updated_at")),
+                          result.getBigInt("version"));
                     } catch (JsonProcessingException e) {
                       throw new RuntimeException(e);
                     }
@@ -100,6 +102,7 @@ public class ReplicationUpdatedRecordRepository {
                   .addText("ck", objectMapper.writeValueAsString(updatedRecord.ck))
                   .addText("transaction_id", updatedRecord.transactionId)
                   .build())
+          .value(BigIntColumn.of("version", updatedRecord.version))
           .build();
     } catch (JsonProcessingException e) {
       throw new RuntimeException(
@@ -151,7 +154,8 @@ public class ReplicationUpdatedRecordRepository {
             updatedRecord.pk,
             updatedRecord.ck,
             updatedRecord.transactionId,
-            Instant.now());
+            Instant.now(),
+            updatedRecord.version);
 
     logger.debug("[updateUpdatedAt]\n  updatedRecord:{}\n", updatedRecord);
 

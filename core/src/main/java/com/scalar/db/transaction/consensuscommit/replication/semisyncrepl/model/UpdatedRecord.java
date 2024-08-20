@@ -11,6 +11,7 @@ public class UpdatedRecord {
   public final Key ck;
   public final String transactionId;
   public final Instant updatedAt;
+  public final long version;
 
   public UpdatedRecord(
       int partitionId,
@@ -19,7 +20,8 @@ public class UpdatedRecord {
       Key pk,
       Key ck,
       String transactionId,
-      Instant updatedAt) {
+      Instant updatedAt,
+      long version) {
     this.partitionId = partitionId;
     this.namespace = namespace;
     this.table = table;
@@ -27,6 +29,7 @@ public class UpdatedRecord {
     this.ck = ck;
     this.updatedAt = updatedAt;
     this.transactionId = transactionId;
+    this.version = version;
   }
 
   @Override
@@ -39,6 +42,7 @@ public class UpdatedRecord {
         .add("ck", ck)
         .add("transactionId", transactionId)
         .add("updatedAt", updatedAt)
+        .add("version", version)
         .toString();
   }
 }

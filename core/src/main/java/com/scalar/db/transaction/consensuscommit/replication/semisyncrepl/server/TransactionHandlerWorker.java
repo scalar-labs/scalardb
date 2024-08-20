@@ -6,6 +6,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.CoordinatorState;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.DeletedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.InsertedTuple;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
@@ -115,6 +116,9 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
     try {
       metricsLogger.execAppendValueToRecord(
           () -> {
+            Optional<Record> recordOpt = replicationRecordRepository.get(key);
+            Long nextVersion = replicationRecordRepository.nextVersion(recordOpt);
+
             // Notify downstream workers.
             replicationUpdatedRecordRepository.add(
                 new UpdatedRecord(
@@ -124,9 +128,10 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
                     writtenTuple.partitionKey,
                     writtenTuple.clusteringKey,
                     transactionId,
-                    Instant.now()));
+                    Instant.now(),
+                    nextVersion));
 
-            replicationRecordRepository.upsertWithNewValue(key, newValue);
+            replicationRecordRepository.upsertWithNewValue(key, recordOpt, newValue);
             return null;
           });
     } catch (Exception e) {
