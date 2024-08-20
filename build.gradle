@@ -37,7 +37,7 @@ subprojects {
         yugabyteDriverVersion = '42.3.5-yb-6'
         picocliVersion = '4.7.6'
         commonsTextVersion = '1.12.0'
-        junitVersion = '5.10.3'
+        junitVersion = '5.11.0'
         commonsLangVersion = '3.16.0'
         assertjVersion = '3.26.3'
         mockitoVersion = '4.11.0'
