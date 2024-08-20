@@ -61,38 +61,16 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     }
   }
 
-  /*
-  enum ResultOfHandlingKey {
-    OLD_VERSION_IGNORED,
-    NO_VALUES_PROCESSED,
-    PARTIAL_VALUES_PROCESSED,
-    ALL_VALUES_PROCESSED
-  }
-
   private static class ResultOfKeyHandling {
-    final boolean recordExists;
-    final boolean remainingValueExists;
-    final boolean nextConnectedValueExists;
-
-    ResultOfKeyHandling(
-        boolean recordExists, boolean remainingValueExists, boolean nextConnectedValueExists) {
-      this.recordExists = recordExists;
-      this.remainingValueExists = remainingValueExists;
-      this.nextConnectedValueExists = nextConnectedValueExists;
-    }
-  }
-   */
-
-  private static class ResultOfKeyHandling {
-    final boolean remainingValueExists;
-    final boolean nextConnectedValueExists;
     final Long currentRecordVersion;
+    final boolean remainingValueExists;
+    final boolean nextConnectedValueExists;
 
     ResultOfKeyHandling(
-        boolean remainingValueExists, boolean nextConnectedValueExists, Long currentRecordVersion) {
+        Long currentRecordVersion, boolean remainingValueExists, boolean nextConnectedValueExists) {
+      this.currentRecordVersion = currentRecordVersion;
       this.remainingValueExists = remainingValueExists;
       this.nextConnectedValueExists = nextConnectedValueExists;
-      this.currentRecordVersion = currentRecordVersion;
     }
   }
 
@@ -285,7 +263,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
           metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
       if (!recordOpt.isPresent()) {
         logger.warn("Key:{} is not found", key);
-        return new ResultOfKeyHandling(false, false, null);
+        return new ResultOfKeyHandling(null, false, false);
       }
 
       Record record = recordOpt.get();
@@ -295,7 +273,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
       if (nextValue == null) {
         logger.debug(
             "A next value is not found. Key:{}, Record:{}", key, record.toStringOnlyWithMetadata());
-        return new ResultOfKeyHandling(!record.values.isEmpty(), false, record.version);
+        return new ResultOfKeyHandling(record.version, !record.values.isEmpty(), false);
       }
       logger.debug(
           "[handleKey]\n  Key:{}\n  NextValue:{}\n", key, nextValue.toStringOnlyWithMetadata());
@@ -402,7 +380,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
                         nextValue.restValues,
                         nextValue.insertTxIds));
         return new ResultOfKeyHandling(
-            !nextValue.restValues.isEmpty(), nextValue.shouldHandleTheSameKey, newVersion);
+            newVersion, !nextValue.restValues.isEmpty(), nextValue.shouldHandleTheSameKey);
       } catch (Exception e) {
         throw new RuntimeException(
             String.format(
@@ -442,31 +420,26 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
                   updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
               updatedRecord.version,
               true);
-      /*
-        if (result.recordExists) {
-          if (result.remainingValueExists) {
-            // There are remaining values. Don't remove the notification.
-            if (result.nextConnectedValueExists) {
-              // There are connected values to handle immediately. No wait is needed.
-            } else {
-              // There are no connected values. Wait for a while so that dependent values may be
-              // processed.
-              replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-            }
+
+      if (result.currentRecordVersion != null) {
+        if (result.remainingValueExists) {
+          // There are remaining values. Don't remove the notification.
+          if (result.nextConnectedValueExists) {
+            // There are connected values to handle immediately. No wait is needed.
           } else {
-            // There are no remaining values. Remove the notification.
-            replicationUpdatedRecordRepository.delete(updatedRecord);
+            // There are no connected values. Wait for a while so that dependent values may be
+            // processed.
+            replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
           }
         } else {
-          // It's possible that only the notification was handled before writing the record.
+          // There are no remaining values. Remove the notification if it's old.
+          if (result.currentRecordVersion >= updatedRecord.version) {
+            replicationUpdatedRecordRepository.delete(updatedRecord);
+          }
         }
-      */
-      // TODO: Refactor
-      if (result.currentRecordVersion == null) {
-        replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-      } else if (result.currentRecordVersion >= updatedRecord.version
-          && !result.remainingValueExists) {
-        replicationUpdatedRecordRepository.delete(updatedRecord);
+      } else {
+        // The record doesn't exist yet.
+        // It's possible that only the notification was handled before writing the record.
       }
     }
 
