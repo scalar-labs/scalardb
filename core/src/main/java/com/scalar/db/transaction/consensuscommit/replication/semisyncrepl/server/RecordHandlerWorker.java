@@ -35,18 +35,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RecordHandlerWorker extends BaseHandlerWorker {
+public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
   private static final Logger logger = LoggerFactory.getLogger(RecordHandlerWorker.class);
 
   private final Configuration conf;
   private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
   private final ReplicationRecordRepository replicationRecordRepository;
+  private final Queue<UpdatedRecord> updatedRecordQueue;
   private final KeyHandler keyHandler;
   private final MetricsLogger metricsLogger;
 
@@ -91,7 +93,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     @Immutable
     static class NextValue {
       // TODO: `columns` of this field isn't used. Flat this field to `nextTxId`, `nextVersion` and
-      // so on might be good.
+      //       so on might be good.
       public final Value nextValue;
       public final boolean deleted;
       public final Set<Value> restValues;
@@ -398,14 +400,58 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
       ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
       DistributedStorage backupScalarDbStorage,
+      BlockingQueue<UpdatedRecord> updatedRecordQueue,
       MetricsLogger metricsLogger) {
-    super(conf, "record", metricsLogger);
+    super(conf, "record", metricsLogger, null, updatedRecordQueue);
     this.conf = conf;
     this.keyHandler =
         new KeyHandler(replicationRecordRepository, backupScalarDbStorage, metricsLogger);
     this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
     this.replicationRecordRepository = replicationRecordRepository;
+    this.updatedRecordQueue = updatedRecordQueue;
     this.metricsLogger = metricsLogger;
+  }
+
+  @Override
+  protected void handleQueuedItem(UpdatedRecord updatedRecord) throws ExecutionException {
+    handleUpdatedRecord(updatedRecord);
+  }
+
+  private boolean handleUpdatedRecord(UpdatedRecord updatedRecord) throws ExecutionException {
+    ResultOfKeyHandling result =
+        keyHandler.handleKey(
+            replicationRecordRepository.createKey(
+                updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
+            true);
+
+    if (result.currentRecordVersion != null) {
+      if (result.remainingValueExists) {
+        // There are remaining values. Don't remove the notification.
+        if (result.nextConnectedValueExists) {
+          // There are connected values to handle immediately. No wait is needed.
+          return true;
+        } else {
+          // There are no connected values. Wait for a while so that dependent values may be
+          // processed.
+          replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
+
+          // TODO: Garbage collect by comparing `updated_at` and current timestamp.
+        }
+      } else {
+        // There are no remaining values. Remove the notification if it's old.
+
+        // Probably this version comparison isn't needed.
+        // if (result.currentRecordVersion >= updatedRecord.version) {
+        replicationUpdatedRecordRepository.delete(updatedRecord);
+        // }
+      }
+    } else {
+      // The record doesn't exist yet.
+      // It's possible that only the notification was handled before writing the record.
+      return true;
+    }
+
+    return false;
   }
 
   @Override
@@ -417,36 +463,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     boolean isImmediateRetryNeeded = false;
 
     for (UpdatedRecord updatedRecord : scannedUpdatedRecords) {
-      ResultOfKeyHandling result =
-          keyHandler.handleKey(
-              replicationRecordRepository.createKey(
-                  updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
-              true);
-
-      if (result.currentRecordVersion != null) {
-        if (result.remainingValueExists) {
-          // There are remaining values. Don't remove the notification.
-          if (result.nextConnectedValueExists) {
-            // There are connected values to handle immediately. No wait is needed.
-            isImmediateRetryNeeded = true;
-          } else {
-            // There are no connected values. Wait for a while so that dependent values may be
-            // processed.
-            replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-
-            // TODO: Garbage collect by comparing `updated_at` and current timestamp.
-          }
-        } else {
-          // There are no remaining values. Remove the notification if it's old.
-
-          // Probably this version comparison isn't needed.
-          // if (result.currentRecordVersion >= updatedRecord.version) {
-          replicationUpdatedRecordRepository.delete(updatedRecord);
-          // }
-        }
-      } else {
-        // The record doesn't exist yet.
-        // It's possible that only the notification was handled before writing the record.
+      if (handleUpdatedRecord(updatedRecord)) {
         isImmediateRetryNeeded = true;
       }
     }

@@ -2,8 +2,8 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.serve
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationBulkTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
@@ -119,8 +119,8 @@ public class LogApplier {
             "replication",
             "bulk_transactions");
 
-    BlockingQueue<Key> recordWriterQueue = new LinkedBlockingQueue<>();
-    MetricsLogger metricsLogger = new MetricsLogger(recordWriterQueue);
+    BlockingQueue<UpdatedRecord> updatedRecordQueue = new LinkedBlockingQueue<>();
+    MetricsLogger metricsLogger = new MetricsLogger(updatedRecordQueue);
 
     Properties backupScalarDbProps = new Properties();
     try (InputStream in =
@@ -138,6 +138,7 @@ public class LogApplier {
             replicationUpdatedRecordRepository,
             replicationRecordRepository,
             StorageFactory.create(backupScalarDbProps).getStorage(),
+            updatedRecordQueue,
             metricsLogger);
     recordHandlerWorker.run();
 
@@ -165,6 +166,7 @@ public class LogApplier {
             replicationTransactionRepository,
             replicationUpdatedRecordRepository,
             replicationRecordRepository,
+            updatedRecordQueue,
             metricsLogger);
     transactionHandlerWorker.run();
 

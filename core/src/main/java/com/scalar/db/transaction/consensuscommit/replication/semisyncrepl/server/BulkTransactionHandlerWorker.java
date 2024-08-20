@@ -8,7 +8,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.reposi
 import java.util.List;
 import javax.annotation.concurrent.Immutable;
 
-public class BulkTransactionHandlerWorker extends BaseHandlerWorker {
+public class BulkTransactionHandlerWorker extends BaseHandlerWorker<Void> {
   private final Configuration conf;
   private final ReplicationBulkTransactionRepository replicationBulkTransactionRepository;
   private final ReplicationTransactionRepository replicationTransactionRepository;
@@ -30,7 +30,7 @@ public class BulkTransactionHandlerWorker extends BaseHandlerWorker {
       ReplicationBulkTransactionRepository replicationBulkTransactionRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
       MetricsLogger metricsLogger) {
-    super(conf, "bulk-tx", metricsLogger);
+    super(conf, "bulk-tx", metricsLogger, null, null);
     this.conf = conf;
     this.replicationBulkTransactionRepository = replicationBulkTransactionRepository;
     this.replicationTransactionRepository = replicationTransactionRepository;

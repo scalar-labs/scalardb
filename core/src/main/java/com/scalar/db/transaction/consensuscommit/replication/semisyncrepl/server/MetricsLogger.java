@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
-import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.BulkTransaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
@@ -18,12 +17,12 @@ public class MetricsLogger {
   private final boolean isEnabled;
   private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
   private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
-  private final Queue<Key> recordWriterQueue;
+  private final Queue<UpdatedRecord> updatedRecordQueue;
 
-  public MetricsLogger(Queue<Key> recordWriterQueue) {
+  public MetricsLogger(Queue<UpdatedRecord> updatedRecordQueue) {
     String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
     this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
-    this.recordWriterQueue = recordWriterQueue;
+    this.updatedRecordQueue = updatedRecordQueue;
   }
 
   private Instant currentTimestampRoundedInSeconds() {
@@ -33,7 +32,7 @@ public class MetricsLogger {
   private void withPrintAndCleanup(Consumer<Metrics> consumer) {
     Instant currentKey = currentTimestampRoundedInSeconds();
     Instant oldKey = keyHolder.getAndSet(currentKey);
-    Metrics metrics = metricsMap.computeIfAbsent(currentKey, k -> new Metrics(recordWriterQueue));
+    Metrics metrics = metricsMap.computeIfAbsent(currentKey, k -> new Metrics(updatedRecordQueue));
     consumer.accept(metrics);
     if (oldKey == null) {
       return;

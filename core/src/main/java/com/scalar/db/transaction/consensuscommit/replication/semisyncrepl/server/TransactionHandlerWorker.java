@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
+import com.google.common.base.Objects;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
@@ -19,11 +20,12 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.reposi
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransactionHandlerWorker extends BaseHandlerWorker {
+public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
   private static final Logger logger = LoggerFactory.getLogger(TransactionHandlerWorker.class);
 
   private final TransactionHandlerWorker.Configuration conf;
@@ -56,8 +58,9 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
       ReplicationTransactionRepository replicationTransactionRepository,
       ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
+      BlockingQueue<UpdatedRecord> updatedRecordQueue,
       MetricsLogger metricsLogger) {
-    super(conf, "tx", metricsLogger);
+    super(conf, "tx", metricsLogger, updatedRecordQueue, null);
     this.conf = conf;
     this.coordinatorStateRepository = coordinatorStateRepository;
     this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
@@ -119,18 +122,34 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
             Optional<Record> recordOpt = replicationRecordRepository.get(key);
             long nextVersion = replicationRecordRepository.nextVersion(recordOpt);
 
-            // Notify downstream workers.
-            replicationUpdatedRecordRepository.add(
+            int partitionIdForRecord =
+                Math.abs(
+                        Objects.hashCode(
+                            writtenTuple.namespace,
+                            writtenTuple.table,
+                            writtenTuple.partitionKey,
+                            writtenTuple.clusteringKey))
+                    % conf.replicationDbPartitionSize;
+
+            UpdatedRecord updatedRecord =
                 new UpdatedRecord(
-                    partitionId,
+                    partitionIdForRecord,
                     writtenTuple.namespace,
                     writtenTuple.table,
                     writtenTuple.partitionKey,
                     writtenTuple.clusteringKey,
                     Instant.now(),
-                    nextVersion));
+                    nextVersion);
 
+            // Persistent a notification to downstream workers.
+            replicationUpdatedRecordRepository.add(updatedRecord);
+
+            // Add the new values to the record.
             replicationRecordRepository.upsertWithNewValue(key, recordOpt, newValue);
+
+            // Notify downstream workers via in-memory queue.
+            getQueueToSupply().add(updatedRecord);
+
             return null;
           });
     } catch (Exception e) {
