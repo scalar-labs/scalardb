@@ -117,7 +117,7 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
       metricsLogger.execAppendValueToRecord(
           () -> {
             Optional<Record> recordOpt = replicationRecordRepository.get(key);
-            Long nextVersion = replicationRecordRepository.nextVersion(recordOpt);
+            long nextVersion = replicationRecordRepository.nextVersion(recordOpt);
 
             // Notify downstream workers.
             replicationUpdatedRecordRepository.add(
@@ -127,7 +127,6 @@ public class TransactionHandlerWorker extends BaseHandlerWorker {
                     writtenTuple.table,
                     writtenTuple.partitionKey,
                     writtenTuple.clusteringKey,
-                    transactionId,
                     Instant.now(),
                     nextVersion));
 

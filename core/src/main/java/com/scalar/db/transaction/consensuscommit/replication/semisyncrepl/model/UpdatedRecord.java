@@ -9,7 +9,6 @@ public class UpdatedRecord {
   public final String table;
   public final Key pk;
   public final Key ck;
-  public final String transactionId;
   public final Instant updatedAt;
   public final long version;
 
@@ -19,7 +18,6 @@ public class UpdatedRecord {
       String table,
       Key pk,
       Key ck,
-      String transactionId,
       Instant updatedAt,
       long version) {
     this.partitionId = partitionId;
@@ -28,7 +26,6 @@ public class UpdatedRecord {
     this.pk = pk;
     this.ck = ck;
     this.updatedAt = updatedAt;
-    this.transactionId = transactionId;
     this.version = version;
   }
 
@@ -40,7 +37,6 @@ public class UpdatedRecord {
         .add("table", table)
         .add("pk", pk)
         .add("ck", ck)
-        .add("transactionId", transactionId)
         .add("updatedAt", updatedAt)
         .add("version", version)
         .toString();

@@ -9,7 +9,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import java.io.IOException;
@@ -67,7 +66,6 @@ public class ReplicationUpdatedRecordRepository {
                               result.getText("ck"),
                               com.scalar.db.transaction.consensuscommit.replication.semisyncrepl
                                   .model.Key.class),
-                          result.getText("transaction_id"),
                           Instant.ofEpochMilli(result.getBigInt("updated_at")),
                           result.getBigInt("version"));
                     } catch (JsonProcessingException e) {
@@ -100,9 +98,8 @@ public class ReplicationUpdatedRecordRepository {
                   .addText("table", updatedRecord.table)
                   .addText("pk", objectMapper.writeValueAsString(updatedRecord.pk))
                   .addText("ck", objectMapper.writeValueAsString(updatedRecord.ck))
-                  .addText("transaction_id", updatedRecord.transactionId)
+                  .addBigInt("version", updatedRecord.version)
                   .build())
-          .value(BigIntColumn.of("version", updatedRecord.version))
           .build();
     } catch (JsonProcessingException e) {
       throw new RuntimeException(
@@ -134,7 +131,7 @@ public class ReplicationUpdatedRecordRepository {
                       .addText("table", updatedRecord.table)
                       .addText("pk", objectMapper.writeValueAsString(updatedRecord.pk))
                       .addText("ck", objectMapper.writeValueAsString(updatedRecord.ck))
-                      .addText("transaction_id", updatedRecord.transactionId)
+                      .addBigInt("version", updatedRecord.version)
                       .build())
               .build());
     } catch (JsonProcessingException e) {
@@ -153,7 +150,6 @@ public class ReplicationUpdatedRecordRepository {
             updatedRecord.table,
             updatedRecord.pk,
             updatedRecord.ck,
-            updatedRecord.transactionId,
             Instant.now(),
             updatedRecord.version);
 

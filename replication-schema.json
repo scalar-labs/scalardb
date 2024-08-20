@@ -46,7 +46,7 @@
       "table",
       "pk",
       "ck",
-      "transaction_id"
+      "version"
     ],
     "columns": {
       "partition_id": "INT",
@@ -55,7 +55,6 @@
       "table": "TEXT",
       "pk": "TEXT",
       "ck": "TEXT",
-      "transaction_id": "TEXT",
       "version": "BIGINT"
     }
   },
