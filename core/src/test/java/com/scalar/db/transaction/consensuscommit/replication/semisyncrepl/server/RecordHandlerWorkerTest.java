@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -28,7 +30,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.KeyHandler;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.ResultOfHandlingKey;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.ResultOfKeyHandling;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -111,13 +113,14 @@ class RecordHandlerWorkerTest {
             committedAtInMillisOfLastValue,
             "insert",
             Collections.singletonList(new Column<>("name", "user1")));
+
     Record currentRecord =
         new Record(
             "ns",
             "tbl",
             pk,
             ck,
-            0,
+            1,
             null,
             null,
             false,
@@ -127,12 +130,18 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isFalse();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx1");
@@ -183,7 +192,7 @@ class RecordHandlerWorkerTest {
             "tbl",
             pk,
             ck,
-            0,
+            1,
             "tx1",
             null,
             false,
@@ -195,10 +204,12 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(1);
+    assertThat(resultOfKeyHandling.remainingValueExists).isTrue();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -219,7 +230,7 @@ class RecordHandlerWorkerTest {
     // - DELETE#2 is added
     // - Attempt#B handles DELETE#2
     // - The same INSERT#1 is added again due to retry or something
-    // - Attempt#C should skip INSERT#1
+    // - Attempt#C should skip INSERT#1 (TODO: Consider long delay and retry...)
     Value valueTx1 =
         new Value(
             null,
@@ -248,10 +259,12 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isTrue();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -284,7 +297,7 @@ class RecordHandlerWorkerTest {
             "tbl",
             pk,
             ck,
-            0,
+            1,
             null,
             null,
             false,
@@ -296,10 +309,12 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(1);
+    assertThat(resultOfKeyHandling.remainingValueExists).isTrue();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -347,12 +362,18 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isFalse();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx3");
@@ -435,6 +456,10 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     doThrow(NoMutationException.class).doNothing().when(storage).put(any(Put.class));
     Result result = mock(Result.class);
@@ -444,10 +469,12 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(result)).when(storage).get(any(Get.class));
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isFalse();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx3");
@@ -631,12 +658,18 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isFalse();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx2");
@@ -714,10 +747,12 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.NO_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(1);
+    assertThat(resultOfKeyHandling.remainingValueExists).isTrue();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -765,12 +800,18 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.ALL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isFalse();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isFalse();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx3");
@@ -849,12 +890,18 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isTrue();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isTrue();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());
@@ -950,12 +997,18 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
+    assertThat(resultOfKeyHandling.remainingValueExists).isTrue();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isTrue();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo).updateWithPrepTxId(key, currentRecord, "tx4");
@@ -1033,12 +1086,18 @@ class RecordHandlerWorkerTest {
             null);
 
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
+    doReturn(currentRecord.version + 1)
+        .when(replRecordRepo)
+        .updateWithValues(
+            any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfHandlingKey resultOfHandlingKey = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
 
     // Assert
-    assertThat(resultOfHandlingKey).isEqualTo(ResultOfHandlingKey.PARTIAL_VALUES_PROCESSED);
+    assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(101);
+    assertThat(resultOfKeyHandling.remainingValueExists).isTrue();
+    assertThat(resultOfKeyHandling.nextConnectedValueExists).isTrue();
 
     verify(replRecordRepo).get(key);
     verify(replRecordRepo, never()).updateWithPrepTxId(any(), any(), any());

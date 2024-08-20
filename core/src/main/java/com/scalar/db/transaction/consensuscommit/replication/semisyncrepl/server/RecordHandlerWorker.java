@@ -61,7 +61,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker {
     }
   }
 
-  private static class ResultOfKeyHandling {
+  static class ResultOfKeyHandling {
     final Long currentRecordVersion;
     final boolean remainingValueExists;
     final boolean nextConnectedValueExists;
