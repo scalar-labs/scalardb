@@ -124,10 +124,11 @@ public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
 
             int partitionIdForRecord =
                 Objects.hashCode(
-                    writtenTuple.namespace,
-                    writtenTuple.table,
-                    writtenTuple.partitionKey,
-                    writtenTuple.clusteringKey);
+                        writtenTuple.namespace,
+                        writtenTuple.table,
+                        writtenTuple.partitionKey,
+                        writtenTuple.clusteringKey)
+                    % conf.replicationDbPartitionSize;
 
             UpdatedRecord updatedRecord =
                 new UpdatedRecord(

@@ -142,7 +142,7 @@ public class ReplicationUpdatedRecordRepository {
     }
   }
 
-  public void updateUpdatedAt(UpdatedRecord updatedRecord) throws ExecutionException {
+  public UpdatedRecord updateUpdatedAt(UpdatedRecord updatedRecord) throws ExecutionException {
     UpdatedRecord newUpdatedRecord =
         new UpdatedRecord(
             updatedRecord.partitionId,
@@ -158,5 +158,7 @@ public class ReplicationUpdatedRecordRepository {
     add(newUpdatedRecord);
     // It's okay if deleting the old record remains
     delete(updatedRecord);
+
+    return newUpdatedRecord;
   }
 }
