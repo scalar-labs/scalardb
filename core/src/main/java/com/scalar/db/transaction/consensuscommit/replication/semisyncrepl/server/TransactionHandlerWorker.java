@@ -58,9 +58,9 @@ public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
       ReplicationTransactionRepository replicationTransactionRepository,
       ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
-      BlockingQueue<UpdatedRecord> updatedRecordQueue,
+      List<BlockingQueue<UpdatedRecord>> updatedRecordQueues,
       MetricsLogger metricsLogger) {
-    super(conf, "tx", metricsLogger, updatedRecordQueue, null);
+    super(conf, "tx", metricsLogger, updatedRecordQueues, null);
     this.conf = conf;
     this.coordinatorStateRepository = coordinatorStateRepository;
     this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
@@ -148,7 +148,7 @@ public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
             replicationRecordRepository.upsertWithNewValue(key, recordOpt, newValue);
 
             // Notify downstream workers via in-memory queue.
-            getQueueToSupply().add(updatedRecord);
+            getQueueToSupply(partitionIdForRecord).add(updatedRecord);
 
             return null;
           });

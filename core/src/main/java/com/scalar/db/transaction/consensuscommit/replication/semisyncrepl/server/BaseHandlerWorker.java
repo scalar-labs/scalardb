@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,8 +21,8 @@ public abstract class BaseHandlerWorker<T> {
   private final ExecutorService executorService;
   private final Configuration conf;
   private final MetricsLogger metricsLogger;
-  @Nullable private final BlockingQueue<T> queueToSupply;
-  @Nullable private final BlockingQueue<T> queueToConsume;
+  @Nullable private final List<BlockingQueue<T>> queuesToSupply;
+  @Nullable private final List<BlockingQueue<T>> queuesToConsume;
 
   @Immutable
   public static class Configuration {
@@ -41,8 +42,8 @@ public abstract class BaseHandlerWorker<T> {
       Configuration conf,
       String label,
       MetricsLogger metricsLogger,
-      @Nullable BlockingQueue<T> queueToSupply,
-      @Nullable BlockingQueue<T> queueToConsume) {
+      @Nullable List<BlockingQueue<T>> queuesToSupply,
+      @Nullable List<BlockingQueue<T>> queuesToConsume) {
 
     if (conf.replicationDbPartitionSize % conf.threadSize != 0) {
       throw new IllegalArgumentException(
@@ -63,10 +64,16 @@ public abstract class BaseHandlerWorker<T> {
                 .build());
     this.metricsLogger = metricsLogger;
 
-    this.queueToSupply = queueToSupply;
-    this.queueToConsume = queueToConsume;
+    this.queuesToSupply = queuesToSupply;
+    this.queuesToConsume = queuesToConsume;
 
-    if (this.queueToConsume != null) {
+    if (this.queuesToConsume != null) {
+      if (this.queuesToConsume.size() != conf.threadSize) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The size of queues must be the same as the size of the threads. Queue Size: %d, Config: %s",
+                this.queuesToConsume.size(), conf));
+      }
       ExecutorService executorServiceForInMemoryQueue =
           Executors.newFixedThreadPool(
               conf.threadSize,
@@ -78,12 +85,13 @@ public abstract class BaseHandlerWorker<T> {
                           logger.error("Got an uncaught exception. thread:{}", thread, e))
                   .build());
       for (int i = 0; i < conf.threadSize; i++) {
+        int targetThreadIndex = i;
         executorServiceForInMemoryQueue.execute(
             () -> {
               T dequeuedItem = null;
               try {
                 while (true) {
-                  dequeuedItem = getQueueToConsume().take();
+                  dequeuedItem = getQueueToConsume(targetThreadIndex).take();
                   handleQueuedItem(dequeuedItem);
                 }
               } catch (InterruptedException e) {
@@ -100,15 +108,15 @@ public abstract class BaseHandlerWorker<T> {
   }
 
   @Nonnull
-  protected BlockingQueue<T> getQueueToSupply() {
-    assert queueToSupply != null;
-    return queueToSupply;
+  protected BlockingQueue<T> getQueueToSupply(int partitionId) {
+    assert queuesToSupply != null;
+    return queuesToSupply.get(partitionId / queuesToSupply.size());
   }
 
   @Nonnull
-  protected BlockingQueue<T> getQueueToConsume() {
-    assert queueToConsume != null;
-    return queueToConsume;
+  protected BlockingQueue<T> getQueueToConsume(int threadIndex) {
+    assert queuesToConsume != null;
+    return queuesToConsume.get(threadIndex);
   }
 
   protected void handleQueuedItem(T item) throws Exception {

@@ -14,9 +14,11 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class LogApplier {
@@ -119,8 +121,13 @@ public class LogApplier {
             "replication",
             "bulk_transactions");
 
-    BlockingQueue<UpdatedRecord> updatedRecordQueue = new LinkedBlockingQueue<>();
-    MetricsLogger metricsLogger = new MetricsLogger(updatedRecordQueue);
+    List<BlockingQueue<UpdatedRecord>> updatedRecordQueues =
+        new ArrayList<>(numOfRecordWriterThreads);
+    for (int i = 0; i < numOfRecordWriterThreads; i++) {
+      updatedRecordQueues.add(new ArrayBlockingQueue<>(2048));
+    }
+    // FIXME
+    MetricsLogger metricsLogger = new MetricsLogger(updatedRecordQueues.get(0));
 
     Properties backupScalarDbProps = new Properties();
     try (InputStream in =
@@ -132,13 +139,13 @@ public class LogApplier {
         new RecordHandlerWorker(
             new RecordHandlerWorker.Configuration(
                 REPLICATION_DB_PARTITION_SIZE,
-                numOfDistributorThreads,
+                numOfRecordWriterThreads,
                 waitMillisPerPartition,
                 transactionFetchSize),
             replicationUpdatedRecordRepository,
             replicationRecordRepository,
             StorageFactory.create(backupScalarDbProps).getStorage(),
-            updatedRecordQueue,
+            updatedRecordQueues,
             metricsLogger);
     recordHandlerWorker.run();
 
@@ -166,7 +173,7 @@ public class LogApplier {
             replicationTransactionRepository,
             replicationUpdatedRecordRepository,
             replicationRecordRepository,
-            updatedRecordQueue,
+            updatedRecordQueues,
             metricsLogger);
     transactionHandlerWorker.run();
 

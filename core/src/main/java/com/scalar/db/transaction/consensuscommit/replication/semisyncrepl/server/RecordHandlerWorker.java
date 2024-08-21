@@ -48,7 +48,6 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
   private final Configuration conf;
   private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
   private final ReplicationRecordRepository replicationRecordRepository;
-  private final Queue<UpdatedRecord> updatedRecordQueue;
   private final KeyHandler keyHandler;
   private final MetricsLogger metricsLogger;
 
@@ -400,15 +399,14 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
       ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
       DistributedStorage backupScalarDbStorage,
-      BlockingQueue<UpdatedRecord> updatedRecordQueue,
+      List<BlockingQueue<UpdatedRecord>> updatedRecordQueues,
       MetricsLogger metricsLogger) {
-    super(conf, "record", metricsLogger, null, updatedRecordQueue);
+    super(conf, "record", metricsLogger, null, updatedRecordQueues);
     this.conf = conf;
     this.keyHandler =
         new KeyHandler(replicationRecordRepository, backupScalarDbStorage, metricsLogger);
     this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
     this.replicationRecordRepository = replicationRecordRepository;
-    this.updatedRecordQueue = updatedRecordQueue;
     this.metricsLogger = metricsLogger;
   }
 
@@ -457,6 +455,8 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
 
   @Override
   protected boolean handle(int partitionId) throws ExecutionException {
+    // FIXME: Revert this comment out.
+    /*
     List<UpdatedRecord> scannedUpdatedRecords =
         metricsLogger.execFetchUpdatedRecords(
             () -> replicationUpdatedRecordRepository.scan(partitionId, conf.fetchSize));
@@ -468,6 +468,9 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
         isImmediateRetryNeeded = true;
       }
     }
+
+     */
+    boolean isImmediateRetryNeeded = false;
 
     return isImmediateRetryNeeded;
   }
