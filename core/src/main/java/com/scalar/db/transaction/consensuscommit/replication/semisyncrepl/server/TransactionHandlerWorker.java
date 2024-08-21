@@ -123,13 +123,11 @@ public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
             long nextVersion = replicationRecordRepository.nextVersion(recordOpt);
 
             int partitionIdForRecord =
-                Math.abs(
-                        Objects.hashCode(
-                            writtenTuple.namespace,
-                            writtenTuple.table,
-                            writtenTuple.partitionKey,
-                            writtenTuple.clusteringKey))
-                    % conf.replicationDbPartitionSize;
+                Objects.hashCode(
+                    writtenTuple.namespace,
+                    writtenTuple.table,
+                    writtenTuple.partitionKey,
+                    writtenTuple.clusteringKey);
 
             UpdatedRecord updatedRecord =
                 new UpdatedRecord(

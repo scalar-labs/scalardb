@@ -88,19 +88,19 @@ public abstract class BaseHandlerWorker<T> {
         int targetThreadIndex = i;
         executorServiceForInMemoryQueue.execute(
             () -> {
-              T dequeuedItem = null;
-              try {
-                while (true) {
+              while (true) {
+                T dequeuedItem = null;
+                try {
                   dequeuedItem = getQueueToConsume(targetThreadIndex).take();
                   handleQueuedItem(dequeuedItem);
+                } catch (InterruptedException e) {
+                  // TODO: Error handling.
+                  Thread.currentThread().interrupt();
+                  throw new RuntimeException(e);
+                } catch (Exception e) {
+                  logger.error("Failed to handle a dequeued item. Item: {}", dequeuedItem, e);
+                  Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
                 }
-              } catch (InterruptedException e) {
-                // TODO: Error handling.
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-              } catch (Exception e) {
-                logger.error("Failed to handle a dequeued item. Item: {}", dequeuedItem, e);
-                Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
               }
             });
       }
@@ -110,7 +110,7 @@ public abstract class BaseHandlerWorker<T> {
   @Nonnull
   protected BlockingQueue<T> getQueueToSupply(int partitionId) {
     assert queuesToSupply != null;
-    return queuesToSupply.get(partitionId / queuesToSupply.size());
+    return queuesToSupply.get(Math.abs(partitionId) % queuesToSupply.size());
   }
 
   @Nonnull

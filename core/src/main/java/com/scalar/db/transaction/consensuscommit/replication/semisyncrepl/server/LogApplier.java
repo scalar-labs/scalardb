@@ -17,8 +17,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class LogApplier {
@@ -124,7 +124,7 @@ public class LogApplier {
     List<BlockingQueue<UpdatedRecord>> updatedRecordQueues =
         new ArrayList<>(numOfRecordWriterThreads);
     for (int i = 0; i < numOfRecordWriterThreads; i++) {
-      updatedRecordQueues.add(new ArrayBlockingQueue<>(2048));
+      updatedRecordQueues.add(new LinkedBlockingQueue<>());
     }
     // FIXME
     MetricsLogger metricsLogger = new MetricsLogger(updatedRecordQueues.get(0));
