@@ -99,6 +99,9 @@ public abstract class BaseHandlerWorker<T> {
                   throw new RuntimeException(e);
                 } catch (Exception e) {
                   logger.error("Failed to handle a dequeued item. Item: {}", dequeuedItem, e);
+                  if (dequeuedItem != null) {
+                    getQueueToConsume(targetThreadIndex).add(dequeuedItem);
+                  }
                   Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
                 }
               }
