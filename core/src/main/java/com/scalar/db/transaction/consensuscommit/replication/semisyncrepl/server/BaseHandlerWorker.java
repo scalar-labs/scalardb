@@ -85,14 +85,16 @@ public abstract class BaseHandlerWorker<T> {
                           logger.error("Got an uncaught exception. thread:{}", thread, e))
                   .build());
       for (int i = 0; i < conf.threadSize; i++) {
-        int targetThreadIndex = i;
+        BlockingQueue<T> queueToConsume = getQueueToConsume(i);
         executorServiceForInMemoryQueue.execute(
             () -> {
               while (true) {
                 T dequeuedItem = null;
                 try {
-                  dequeuedItem = getQueueToConsume(targetThreadIndex).take();
-                  handleQueuedItem(dequeuedItem);
+                  dequeuedItem = queueToConsume.take();
+                  if (handleQueuedItem(dequeuedItem)) {
+                    queueToConsume.add(dequeuedItem);
+                  }
                 } catch (InterruptedException e) {
                   // TODO: Error handling.
                   Thread.currentThread().interrupt();
@@ -100,7 +102,7 @@ public abstract class BaseHandlerWorker<T> {
                 } catch (Exception e) {
                   logger.error("Failed to handle a dequeued item. Item: {}", dequeuedItem, e);
                   if (dequeuedItem != null) {
-                    getQueueToConsume(targetThreadIndex).add(dequeuedItem);
+                    queueToConsume.add(dequeuedItem);
                   }
                   Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
                 }
@@ -122,7 +124,7 @@ public abstract class BaseHandlerWorker<T> {
     return queuesToConsume.get(threadIndex);
   }
 
-  protected void handleQueuedItem(T item) throws Exception {
+  protected boolean handleQueuedItem(T item) throws Exception {
     throw new UnsupportedOperationException();
   }
 

@@ -411,9 +411,9 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
   }
 
   @Override
-  protected void handleQueuedItem(UpdatedRecord updatedRecord) throws ExecutionException {
+  protected boolean handleQueuedItem(UpdatedRecord updatedRecord) throws ExecutionException {
     logger.debug("[handleQueuedItem]\n  updatedRecord: {}\n", updatedRecord);
-    handleUpdatedRecord(updatedRecord);
+    return handleUpdatedRecord(updatedRecord);
   }
 
   private boolean handleUpdatedRecord(UpdatedRecord updatedRecord) throws ExecutionException {
@@ -455,8 +455,6 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
 
   @Override
   protected boolean handle(int partitionId) throws ExecutionException {
-    // FIXME: Revert this comment out.
-    /*
     List<UpdatedRecord> scannedUpdatedRecords =
         metricsLogger.execFetchUpdatedRecords(
             () -> replicationUpdatedRecordRepository.scan(partitionId, conf.fetchSize));
@@ -468,9 +466,6 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
         isImmediateRetryNeeded = true;
       }
     }
-
-     */
-    boolean isImmediateRetryNeeded = false;
 
     return isImmediateRetryNeeded;
   }
