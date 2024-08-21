@@ -135,16 +135,32 @@ public class LogApplier {
       backupScalarDbProps.load(in);
     }
 
+    RecordHandler recordHandler =
+        new RecordHandler(
+            replicationUpdatedRecordRepository,
+            replicationRecordRepository,
+            StorageFactory.create(backupScalarDbProps).getStorage(),
+            metricsLogger);
+
+    RecordHandlerInMemoryQueueConsumer recordHandlerInMemoryQueueConsumer =
+        new RecordHandlerInMemoryQueueConsumer(
+            new RecordHandlerInMemoryQueueConsumer.Configuration(
+                numOfRecordWriterThreads, waitMillisPerPartition),
+            recordHandler,
+            updatedRecordQueues);
+    recordHandlerInMemoryQueueConsumer.run();
+
     RecordHandlerWorker recordHandlerWorker =
         new RecordHandlerWorker(
             new RecordHandlerWorker.Configuration(
+                // TODO: The partition size can be different from other partition sizes on other
+                // tables.
                 REPLICATION_DB_PARTITION_SIZE,
                 numOfRecordWriterThreads,
                 waitMillisPerPartition,
                 transactionFetchSize),
+            recordHandler,
             replicationUpdatedRecordRepository,
-            replicationRecordRepository,
-            StorageFactory.create(backupScalarDbProps).getStorage(),
             updatedRecordQueues,
             metricsLogger);
     recordHandlerWorker.run();

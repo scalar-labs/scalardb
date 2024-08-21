@@ -29,7 +29,6 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.KeyHandler;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.ResultOfKeyHandling;
 import java.util.Arrays;
 import java.util.Collections;
@@ -58,14 +57,14 @@ class RecordHandlerWorkerTest {
   @Mock private ReplicationRecordRepository replRecordRepo;
   @Mock private DistributedStorage storage;
   @LazyInit private MetricsLogger metricsLogger;
-  @LazyInit private KeyHandler keyHandler;
+  @LazyInit private RecordHandler recordHandler;
   @LazyInit private long preparedAtInMillisOfLastValue;
   @LazyInit private long committedAtInMillisOfLastValue;
 
   @BeforeEach
   void setUp() {
     metricsLogger = new MetricsLogger(new LinkedBlockingQueue<>());
-    keyHandler = new KeyHandler(replRecordRepo, storage, metricsLogger);
+    recordHandler = new RecordHandler(replRecordRepo, storage, metricsLogger);
     preparedAtInMillisOfLastValue = System.currentTimeMillis() - 400;
     committedAtInMillisOfLastValue = System.currentTimeMillis() - 200;
   }
@@ -136,7 +135,7 @@ class RecordHandlerWorkerTest {
             any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -204,7 +203,7 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(1);
@@ -259,7 +258,7 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -309,7 +308,7 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(1);
@@ -368,7 +367,7 @@ class RecordHandlerWorkerTest {
             any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -469,7 +468,7 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(result)).when(storage).get(any(Get.class));
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -576,7 +575,8 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(result)).when(storage).get(any(Get.class));
 
     // Act Assert
-    assertThatThrownBy(() -> keyHandler.handleKey(key, true)).isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> recordHandler.handleKey(key, true))
+        .isInstanceOf(RuntimeException.class);
 
     // Assert
     verify(replRecordRepo).get(key);
@@ -664,7 +664,7 @@ class RecordHandlerWorkerTest {
             any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -747,7 +747,7 @@ class RecordHandlerWorkerTest {
     doReturn(Optional.of(currentRecord)).when(replRecordRepo).get(any());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(1);
@@ -806,7 +806,7 @@ class RecordHandlerWorkerTest {
             any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -896,7 +896,7 @@ class RecordHandlerWorkerTest {
             any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -1003,7 +1003,7 @@ class RecordHandlerWorkerTest {
             any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(2);
@@ -1092,7 +1092,7 @@ class RecordHandlerWorkerTest {
             any(), any(), anyString(), anyBoolean(), anyCollection(), anyCollection());
 
     // Act
-    ResultOfKeyHandling resultOfKeyHandling = keyHandler.handleKey(key, true);
+    ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
 
     // Assert
     assertThat(resultOfKeyHandling.currentRecordVersion).isEqualTo(101);
