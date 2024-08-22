@@ -1,16 +1,10 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +15,6 @@ public abstract class BaseHandlerWorker<T> {
   private final ExecutorService executorService;
   private final Configuration conf;
   private final MetricsLogger metricsLogger;
-  @Nullable private final List<BlockingQueue<T>> queuesToSupply;
-  @Nullable private final List<BlockingQueue<T>> queuesToConsume;
 
   @Immutable
   public static class Configuration {
@@ -38,13 +30,7 @@ public abstract class BaseHandlerWorker<T> {
     }
   }
 
-  public BaseHandlerWorker(
-      Configuration conf,
-      String label,
-      MetricsLogger metricsLogger,
-      @Nullable List<BlockingQueue<T>> queuesToSupply,
-      @Nullable List<BlockingQueue<T>> queuesToConsume) {
-
+  public BaseHandlerWorker(Configuration conf, String label, MetricsLogger metricsLogger) {
     if (conf.replicationDbPartitionSize % conf.threadSize != 0) {
       throw new IllegalArgumentException(
           String.format(
@@ -52,7 +38,6 @@ public abstract class BaseHandlerWorker<T> {
               conf.replicationDbPartitionSize, conf.threadSize));
     }
     this.conf = conf;
-
     this.executorService =
         Executors.newFixedThreadPool(
             conf.threadSize,
@@ -63,69 +48,6 @@ public abstract class BaseHandlerWorker<T> {
                     (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
                 .build());
     this.metricsLogger = metricsLogger;
-
-    this.queuesToSupply = queuesToSupply;
-    this.queuesToConsume = queuesToConsume;
-
-    if (this.queuesToConsume != null) {
-      if (this.queuesToConsume.size() != conf.threadSize) {
-        throw new IllegalArgumentException(
-            String.format(
-                "The size of queues must be the same as the size of the threads. Queue Size: %d, Config: %s",
-                this.queuesToConsume.size(), conf));
-      }
-      ExecutorService executorServiceForInMemoryQueue =
-          Executors.newFixedThreadPool(
-              conf.threadSize,
-              new ThreadFactoryBuilder()
-                  .setDaemon(true)
-                  .setNameFormat(String.format("log-distributor-queue-consume-%s", label) + "-%d")
-                  .setUncaughtExceptionHandler(
-                      (thread, e) ->
-                          logger.error("Got an uncaught exception. thread:{}", thread, e))
-                  .build());
-      for (int i = 0; i < conf.threadSize; i++) {
-        BlockingQueue<T> queueToConsume = getQueueToConsume(i);
-        executorServiceForInMemoryQueue.execute(
-            () -> {
-              while (true) {
-                T dequeuedItem = null;
-                try {
-                  dequeuedItem = queueToConsume.take();
-                  if (handleQueuedItem(dequeuedItem)) {
-                    queueToConsume.add(dequeuedItem);
-                  }
-                } catch (InterruptedException e) {
-                  // TODO: Error handling.
-                  Thread.currentThread().interrupt();
-                  throw new RuntimeException(e);
-                } catch (Exception e) {
-                  logger.error("Failed to handle a dequeued item. Item: {}", dequeuedItem, e);
-                  if (dequeuedItem != null) {
-                    queueToConsume.add(dequeuedItem);
-                  }
-                  Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
-                }
-              }
-            });
-      }
-    }
-  }
-
-  @Nonnull
-  protected BlockingQueue<T> getQueueToSupply(int partitionId) {
-    assert queuesToSupply != null;
-    return queuesToSupply.get(Math.abs(partitionId) % queuesToSupply.size());
-  }
-
-  @Nonnull
-  protected BlockingQueue<T> getQueueToConsume(int threadIndex) {
-    assert queuesToConsume != null;
-    return queuesToConsume.get(threadIndex);
-  }
-
-  protected boolean handleQueuedItem(T item) throws Exception {
-    throw new UnsupportedOperationException();
   }
 
   private void handlePartitions(int startPartitionId) {
@@ -166,7 +88,7 @@ public abstract class BaseHandlerWorker<T> {
         }
 
         try {
-          if (handle(partitionId)) {
+          if (handlePartition(partitionId)) {
             // Fetched the maximum size entries or immediate retry is needed. Enter no-wait
             // mode.
             partitionIdHavingMoreEnntries = partitionId;
@@ -191,7 +113,7 @@ public abstract class BaseHandlerWorker<T> {
     }
   }
 
-  protected abstract boolean handle(int partitionId) throws ExecutionException;
+  protected abstract boolean handlePartition(int partitionId) throws ExecutionException;
 
   public void run() {
     for (int i = 0; i < conf.threadSize; i++) {

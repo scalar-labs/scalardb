@@ -12,9 +12,8 @@ import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RecordHandlerInMemoryQueueConsumer {
-  private static final Logger logger =
-      LoggerFactory.getLogger(RecordHandlerInMemoryQueueConsumer.class);
+public class RecordQueueConsumer {
+  private static final Logger logger = LoggerFactory.getLogger(RecordQueueConsumer.class);
 
   private final RecordHandler recordHandler;
   private final ExecutorService executorService;
@@ -32,7 +31,7 @@ public class RecordHandlerInMemoryQueueConsumer {
     }
   }
 
-  public RecordHandlerInMemoryQueueConsumer(
+  public RecordQueueConsumer(
       Configuration conf, RecordHandler recordHandler, List<BlockingQueue<UpdatedRecord>> queues) {
 
     if (queues.size() != conf.threadSize) {

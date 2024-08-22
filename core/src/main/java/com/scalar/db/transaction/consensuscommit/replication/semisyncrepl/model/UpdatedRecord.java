@@ -10,6 +10,7 @@ public class UpdatedRecord {
   public final Key pk;
   public final Key ck;
   public final Instant updatedAt;
+  // TODO: This isn't used as a total order. Use tx_id instead since it's more robust.
   public final long version;
 
   public UpdatedRecord(

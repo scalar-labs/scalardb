@@ -6,12 +6,14 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationBulkTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import javax.annotation.concurrent.Immutable;
 
 public class BulkTransactionHandlerWorker extends BaseHandlerWorker<Void> {
   private final Configuration conf;
   private final ReplicationBulkTransactionRepository replicationBulkTransactionRepository;
   private final ReplicationTransactionRepository replicationTransactionRepository;
+  private final List<BlockingQueue<Transaction>> transactionQueues;
   private final MetricsLogger metricsLogger;
 
   @Immutable
@@ -29,22 +31,27 @@ public class BulkTransactionHandlerWorker extends BaseHandlerWorker<Void> {
       Configuration conf,
       ReplicationBulkTransactionRepository replicationBulkTransactionRepository,
       ReplicationTransactionRepository replicationTransactionRepository,
+      List<BlockingQueue<Transaction>> transactionQueues,
       MetricsLogger metricsLogger) {
-    super(conf, "bulk-tx", metricsLogger, null, null);
+    super(conf, "bulk-tx", metricsLogger);
     this.conf = conf;
     this.replicationBulkTransactionRepository = replicationBulkTransactionRepository;
     this.replicationTransactionRepository = replicationTransactionRepository;
+    this.transactionQueues = transactionQueues;
     this.metricsLogger = metricsLogger;
   }
 
   private void moveTransaction(Transaction transaction) throws ExecutionException {
     metricsLogger.incrementScannedTransactions();
     replicationTransactionRepository.add(transaction);
+    transactionQueues
+        .get(transaction.transactionId.hashCode() % transactionQueues.size())
+        .add(transaction);
     metricsLogger.incrementHandledCommittedTransactions();
   }
 
   @Override
-  protected boolean handle(int partitionId) throws ExecutionException {
+  protected boolean handlePartition(int partitionId) throws ExecutionException {
     List<BulkTransaction> scannedBulkTxns =
         metricsLogger.execFetchBulkTransactions(
             () -> replicationBulkTransactionRepository.scan(partitionId, conf.fetchSize));

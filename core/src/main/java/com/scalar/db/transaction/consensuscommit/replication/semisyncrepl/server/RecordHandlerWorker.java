@@ -53,7 +53,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
       ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       List<BlockingQueue<UpdatedRecord>> updatedRecordQueues,
       MetricsLogger metricsLogger) {
-    super(conf, "record", metricsLogger, null, updatedRecordQueues);
+    super(conf, "record", metricsLogger);
     this.conf = conf;
     this.recordHandler = recordHandler;
     this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
@@ -61,13 +61,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
   }
 
   @Override
-  protected boolean handleQueuedItem(UpdatedRecord updatedRecord) throws ExecutionException {
-    logger.debug("[handleQueuedItem]\n  updatedRecord: {}\n", updatedRecord);
-    return recordHandler.handleUpdatedRecord(updatedRecord);
-  }
-
-  @Override
-  protected boolean handle(int partitionId) throws ExecutionException {
+  protected boolean handlePartition(int partitionId) throws ExecutionException {
     List<UpdatedRecord> scannedUpdatedRecords =
         metricsLogger.execFetchUpdatedRecords(
             () ->

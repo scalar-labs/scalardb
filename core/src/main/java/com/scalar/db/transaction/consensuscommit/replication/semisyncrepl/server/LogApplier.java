@@ -3,12 +3,14 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.serve
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationBulkTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.TransactionQueueConsumer.Configuration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -26,17 +28,23 @@ public class LogApplier {
   private static final String ENV_VAR_REPLICATION_CONFIG = "LOG_APPLIER_REPLICATION_CONFIG";
   private static final String ENV_VAR_COORDINATOR_STATE_CONFIG =
       "LOG_APPLIER_COORDINATOR_STATE_CONFIG";
-  private static final String ENV_VAR_NUM_OF_DISTRIBUTOR_THREADS =
-      "LOG_APPLIER_NUM_OF_DISTRIBUTOR_THREADS";
-  private static final String ENV_VAR_NUM_OF_RECORD_WRITER_THREADS =
-      "LOG_APPLIER_NUM_OF_RECORD_WRITER_THREADS";
+  private static final String ENV_VAR_NUM_OF_BULK_TRANSACTION_HANDLER_THREADS =
+      "LOG_APPLIER_NUM_OF_BULK_TRANSACTION_HANDLER_THREADS";
+  private static final String ENV_VAR_NUM_OF_TRANSACTION_HANDLER_THREADS =
+      "LOG_APPLIER_NUM_OF_TRANSACTION_HANDLER_THREADS";
+  private static final String ENV_VAR_NUM_OF_TRANSACTION_QUEUE_CONSUMER_THREADS =
+      "LOG_APPLIER_NUM_OF_TRANSACTION_QUEUE_CONSUMER_THREADS";
+  private static final String ENV_VAR_NUM_OF_RECORD_HANDLER_THREADS =
+      "LOG_APPLIER_NUM_OF_RECORD_HANDLER_THREADS";
+  private static final String ENV_VAR_NUM_OF_RECORD_QUEUE_CONSUMER_THREADS =
+      "LOG_APPLIER_NUM_OF_RECORD_QUEUE_CONSUMER_THREADS";
   private static final String ENV_VAR_TRANSACTION_FETCH_SIZE = "LOG_APPLIER_TRANSACTION_FETCH_SIZE";
   private static final String ENV_VAR_TRANSACTION_WAIT_MILLIS_PER_PARTITION =
       "LOG_APPLIER_TRANSACTION_WAIT_MILLIS_PER_PARTITION";
   private static final String ENV_VAR_THRESHOLD_MILLIS_FOR_OLD_TRANSACTION =
       "LOG_APPLIER_THRESHOLD_MILLIS_FOR_OLD_TRANSACTION";
 
-  private static final int REPLICATION_DB_PARTITION_SIZE = 256;
+  private static final int REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE = 256;
 
   public static void main(String[] args) throws IOException, InterruptedException {
     String backupScalarDbConfigPath = System.getenv(ENV_VAR_BACKUP_SCALARDB_CONFIG);
@@ -59,15 +67,34 @@ public class LogApplier {
               + ENV_VAR_COORDINATOR_STATE_CONFIG);
     }
 
-    int numOfDistributorThreads = 16;
-    if (System.getenv(ENV_VAR_NUM_OF_DISTRIBUTOR_THREADS) != null) {
-      numOfDistributorThreads = Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_DISTRIBUTOR_THREADS));
+    int numOfBulkTransactionHandlerThreads = 8;
+    if (System.getenv(ENV_VAR_NUM_OF_BULK_TRANSACTION_HANDLER_THREADS) != null) {
+      numOfBulkTransactionHandlerThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_BULK_TRANSACTION_HANDLER_THREADS));
     }
 
-    int numOfRecordWriterThreads = 16;
-    if (System.getenv(ENV_VAR_NUM_OF_RECORD_WRITER_THREADS) != null) {
-      numOfRecordWriterThreads =
-          Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_RECORD_WRITER_THREADS));
+    int numOfTransactionHandlerThreads = 8;
+    if (System.getenv(ENV_VAR_NUM_OF_TRANSACTION_HANDLER_THREADS) != null) {
+      numOfTransactionHandlerThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_TRANSACTION_HANDLER_THREADS));
+    }
+
+    int numOfTransactionQueueConsumerThreads = 16;
+    if (System.getenv(ENV_VAR_NUM_OF_TRANSACTION_QUEUE_CONSUMER_THREADS) != null) {
+      numOfTransactionQueueConsumerThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_TRANSACTION_QUEUE_CONSUMER_THREADS));
+    }
+
+    int numOfRecordHandlerThreads = 8;
+    if (System.getenv(ENV_VAR_NUM_OF_RECORD_HANDLER_THREADS) != null) {
+      numOfRecordHandlerThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_RECORD_HANDLER_THREADS));
+    }
+
+    int numOfRecordQueueConsumerThreads = 16;
+    if (System.getenv(ENV_VAR_NUM_OF_RECORD_QUEUE_CONSUMER_THREADS) != null) {
+      numOfRecordQueueConsumerThreads =
+          Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_RECORD_QUEUE_CONSUMER_THREADS));
     }
 
     int transactionFetchSize = 16;
@@ -122,10 +149,17 @@ public class LogApplier {
             "bulk_transactions");
 
     List<BlockingQueue<UpdatedRecord>> updatedRecordQueues =
-        new ArrayList<>(numOfRecordWriterThreads);
-    for (int i = 0; i < numOfRecordWriterThreads; i++) {
+        new ArrayList<>(numOfRecordQueueConsumerThreads);
+    for (int i = 0; i < numOfRecordQueueConsumerThreads; i++) {
       updatedRecordQueues.add(new LinkedBlockingQueue<>());
     }
+
+    List<BlockingQueue<Transaction>> transactionQueues =
+        new ArrayList<>(numOfTransactionQueueConsumerThreads);
+    for (int i = 0; i < numOfTransactionQueueConsumerThreads; i++) {
+      transactionQueues.add(new LinkedBlockingQueue<>());
+    }
+
     // FIXME
     MetricsLogger metricsLogger = new MetricsLogger(updatedRecordQueues.get(0));
 
@@ -142,21 +176,20 @@ public class LogApplier {
             StorageFactory.create(backupScalarDbProps).getStorage(),
             metricsLogger);
 
-    RecordHandlerInMemoryQueueConsumer recordHandlerInMemoryQueueConsumer =
-        new RecordHandlerInMemoryQueueConsumer(
-            new RecordHandlerInMemoryQueueConsumer.Configuration(
-                numOfRecordWriterThreads, waitMillisPerPartition),
+    RecordQueueConsumer recordQueueConsumer =
+        new RecordQueueConsumer(
+            new RecordQueueConsumer.Configuration(
+                numOfRecordQueueConsumerThreads, waitMillisPerPartition),
             recordHandler,
             updatedRecordQueues);
-    recordHandlerInMemoryQueueConsumer.run();
+    recordQueueConsumer.run();
 
-    RecordHandlerWorker recordHandlerWorker =
-        new RecordHandlerWorker(
+    new RecordHandlerWorker(
             new RecordHandlerWorker.Configuration(
                 // TODO: The partition size can be different from other partition sizes on other
-                // tables.
-                REPLICATION_DB_PARTITION_SIZE,
-                numOfRecordWriterThreads,
+                //       tables.
+                REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
+                numOfRecordHandlerThreads,
                 waitMillisPerPartition,
                 transactionFetchSize,
                 // FIXME
@@ -164,36 +197,48 @@ public class LogApplier {
             recordHandler,
             replicationUpdatedRecordRepository,
             updatedRecordQueues,
-            metricsLogger);
-    recordHandlerWorker.run();
+            metricsLogger)
+        .run();
 
-    BulkTransactionHandlerWorker bulkTransactionHandlerWorker =
-        new BulkTransactionHandlerWorker(
+    new BulkTransactionHandlerWorker(
             new BulkTransactionHandlerWorker.Configuration(
-                REPLICATION_DB_PARTITION_SIZE,
-                numOfDistributorThreads,
+                REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
+                numOfBulkTransactionHandlerThreads,
                 waitMillisPerPartition,
                 transactionFetchSize),
             replicationBulkTransactionRepository,
             replicationTransactionRepository,
-            metricsLogger);
-    bulkTransactionHandlerWorker.run();
+            transactionQueues,
+            metricsLogger)
+        .run();
 
-    TransactionHandlerWorker transactionHandlerWorker =
-        new TransactionHandlerWorker(
-            new TransactionHandlerWorker.Configuration(
-                REPLICATION_DB_PARTITION_SIZE,
-                numOfDistributorThreads,
-                waitMillisPerPartition,
-                transactionFetchSize,
-                thresholdMillisForOldTransaction),
-            coordinatorStateRepository,
+    TransactionHandler transactionHandler =
+        new TransactionHandler(
+            REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
+            thresholdMillisForOldTransaction,
             replicationTransactionRepository,
             replicationUpdatedRecordRepository,
             replicationRecordRepository,
+            coordinatorStateRepository,
             updatedRecordQueues,
             metricsLogger);
-    transactionHandlerWorker.run();
+
+    new TransactionQueueConsumer(
+            new Configuration(numOfTransactionQueueConsumerThreads, waitMillisPerPartition),
+            transactionHandler,
+            transactionQueues)
+        .run();
+
+    new TransactionHandlerWorker(
+            new TransactionHandlerWorker.Configuration(
+                REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
+                numOfTransactionHandlerThreads,
+                waitMillisPerPartition,
+                transactionFetchSize),
+            transactionHandler,
+            replicationTransactionRepository,
+            metricsLogger)
+        .run();
 
     while (true) {
       TimeUnit.MINUTES.sleep(1);
