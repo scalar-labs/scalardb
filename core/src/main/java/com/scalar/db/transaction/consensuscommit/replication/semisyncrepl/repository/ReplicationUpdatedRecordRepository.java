@@ -38,7 +38,8 @@ public class ReplicationUpdatedRecordRepository {
     this.replicationDbUpdatedRecordTable = replicationDbUpdatedRecordTable;
   }
 
-  public List<UpdatedRecord> scan(int partitionId, int fetchSize)
+  public List<UpdatedRecord> scan(
+      int partitionId, int fetchSize, long skipRecentDataThresholdMillis)
       throws ExecutionException, IOException {
     try (Scanner scan =
         replicationDbStorage.scan(
@@ -48,6 +49,9 @@ public class ReplicationUpdatedRecordRepository {
                 .partitionKey(Key.ofInt("partition_id", partitionId))
                 .ordering(Ordering.asc("updated_at"))
                 .limit(fetchSize)
+                .end(
+                    Key.ofBigInt(
+                        "updated_at", System.currentTimeMillis() - skipRecentDataThresholdMillis))
                 .build())) {
       List<UpdatedRecord> updatedRecords =
           scan.all().stream()

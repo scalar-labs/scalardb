@@ -20,11 +20,17 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
   @Immutable
   public static class Configuration extends BaseHandlerWorker.Configuration {
     private final int fetchSize;
+    private final long skipRecentDataThresholdMillis;
 
     public Configuration(
-        int replicationDbPartitionSize, int threadSize, int waitMillisPerPartition, int fetchSize) {
+        int replicationDbPartitionSize,
+        int threadSize,
+        int waitMillisPerPartition,
+        int fetchSize,
+        long skipRecentDataThresholdMillis) {
       super(replicationDbPartitionSize, threadSize, waitMillisPerPartition);
       this.fetchSize = fetchSize;
+      this.skipRecentDataThresholdMillis = skipRecentDataThresholdMillis;
     }
   }
 
@@ -64,7 +70,9 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
   protected boolean handle(int partitionId) throws ExecutionException {
     List<UpdatedRecord> scannedUpdatedRecords =
         metricsLogger.execFetchUpdatedRecords(
-            () -> replicationUpdatedRecordRepository.scan(partitionId, conf.fetchSize));
+            () ->
+                replicationUpdatedRecordRepository.scan(
+                    partitionId, conf.fetchSize, conf.skipRecentDataThresholdMillis));
 
     boolean isImmediateRetryNeeded = false;
 

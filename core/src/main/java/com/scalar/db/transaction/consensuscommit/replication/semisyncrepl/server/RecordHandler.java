@@ -370,35 +370,18 @@ class RecordHandler {
                 updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
             true);
 
-    if (result.currentRecordVersion != null) {
-      if (result.remainingValueExists) {
-        // There are remaining values. Don't remove the notification.
-        if (result.nextConnectedValueExists) {
-          // There are connected values to handle immediately. No wait is needed.
-          return true;
-        } else {
-          // There are no connected values. Wait for a while so that dependent values may be
-          // processed.
-          replicationUpdatedRecordRepository.updateUpdatedAt(updatedRecord);
-
-          // TODO: Garbage collect by comparing `updated_at` and current timestamp.
-        }
-      } else {
-        // There are no remaining values. Remove the notification if it's old.
-
-        // TODO: Check if this can be executed when `result.nextConnectedValueExists` is false?
-
-        // This version comparison is needed in case of a bit too early notification.
-        if (result.currentRecordVersion >= updatedRecord.version) {
-          replicationUpdatedRecordRepository.delete(updatedRecord);
-        }
-      }
-    } else {
-      // The record doesn't exist yet.
-      // It's possible that only the notification was handled before writing the record.
+    if (result.currentRecordVersion == null) {
+      // The record doesn't exist yet. It's possible that only the notification was handled before
+      // writing the record. Therefore, a retry is needed. The notification should be reused and
+      // kept.
+      return true;
+    } else if (result.nextConnectedValueExists) {
+      // There are connected values to be handled immediately. The notification should be reused and
+      // kept.
       return true;
     }
 
+    replicationUpdatedRecordRepository.delete(updatedRecord);
     return false;
   }
 }

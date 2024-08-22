@@ -158,7 +158,9 @@ public class LogApplier {
                 REPLICATION_DB_PARTITION_SIZE,
                 numOfRecordWriterThreads,
                 waitMillisPerPartition,
-                transactionFetchSize),
+                transactionFetchSize,
+                // FIXME
+                0),
             recordHandler,
             replicationUpdatedRecordRepository,
             updatedRecordQueues,

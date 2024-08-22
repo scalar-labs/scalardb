@@ -217,7 +217,7 @@ public class ReplicationRecordRepository {
           key,
           record.toStringOnlyWithMetadata(),
           newTxId,
-          values);
+          Utils.convValuesToString(values));
 
       replicationDbStorage.put(
           putBuilder
