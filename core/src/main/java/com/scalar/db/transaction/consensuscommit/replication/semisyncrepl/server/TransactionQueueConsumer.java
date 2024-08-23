@@ -4,8 +4,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
 import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.annotation.concurrent.Immutable;
@@ -19,7 +17,8 @@ public class TransactionQueueConsumer {
   private final TransactionHandler transactionHandler;
   private final ExecutorService executorService;
   private final Configuration conf;
-  private final List<BlockingQueue<Transaction>> queues;
+  private final InMemoryQueue<Transaction> queue;
+  private final MetricsLogger metricsLogger;
 
   @Immutable
   public static class Configuration {
@@ -35,13 +34,14 @@ public class TransactionQueueConsumer {
   public TransactionQueueConsumer(
       Configuration conf,
       TransactionHandler transactionHandler,
-      List<BlockingQueue<Transaction>> queues) {
+      InMemoryQueue<Transaction> queue,
+      MetricsLogger metricsLogger) {
 
-    if (queues.size() != conf.threadSize) {
+    if (queue.size() != conf.threadSize) {
       throw new IllegalArgumentException(
           String.format(
               "The size of the queues (%d) should be same as the size of threads (%d)",
-              queues.size(), conf.threadSize));
+              queue.size(), conf.threadSize));
     }
     this.conf = conf;
     this.transactionHandler = transactionHandler;
@@ -54,24 +54,23 @@ public class TransactionQueueConsumer {
                 .setUncaughtExceptionHandler(
                     (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
                 .build());
-    this.queues = queues;
-  }
-
-  protected BlockingQueue<Transaction> getQueue(int threadIndex) {
-    return queues.get(threadIndex);
+    this.queue = queue;
+    this.metricsLogger = metricsLogger;
   }
 
   public void run() {
     for (int i = 0; i < conf.threadSize; i++) {
-      BlockingQueue<Transaction> queue = getQueue(i);
+      int threadId = i;
       executorService.execute(
           () -> {
             while (true) {
               Transaction transaction = null;
               try {
-                transaction = queue.take();
-                if (transactionHandler.handleTransaction(transaction)) {
-                  queue.add(transaction);
+                metricsLogger.incrementDequeueFromTransactionQueue();
+                transaction = queue.dequeue(threadId);
+                if (!transactionHandler.handleTransaction(transaction)) {
+                  metricsLogger.incrementReEnqueueFromTransactionQueue();
+                  queue.enqueue(threadId, transaction);
                 }
               } catch (InterruptedException e) {
                 // TODO: Error handling.
@@ -80,7 +79,8 @@ public class TransactionQueueConsumer {
               } catch (Exception e) {
                 logger.error("Failed to handle a dequeued Transaction: {}", transaction, e);
                 if (transaction != null) {
-                  queue.add(transaction);
+                  metricsLogger.incrementReEnqueueFromTransactionQueue();
+                  queue.enqueue(threadId, transaction);
                 }
                 Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
               }

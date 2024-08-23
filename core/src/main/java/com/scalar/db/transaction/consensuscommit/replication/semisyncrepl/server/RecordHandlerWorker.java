@@ -4,14 +4,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
-  private static final Logger logger = LoggerFactory.getLogger(RecordHandlerWorker.class);
-
   private final Configuration conf;
   private final RecordHandler recordHandler;
   private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
@@ -51,7 +46,6 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
       Configuration conf,
       RecordHandler recordHandler,
       ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
-      List<BlockingQueue<UpdatedRecord>> updatedRecordQueues,
       MetricsLogger metricsLogger) {
     super(conf, "record", metricsLogger);
     this.conf = conf;
@@ -71,7 +65,7 @@ public class RecordHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
     boolean isImmediateRetryNeeded = false;
 
     for (UpdatedRecord updatedRecord : scannedUpdatedRecords) {
-      if (recordHandler.handleUpdatedRecord(updatedRecord)) {
+      if (!recordHandler.handleUpdatedRecord(updatedRecord)) {
         isImmediateRetryNeeded = true;
       }
     }

@@ -4,8 +4,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.annotation.concurrent.Immutable;
@@ -18,7 +16,8 @@ public class RecordQueueConsumer {
   private final RecordHandler recordHandler;
   private final ExecutorService executorService;
   private final Configuration conf;
-  private final List<BlockingQueue<UpdatedRecord>> queues;
+  private final InMemoryQueue<UpdatedRecord> queue;
+  private final MetricsLogger metricsLogger;
 
   @Immutable
   public static class Configuration {
@@ -32,13 +31,16 @@ public class RecordQueueConsumer {
   }
 
   public RecordQueueConsumer(
-      Configuration conf, RecordHandler recordHandler, List<BlockingQueue<UpdatedRecord>> queues) {
+      Configuration conf,
+      RecordHandler recordHandler,
+      InMemoryQueue<UpdatedRecord> queue,
+      MetricsLogger metricsLogger) {
 
-    if (queues.size() != conf.threadSize) {
+    if (queue.size() != conf.threadSize) {
       throw new IllegalArgumentException(
           String.format(
               "The size of the queues (%d) should be same as the size of threads (%d)",
-              queues.size(), conf.threadSize));
+              queue.size(), conf.threadSize));
     }
     this.conf = conf;
     this.recordHandler = recordHandler;
@@ -53,24 +55,23 @@ public class RecordQueueConsumer {
                     (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
                 .build());
 
-    this.queues = queues;
-  }
-
-  protected BlockingQueue<UpdatedRecord> getQueue(int threadIndex) {
-    return queues.get(threadIndex);
+    this.queue = queue;
+    this.metricsLogger = metricsLogger;
   }
 
   public void run() {
     for (int i = 0; i < conf.threadSize; i++) {
-      BlockingQueue<UpdatedRecord> queueToConsume = getQueue(i);
+      int threadId = i;
       executorService.execute(
           () -> {
             while (true) {
               UpdatedRecord updatedRecord = null;
               try {
-                updatedRecord = queueToConsume.take();
-                if (recordHandler.handleUpdatedRecord(updatedRecord)) {
-                  queueToConsume.add(updatedRecord);
+                metricsLogger.incrementDequeueFromUpdatedRecordQueue();
+                updatedRecord = queue.dequeue(threadId);
+                if (!recordHandler.handleUpdatedRecord(updatedRecord)) {
+                  metricsLogger.incrementReEnqueueFromUpdatedRecordQueue();
+                  queue.enqueue(threadId, updatedRecord);
                 }
               } catch (InterruptedException e) {
                 // TODO: Error handling.
@@ -79,7 +80,8 @@ public class RecordQueueConsumer {
               } catch (Exception e) {
                 logger.error("Failed to handle a dequeued UpdatedRecord: {}", updatedRecord, e);
                 if (updatedRecord != null) {
-                  queueToConsume.add(updatedRecord);
+                  metricsLogger.incrementReEnqueueFromUpdatedRecordQueue();
+                  queue.enqueue(threadId, updatedRecord);
                 }
                 Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
               }

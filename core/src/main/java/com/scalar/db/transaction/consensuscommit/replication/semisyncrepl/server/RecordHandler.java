@@ -363,6 +363,14 @@ class RecordHandler {
     }
   }
 
+  /**
+   * Handle an updated record
+   *
+   * @param updatedRecord
+   * @return true if handling the updated record has finished and the updated record is removed,
+   *     false otherwise.
+   * @throws ExecutionException
+   */
   boolean handleUpdatedRecord(UpdatedRecord updatedRecord) throws ExecutionException {
     ResultOfKeyHandling result =
         handleKey(
@@ -374,14 +382,14 @@ class RecordHandler {
       // The record doesn't exist yet. It's possible that only the notification was handled before
       // writing the record. Therefore, a retry is needed. The notification should be reused and
       // kept.
-      return true;
+      return false;
     } else if (result.nextConnectedValueExists) {
       // There are connected values to be handled immediately. The notification should be reused and
       // kept.
-      return true;
+      return false;
     }
 
     replicationUpdatedRecordRepository.delete(updatedRecord);
-    return false;
+    return true;
   }
 }

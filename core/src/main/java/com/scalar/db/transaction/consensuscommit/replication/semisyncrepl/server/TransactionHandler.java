@@ -18,9 +18,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.reposi
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +30,7 @@ class TransactionHandler {
   private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
   private final ReplicationRecordRepository replicationRecordRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
-  private final List<BlockingQueue<UpdatedRecord>> updatedRecordQueues;
+  private final InMemoryQueue<UpdatedRecord> queue;
   private final MetricsLogger metricsLogger;
 
   public TransactionHandler(
@@ -42,7 +40,7 @@ class TransactionHandler {
       ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
       CoordinatorStateRepository coordinatorStateRepository,
-      List<BlockingQueue<UpdatedRecord>> updatedRecordQueues,
+      InMemoryQueue<UpdatedRecord> queue,
       MetricsLogger metricsLogger) {
     this.recordTablePartitionSize = recordTablePartitionSize;
     this.oldTransactionThresholdMillis = oldTransactionThresholdMillis;
@@ -50,7 +48,7 @@ class TransactionHandler {
     this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
     this.replicationRecordRepository = replicationRecordRepository;
     this.coordinatorStateRepository = coordinatorStateRepository;
-    this.updatedRecordQueues = updatedRecordQueues;
+    this.queue = queue;
     this.metricsLogger = metricsLogger;
   }
 
@@ -108,11 +106,12 @@ class TransactionHandler {
             long nextVersion = replicationRecordRepository.nextVersion(recordOpt);
 
             int partitionIdForRecord =
-                Objects.hashCode(
-                        writtenTuple.namespace,
-                        writtenTuple.table,
-                        writtenTuple.partitionKey,
-                        writtenTuple.clusteringKey)
+                Math.abs(
+                        Objects.hashCode(
+                            writtenTuple.namespace,
+                            writtenTuple.table,
+                            writtenTuple.partitionKey,
+                            writtenTuple.clusteringKey))
                     % recordTablePartitionSize;
 
             UpdatedRecord updatedRecord =
@@ -132,9 +131,7 @@ class TransactionHandler {
             replicationRecordRepository.upsertWithNewValue(key, recordOpt, newValue);
 
             // Notify downstream workers via in-memory queue.
-            updatedRecordQueues
-                .get(partitionIdForRecord % updatedRecordQueues.size())
-                .add(updatedRecord);
+            queue.enqueue(partitionIdForRecord, updatedRecord);
 
             return null;
           });
@@ -147,12 +144,6 @@ class TransactionHandler {
     }
   }
 
-  /**
-   * Copy tuples to Records table
-   *
-   * @param transaction A transaction
-   * @return true if the transaction has finished, false otherwise.
-   */
   private boolean copyTuplesToRecords(Transaction transaction) throws ExecutionException {
     metricsLogger.incrementScannedTransactions();
     Optional<CoordinatorState> coordinatorState =
@@ -169,8 +160,7 @@ class TransactionHandler {
       return false;
     }
     if (coordinatorState.get().txState != TransactionState.COMMITTED) {
-      // TODO: Add AbortedTransactions
-      metricsLogger.incrementUncommittedTransactions();
+      metricsLogger.incrementAbortedTransactions();
       return true;
     }
 
@@ -183,6 +173,12 @@ class TransactionHandler {
     return true;
   }
 
+  /**
+   * Handle a transaction
+   *
+   * @param transaction A transaction
+   * @return true if the transaction has finished and the transaction is removed, false otherwise.
+   */
   boolean handleTransaction(Transaction transaction) throws ExecutionException {
     if (copyTuplesToRecords(transaction)) {
       replicationTransactionRepository.delete(transaction);

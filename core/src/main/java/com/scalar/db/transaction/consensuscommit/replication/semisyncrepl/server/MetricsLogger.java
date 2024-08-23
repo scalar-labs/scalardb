@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -17,11 +16,15 @@ public class MetricsLogger {
   private final boolean isEnabled;
   private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
   private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
-  private final Queue<UpdatedRecord> updatedRecordQueue;
+  private final InMemoryQueue<Transaction> transactionQueue;
+  private final InMemoryQueue<UpdatedRecord> updatedRecordQueue;
 
-  public MetricsLogger(Queue<UpdatedRecord> updatedRecordQueue) {
+  public MetricsLogger(
+      InMemoryQueue<Transaction> transactionQueue,
+      InMemoryQueue<UpdatedRecord> updatedRecordQueue) {
     String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
     this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
+    this.transactionQueue = transactionQueue;
     this.updatedRecordQueue = updatedRecordQueue;
   }
 
@@ -32,7 +35,9 @@ public class MetricsLogger {
   private void withPrintAndCleanup(Consumer<Metrics> consumer) {
     Instant currentKey = currentTimestampRoundedInSeconds();
     Instant oldKey = keyHolder.getAndSet(currentKey);
-    Metrics metrics = metricsMap.computeIfAbsent(currentKey, k -> new Metrics(updatedRecordQueue));
+    Metrics metrics =
+        metricsMap.computeIfAbsent(
+            currentKey, k -> new Metrics(transactionQueue, updatedRecordQueue));
     consumer.accept(metrics);
     if (oldKey == null) {
       return;
@@ -62,6 +67,45 @@ public class MetricsLogger {
       return;
     }
     withPrintAndCleanup(metrics -> metrics.uncommittedTransactions.incrementAndGet());
+  }
+
+  public void incrementAbortedTransactions() {
+    if (!isEnabled) {
+      return;
+    }
+    withPrintAndCleanup(metrics -> metrics.abortedTransactions.incrementAndGet());
+  }
+
+  public void incrementDequeueFromTransactionQueue() {
+    if (!isEnabled) {
+      return;
+    }
+    withPrintAndCleanup(
+        metrics -> metrics.totalCountToDequeueFromTransactionQueue.incrementAndGet());
+  }
+
+  public void incrementReEnqueueFromTransactionQueue() {
+    if (!isEnabled) {
+      return;
+    }
+    withPrintAndCleanup(
+        metrics -> metrics.totalCountToReEnqueueFromTransactionQueue.incrementAndGet());
+  }
+
+  public void incrementDequeueFromUpdatedRecordQueue() {
+    if (!isEnabled) {
+      return;
+    }
+    withPrintAndCleanup(
+        metrics -> metrics.totalCountToDequeueFromUpdateRecordQueue.incrementAndGet());
+  }
+
+  public void incrementReEnqueueFromUpdatedRecordQueue() {
+    if (!isEnabled) {
+      return;
+    }
+    withPrintAndCleanup(
+        metrics -> metrics.totalCountToReEnqueueFromUpdateRecordQueue.incrementAndGet());
   }
 
   public void incrementExceptionCount() {

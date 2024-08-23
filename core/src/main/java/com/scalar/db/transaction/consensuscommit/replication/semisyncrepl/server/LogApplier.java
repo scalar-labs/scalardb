@@ -16,11 +16,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class LogApplier {
@@ -148,20 +144,13 @@ public class LogApplier {
             "replication",
             "bulk_transactions");
 
-    List<BlockingQueue<UpdatedRecord>> updatedRecordQueues =
-        new ArrayList<>(numOfRecordQueueConsumerThreads);
-    for (int i = 0; i < numOfRecordQueueConsumerThreads; i++) {
-      updatedRecordQueues.add(new LinkedBlockingQueue<>());
-    }
-
-    List<BlockingQueue<Transaction>> transactionQueues =
-        new ArrayList<>(numOfTransactionQueueConsumerThreads);
-    for (int i = 0; i < numOfTransactionQueueConsumerThreads; i++) {
-      transactionQueues.add(new LinkedBlockingQueue<>());
-    }
+    InMemoryQueue<Transaction> transactionQueue =
+        new InMemoryQueue<>(numOfTransactionQueueConsumerThreads);
+    InMemoryQueue<UpdatedRecord> updatedRecordQueue =
+        new InMemoryQueue<>(numOfRecordQueueConsumerThreads);
 
     // FIXME
-    MetricsLogger metricsLogger = new MetricsLogger(updatedRecordQueues.get(0));
+    MetricsLogger metricsLogger = new MetricsLogger(transactionQueue, updatedRecordQueue);
 
     Properties backupScalarDbProps = new Properties();
     try (InputStream in =
@@ -181,7 +170,8 @@ public class LogApplier {
             new RecordQueueConsumer.Configuration(
                 numOfRecordQueueConsumerThreads, waitMillisPerPartition),
             recordHandler,
-            updatedRecordQueues);
+            updatedRecordQueue,
+            metricsLogger);
     recordQueueConsumer.run();
 
     new RecordHandlerWorker(
@@ -196,7 +186,6 @@ public class LogApplier {
                 0),
             recordHandler,
             replicationUpdatedRecordRepository,
-            updatedRecordQueues,
             metricsLogger)
         .run();
 
@@ -208,7 +197,7 @@ public class LogApplier {
                 transactionFetchSize),
             replicationBulkTransactionRepository,
             replicationTransactionRepository,
-            transactionQueues,
+            transactionQueue,
             metricsLogger)
         .run();
 
@@ -220,13 +209,14 @@ public class LogApplier {
             replicationUpdatedRecordRepository,
             replicationRecordRepository,
             coordinatorStateRepository,
-            updatedRecordQueues,
+            updatedRecordQueue,
             metricsLogger);
 
     new TransactionQueueConsumer(
             new Configuration(numOfTransactionQueueConsumerThreads, waitMillisPerPartition),
             transactionHandler,
-            transactionQueues)
+            transactionQueue,
+            metricsLogger)
         .run();
 
     new TransactionHandlerWorker(
