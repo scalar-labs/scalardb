@@ -116,7 +116,7 @@ public class ReplicationTransactionRepository {
     replicationDbStorage.put(createPutFromTransaction(transaction));
   }
 
-  public void updateUpdatedAt(Transaction transaction) throws ExecutionException {
+  public Transaction updateUpdatedAt(Transaction transaction) throws ExecutionException {
     Transaction newTxn =
         new Transaction(
             transaction.partitionId,
@@ -130,6 +130,8 @@ public class ReplicationTransactionRepository {
     add(newTxn);
     // It's okay if deleting the old record remains
     delete(transaction);
+
+    return newTxn;
   }
 
   public void delete(Transaction transaction) throws ExecutionException {

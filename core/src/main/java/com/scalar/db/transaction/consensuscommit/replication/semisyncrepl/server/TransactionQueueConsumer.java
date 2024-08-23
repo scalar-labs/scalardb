@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.annotation.concurrent.Immutable;
@@ -68,9 +69,11 @@ public class TransactionQueueConsumer {
               try {
                 metricsLogger.incrementDequeueFromTransactionQueue();
                 transaction = queue.dequeue(threadId);
-                if (!transactionHandler.handleTransaction(transaction)) {
+                Optional<Transaction> updatedTransaction =
+                    transactionHandler.handleTransaction(transaction);
+                if (updatedTransaction.isPresent()) {
                   metricsLogger.incrementReEnqueueFromTransactionQueue();
-                  queue.enqueue(threadId, transaction);
+                  queue.enqueue(threadId, updatedTransaction.get());
                 }
               } catch (InterruptedException e) {
                 // TODO: Error handling.

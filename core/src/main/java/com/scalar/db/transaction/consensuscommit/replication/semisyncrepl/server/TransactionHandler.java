@@ -144,24 +144,34 @@ class TransactionHandler {
     }
   }
 
-  private boolean copyTuplesToRecords(Transaction transaction) throws ExecutionException {
+  // FIXME: Return value comment.
+  /**
+   * Handle a transaction
+   *
+   * @param transaction A transaction
+   * @return a transaction with updated `updated_at` if the transaction hasn't finished, empty
+   *     otherwise.
+   */
+  Optional<Transaction> handleTransaction(Transaction transaction) throws ExecutionException {
     metricsLogger.incrementScannedTransactions();
     Optional<CoordinatorState> coordinatorState =
         coordinatorStateRepository.get(transaction.transactionId);
     if (!coordinatorState.isPresent()) {
       metricsLogger.incrementUncommittedTransactions();
-      Instant now = Instant.now();
-      if (transaction.updatedAt.isBefore(now.minusMillis(oldTransactionThresholdMillis))) {
-        // TODO: Maybe always updating `updated_at` works better.
-        logger.info(
-            "Updating an old transaction to be handled later. txId:{}", transaction.transactionId);
-        replicationTransactionRepository.updateUpdatedAt(transaction);
-      }
-      return false;
+      // TODO: Maybe always updating `updated_at` works better.
+      // if (transaction.updatedAt.isBefore(now.minusMillis(oldTransactionThresholdMillis))) {
+      logger.info(
+          "Updating an ongoing transaction to be handled later. txId:{}",
+          transaction.transactionId);
+      Transaction updatedTransaction =
+          replicationTransactionRepository.updateUpdatedAt(transaction);
+      return Optional.of(updatedTransaction);
+      // }
     }
     if (coordinatorState.get().txState != TransactionState.COMMITTED) {
       metricsLogger.incrementAbortedTransactions();
-      return true;
+      replicationTransactionRepository.delete(transaction);
+      return Optional.empty();
     }
 
     // Copy written tuples to `records` table
@@ -170,20 +180,7 @@ class TransactionHandler {
           transaction.transactionId, writtenTuple, coordinatorState.get().txCommittedAt);
     }
     metricsLogger.incrementHandledCommittedTransactions();
-    return true;
-  }
-
-  /**
-   * Handle a transaction
-   *
-   * @param transaction A transaction
-   * @return true if the transaction has finished and the transaction is removed, false otherwise.
-   */
-  boolean handleTransaction(Transaction transaction) throws ExecutionException {
-    if (copyTuplesToRecords(transaction)) {
-      replicationTransactionRepository.delete(transaction);
-      return true;
-    }
-    return false;
+    replicationTransactionRepository.delete(transaction);
+    return Optional.empty();
   }
 }

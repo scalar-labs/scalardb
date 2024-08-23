@@ -43,7 +43,7 @@ public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
             () -> replicationTransactionRepository.scan(partitionId, conf.fetchSize));
     int finishedTransactions = 0;
     for (Transaction transaction : scannedTxns) {
-      if (transactionHandler.handleTransaction(transaction)) {
+      if (!transactionHandler.handleTransaction(transaction).isPresent()) {
         finishedTransactions++;
       }
     }

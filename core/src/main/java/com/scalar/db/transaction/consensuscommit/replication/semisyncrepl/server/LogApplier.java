@@ -219,6 +219,7 @@ public class LogApplier {
             metricsLogger)
         .run();
 
+    /*
     new TransactionHandlerWorker(
             new TransactionHandlerWorker.Configuration(
                 REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
@@ -229,6 +230,7 @@ public class LogApplier {
             replicationTransactionRepository,
             metricsLogger)
         .run();
+     */
 
     while (true) {
       TimeUnit.MINUTES.sleep(1);
