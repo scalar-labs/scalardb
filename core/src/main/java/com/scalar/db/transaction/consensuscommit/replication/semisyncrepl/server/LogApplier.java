@@ -63,25 +63,25 @@ public class LogApplier {
               + ENV_VAR_COORDINATOR_STATE_CONFIG);
     }
 
-    int numOfBulkTransactionHandlerThreads = 8;
+    int numOfBulkTransactionHandlerThreads = 32;
     if (System.getenv(ENV_VAR_NUM_OF_BULK_TRANSACTION_HANDLER_THREADS) != null) {
       numOfBulkTransactionHandlerThreads =
           Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_BULK_TRANSACTION_HANDLER_THREADS));
     }
 
-    int numOfTransactionHandlerThreads = 8;
+    int numOfTransactionHandlerThreads = 32;
     if (System.getenv(ENV_VAR_NUM_OF_TRANSACTION_HANDLER_THREADS) != null) {
       numOfTransactionHandlerThreads =
           Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_TRANSACTION_HANDLER_THREADS));
     }
 
-    int numOfTransactionQueueConsumerThreads = 16;
+    int numOfTransactionQueueConsumerThreads = 8;
     if (System.getenv(ENV_VAR_NUM_OF_TRANSACTION_QUEUE_CONSUMER_THREADS) != null) {
       numOfTransactionQueueConsumerThreads =
           Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_TRANSACTION_QUEUE_CONSUMER_THREADS));
     }
 
-    int numOfRecordHandlerThreads = 8;
+    int numOfRecordHandlerThreads = 16;
     if (System.getenv(ENV_VAR_NUM_OF_RECORD_HANDLER_THREADS) != null) {
       numOfRecordHandlerThreads =
           Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_RECORD_HANDLER_THREADS));
@@ -93,7 +93,7 @@ public class LogApplier {
           Integer.parseInt(System.getenv(ENV_VAR_NUM_OF_RECORD_QUEUE_CONSUMER_THREADS));
     }
 
-    int transactionFetchSize = 16;
+    int transactionFetchSize = 32;
     if (System.getenv(ENV_VAR_TRANSACTION_FETCH_SIZE) != null) {
       transactionFetchSize = Integer.parseInt(System.getenv(ENV_VAR_TRANSACTION_FETCH_SIZE));
     }
@@ -219,7 +219,6 @@ public class LogApplier {
             metricsLogger)
         .run();
 
-    /*
     new TransactionHandlerWorker(
             new TransactionHandlerWorker.Configuration(
                 REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
@@ -230,7 +229,6 @@ public class LogApplier {
             replicationTransactionRepository,
             metricsLogger)
         .run();
-     */
 
     while (true) {
       TimeUnit.MINUTES.sleep(1);

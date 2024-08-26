@@ -48,6 +48,7 @@ public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
       }
     }
 
+    // TODO: scannedTxns.size() >= conf.fetchSize;
     return finishedTransactions >= conf.fetchSize;
   }
 }

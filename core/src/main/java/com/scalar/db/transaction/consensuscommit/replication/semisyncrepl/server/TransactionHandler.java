@@ -159,14 +159,17 @@ class TransactionHandler {
     if (!coordinatorState.isPresent()) {
       metricsLogger.incrementUncommittedTransactions();
       // TODO: Maybe always updating `updated_at` works better.
-      // if (transaction.updatedAt.isBefore(now.minusMillis(oldTransactionThresholdMillis))) {
-      logger.info(
-          "Updating an ongoing transaction to be handled later. txId:{}",
-          transaction.transactionId);
-      Transaction updatedTransaction =
-          replicationTransactionRepository.updateUpdatedAt(transaction);
-      return Optional.of(updatedTransaction);
-      // }
+      if (transaction.updatedAt.isBefore(
+          Instant.now().minusMillis(oldTransactionThresholdMillis))) {
+        logger.info(
+            "Updating an ongoing transaction to be handled later. txId:{}",
+            transaction.transactionId);
+        Transaction updatedTransaction =
+            replicationTransactionRepository.updateUpdatedAt(transaction);
+        return Optional.of(updatedTransaction);
+      } else {
+        return Optional.of(transaction);
+      }
     }
     if (coordinatorState.get().txState != TransactionState.COMMITTED) {
       metricsLogger.incrementAbortedTransactions();
