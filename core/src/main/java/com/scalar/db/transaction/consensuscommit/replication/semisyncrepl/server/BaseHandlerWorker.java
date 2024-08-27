@@ -5,6 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,7 @@ import org.slf4j.LoggerFactory;
 public abstract class BaseHandlerWorker<T> {
   private static final Logger logger = LoggerFactory.getLogger(BaseHandlerWorker.class);
 
-  private final ExecutorService executorService;
+  @Nullable private final ExecutorService executorService;
   private final Configuration conf;
   private final MetricsLogger metricsLogger;
 
@@ -31,22 +32,27 @@ public abstract class BaseHandlerWorker<T> {
   }
 
   public BaseHandlerWorker(Configuration conf, String label, MetricsLogger metricsLogger) {
-    if (conf.threadSize > 0 && conf.replicationDbPartitionSize % conf.threadSize != 0) {
-      throw new IllegalArgumentException(
-          String.format(
-              "`replicationDbPartitionSize`(%d) should be a multiple of `replicationDbThreadSize`(%d)",
-              conf.replicationDbPartitionSize, conf.threadSize));
-    }
     this.conf = conf;
-    this.executorService =
-        Executors.newFixedThreadPool(
-            conf.threadSize,
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(String.format("log-distributor-%s", label) + "-%d")
-                .setUncaughtExceptionHandler(
-                    (thread, e) -> logger.error("Got an uncaught exception. thread:{}", thread, e))
-                .build());
+    if (conf.threadSize > 0) {
+      if (conf.replicationDbPartitionSize % conf.threadSize != 0) {
+        throw new IllegalArgumentException(
+            String.format(
+                "`replicationDbPartitionSize`(%d) should be a multiple of `replicationDbThreadSize`(%d)",
+                conf.replicationDbPartitionSize, conf.threadSize));
+      }
+      this.executorService =
+          Executors.newFixedThreadPool(
+              conf.threadSize,
+              new ThreadFactoryBuilder()
+                  .setDaemon(true)
+                  .setNameFormat(String.format("log-distributor-%s", label) + "-%d")
+                  .setUncaughtExceptionHandler(
+                      (thread, e) ->
+                          logger.error("Got an uncaught exception. thread:{}", thread, e))
+                  .build());
+    } else {
+      this.executorService = null;
+    }
     this.metricsLogger = metricsLogger;
   }
 
@@ -118,7 +124,9 @@ public abstract class BaseHandlerWorker<T> {
   public void run() {
     for (int i = 0; i < conf.threadSize; i++) {
       int startPartitionId = i;
-      executorService.execute(() -> handlePartitions(startPartitionId));
+      if (executorService != null) {
+        executorService.execute(() -> handlePartitions(startPartitionId));
+      }
     }
   }
 }
