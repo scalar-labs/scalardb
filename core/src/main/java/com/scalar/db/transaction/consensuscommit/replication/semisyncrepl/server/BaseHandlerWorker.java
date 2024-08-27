@@ -31,7 +31,7 @@ public abstract class BaseHandlerWorker<T> {
   }
 
   public BaseHandlerWorker(Configuration conf, String label, MetricsLogger metricsLogger) {
-    if (conf.replicationDbPartitionSize % conf.threadSize != 0) {
+    if (conf.threadSize > 0 && conf.replicationDbPartitionSize % conf.threadSize != 0) {
       throw new IllegalArgumentException(
           String.format(
               "`replicationDbPartitionSize`(%d) should be a multiple of `replicationDbThreadSize`(%d)",
