@@ -38,12 +38,14 @@ public class TransactionQueueConsumer {
       InMemoryQueue<Transaction> queue,
       MetricsLogger metricsLogger) {
 
+    /*
     if (queue.size() != conf.threadSize) {
       throw new IllegalArgumentException(
           String.format(
               "The size of the queues (%d) should be same as the size of threads (%d)",
               queue.size(), conf.threadSize));
     }
+     */
     this.conf = conf;
     this.transactionHandler = transactionHandler;
     this.executorService =

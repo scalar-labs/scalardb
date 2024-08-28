@@ -10,6 +10,9 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder.Buildable;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
@@ -17,14 +20,18 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.Utils;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +82,76 @@ public class ReplicationRecordRepository {
           String.format(
               "Failed to create a key for record. namespace:%s, table:%s, pk:%s, ck:%s",
               namespace, table, partitionKey, clusteringKey));
+    }
+  }
+
+  public static class ScanResult {
+    public final Long oldestAppendedAtMillis;
+    public final List<Key> keys;
+
+    public ScanResult(Long oldestAppendedAtMillis, List<Key> keys) {
+      this.oldestAppendedAtMillis = oldestAppendedAtMillis;
+      this.keys = keys;
+    }
+  }
+
+  public ScanResult scan(int fetchSize, Long nextOldestAppendedAtMillis)
+      throws ExecutionException, IOException {
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(replicationDbNamespace)
+            .table(replicationDbRecordsTable)
+            .all()
+            .ordering(Ordering.asc("appended_at"))
+            .where(
+                ConditionBuilder.buildConditionalExpression(
+                    BigIntColumn.ofNull("appended_at"), Operator.IS_NOT_NULL))
+            .and(
+                ConditionBuilder.buildConditionalExpression(
+                    BigIntColumn.of("appended_at", nextOldestAppendedAtMillis), Operator.LT))
+            .limit(fetchSize)
+            .projections("namespace", "table", "pk", "ck", "appended_at")
+            .build();
+
+    AtomicReference<Long> oldestAppendedAtMillis = new AtomicReference<>();
+    try (Scanner scanner = replicationDbStorage.scan(scan)) {
+      List<Key> keys =
+          scanner.all().stream()
+              .map(
+                  result -> {
+                    long appendedAt = result.getBigInt("appended_at");
+                    if (appendedAt == 0) {
+                      throw new AssertionError();
+                    }
+
+                    if (oldestAppendedAtMillis.get() == null
+                        || appendedAt < oldestAppendedAtMillis.get()) {
+                      oldestAppendedAtMillis.set(appendedAt);
+                    }
+
+                    try {
+                      return createKey(
+                          Objects.requireNonNull(result.getText("namespace")),
+                          Objects.requireNonNull(result.getText("table")),
+                          objectMapper.readValue(
+                              result.getText("pk"),
+                              com.scalar.db.transaction.consensuscommit.replication.semisyncrepl
+                                  .model.Key.class),
+                          objectMapper.readValue(
+                              result.getText("ck"),
+                              com.scalar.db.transaction.consensuscommit.replication.semisyncrepl
+                                  .model.Key.class));
+                    } catch (JsonProcessingException e) {
+                      throw new RuntimeException("Failed to deserialize JSON into a key", e);
+                    }
+                  })
+              .collect(Collectors.toList());
+
+      if (oldestAppendedAtMillis.get() == null && !keys.isEmpty()) {
+        throw new AssertionError();
+      }
+
+      return new ScanResult(oldestAppendedAtMillis.get(), keys);
     }
   }
 
@@ -175,7 +252,11 @@ public class ReplicationRecordRepository {
           "[upsertWithNewValue]\n  key:{}\n  values=[{}]\n", key, Utils.convValuesToString(values));
 
       replicationDbStorage.put(
-          putBuilder.textValue("values", objectMapper.writeValueAsString(values)).build());
+          putBuilder
+              .textValue("values", objectMapper.writeValueAsString(values))
+              // Mark any values are appended and not handled yet.
+              .bigIntValue("appended_at", System.currentTimeMillis())
+              .build());
     } catch (JsonProcessingException e) {
       throw new RuntimeException("Failed to serialize `values` for key:" + key, e);
     }
@@ -226,6 +307,8 @@ public class ReplicationRecordRepository {
               // Clear `prep_tx_id` for subsequent transactions
               .textValue("prep_tx_id", null)
               .booleanValue("deleted", deleted)
+              // Mark the values are handled already.
+              .bigIntValue("appended_at", null)
               .build());
       return nextVersion;
     } catch (JsonProcessingException e) {

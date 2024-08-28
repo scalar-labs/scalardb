@@ -66,6 +66,9 @@
       "pk",
       "ck"
     ],
+    "secondary-index": [
+      "appended_at"
+    ],
     "columns": {
       "namespace": "TEXT",
       "table": "TEXT",

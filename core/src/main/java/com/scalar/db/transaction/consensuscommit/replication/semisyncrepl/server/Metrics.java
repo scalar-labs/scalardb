@@ -2,8 +2,8 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.serve
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -33,11 +33,10 @@ class Metrics {
   public final AtomicInteger exceptionCountInDistributor = new AtomicInteger();
 
   private final InMemoryQueue<Transaction> transactionQueue;
-  private final InMemoryQueue<UpdatedRecord> updatedRecordQueue;
+  private final InMemoryQueue<Key> updatedRecordQueue;
 
   public Metrics(
-      InMemoryQueue<Transaction> transactionQueue,
-      InMemoryQueue<UpdatedRecord> updatedRecordQueue) {
+      InMemoryQueue<Transaction> transactionQueue, InMemoryQueue<Key> updatedRecordQueue) {
     this.transactionQueue = transactionQueue;
     this.updatedRecordQueue = updatedRecordQueue;
   }

@@ -2,7 +2,7 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.serve
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
+import com.scalar.db.io.Key;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,7 +16,7 @@ public class RecordQueueConsumer {
   private final RecordHandler recordHandler;
   private final ExecutorService executorService;
   private final Configuration conf;
-  private final InMemoryQueue<UpdatedRecord> queue;
+  private final InMemoryQueue<Key> queue;
   private final MetricsLogger metricsLogger;
 
   @Immutable
@@ -33,15 +33,17 @@ public class RecordQueueConsumer {
   public RecordQueueConsumer(
       Configuration conf,
       RecordHandler recordHandler,
-      InMemoryQueue<UpdatedRecord> queue,
+      InMemoryQueue<Key> queue,
       MetricsLogger metricsLogger) {
 
+    /*
     if (queue.size() != conf.threadSize) {
       throw new IllegalArgumentException(
           String.format(
               "The size of the queues (%d) should be same as the size of threads (%d)",
               queue.size(), conf.threadSize));
     }
+     */
     this.conf = conf;
     this.recordHandler = recordHandler;
 
@@ -65,23 +67,23 @@ public class RecordQueueConsumer {
       executorService.execute(
           () -> {
             while (true) {
-              UpdatedRecord updatedRecord = null;
+              Key key = null;
               try {
                 metricsLogger.incrementDequeueFromUpdatedRecordQueue();
-                updatedRecord = queue.dequeue(threadId);
-                if (!recordHandler.handleUpdatedRecord(updatedRecord)) {
+                key = queue.dequeue(threadId);
+                if (!recordHandler.handleKey(key)) {
                   metricsLogger.incrementReEnqueueFromUpdatedRecordQueue();
-                  queue.enqueue(threadId, updatedRecord);
+                  queue.enqueue(threadId, key);
                 }
               } catch (InterruptedException e) {
                 // TODO: Error handling.
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
               } catch (Exception e) {
-                logger.error("Failed to handle a dequeued UpdatedRecord: {}", updatedRecord, e);
-                if (updatedRecord != null) {
+                logger.error("Failed to handle a dequeued UpdatedRecord: {}", key, e);
+                if (key != null) {
                   metricsLogger.incrementReEnqueueFromUpdatedRecordQueue();
-                  queue.enqueue(threadId, updatedRecord);
+                  queue.enqueue(threadId, key);
                 }
                 Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
               }

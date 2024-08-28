@@ -2,12 +2,11 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.serve
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
 import java.util.List;
 import javax.annotation.concurrent.Immutable;
 
-public class TransactionHandlerWorker extends BaseHandlerWorker<UpdatedRecord> {
+public class TransactionHandlerWorker extends BaseHandlerWorker {
   private final ReplicationTransactionRepository replicationTransactionRepository;
   private final TransactionHandlerWorker.Configuration conf;
   private final MetricsLogger metricsLogger;

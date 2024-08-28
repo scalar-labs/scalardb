@@ -1,9 +1,9 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
+import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.BulkTransaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +17,10 @@ public class MetricsLogger {
   private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
   private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
   private final InMemoryQueue<Transaction> transactionQueue;
-  private final InMemoryQueue<UpdatedRecord> updatedRecordQueue;
+  private final InMemoryQueue<Key> updatedRecordQueue;
 
   public MetricsLogger(
-      InMemoryQueue<Transaction> transactionQueue,
-      InMemoryQueue<UpdatedRecord> updatedRecordQueue) {
+      InMemoryQueue<Transaction> transactionQueue, InMemoryQueue<Key> updatedRecordQueue) {
     String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
     this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
     this.transactionQueue = transactionQueue;
@@ -171,8 +170,8 @@ public class MetricsLogger {
     return resultWithDuration.result;
   }
 
-  public List<UpdatedRecord> execFetchUpdatedRecords(Task<List<UpdatedRecord>> task) {
-    ResultWithDuration<List<UpdatedRecord>> resultWithDuration = captureDuration(task);
+  public List<Key> execFetchUpdatedRecords(Task<List<Key>> task) {
+    ResultWithDuration<List<Key>> resultWithDuration = captureDuration(task);
     if (!isEnabled) {
       return resultWithDuration.result;
     }

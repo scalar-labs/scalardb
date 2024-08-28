@@ -2,14 +2,13 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.serve
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationBulkTransactionRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.TransactionQueueConsumer.Configuration;
 import java.io.IOException;
 import java.io.InputStream;
@@ -123,13 +122,6 @@ public class LogApplier {
             "replication",
             "records");
 
-    ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository =
-        new ReplicationUpdatedRecordRepository(
-            StorageFactory.create(replicationDbConfigPath).getStorage(),
-            objectMapper,
-            "replication",
-            "updated_records");
-
     ReplicationTransactionRepository replicationTransactionRepository =
         new ReplicationTransactionRepository(
             StorageFactory.create(replicationDbConfigPath).getStorage(),
@@ -146,8 +138,7 @@ public class LogApplier {
 
     InMemoryQueue<Transaction> transactionQueue =
         new InMemoryQueue<>(numOfTransactionQueueConsumerThreads);
-    InMemoryQueue<UpdatedRecord> updatedRecordQueue =
-        new InMemoryQueue<>(numOfRecordQueueConsumerThreads);
+    InMemoryQueue<Key> updatedRecordQueue = new InMemoryQueue<>(numOfRecordQueueConsumerThreads);
 
     // FIXME
     MetricsLogger metricsLogger = new MetricsLogger(transactionQueue, updatedRecordQueue);
@@ -160,10 +151,16 @@ public class LogApplier {
 
     RecordHandler recordHandler =
         new RecordHandler(
-            replicationUpdatedRecordRepository,
             replicationRecordRepository,
             StorageFactory.create(backupScalarDbProps).getStorage(),
             metricsLogger);
+
+    new RecordScanWorker(
+            new RecordScanWorker.Configuration(2048, 4000),
+            replicationRecordRepository,
+            updatedRecordQueue,
+            metricsLogger)
+        .run();
 
     RecordQueueConsumer recordQueueConsumer =
         new RecordQueueConsumer(
@@ -173,21 +170,6 @@ public class LogApplier {
             updatedRecordQueue,
             metricsLogger);
     recordQueueConsumer.run();
-
-    new RecordHandlerWorker(
-            new RecordHandlerWorker.Configuration(
-                // TODO: The partition size can be different from other partition sizes on other
-                //       tables.
-                REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
-                numOfRecordHandlerThreads,
-                waitMillisPerPartition,
-                transactionFetchSize,
-                // FIXME
-                0),
-            recordHandler,
-            replicationUpdatedRecordRepository,
-            metricsLogger)
-        .run();
 
     new BulkTransactionHandlerWorker(
             new BulkTransactionHandlerWorker.Configuration(
@@ -206,7 +188,6 @@ public class LogApplier {
             REPLICATION_DB_BULK_TRANSACTION_PARTITION_SIZE,
             thresholdMillisForOldTransaction,
             replicationTransactionRepository,
-            replicationUpdatedRecordRepository,
             replicationRecordRepository,
             coordinatorStateRepository,
             updatedRecordQueue,

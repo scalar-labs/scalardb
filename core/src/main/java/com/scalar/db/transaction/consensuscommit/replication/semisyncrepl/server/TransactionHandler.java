@@ -10,13 +10,11 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.WrittenTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
 import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -27,28 +25,25 @@ class TransactionHandler {
   private final int recordTablePartitionSize;
   private final long oldTransactionThresholdMillis;
   private final ReplicationTransactionRepository replicationTransactionRepository;
-  private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
   private final ReplicationRecordRepository replicationRecordRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
-  private final InMemoryQueue<UpdatedRecord> queue;
+  private final InMemoryQueue<Key> recordQueue;
   private final MetricsLogger metricsLogger;
 
   public TransactionHandler(
       int recordTablePartitionSize,
       long oldTransactionThresholdMillis,
       ReplicationTransactionRepository replicationTransactionRepository,
-      ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
       CoordinatorStateRepository coordinatorStateRepository,
-      InMemoryQueue<UpdatedRecord> queue,
+      InMemoryQueue<Key> recordQueue,
       MetricsLogger metricsLogger) {
     this.recordTablePartitionSize = recordTablePartitionSize;
     this.oldTransactionThresholdMillis = oldTransactionThresholdMillis;
     this.replicationTransactionRepository = replicationTransactionRepository;
-    this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
     this.replicationRecordRepository = replicationRecordRepository;
     this.coordinatorStateRepository = coordinatorStateRepository;
-    this.queue = queue;
+    this.recordQueue = recordQueue;
     this.metricsLogger = metricsLogger;
   }
 
@@ -114,24 +109,16 @@ class TransactionHandler {
                             writtenTuple.clusteringKey))
                     % recordTablePartitionSize;
 
-            UpdatedRecord updatedRecord =
-                new UpdatedRecord(
-                    partitionIdForRecord,
-                    writtenTuple.namespace,
-                    writtenTuple.table,
-                    writtenTuple.partitionKey,
-                    writtenTuple.clusteringKey,
-                    Instant.now(),
-                    nextVersion);
-
-            // Persistent a notification to downstream workers.
-            replicationUpdatedRecordRepository.add(updatedRecord);
-
             // Add the new values to the record.
             replicationRecordRepository.upsertWithNewValue(key, recordOpt, newValue);
 
-            // Notify downstream workers via in-memory queue.
-            queue.enqueue(partitionIdForRecord, updatedRecord);
+            recordQueue.enqueue(
+                partitionIdForRecord,
+                replicationRecordRepository.createKey(
+                    writtenTuple.namespace,
+                    writtenTuple.table,
+                    writtenTuple.partitionKey,
+                    writtenTuple.clusteringKey));
 
             return null;
           });
