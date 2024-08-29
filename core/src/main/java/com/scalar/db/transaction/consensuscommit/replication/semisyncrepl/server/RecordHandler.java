@@ -23,10 +23,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.ResultOfKeyHandling;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashMap;
@@ -44,17 +41,14 @@ import org.slf4j.LoggerFactory;
 
 class RecordHandler {
   private static final Logger logger = LoggerFactory.getLogger(RecordHandler.class);
-  private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
   private final ReplicationRecordRepository replicationRecordRepository;
   private final DistributedStorage backupScalarDbStorage;
   private final MetricsLogger metricsLogger;
 
   RecordHandler(
-      ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
       DistributedStorage backupScalarDbStorage,
       MetricsLogger metricsLogger) {
-    this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
     this.replicationRecordRepository = replicationRecordRepository;
     this.backupScalarDbStorage = backupScalarDbStorage;
     this.metricsLogger = metricsLogger;
@@ -363,33 +357,16 @@ class RecordHandler {
     }
   }
 
-  /**
-   * Handle an updated record
-   *
-   * @param updatedRecord
-   * @return true if handling the updated record has finished and the updated record is removed,
-   *     false otherwise.
-   * @throws ExecutionException
-   */
-  boolean handleUpdatedRecord(UpdatedRecord updatedRecord) throws ExecutionException {
-    ResultOfKeyHandling result =
-        handleKey(
-            replicationRecordRepository.createKey(
-                updatedRecord.namespace, updatedRecord.table, updatedRecord.pk, updatedRecord.ck),
-            true);
+  static class ResultOfKeyHandling {
+    final Long currentRecordVersion;
+    final boolean remainingValueExists;
+    final boolean nextConnectedValueExists;
 
-    if (result.currentRecordVersion == null) {
-      // The record doesn't exist yet. It's possible that only the notification was handled before
-      // writing the record. Therefore, a retry is needed. The notification should be reused and
-      // kept.
-      return false;
-    } else if (result.nextConnectedValueExists) {
-      // There are connected values to be handled immediately. The notification should be reused and
-      // kept.
-      return false;
+    ResultOfKeyHandling(
+        Long currentRecordVersion, boolean remainingValueExists, boolean nextConnectedValueExists) {
+      this.currentRecordVersion = currentRecordVersion;
+      this.remainingValueExists = remainingValueExists;
+      this.nextConnectedValueExists = nextConnectedValueExists;
     }
-
-    replicationUpdatedRecordRepository.delete(updatedRecord);
-    return true;
   }
 }

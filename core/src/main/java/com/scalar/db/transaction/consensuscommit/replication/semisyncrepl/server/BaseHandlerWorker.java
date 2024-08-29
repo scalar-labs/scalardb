@@ -1,7 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.scalar.db.exception.storage.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -10,7 +9,7 @@ import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class BaseHandlerWorker<T> {
+public abstract class BaseHandlerWorker {
   private static final Logger logger = LoggerFactory.getLogger(BaseHandlerWorker.class);
 
   @Nullable private final ExecutorService executorService;
@@ -119,7 +118,7 @@ public abstract class BaseHandlerWorker<T> {
     }
   }
 
-  protected abstract boolean handlePartition(int partitionId) throws ExecutionException;
+  protected abstract boolean handlePartition(int partitionId) throws Exception;
 
   public void run() {
     for (int i = 0; i < conf.threadSize; i++) {

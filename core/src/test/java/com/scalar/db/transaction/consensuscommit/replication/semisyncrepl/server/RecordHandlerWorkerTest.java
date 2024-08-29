@@ -29,7 +29,7 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandlerWorker.ResultOfKeyHandling;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandler.ResultOfKeyHandling;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;

@@ -1,8 +1,9 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
-import com.google.common.base.Objects;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.CoordinatorState;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.DeletedTuple;
@@ -10,50 +11,54 @@ import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record.Value;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.WrittenTuple;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationRecordRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationUpdatedRecordRepository;
+import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server.RecordHandler.ResultOfKeyHandling;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.function.FailableRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class TransactionHandler {
   private static final Logger logger = LoggerFactory.getLogger(TransactionHandler.class);
-  private final int recordTablePartitionSize;
   private final long oldTransactionThresholdMillis;
   private final ReplicationTransactionRepository replicationTransactionRepository;
-  private final ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository;
   private final ReplicationRecordRepository replicationRecordRepository;
   private final CoordinatorStateRepository coordinatorStateRepository;
-  private final InMemoryQueue<UpdatedRecord> queue;
+  private final RecordHandler recordHandler;
+  private final ExecutorService recordHandlerExecutorService;
   private final MetricsLogger metricsLogger;
 
   public TransactionHandler(
       int recordTablePartitionSize,
       long oldTransactionThresholdMillis,
       ReplicationTransactionRepository replicationTransactionRepository,
-      ReplicationUpdatedRecordRepository replicationUpdatedRecordRepository,
       ReplicationRecordRepository replicationRecordRepository,
       CoordinatorStateRepository coordinatorStateRepository,
-      InMemoryQueue<UpdatedRecord> queue,
+      RecordHandler recordHandler,
+      ExecutorService recordHandlerExecutorService,
       MetricsLogger metricsLogger) {
-    this.recordTablePartitionSize = recordTablePartitionSize;
     this.oldTransactionThresholdMillis = oldTransactionThresholdMillis;
     this.replicationTransactionRepository = replicationTransactionRepository;
-    this.replicationUpdatedRecordRepository = replicationUpdatedRecordRepository;
     this.replicationRecordRepository = replicationRecordRepository;
     this.coordinatorStateRepository = coordinatorStateRepository;
-    this.queue = queue;
+    this.recordHandler = recordHandler;
+    this.recordHandlerExecutorService = recordHandlerExecutorService;
     this.metricsLogger = metricsLogger;
   }
 
   private void handleWrittenTuple(
-      String transactionId, WrittenTuple writtenTuple, Instant committedAt) {
+      String transactionId, WrittenTuple writtenTuple, Instant committedAt)
+      throws ExecutionException {
     Key key =
         replicationRecordRepository.createKey(
             writtenTuple.namespace,
@@ -99,48 +104,61 @@ class TransactionHandler {
       throw new AssertionError();
     }
 
-    try {
-      metricsLogger.execAppendValueToRecord(
-          () -> {
-            Optional<Record> recordOpt = replicationRecordRepository.get(key);
-            long nextVersion = replicationRecordRepository.nextVersion(recordOpt);
+    retryOnConflictException(
+        "copy a written tuple to the record",
+        key,
+        () ->
+            metricsLogger.execAppendValueToRecord(
+                () -> {
+                  Optional<Record> recordOpt = replicationRecordRepository.get(key);
+                  // Add the new values to the record.
+                  replicationRecordRepository.upsertWithNewValue(key, recordOpt, newValue);
+                  return null;
+                }));
 
-            int partitionIdForRecord =
-                Math.abs(
-                        Objects.hashCode(
-                            writtenTuple.namespace,
-                            writtenTuple.table,
-                            writtenTuple.partitionKey,
-                            writtenTuple.clusteringKey))
-                    % recordTablePartitionSize;
+    retryOnConflictException(
+        "handle the written tuple",
+        key,
+        () -> {
+          // Handle the new value.
+          while (true) {
+            ResultOfKeyHandling resultOfKeyHandling = recordHandler.handleKey(key, true);
+            if (resultOfKeyHandling.nextConnectedValueExists) {
+              // Need to handle the connected value immediately.
+            } else {
+              break;
+            }
+          }
+        });
+  }
 
-            UpdatedRecord updatedRecord =
-                new UpdatedRecord(
-                    partitionIdForRecord,
-                    writtenTuple.namespace,
-                    writtenTuple.table,
-                    writtenTuple.partitionKey,
-                    writtenTuple.clusteringKey,
-                    Instant.now(),
-                    nextVersion);
+  private boolean isConflictException(Throwable exception) {
+    Throwable e = exception;
+    while (e != null) {
+      if (e instanceof NoMutationException) {
+        return true;
+      }
 
-            // Persistent a notification to downstream workers.
-            replicationUpdatedRecordRepository.add(updatedRecord);
+      e = e.getCause();
+    }
+    return false;
+  }
 
-            // Add the new values to the record.
-            replicationRecordRepository.upsertWithNewValue(key, recordOpt, newValue);
-
-            // Notify downstream workers via in-memory queue.
-            queue.enqueue(partitionIdForRecord, updatedRecord);
-
-            return null;
-          });
-    } catch (Exception e) {
-      String message =
-          String.format(
-              "Failed to append the value. key:%s, txId:%s, newValue:%s",
-              key, transactionId, newValue);
-      throw new RuntimeException(message, e);
+  private void retryOnConflictException(
+      String taskDesc, Key key, FailableRunnable<ExecutionException> task)
+      throws ExecutionException {
+    while (true) {
+      try {
+        task.run();
+        return;
+      } catch (Exception e) {
+        if (isConflictException(e)) {
+          logger.warn("Failed to {} due to conflict. Retrying... Key:{}", taskDesc, key, e);
+          Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+        } else {
+          throw e;
+        }
+      }
     }
   }
 
@@ -152,7 +170,7 @@ class TransactionHandler {
    * @return a transaction with updated `updated_at` if the transaction hasn't finished, empty
    *     otherwise.
    */
-  Optional<Transaction> handleTransaction(Transaction transaction) throws ExecutionException {
+  Optional<Transaction> handleTransaction(Transaction transaction) throws Exception {
     metricsLogger.incrementScannedTransactions();
     Optional<CoordinatorState> coordinatorState =
         coordinatorStateRepository.get(transaction.transactionId);
@@ -177,11 +195,37 @@ class TransactionHandler {
       return Optional.empty();
     }
 
-    // Copy written tuples to `records` table
+    // Handle the written tuples.
+    List<Future<?>> futures = new ArrayList<>(transaction.writtenTuples.size());
     for (WrittenTuple writtenTuple : transaction.writtenTuples) {
-      handleWrittenTuple(
-          transaction.transactionId, writtenTuple, coordinatorState.get().txCommittedAt);
+      logger.debug(
+          "[handleTransaction]\n  transaction:{}\n  writtenTuple:{}\n", transaction, writtenTuple);
+
+      futures.add(
+          recordHandlerExecutorService.submit(
+              () -> {
+                try {
+                  handleWrittenTuple(
+                      transaction.transactionId,
+                      writtenTuple,
+                      coordinatorState.get().txCommittedAt);
+                } catch (Exception e) {
+                  throw new RuntimeException(
+                      String.format(
+                          "Failed to handle written tuples unexpectedly. Namespace:%s, Table:%s, Partition key:%s, Clustering key:%s",
+                          writtenTuple.namespace,
+                          writtenTuple.table,
+                          writtenTuple.partitionKey,
+                          writtenTuple.clusteringKey),
+                      e);
+                }
+              }));
     }
+    for (Future<?> future : futures) {
+      // If a timeout occurs unexpectedly, all the written tuples will be retries.
+      Uninterruptibles.getUninterruptibly(future, 60, TimeUnit.SECONDS);
+    }
+
     metricsLogger.incrementHandledCommittedTransactions();
     replicationTransactionRepository.delete(transaction);
     return Optional.empty();

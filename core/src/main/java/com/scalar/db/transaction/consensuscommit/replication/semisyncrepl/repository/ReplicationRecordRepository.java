@@ -151,6 +151,7 @@ public class ReplicationRecordRepository {
     return recordOpt.map(record -> record.version + 1).orElse(1L);
   }
 
+  // TODO: Return an updated record to avoid subsequent read operation.
   public void upsertWithNewValue(Key key, Optional<Record> recordOpt, Value newValue)
       throws ExecutionException {
     Buildable putBuilder =

@@ -3,12 +3,12 @@ package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.serve
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.BulkTransaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Transaction;
-import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.UpdatedRecord;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -17,15 +17,14 @@ public class MetricsLogger {
   private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
   private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
   private final InMemoryQueue<Transaction> transactionQueue;
-  private final InMemoryQueue<UpdatedRecord> updatedRecordQueue;
+  private final ExecutorService recordHandlerExecutorService;
 
   public MetricsLogger(
-      InMemoryQueue<Transaction> transactionQueue,
-      InMemoryQueue<UpdatedRecord> updatedRecordQueue) {
+      InMemoryQueue<Transaction> transactionQueue, ExecutorService recordHandlerExecutorService) {
     String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
     this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
     this.transactionQueue = transactionQueue;
-    this.updatedRecordQueue = updatedRecordQueue;
+    this.recordHandlerExecutorService = recordHandlerExecutorService;
   }
 
   private Instant currentTimestampRoundedInSeconds() {
@@ -37,7 +36,7 @@ public class MetricsLogger {
     Instant oldKey = keyHolder.getAndSet(currentKey);
     Metrics metrics =
         metricsMap.computeIfAbsent(
-            currentKey, k -> new Metrics(transactionQueue, updatedRecordQueue));
+            currentKey, k -> new Metrics(transactionQueue, recordHandlerExecutorService));
     consumer.accept(metrics);
     if (oldKey == null) {
       return;
@@ -166,20 +165,6 @@ public class MetricsLogger {
         metrics -> {
           metrics.totalCountToFetchBulkTransaction.incrementAndGet();
           metrics.totalDurationInMillisToFetchBulkTransaction.addAndGet(
-              resultWithDuration.durationInMillis);
-        });
-    return resultWithDuration.result;
-  }
-
-  public List<UpdatedRecord> execFetchUpdatedRecords(Task<List<UpdatedRecord>> task) {
-    ResultWithDuration<List<UpdatedRecord>> resultWithDuration = captureDuration(task);
-    if (!isEnabled) {
-      return resultWithDuration.result;
-    }
-    withPrintAndCleanup(
-        metrics -> {
-          metrics.totalCountToFetchUpdatedRecords.incrementAndGet();
-          metrics.totalDurationInMillisToFetchUpdatedRecords.addAndGet(
               resultWithDuration.durationInMillis);
         });
     return resultWithDuration.result;
