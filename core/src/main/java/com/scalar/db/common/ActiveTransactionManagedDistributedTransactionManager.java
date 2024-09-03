@@ -29,7 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class ActiveTransactionManagedDistributedTransactionManager
-    extends TransactionDecorationDistributedTransactionManager {
+    extends TransactionDecorationDistributedTransactionManager
+    implements DistributedTransactionExpirationHandlerSettable {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
@@ -61,6 +62,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
             });
   }
 
+  @Override
   public void setTransactionExpirationHandler(BiConsumer<String, DistributedTransaction> handler) {
     transactionExpirationHandler.set(handler);
   }

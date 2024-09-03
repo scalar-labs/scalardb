@@ -115,10 +115,10 @@ public enum CoreError implements ScalarDbError {
       "The clustering key is not properly specified. Operation: %s",
       "",
       ""),
-  NOT_SUPPORTED_IN_COMMUNITY_EDITION(
+  AUTH_NOT_ENABLED(
       Category.USER_ERROR,
       "0022",
-      "This feature is not supported in the ScalarDB Community edition",
+      "ScalarDB Auth is not enabled. To use ScalarDB Auth, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF(
@@ -647,10 +647,10 @@ public enum CoreError implements ScalarDbError {
           + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
-  ENCRYPTED_COLUMNS_NOT_SUPPORTED(
+  TRANSPARENT_DATA_ENCRYPTION_NOT_ENABLED(
       Category.USER_ERROR,
       "0143",
-      "Encrypted columns are not supported in the ScalarDB Community edition",
+      "ScalarDB Transparent Data Encryption is not enabled. To use ScalarDB Transparent Data Encryption, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
 

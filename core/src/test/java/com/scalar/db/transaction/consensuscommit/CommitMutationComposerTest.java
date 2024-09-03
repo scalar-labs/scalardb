@@ -6,6 +6,8 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionalExpression;
@@ -13,11 +15,13 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
@@ -26,6 +30,8 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ScalarDbUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 public class CommitMutationComposerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
@@ -50,11 +56,19 @@ public class CommitMutationComposerTest {
           .addClusteringKey(ANY_NAME_2)
           .build();
 
+  @Mock private TransactionTableMetadataManager tableMetadataManager;
+
   private CommitMutationComposer composer;
 
   @BeforeEach
-  public void setUp() {
-    composer = new CommitMutationComposer(ANY_ID, ANY_TIME_2);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    composer = new CommitMutationComposer(ANY_ID, ANY_TIME_2, tableMetadataManager);
+
+    when(tableMetadataManager.getTransactionTableMetadata(any(Operation.class)))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
   }
 
   private Put preparePut() {
@@ -99,7 +113,8 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_PutAndPreparedResultGiven_ShouldComposePutWithPutIfCondition() {
+  public void add_PutAndPreparedResultGiven_ShouldComposePutWithPutIfCondition()
+      throws ExecutionException {
     // Arrange
     Put put = preparePut();
     TransactionResult result = prepareResult(TransactionState.PREPARED);
@@ -125,7 +140,8 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_PutAndNullResultGiven_ShouldComposePutWithPutIfCondition() {
+  public void add_PutAndNullResultGiven_ShouldComposePutWithPutIfCondition()
+      throws ExecutionException {
     // Arrange
     Put put = preparePut();
 
@@ -150,7 +166,8 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_DeleteAndDeletedResultGiven_ShouldComposeDeleteWithDeleteIfCondition() {
+  public void add_DeleteAndDeletedResultGiven_ShouldComposeDeleteWithDeleteIfCondition()
+      throws ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
     TransactionResult result = prepareResult(TransactionState.DELETED);
@@ -169,7 +186,8 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_DeleteAndNullResultGiven_ShouldComposeDeleteWithDeleteIfCondition() {
+  public void add_DeleteAndNullResultGiven_ShouldComposeDeleteWithDeleteIfCondition()
+      throws ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
 
@@ -187,7 +205,8 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_SelectionAndPreparedResultGiven_ShouldComposePutForRollforward() {
+  public void add_SelectionAndPreparedResultGiven_ShouldComposePutForRollforward()
+      throws ExecutionException {
     // Arrange
     Get get = prepareGet();
     TransactionResult result = prepareResult(TransactionState.PREPARED);
@@ -213,7 +232,8 @@ public class CommitMutationComposerTest {
   }
 
   @Test
-  public void add_SelectionAndDeletedResultGiven_ShouldComposeDeleteForRollforward() {
+  public void add_SelectionAndDeletedResultGiven_ShouldComposeDeleteForRollforward()
+      throws ExecutionException {
     // Arrange
     Get get = prepareGet();
     TransactionResult result = prepareResult(TransactionState.DELETED);
@@ -237,7 +257,8 @@ public class CommitMutationComposerTest {
 
   @Test
   public void
-      add_GetAndNullResultGiven_ShouldComposeDeleteForDeletingNonExistingRecordForSerializableWithExtraWrite() {
+      add_GetAndNullResultGiven_ShouldComposeDeleteForDeletingNonExistingRecordForSerializableWithExtraWrite()
+          throws ExecutionException {
     // Arrange
     Get get = prepareGet();
 

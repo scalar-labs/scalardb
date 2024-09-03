@@ -19,16 +19,11 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
-import com.scalar.db.storage.rpc.GrpcAdmin;
-import com.scalar.db.storage.rpc.GrpcStorage;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionAdmin;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
-import com.scalar.db.transaction.rpc.GrpcTransactionAdmin;
-import com.scalar.db.transaction.rpc.GrpcTransactionManager;
-import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 
 /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
 @Deprecated
@@ -65,10 +60,6 @@ public class TransactionModule extends AbstractModule {
         storageClass = MultiStorage.class;
         storageAdminClass = MultiStorageAdmin.class;
         break;
-      case "grpc":
-        storageClass = GrpcStorage.class;
-        storageAdminClass = GrpcAdmin.class;
-        break;
       default:
         throw new IllegalArgumentException("Storage '" + config.getStorage() + "' isn't supported");
     }
@@ -89,11 +80,6 @@ public class TransactionModule extends AbstractModule {
         transactionManagerClass = JdbcTransactionManager.class;
         transactionAdminClass = JdbcTransactionAdmin.class;
         twoPhaseCommitTransactionManagerClass = null;
-        break;
-      case "grpc":
-        transactionManagerClass = GrpcTransactionManager.class;
-        transactionAdminClass = GrpcTransactionAdmin.class;
-        twoPhaseCommitTransactionManagerClass = GrpcTwoPhaseCommitTransactionManager.class;
         break;
       default:
         throw new IllegalArgumentException(
