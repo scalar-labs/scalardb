@@ -9,54 +9,10 @@ on:
     types:
       - closed
 
-env:
-  TERM: dumb
 jobs:
   if_merged:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GH_PR_PAT }}
-      # Escape the PR title. See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable for details
-      PR_TITLE: ${{ github.event.pull_request.title }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # This is necessary to avoid unexpected auto-merge in git cherry-pick
-          fetch-depth: 0
-          # This is necessary for git-push
-          token: ${{ secrets.GH_PR_PAT }}
-
-      - name: Create pull requests
-        run: |
-          assignee=$(ci/auto-pr/fetch_gh_user_info "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.pull_request.user.login }}")
-          echo -------------
-          echo "assignee: $assignee"
-          echo -------------
-          if [[ -z $assignee ]]; then
-            # For instance, we can't assign `debendabot` to a new PR.
-            new_pr_assignee="${{ github.event.pull_request.merged_by.login }}"
-          else
-            new_pr_assignee="${{ github.event.pull_request.user.login }}"
-          fi
-
-          versions=$(ci/auto-pr/fetch_gh_proj_versions "${{ github.event.repository.owner.login }}" "${{ github.event.repository.name }}" "${{ github.event.number }}")
-          echo -------------
-          echo "versions: $versions"
-          echo -------------
-
-          branches=$(ci/auto-pr/conv_proj_version_to_branch $versions)
-          # Remove the base branch from the list because the target change is already merged to the branch.
-          branches=$(echo "$branches" | sed "/^${{ github.base_ref }}$/d")
-          echo -------------
-          echo "branches: $branches"
-          echo -------------
-
-          ci/auto-pr/create_pull_requests \
-            "${{ github.event.number }}" \
-            "${{ github.event.pull_request.html_url }}" \
-            "$PR_TITLE" \
-            "${{ github.sha }}" \
-            "$new_pr_assignee" \
-            $branches
+    uses: scalar-labs/actions/.github/workflows/auto-pr-reusable.yaml@main
+    secrets: inherit
+    with:
+      project_base_name: "ScalarDB"
 
