@@ -381,6 +381,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void get_GetGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
         get, commitType);
@@ -390,6 +395,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scan_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
         scan, commitType);
@@ -446,6 +456,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void get_GetGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
       CommitType commitType) throws TransactionException, ExecutionException, CoordinatorException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(get, commitType);
   }
@@ -454,6 +469,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scan_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
       CommitType commitType) throws TransactionException, ExecutionException, CoordinatorException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(scan, commitType);
   }
@@ -493,6 +513,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         get, commitType);
@@ -504,6 +529,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scan, commitType);
@@ -557,6 +587,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         get, commitType);
@@ -568,6 +603,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         scan, commitType);
@@ -646,6 +686,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         get, commitType);
@@ -657,6 +702,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         scan, commitType);
@@ -734,6 +784,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         get, commitType);
@@ -745,6 +800,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         scan, commitType);
@@ -792,6 +852,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void get_GetGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
         get, commitType);
@@ -801,6 +866,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scan_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
         scan, commitType);
@@ -857,6 +927,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void get_GetGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(get, commitType);
   }
@@ -865,6 +940,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scan_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(scan, commitType);
   }
@@ -904,6 +984,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         get, commitType);
@@ -915,6 +1000,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scan, commitType);
@@ -968,6 +1058,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void get_GetGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         get, commitType);
@@ -977,6 +1072,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         scan, commitType);
@@ -1045,6 +1145,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         get, commitType);
@@ -1056,6 +1161,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         scan, commitType);
@@ -1133,6 +1243,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         get, commitType);
@@ -1144,6 +1259,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         scan, commitType);
@@ -3091,6 +3211,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
         scanAll, commitType);
@@ -3102,6 +3227,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         scanAll, commitType);
@@ -3111,6 +3241,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
         scanAll, commitType);
@@ -3122,6 +3257,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         scanAll, commitType);
@@ -3133,6 +3273,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         scanAll, commitType);
@@ -3144,6 +3289,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scanAll, commitType);
@@ -3171,6 +3321,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
       CommitType commitType) throws TransactionException, ExecutionException, CoordinatorException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
         scanAll, commitType);
@@ -3182,6 +3337,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         scanAll, commitType);
@@ -3191,6 +3351,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(CommitType.class)
   public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
       CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
         scanAll, commitType);
@@ -3202,6 +3367,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         scanAll, commitType);
@@ -3213,6 +3383,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         scanAll, commitType);
@@ -3224,6 +3399,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    // ScalarDB 3 doesn't have `coordinator.state.tx_child_ids` column when the group commit feature
+    // is disabled. Skip this test in this case.
+    if (!isGroupCommitEnabled() && commitType != CommitType.NORMAL_COMMIT) {
+      return;
+    }
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scanAll, commitType);
