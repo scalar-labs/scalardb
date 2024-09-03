@@ -837,7 +837,7 @@ jobs:
         with:
           name: postgresql_15_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
-
+  
   integration-test-for-jdbc-oracle-19:
     name: Oracle 19 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
