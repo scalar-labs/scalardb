@@ -55,10 +55,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
-      - name: Setup and execute Gradle 'check' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: check buildSrc:check
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'check' task
+        run: ./gradlew check buildSrc:check
 
       - name: Save Gradle test reports
         if: always()
@@ -109,16 +110,14 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Dockerfile Lint for ScalarDB Server
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: :server:dockerfileLint
+        run: ./gradlew server:dockerfileLint
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
-        if: always()
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: :schema-loader:dockerfileLint
+        run: ./gradlew schema-loader:dockerfileLint
 
   integration-test-for-cassandra-3-0:
     name: Cassandra 3.0 integration test
@@ -164,10 +163,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestCassandra' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestCassandra
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestCassandra' task
+        run: ./gradlew integrationTestCassandra
 
       - name: Upload Gradle test reports
         if: always()
@@ -220,10 +220,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestCassandra' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestCassandra
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestCassandra' task
+        run: ./gradlew integrationTestCassandra
 
       - name: Upload Gradle test reports
         if: always()
@@ -303,10 +304,11 @@ jobs:
           & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
           & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
 
-      - name: Setup and execute Gradle 'integrationTestCosmos' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestCosmos -Dscalardb.cosmos.uri=https://localhost:8081/ -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Dfile.encoding=UTF-8
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestCosmos' task
+        run: ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8"
 
       - name: Upload Gradle test reports
         if: always()
@@ -356,10 +358,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestDynamo' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestDynamo
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestDynamo' task
+        run: ./gradlew integrationTestDynamo
 
       - name: Upload Gradle test reports
         if: always()
@@ -407,10 +410,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
@@ -458,10 +462,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
@@ -509,10 +514,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
@@ -565,10 +571,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -621,10 +628,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -677,10 +685,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -734,10 +743,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
@@ -790,10 +800,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -837,7 +848,6 @@ jobs:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
@@ -853,10 +863,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -921,10 +932,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Stop Oracle 23 container
         if: always()
@@ -987,10 +999,11 @@ jobs:
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3
         timeout-minutes: 1
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -1049,10 +1062,11 @@ jobs:
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19 10 3
         timeout-minutes: 1
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -1111,10 +1125,11 @@ jobs:
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22 10 3
         timeout-minutes: 1
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
 
       - name: Upload Gradle test reports
         if: always()
@@ -1161,10 +1176,11 @@ jobs:
       - name: Set up SQLite3
         run: sudo apt-get install -y sqlite3
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
 
       - name: Upload Gradle test reports
         if: always()
@@ -1212,10 +1228,12 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -1262,10 +1280,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestJdbc' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestJdbc
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc
 
       - name: Upload Gradle test reports
         if: always()
@@ -1322,10 +1341,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestMultiStorage' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestMultiStorage
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestMultiStorage' task
+        run: ./gradlew integrationTestMultiStorage
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4
@@ -1373,10 +1393,11 @@ jobs:
           docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
           tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
 
-      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: integrationTestScalarDbServer
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestScalarDbServer' task
+        run: ./gradlew integrationTestScalarDbServer
 
       - name: Upload Gradle test reports
         uses: actions/upload-artifact@v4
