@@ -533,7 +533,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -545,7 +545,7 @@ public class ConsensusCommitManagerTest {
     Optional<Result> actual = spied.get(get);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).get(get);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(Optional.of(result));
@@ -557,7 +557,7 @@ public class ConsensusCommitManagerTest {
           throws TransactionException {
     // Arrange
     ConsensusCommitManager spied = spy(manager);
-    doThrow(TransactionNotFoundException.class).when(spied).begin();
+    doThrow(TransactionNotFoundException.class).when(spied).beginInternal();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -565,7 +565,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).begin();
+    verify(spied).beginInternal();
   }
 
   @Test
@@ -573,7 +573,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     ConsensusCommitManager spied = spy(manager);
-    doThrow(TransactionException.class).when(spied).begin();
+    doThrow(TransactionException.class).when(spied).beginInternal();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -581,7 +581,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).begin();
+    verify(spied).beginInternal();
   }
 
   @Test
@@ -591,7 +591,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -600,7 +600,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -613,7 +613,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -622,7 +622,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -635,7 +635,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -644,7 +644,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(UnknownTransactionStatusException.class);
 
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -656,7 +656,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -665,7 +665,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -676,7 +676,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Scan scan =
         Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -689,7 +689,7 @@ public class ConsensusCommitManagerTest {
     List<Result> actual = spied.scan(scan);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).scan(scan);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(results);
@@ -701,7 +701,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Put put =
         Put.newBuilder()
@@ -715,7 +715,7 @@ public class ConsensusCommitManagerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).put(put);
     verify(transaction).commit();
   }
@@ -726,7 +726,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     List<Put> puts =
         Arrays.asList(
@@ -753,7 +753,7 @@ public class ConsensusCommitManagerTest {
     spied.put(puts);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).put(puts);
     verify(transaction).commit();
   }
@@ -764,7 +764,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Insert insert =
         Insert.newBuilder()
@@ -778,7 +778,7 @@ public class ConsensusCommitManagerTest {
     spied.insert(insert);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).insert(insert);
     verify(transaction).commit();
   }
@@ -789,7 +789,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Upsert upsert =
         Upsert.newBuilder()
@@ -803,7 +803,7 @@ public class ConsensusCommitManagerTest {
     spied.upsert(upsert);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).upsert(upsert);
     verify(transaction).commit();
   }
@@ -814,7 +814,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Update update =
         Update.newBuilder()
@@ -828,7 +828,7 @@ public class ConsensusCommitManagerTest {
     spied.update(update);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).update(update);
     verify(transaction).commit();
   }
@@ -839,7 +839,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     Delete delete =
         Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -848,7 +848,7 @@ public class ConsensusCommitManagerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).delete(delete);
     verify(transaction).commit();
   }
@@ -859,7 +859,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     List<Delete> deletes =
         Arrays.asList(
@@ -883,7 +883,7 @@ public class ConsensusCommitManagerTest {
     spied.delete(deletes);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).delete(deletes);
     verify(transaction).commit();
   }
@@ -894,7 +894,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin();
+    doReturn(transaction).when(spied).beginInternal();
 
     List<Mutation> mutations =
         Arrays.asList(
@@ -932,7 +932,7 @@ public class ConsensusCommitManagerTest {
     spied.mutate(mutations);
 
     // Assert
-    verify(spied).begin();
+    verify(spied).beginInternal();
     verify(transaction).mutate(mutations);
     verify(transaction).commit();
   }
