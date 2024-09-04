@@ -114,7 +114,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Dockerfile Lint for ScalarDB Server
-        uses: gradle/gradle-build-action@v3
         run: ./gradlew server:dockerfileLint
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
@@ -1234,6 +1233,7 @@ jobs:
 
       - name: Execute Gradle 'integrationTestJdbc' task
         run: ./gradlew integrationTestJdbc
+
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v4
