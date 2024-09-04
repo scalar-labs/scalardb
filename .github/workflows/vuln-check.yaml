@@ -73,11 +73,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Docker build
         if: always()
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: docker
+        run: ./gradlew docker
 
       - name: Set version
         if: always()
