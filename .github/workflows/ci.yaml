@@ -1361,7 +1361,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Setup and execute Gradle 'integrationTestMultiStorage' task
+      - name: Execute Gradle 'integrationTestMultiStorage' task
         run: ./gradlew integrationTestMultiStorage
 
       - name: Upload Gradle test reports
@@ -1417,7 +1417,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Setup and execute Gradle 'integrationTestScalarDbServer' task
+      - name: Execute Gradle 'integrationTestScalarDbServer' task
         run: ./gradlew integrationTestScalarDbServer
 
       - name: Upload Gradle test reports
