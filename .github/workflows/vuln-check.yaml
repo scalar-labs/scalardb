@@ -73,11 +73,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Docker build
         if: always()
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: docker
+        run: ./gradlew docker
 
       - name: Set version
         if: always()
@@ -99,7 +100,7 @@ jobs:
 
       - name: Post Trivy vulnerability check failure for ScalarDB Schema Loader to Slack
         if: failure()
-        uses: slackapi/slack-github-action@v1.26.0
+        uses: slackapi/slack-github-action@v1.27.0
         with:
           payload: |
             {
