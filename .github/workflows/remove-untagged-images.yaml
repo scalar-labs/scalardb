@@ -14,6 +14,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: scalardb-server
+        uses: camargo/delete-untagged-action@v1
+        with:
+          github-token: ${{ secrets.CR_PAT }}
+          package-name: scalardb-server
+
       - name: scalardb-schema-loader
         uses: camargo/delete-untagged-action@v1
         with:
