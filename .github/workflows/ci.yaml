@@ -38,9 +38,8 @@ env:
   ORG_GRADLE_PROJECT_javaVendor: 'temurin'
   ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
   ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
-  # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
-  SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
-  SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ (inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')) &&  'true' || 'false' }}"
+  # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK)} then {true} else {false}
+  SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle')) && 'true' || 'false' }}"
 
 jobs:
   check:
@@ -143,25 +142,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -200,25 +198,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -236,6 +233,10 @@ jobs:
   integration-test-for-cosmos:
     name: Cosmos DB integration test
     runs-on: windows-latest
+    env:
+      # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
+      SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
+      SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ (inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')) &&  'true' || 'false' }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -338,25 +339,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -390,25 +390,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -442,25 +441,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -494,25 +492,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -551,25 +548,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -608,25 +604,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -665,25 +660,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -722,26 +716,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -780,25 +772,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -843,25 +834,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -920,17 +910,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -975,25 +972,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3
@@ -1038,25 +1034,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19 10 3
@@ -1101,25 +1096,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Create no superuser
         run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22 10 3
@@ -1153,25 +1147,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Set up SQLite3
         run: sudo apt-get install -y sqlite3
@@ -1208,25 +1201,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -1260,25 +1252,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -1321,25 +1312,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -1373,25 +1363,24 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
+      - name: Login to Oracle container registry
         uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         run: |
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-linux")
-          docker cp "$container_id:oracle-jdk.tar.gz" . && docker rm "$container_id"
-          tar -xzf oracle-jdk.tar.gz -C /usr/lib/jvm
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
