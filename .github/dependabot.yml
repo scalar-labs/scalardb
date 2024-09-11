@@ -2,6 +2,10 @@ version: 2
 updates:
   # For Gradle, update dependencies and plugins to the latest non-major version
   - package-ecosystem: "gradle"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -12,10 +16,76 @@ updates:
         update-types: [ "version-update:semver-major" ]
       - dependency-name: "software.amazon.awssdk:*"
         update-types: [ "version-update:semver-patch" ]
-  # For GitHub Actions workflows, update all actions
+
+  # For GitHub Actions, update all actions on the default, support and release branches
   - package-ecosystem: "github-actions"
+    groups:
+      actions on branch master:
+        patterns:
+          - "*"
     directory: "/"
     schedule:
       interval: "weekly"
     reviewers:
       - "scalar-labs/scalardb"
+
+  - package-ecosystem: "github-actions"
+    target-branch: "3"
+    groups:
+      actions on branch 3:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    target-branch: "3.13"
+    groups:
+      actions on branch 3.13:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    target-branch: "3.12"
+    groups:
+      actions on branch 3.12:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    target-branch: "3.11"
+    groups:
+      actions on branch 3.11:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    target-branch: "3.10"
+    groups:
+      actions on branch 3.10:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    target-branch: "3.9"
+    groups:
+      actions on branch 3.9:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
