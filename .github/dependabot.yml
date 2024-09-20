@@ -38,6 +38,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.13"
@@ -48,6 +50,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.12"
@@ -58,6 +62,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.11"
@@ -68,6 +74,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.10"
@@ -78,6 +86,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.9"
@@ -88,4 +98,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    reviewers:
+      - "scalar-labs/scalardb"
 
