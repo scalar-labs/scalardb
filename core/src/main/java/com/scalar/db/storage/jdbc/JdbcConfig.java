@@ -66,6 +66,20 @@ public class JdbcConfig {
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
 
+  // MySQL and Oracle have limitations regarding the total size of key columns. Thus, we should set
+  // a small but enough key column size so that users can create multiple key columns without
+  // exceeding the limit and changing the default. Since we found the old default size of 64 bytes
+  // was small for some applications, we changed it based on the following specifications. See the
+  // official documents for details.
+  // 1) In MySQL, the maximum total size of key columns is 3072 bytes in the default, and thus,
+  // depending on the charset, it can be up to 768 characters long. It can further be reduced if the
+  // different settings are used.
+  // 2) In Oracle, the maximum total size of key columns is approximately 75% of the database block
+  // size minus some overhead. The default block size is 8KB, and it is typically 4kB or 8kB. Thus,
+  // the maximum size can be similar to the MySQL.
+  // See the official documents for details.
+  // https://dev.mysql.com/doc/refman/8.0/en/innodb-limits.html
+  // https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/logical-database-limits.html
   public static final int DEFAULT_VARIABLE_KEY_COLUMN_SIZE = 128;
 
   private final String jdbcUrl;
