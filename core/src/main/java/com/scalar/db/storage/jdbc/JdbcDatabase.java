@@ -18,7 +18,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -60,8 +59,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
-    jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
+    jdbcService = new JdbcService(tableMetadataManager, operationChecker, rdbEngine);
   }
 
   @VisibleForTesting

@@ -36,6 +36,8 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "50");
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "150");
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "200");
+    props.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "64");
+    props.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "64");
 
     // Act
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
@@ -60,6 +62,8 @@ public class JdbcConfigTest {
     assertThat(config.getAdminConnectionPoolMinIdle()).isEqualTo(50);
     assertThat(config.getAdminConnectionPoolMaxIdle()).isEqualTo(150);
     assertThat(config.getAdminConnectionPoolMaxTotal()).isEqualTo(200);
+    assertThat(config.getMysqlVariableKeyColumnSize()).isEqualTo(64);
+    assertThat(config.getOracleVariableKeyColumnSize()).isEqualTo(64);
   }
 
   @Test
@@ -99,6 +103,10 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE);
     assertThat(config.getTableMetadataConnectionPoolMaxTotal())
         .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
+    assertThat(config.getMysqlVariableKeyColumnSize())
+        .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+    assertThat(config.getOracleVariableKeyColumnSize())
+        .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
   }
 
   @Test

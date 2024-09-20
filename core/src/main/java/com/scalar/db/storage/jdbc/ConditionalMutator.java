@@ -46,14 +46,14 @@ public class ConditionalMutator implements MutationConditionVisitor {
       Mutation mutation,
       TableMetadata tableMetadata,
       Connection connection,
-      QueryBuilder queryBuilder)
-      throws SQLException {
+      RdbEngineStrategy rdbEngine,
+      QueryBuilder queryBuilder) {
     assert mutation.getCondition().isPresent();
     this.mutation = mutation;
     this.tableMetadata = tableMetadata;
     this.connection = connection;
+    this.rdbEngine = rdbEngine;
     this.queryBuilder = queryBuilder;
-    rdbEngine = RdbEngineFactory.create(connection);
   }
 
   // For the SpotBugs warning CT_CONSTRUCTOR_THROW

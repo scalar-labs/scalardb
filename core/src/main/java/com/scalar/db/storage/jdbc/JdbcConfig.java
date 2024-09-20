@@ -47,6 +47,11 @@ public class JdbcConfig {
   public static final String ADMIN_CONNECTION_POOL_MAX_TOTAL =
       PREFIX + "admin.connection_pool.max_total";
 
+  public static final String MYSQL_VARIABLE_KEY_COLUMN_SIZE =
+      PREFIX + "mysql.variable_key_column_size";
+  public static final String ORACLE_VARIABLE_KEY_COLUMN_SIZE =
+      PREFIX + "oracle.variable_key_column_size";
+
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
@@ -60,6 +65,8 @@ public class JdbcConfig {
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE = 5;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
+
+  public static final int DEFAULT_VARIABLE_KEY_COLUMN_SIZE = 128;
 
   private final String jdbcUrl;
   @Nullable private final String username;
@@ -81,6 +88,9 @@ public class JdbcConfig {
   private final int adminConnectionPoolMinIdle;
   private final int adminConnectionPoolMaxIdle;
   private final int adminConnectionPoolMaxTotal;
+
+  private final int mysqlVariableKeyColumnSize;
+  private final int oracleVariableKeyColumnSize;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -167,6 +177,18 @@ public class JdbcConfig {
             ADMIN_CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
 
+    mysqlVariableKeyColumnSize =
+        getInt(
+            databaseConfig.getProperties(),
+            MYSQL_VARIABLE_KEY_COLUMN_SIZE,
+            DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+
+    oracleVariableKeyColumnSize =
+        getInt(
+            databaseConfig.getProperties(),
+            MYSQL_VARIABLE_KEY_COLUMN_SIZE,
+            DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
           "The configuration property \""
@@ -249,5 +271,13 @@ public class JdbcConfig {
 
   public int getAdminConnectionPoolMaxTotal() {
     return adminConnectionPoolMaxTotal;
+  }
+
+  public int getMysqlVariableKeyColumnSize() {
+    return mysqlVariableKeyColumnSize;
+  }
+
+  public int getOracleVariableKeyColumnSize() {
+    return oracleVariableKeyColumnSize;
   }
 }
