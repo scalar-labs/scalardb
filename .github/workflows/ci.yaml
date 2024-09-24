@@ -833,7 +833,7 @@ jobs:
         with:
           name: postgresql_15_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
-  
+
   integration-test-for-jdbc-oracle-19:
     name: Oracle 19 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
@@ -1059,7 +1059,7 @@ jobs:
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     services:
       sqlserver:
