@@ -137,6 +137,16 @@ public interface AuthAdmin {
   }
 
   /**
+   * Retrieves the current logged-in user.
+   *
+   * @return the current logged-in user
+   * @throws ExecutionException if the operation fails
+   */
+  default User getCurrentUser() throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
    * Retrieves privileges for the given table for the given user.
    *
    * @param username the username
