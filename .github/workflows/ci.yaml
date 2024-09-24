@@ -960,7 +960,7 @@ jobs:
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     services:
       sqlserver:
