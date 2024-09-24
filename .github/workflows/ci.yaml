@@ -46,10 +46,10 @@ jobs:
     name: Gradle check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -72,7 +72,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gradle_check_reports
           path: /tmp/gradle_test_reports
@@ -91,7 +91,7 @@ jobs:
 
       - name: Upload Spotbugs reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gradle_spotbugs_reports
           path: /tmp/gradle_spotbugs_reports
@@ -101,10 +101,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -132,7 +132,7 @@ jobs:
           - 9042:9042
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cassandra_3.0_integration_test_reports
           path: core/build/reports/tests/integrationTestCassandra
@@ -225,7 +225,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cassandra_3.11_integration_test_reports
           path: core/build/reports/tests/integrationTestCassandra
@@ -239,7 +239,7 @@ jobs:
       SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ (inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')) &&  'true' || 'false' }}"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -313,7 +313,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cosmos_integration_test_reports
           path: core/build/reports/tests/integrationTestCosmos
@@ -329,7 +329,7 @@ jobs:
           - 8000:8000
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -366,7 +366,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dynamo_integration_test_reports
           path: core/build/reports/tests/integrationTestDynamo
@@ -421,7 +421,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mysql_5.7_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -439,10 +439,10 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -476,7 +476,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mysql_8.0_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -497,7 +497,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -531,7 +531,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mysql_8.1_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -550,7 +550,7 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -587,7 +587,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: postgresql_12_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -609,7 +609,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -643,7 +643,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: postgresql_13_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -665,7 +665,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -699,7 +699,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: postgresql_14_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -721,7 +721,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -755,7 +755,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: postgresql_15_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -774,7 +774,7 @@ jobs:
           - 1521:1521
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -811,7 +811,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oracle_19_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -873,7 +873,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oracle_21_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -953,7 +953,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oracle_23_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -1015,7 +1015,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sqlserver_2017_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -1036,7 +1036,7 @@ jobs:
         options: --name sqlserver19
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -1077,7 +1077,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sqlserver_2019_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -1139,7 +1139,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sqlserver_2022_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -1149,10 +1149,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -1189,7 +1189,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sqlite_3_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -1244,7 +1244,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mariadb_10_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbc
@@ -1320,10 +1320,10 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -1356,7 +1356,7 @@ jobs:
         run: ./gradlew integrationTestMultiStorage
 
       - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if : always()
         with:
           name: multi_storage_integration_test_reports
@@ -1375,10 +1375,10 @@ jobs:
           - 3306:3306
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -1411,7 +1411,7 @@ jobs:
         run: ./gradlew integrationTestScalarDbServer
 
       - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if : always()
         with:
           name: scalardb_server_integration_test_reports
