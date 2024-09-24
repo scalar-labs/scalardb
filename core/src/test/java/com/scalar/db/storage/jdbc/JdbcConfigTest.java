@@ -247,4 +247,28 @@ public class JdbcConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataSchema()).isEqualTo(ANY_METADATA_SCHEMA);
   }
+
+  @Test
+  public void
+      constructor_PropertiesWithSmallKeyColumnSizeGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props1 = new Properties();
+    props1.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props1.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props1.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props1.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props1.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "32");
+    Properties props2 = new Properties();
+    props2.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props2.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props2.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props2.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props2.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "32");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props1)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props2)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

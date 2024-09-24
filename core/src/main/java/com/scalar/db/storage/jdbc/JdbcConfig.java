@@ -200,8 +200,12 @@ public class JdbcConfig {
     oracleVariableKeyColumnSize =
         getInt(
             databaseConfig.getProperties(),
-            MYSQL_VARIABLE_KEY_COLUMN_SIZE,
+            ORACLE_VARIABLE_KEY_COLUMN_SIZE,
             DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+
+    if (mysqlVariableKeyColumnSize < 64 || oracleVariableKeyColumnSize < 64) {
+      throw new IllegalArgumentException(CoreError.INVALID_VARIABLE_KEY_COLUMN_SIZE.buildMessage());
+    }
 
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
