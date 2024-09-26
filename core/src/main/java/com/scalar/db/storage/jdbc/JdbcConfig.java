@@ -81,6 +81,9 @@ public class JdbcConfig {
   // https://dev.mysql.com/doc/refman/8.0/en/innodb-limits.html
   // https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/logical-database-limits.html
   public static final int DEFAULT_VARIABLE_KEY_COLUMN_SIZE = 128;
+  // As the partition key `tx_id` of the coordinator state table, we need a UUID string plus a
+  // 25-byte prefix for the group commit feature; thus, we set 64 bytes as the minimum.
+  public static final int MINIMUM_VARIABLE_KEY_COLUMN_SIZE = 64;
 
   private final String jdbcUrl;
   @Nullable private final String username;
@@ -203,7 +206,8 @@ public class JdbcConfig {
             ORACLE_VARIABLE_KEY_COLUMN_SIZE,
             DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
 
-    if (mysqlVariableKeyColumnSize < 64 || oracleVariableKeyColumnSize < 64) {
+    if (mysqlVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE
+        || oracleVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE) {
       throw new IllegalArgumentException(CoreError.INVALID_VARIABLE_KEY_COLUMN_SIZE.buildMessage());
     }
 
