@@ -139,7 +139,7 @@ public class ConcatenationVisitorTest {
   }
 
   @Test
-  public void visit_NullBlobColumnAcceptCalled_ShouldBuildBlobAsString() {
+  public void visit_NullBlobColumnAcceptCalled_ShouldDoNothing() {
     // Act
     BlobColumn.ofNull("any_blob").accept(visitor);
 
