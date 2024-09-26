@@ -1,16 +1,16 @@
 package com.scalar.db.storage.dynamo.bytes;
 
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
-import com.scalar.db.io.ValueVisitor;
+import com.scalar.db.io.TextColumn;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -19,7 +19,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 
 /** An encoder that converts a key to bytes while preserving the sort order. */
 @NotThreadSafe
-public class KeyBytesEncoder implements ValueVisitor {
+public class KeyBytesEncoder implements ColumnVisitor {
 
   private ByteBuffer dst;
   private Map<String, Order> keyOrders;
@@ -33,7 +33,7 @@ public class KeyBytesEncoder implements ValueVisitor {
     this.keyOrders = keyOrders;
     int length = new KeyBytesEncodedLengthCalculator().calculate(key, keyOrders);
     dst = ByteBuffer.allocate(length);
-    for (Value<?> value : key) {
+    for (Column<?> value : key.getColumns()) {
       value.accept(this);
     }
     dst.flip();
@@ -41,37 +41,37 @@ public class KeyBytesEncoder implements ValueVisitor {
   }
 
   @Override
-  public void visit(BooleanValue value) {
+  public void visit(BooleanColumn value) {
     BytesEncoders.BOOLEAN.encode(value, keyOrders.getOrDefault(value.getName(), Order.ASC), dst);
   }
 
   @Override
-  public void visit(IntValue value) {
+  public void visit(IntColumn value) {
     BytesEncoders.INT.encode(value, keyOrders.getOrDefault(value.getName(), Order.ASC), dst);
   }
 
   @Override
-  public void visit(BigIntValue value) {
+  public void visit(BigIntColumn value) {
     BytesEncoders.BIGINT.encode(value, keyOrders.getOrDefault(value.getName(), Order.ASC), dst);
   }
 
   @Override
-  public void visit(FloatValue value) {
+  public void visit(FloatColumn value) {
     BytesEncoders.FLOAT.encode(value, keyOrders.getOrDefault(value.getName(), Order.ASC), dst);
   }
 
   @Override
-  public void visit(DoubleValue value) {
+  public void visit(DoubleColumn value) {
     BytesEncoders.DOUBLE.encode(value, keyOrders.getOrDefault(value.getName(), Order.ASC), dst);
   }
 
   @Override
-  public void visit(TextValue value) {
+  public void visit(TextColumn value) {
     BytesEncoders.TEXT.encode(value, keyOrders.getOrDefault(value.getName(), Order.ASC), dst);
   }
 
   @Override
-  public void visit(BlobValue value) {
+  public void visit(BlobColumn value) {
     BytesEncoders.BLOB.encode(value, keyOrders.getOrDefault(value.getName(), Order.ASC), dst);
   }
 }
