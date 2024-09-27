@@ -27,7 +27,7 @@ public class ConcatenationVisitor implements ColumnVisitor {
   }
 
   public String build() {
-    // TODO What if the string or blob colum includes `:`?
+    // TODO What if the string or blob column includes `:`?
     return String.join(":", columns);
   }
 
