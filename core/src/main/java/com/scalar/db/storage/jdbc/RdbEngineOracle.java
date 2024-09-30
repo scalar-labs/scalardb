@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
@@ -23,6 +24,16 @@ import org.slf4j.LoggerFactory;
 
 public class RdbEngineOracle implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
+  private final String keyColumnSize;
+
+  RdbEngineOracle(JdbcConfig config) {
+    keyColumnSize = String.valueOf(config.getOracleVariableKeyColumnSize());
+  }
+
+  @VisibleForTesting
+  RdbEngineOracle() {
+    keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+  }
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
@@ -204,9 +215,9 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
-        return "VARCHAR2(64)";
+        return "VARCHAR2(" + keyColumnSize + ")";
       case BLOB:
-        return "RAW(64)";
+        return "RAW(" + keyColumnSize + ")";
       default:
         return null;
     }

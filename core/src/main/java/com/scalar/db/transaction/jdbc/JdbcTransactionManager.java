@@ -33,7 +33,6 @@ import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
-import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.util.ThrowableFunction;
 import java.sql.SQLException;
 import java.util.List;
@@ -68,8 +67,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
-    jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
+    jdbcService = new JdbcService(tableMetadataManager, operationChecker, rdbEngine);
   }
 
   @VisibleForTesting

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
@@ -21,6 +22,16 @@ import org.slf4j.LoggerFactory;
 
 class RdbEngineMysql implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
+  private final String keyColumnSize;
+
+  RdbEngineMysql(JdbcConfig config) {
+    keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
+  }
+
+  @VisibleForTesting
+  RdbEngineMysql() {
+    keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+  }
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
@@ -198,9 +209,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
   public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
-        return "VARCHAR(64)";
+        return "VARCHAR(" + keyColumnSize + ")";
       case BLOB:
-        return "VARBINARY(64)";
+        return "VARBINARY(" + keyColumnSize + ")";
       default:
         return null;
     }
