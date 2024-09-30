@@ -72,12 +72,18 @@ public abstract class JdbcAdminTestBase {
   private static final String COLUMN_1 = "c1";
   private static final ImmutableMap<RdbEngine, RdbEngineStrategy> RDB_ENGINES =
       ImmutableMap.of(
-          RdbEngine.MYSQL, RdbEngineFactory.create("jdbc:mysql:"),
-          RdbEngine.ORACLE, RdbEngineFactory.create("jdbc:oracle:"),
-          RdbEngine.POSTGRESQL, RdbEngineFactory.create("jdbc:postgresql:"),
-          RdbEngine.SQL_SERVER, RdbEngineFactory.create("jdbc:sqlserver:"),
-          RdbEngine.SQLITE, RdbEngineFactory.create("jdbc:sqlite:"),
-          RdbEngine.YUGABYTE, RdbEngineFactory.create("jdbc:yugabytedb:"));
+          RdbEngine.MYSQL,
+          new RdbEngineMysql(),
+          RdbEngine.ORACLE,
+          new RdbEngineOracle(),
+          RdbEngine.POSTGRESQL,
+          new RdbEnginePostgresql(),
+          RdbEngine.SQL_SERVER,
+          new RdbEngineSqlServer(),
+          RdbEngine.SQLITE,
+          new RdbEngineSqlite(),
+          RdbEngine.YUGABYTE,
+          new RdbEngineYugabyte());
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -100,6 +106,16 @@ public abstract class JdbcAdminTestBase {
     RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(rdbEngine);
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
       mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
+      return new JdbcAdmin(dataSource, config);
+    }
+  }
+
+  private JdbcAdmin createJdbcAdminFor(RdbEngineStrategy rdbEngineStrategy) {
+    // Arrange
+    try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
+      mocked
+          .when(() -> RdbEngineFactory.create(any(JdbcConfig.class)))
+          .thenReturn(rdbEngineStrategy);
       return new JdbcAdmin(dataSource, config);
     }
   }
@@ -376,6 +392,50 @@ public abstract class JdbcAdminTestBase {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3`,`c1`,`c4`))",
+        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO `"
+            + tableMetadataSchemaName
+            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+  }
+
+  @Test
+  public void createTable_forMysqlWithModifiedKeyColumnSize_shouldExecuteCreateTableStatement()
+      throws ExecutionException, SQLException {
+    when(config.getMysqlVariableKeyColumnSize()).thenReturn(64);
+    createTable_forX_shouldExecuteCreateTableStatement(
+        new RdbEngineMysql(config),
+        "CREATE SCHEMA IF NOT EXISTS `" + tableMetadataSchemaName + "`",
+        "CREATE TABLE IF NOT EXISTS `"
+            + tableMetadataSchemaName
+            + "`.`metadata`("
+            + "`full_table_name` VARCHAR(128),"
+            + "`column_name` VARCHAR(128),"
+            + "`data_type` VARCHAR(20) NOT NULL,"
+            + "`key_type` VARCHAR(20),"
+            + "`clustering_order` VARCHAR(10),"
+            + "`indexed` BOOLEAN NOT NULL,"
+            + "`ordinal_position` INTEGER NOT NULL,"
+            + "PRIMARY KEY (`full_table_name`, `column_name`))",
         "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3`,`c1`,`c4`))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
@@ -499,6 +559,44 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
+        "INSERT INTO \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+  }
+
+  @Test
+  public void createTable_forOracleWithModifiedKeyColumnSize_shouldExecuteCreateTableStatement()
+      throws ExecutionException, SQLException {
+    when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
+    createTable_forX_shouldExecuteCreateTableStatement(
+        new RdbEngineOracle(config),
+        "CREATE USER \"" + tableMetadataSchemaName + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
+        "ALTER USER \"" + tableMetadataSchemaName + "\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + tableMetadataSchemaName
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -571,6 +669,13 @@ public abstract class JdbcAdminTestBase {
   private void createTable_forX_shouldExecuteCreateTableStatement(
       RdbEngine rdbEngine, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
+    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
+    createTable_forX_shouldExecuteCreateTableStatement(rdbEngineStrategy, expectedSqlStatements);
+  }
+
+  private void createTable_forX_shouldExecuteCreateTableStatement(
+      RdbEngineStrategy rdbEngineStrategy, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
@@ -600,7 +705,7 @@ public abstract class JdbcAdminTestBase {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
     admin.createTable(namespace, table, metadata, new HashMap<>());
@@ -628,7 +733,7 @@ public abstract class JdbcAdminTestBase {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "INSERT INTO `"
@@ -752,7 +857,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -1503,7 +1608,7 @@ public abstract class JdbcAdminTestBase {
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
             + tableMetadataSchemaName
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
-        "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` VARCHAR(64)",
+        "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` VARCHAR(128)",
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `"
             + tableMetadataSchemaName
@@ -1535,7 +1640,7 @@ public abstract class JdbcAdminTestBase {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(64) )",
+        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(128) )",
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + tableMetadataSchemaName
@@ -2998,7 +3103,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   private RdbEngineStrategy getRdbEngineStrategy(RdbEngine rdbEngine) {
-    return RDB_ENGINES.getOrDefault(rdbEngine, RdbEngineFactory.create("jdbc:mysql:"));
+    return RDB_ENGINES.getOrDefault(rdbEngine, new RdbEngineMysql());
   }
 
   // Utility class used to mock ResultSet for getTableMetadata test

@@ -653,6 +653,12 @@ public enum CoreError implements ScalarDbError {
       "ScalarDB Transparent Data Encryption is not enabled. To use ScalarDB Transparent Data Encryption, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
+  INVALID_VARIABLE_KEY_COLUMN_SIZE(
+      Category.USER_ERROR,
+      "0144",
+      "The variable key column size must be greater than or equal to 64",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

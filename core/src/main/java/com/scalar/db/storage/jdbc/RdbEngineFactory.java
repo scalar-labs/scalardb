@@ -1,8 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.common.error.CoreError;
-import java.sql.Connection;
-import java.sql.SQLException;
 
 /** Factory class of subclasses of {@link RdbEngineStrategy} */
 public final class RdbEngineFactory {
@@ -11,21 +9,14 @@ public final class RdbEngineFactory {
   }
 
   public static RdbEngineStrategy create(JdbcConfig config) {
-    return create(config.getJdbcUrl());
-  }
+    String jdbcUrl = config.getJdbcUrl();
 
-  public static RdbEngineStrategy create(Connection connection) throws SQLException {
-    String jdbcUrl = connection.getMetaData().getURL();
-    return create(jdbcUrl);
-  }
-
-  static RdbEngineStrategy create(String jdbcUrl) {
     if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return new RdbEngineMysql();
+      return new RdbEngineMysql(config);
     } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
       return new RdbEnginePostgresql();
     } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return new RdbEngineOracle();
+      return new RdbEngineOracle(config);
     } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
       return new RdbEngineSqlServer();
     } else if (jdbcUrl.startsWith("jdbc:sqlite:")) {
