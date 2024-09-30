@@ -36,6 +36,8 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "50");
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "150");
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "200");
+    props.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "64");
+    props.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "64");
 
     // Act
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
@@ -60,6 +62,8 @@ public class JdbcConfigTest {
     assertThat(config.getAdminConnectionPoolMinIdle()).isEqualTo(50);
     assertThat(config.getAdminConnectionPoolMaxIdle()).isEqualTo(150);
     assertThat(config.getAdminConnectionPoolMaxTotal()).isEqualTo(200);
+    assertThat(config.getMysqlVariableKeyColumnSize()).isEqualTo(64);
+    assertThat(config.getOracleVariableKeyColumnSize()).isEqualTo(64);
   }
 
   @Test
@@ -99,6 +103,10 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE);
     assertThat(config.getTableMetadataConnectionPoolMaxTotal())
         .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
+    assertThat(config.getMysqlVariableKeyColumnSize())
+        .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+    assertThat(config.getOracleVariableKeyColumnSize())
+        .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
   }
 
   @Test
@@ -238,5 +246,29 @@ public class JdbcConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataSchema()).isEqualTo(ANY_METADATA_SCHEMA);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithSmallKeyColumnSizeGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props1 = new Properties();
+    props1.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props1.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props1.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props1.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props1.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "32");
+    Properties props2 = new Properties();
+    props2.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props2.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props2.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props2.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props2.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "32");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props1)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props2)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

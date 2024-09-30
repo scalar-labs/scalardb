@@ -47,6 +47,11 @@ public class JdbcConfig {
   public static final String ADMIN_CONNECTION_POOL_MAX_TOTAL =
       PREFIX + "admin.connection_pool.max_total";
 
+  public static final String MYSQL_VARIABLE_KEY_COLUMN_SIZE =
+      PREFIX + "mysql.variable_key_column_size";
+  public static final String ORACLE_VARIABLE_KEY_COLUMN_SIZE =
+      PREFIX + "oracle.variable_key_column_size";
+
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
@@ -60,6 +65,25 @@ public class JdbcConfig {
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE = 5;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
+
+  // MySQL and Oracle have limitations regarding the total size of key columns. Thus, we should set
+  // a small but enough key column size so that users can create multiple key columns without
+  // exceeding the limit and changing the default. Since we found the old default size of 64 bytes
+  // was small for some applications, we changed it based on the following specifications. See the
+  // official documents for details.
+  // 1) In MySQL, the maximum total size of key columns is 3072 bytes in the default, and thus,
+  // depending on the charset, it can be up to 768 characters long. It can further be reduced if the
+  // different settings are used.
+  // 2) In Oracle, the maximum total size of key columns is approximately 75% of the database block
+  // size minus some overhead. The default block size is 8KB, and it is typically 4kB or 8kB. Thus,
+  // the maximum size can be similar to the MySQL.
+  // See the official documents for details.
+  // https://dev.mysql.com/doc/refman/8.0/en/innodb-limits.html
+  // https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/logical-database-limits.html
+  public static final int DEFAULT_VARIABLE_KEY_COLUMN_SIZE = 128;
+  // As the partition key `tx_id` of the coordinator state table, we need a UUID string plus a
+  // 25-byte prefix for the group commit feature; thus, we set 64 bytes as the minimum.
+  public static final int MINIMUM_VARIABLE_KEY_COLUMN_SIZE = 64;
 
   private final String jdbcUrl;
   @Nullable private final String username;
@@ -81,6 +105,9 @@ public class JdbcConfig {
   private final int adminConnectionPoolMinIdle;
   private final int adminConnectionPoolMaxIdle;
   private final int adminConnectionPoolMaxTotal;
+
+  private final int mysqlVariableKeyColumnSize;
+  private final int oracleVariableKeyColumnSize;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -167,6 +194,23 @@ public class JdbcConfig {
             ADMIN_CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
 
+    mysqlVariableKeyColumnSize =
+        getInt(
+            databaseConfig.getProperties(),
+            MYSQL_VARIABLE_KEY_COLUMN_SIZE,
+            DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+
+    oracleVariableKeyColumnSize =
+        getInt(
+            databaseConfig.getProperties(),
+            ORACLE_VARIABLE_KEY_COLUMN_SIZE,
+            DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+
+    if (mysqlVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE
+        || oracleVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE) {
+      throw new IllegalArgumentException(CoreError.INVALID_VARIABLE_KEY_COLUMN_SIZE.buildMessage());
+    }
+
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
           "The configuration property \""
@@ -249,5 +293,13 @@ public class JdbcConfig {
 
   public int getAdminConnectionPoolMaxTotal() {
     return adminConnectionPoolMaxTotal;
+  }
+
+  public int getMysqlVariableKeyColumnSize() {
+    return mysqlVariableKeyColumnSize;
+  }
+
+  public int getOracleVariableKeyColumnSize() {
+    return oracleVariableKeyColumnSize;
   }
 }
