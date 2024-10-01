@@ -5,6 +5,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Value;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,8 +48,8 @@ public class CosmosOperation {
 
   @Nonnull
   public String getConcatenatedPartitionKey() {
-    Map<String, Value<?>> keyMap = new HashMap<>();
-    operation.getPartitionKey().get().forEach(v -> keyMap.put(v.getName(), v));
+    Map<String, Column<?>> keyMap = new HashMap<>();
+    operation.getPartitionKey().getColumns().forEach(c -> keyMap.put(c.getName(), c));
 
     ConcatenationVisitor visitor = new ConcatenationVisitor();
     metadata.getPartitionKeyNames().forEach(name -> keyMap.get(name).accept(visitor));
@@ -63,9 +64,11 @@ public class CosmosOperation {
 
   @Nonnull
   public String getId() {
-    Map<String, Value<?>> keyMap = new HashMap<>();
-    operation.getPartitionKey().get().forEach(v -> keyMap.put(v.getName(), v));
-    operation.getClusteringKey().ifPresent(k -> k.get().forEach(v -> keyMap.put(v.getName(), v)));
+    Map<String, Column<?>> keyMap = new HashMap<>();
+    operation.getPartitionKey().getColumns().forEach(c -> keyMap.put(c.getName(), c));
+    operation
+        .getClusteringKey()
+        .ifPresent(k -> k.getColumns().forEach(c -> keyMap.put(c.getName(), c)));
 
     ConcatenationVisitor visitor = new ConcatenationVisitor();
     Streams.concat(
