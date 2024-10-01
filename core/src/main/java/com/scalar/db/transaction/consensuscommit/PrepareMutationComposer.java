@@ -25,15 +25,25 @@ import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
+  @Nullable private final OperationAndResultHolder operationAndResultHolder;
+
+  public PrepareMutationComposer(
+      String id,
+      TransactionTableMetadataManager tableMetadataManager,
+      @Nullable OperationAndResultHolder operationAndResultHolder) {
+    super(id, tableMetadataManager);
+    this.operationAndResultHolder = operationAndResultHolder;
+  }
 
   public PrepareMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, tableMetadataManager);
+    this(id, tableMetadataManager, null);
   }
 
   @VisibleForTesting
   PrepareMutationComposer(
       String id, long current, TransactionTableMetadataManager tableMetadataManager) {
     super(id, current, tableMetadataManager);
+    operationAndResultHolder = null;
   }
 
   @Override
@@ -46,6 +56,10 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       add((Get) base);
     } else {
       throw new AssertionError("PrepareMutationComposer.add only accepts Put, Delete, or Get");
+    }
+
+    if (operationAndResultHolder != null) {
+      operationAndResultHolder.add(base, result);
     }
   }
 

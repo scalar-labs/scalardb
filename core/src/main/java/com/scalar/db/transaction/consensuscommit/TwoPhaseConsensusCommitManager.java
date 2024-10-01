@@ -355,4 +355,9 @@ public class TwoPhaseConsensusCommitManager
     admin.close();
     parallelExecutor.close();
   }
+
+  // This setter should be called right after the constructor is called.
+  public void setWriteOperationsHandler(WriteOperationsHandler writeOperationsHandler) {
+    commit.setWriteOperationsHandler(writeOperationsHandler);
+  }
 }

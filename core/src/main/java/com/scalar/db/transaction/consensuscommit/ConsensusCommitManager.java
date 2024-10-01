@@ -75,7 +75,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
-  ConsensusCommitManager(DatabaseConfig databaseConfig) {
+  public ConsensusCommitManager(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
     storage = storageFactory.getStorage();
@@ -402,5 +402,10 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     if (isGroupCommitEnabled()) {
       groupCommitter.close();
     }
+  }
+
+  // This setter should be called right after the constructor is called.
+  public void setWriteOperationsHandler(WriteOperationsHandler writeOperationsHandler) {
+    commit.setWriteOperationsHandler(writeOperationsHandler);
   }
 }

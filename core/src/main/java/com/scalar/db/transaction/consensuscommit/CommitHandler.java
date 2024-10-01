@@ -18,10 +18,12 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
+import com.scalar.db.transaction.consensuscommit.WriteOperationsHandler.WriteOperationsHandleFuture;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,8 @@ public class CommitHandler {
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+
+  @Nullable private WriteOperationsHandler writeOperationsHandler;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -51,8 +55,9 @@ public class CommitHandler {
   protected void onValidateFailure(Snapshot snapshot) {}
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+    Optional<WriteOperationsHandleFuture> writeOpsHandleFuture;
     try {
-      prepare(snapshot);
+      writeOpsHandleFuture = prepare(snapshot);
     } catch (PreparationException e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -78,6 +83,8 @@ public class CommitHandler {
       onValidateFailure(snapshot);
       throw e;
     }
+
+    writeOpsHandleFuture.ifPresent(WriteOperationsHandleFuture::get);
 
     commitState(snapshot);
     commitRecords(snapshot);
@@ -110,9 +117,10 @@ public class CommitHandler {
     }
   }
 
-  public void prepare(Snapshot snapshot) throws PreparationException {
+  public Optional<WriteOperationsHandleFuture> prepare(Snapshot snapshot)
+      throws PreparationException {
     try {
-      prepareRecords(snapshot);
+      return prepareRecords(snapshot);
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
@@ -127,11 +135,26 @@ public class CommitHandler {
     }
   }
 
-  private void prepareRecords(Snapshot snapshot)
+  private Optional<WriteOperationsHandleFuture> prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
-    PrepareMutationComposer composer =
-        new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
-    snapshot.to(composer);
+
+    Optional<WriteOperationsHandleFuture> writeOpsHandleFuture;
+    PrepareMutationComposer composer;
+    if (writeOperationsHandler == null) {
+      composer = new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+      snapshot.to(composer);
+      writeOpsHandleFuture = Optional.empty();
+    } else {
+      OperationAndResultHolder operationAndResultHolder = new OperationAndResultHolder();
+      composer =
+          new PrepareMutationComposer(
+              snapshot.getId(), tableMetadataManager, operationAndResultHolder);
+      snapshot.to(composer);
+      writeOpsHandleFuture =
+          Optional.of(
+              writeOperationsHandler.handle(
+                  tableMetadataManager, snapshot.getId(), composer, operationAndResultHolder));
+    }
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
     ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
@@ -140,6 +163,8 @@ public class CommitHandler {
       tasks.add(() -> storage.mutate(mutations.get(key)));
     }
     parallelExecutor.prepare(tasks, snapshot.getId());
+
+    return writeOpsHandleFuture;
   }
 
   public void validate(Snapshot snapshot) throws ValidationException {
@@ -233,5 +258,10 @@ public class CommitHandler {
       logger.warn("Rolling back records failed. Transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
+  }
+
+  // This setter should be called right after the constructor is called.
+  public void setWriteOperationsHandler(WriteOperationsHandler writeOperationsHandler) {
+    this.writeOperationsHandler = writeOperationsHandler;
   }
 }
