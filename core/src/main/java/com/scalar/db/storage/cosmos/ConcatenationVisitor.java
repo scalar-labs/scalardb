@@ -38,6 +38,7 @@ public class ConcatenationVisitor implements ColumnVisitor {
    */
   @Override
   public void visit(BooleanColumn column) {
+    assert !column.hasNullValue();
     columns.add(String.valueOf(column.getBooleanValue()));
   }
 
@@ -48,6 +49,7 @@ public class ConcatenationVisitor implements ColumnVisitor {
    */
   @Override
   public void visit(IntColumn column) {
+    assert !column.hasNullValue();
     columns.add(String.valueOf(column.getIntValue()));
   }
 
@@ -58,6 +60,7 @@ public class ConcatenationVisitor implements ColumnVisitor {
    */
   @Override
   public void visit(BigIntColumn column) {
+    assert !column.hasNullValue();
     columns.add(String.valueOf(column.getBigIntValue()));
   }
 
@@ -68,6 +71,7 @@ public class ConcatenationVisitor implements ColumnVisitor {
    */
   @Override
   public void visit(FloatColumn column) {
+    assert !column.hasNullValue();
     columns.add(String.valueOf(column.getFloatValue()));
   }
 
@@ -78,6 +82,7 @@ public class ConcatenationVisitor implements ColumnVisitor {
    */
   @Override
   public void visit(DoubleColumn column) {
+    assert !column.hasNullValue();
     columns.add(String.valueOf(column.getDoubleValue()));
   }
 
@@ -88,6 +93,7 @@ public class ConcatenationVisitor implements ColumnVisitor {
    */
   @Override
   public void visit(TextColumn column) {
+    assert !column.hasNullValue();
     column.getValue().ifPresent(columns::add);
   }
 
@@ -98,10 +104,9 @@ public class ConcatenationVisitor implements ColumnVisitor {
    */
   @Override
   public void visit(BlobColumn column) {
-    if (!column.hasNullValue()) {
-      // Use Base64 encoding
-      columns.add(
-          Base64.getUrlEncoder().withoutPadding().encodeToString(column.getBlobValueAsBytes()));
-    }
+    assert !column.hasNullValue();
+    // Use Base64 encoding
+    columns.add(
+        Base64.getUrlEncoder().withoutPadding().encodeToString(column.getBlobValueAsBytes()));
   }
 }

@@ -43,10 +43,8 @@ public class ConcatenationVisitorTest {
     // Act
     visitor.visit(ANY_BOOLEAN_COLUMN);
     visitor.visit(ANY_INT_COLUMN);
-    visitor.visit(BlobColumn.ofNull("any_blob"));
     visitor.visit(ANY_BIGINT_COLUMN);
     visitor.visit(ANY_FLOAT_COLUMN);
-    visitor.visit(TextColumn.ofNull("any_text"));
     visitor.visit(ANY_DOUBLE_COLUMN);
     visitor.visit(ANY_TEXT_COLUMN);
     visitor.visit(ANY_BLOB_COLUMN);
@@ -120,15 +118,6 @@ public class ConcatenationVisitorTest {
   }
 
   @Test
-  public void visit_NullTextColumnAcceptCalled_ShouldDoNothing() {
-    // Act
-    TextColumn.ofNull("any_text").accept(visitor);
-
-    // Assert
-    assertThat(visitor.build()).isEqualTo("");
-  }
-
-  @Test
   public void visit_BlobColumnAcceptCalled_ShouldBuildBlobAsString() {
     // Act
     ANY_BLOB_COLUMN.accept(visitor);
@@ -136,14 +125,5 @@ public class ConcatenationVisitorTest {
     // Assert
     assertThat(visitor.build())
         .isEqualTo(Base64.getUrlEncoder().withoutPadding().encodeToString(ANY_BLOB));
-  }
-
-  @Test
-  public void visit_NullBlobColumnAcceptCalled_ShouldDoNothing() {
-    // Act
-    BlobColumn.ofNull("any_blob").accept(visitor);
-
-    // Assert
-    assertThat(visitor.build()).isEqualTo("");
   }
 }
