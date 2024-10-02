@@ -253,6 +253,18 @@ public class Snapshot {
     }
   }
 
+  public ConcurrentMap<Key, Optional<TransactionResult>> getReadSet() {
+    return readSet;
+  }
+
+  public Map<Key, Put> getWriteSet() {
+    return writeSet;
+  }
+
+  public Map<Key, Delete> getDeleteSet() {
+    return deleteSet;
+  }
+
   private boolean isWriteSetOverlappedWith(Scan scan) {
     if (scan instanceof ScanWithIndex) {
       return isWriteSetOverlappedWith((ScanWithIndex) scan);

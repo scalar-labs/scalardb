@@ -357,7 +357,7 @@ public class TwoPhaseConsensusCommitManager
   }
 
   // This setter should be called right after the constructor is called.
-  public void setWriteOperationsHandler(WriteOperationsHandler writeOperationsHandler) {
-    commit.setWriteOperationsHandler(writeOperationsHandler);
+  public void setSnapshotHandler(SnapshotHandler snapshotHandler) {
+    commit.setSnapshotHandler(snapshotHandler);
   }
 }

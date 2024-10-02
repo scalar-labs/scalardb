@@ -18,7 +18,7 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import com.scalar.db.transaction.consensuscommit.WriteOperationsHandler.WriteOperationsHandleFuture;
+import com.scalar.db.transaction.consensuscommit.SnapshotHandler.SnapshotHandleFuture;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +36,7 @@ public class CommitHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
-  @Nullable private WriteOperationsHandler writeOperationsHandler;
+  @Nullable private SnapshotHandler snapshotHandler;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -55,9 +55,9 @@ public class CommitHandler {
   protected void onValidateFailure(Snapshot snapshot) {}
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    Optional<WriteOperationsHandleFuture> writeOpsHandleFuture;
+    Optional<SnapshotHandleFuture> snapshotHandleFuture;
     try {
-      writeOpsHandleFuture = prepare(snapshot);
+      snapshotHandleFuture = prepare(snapshot);
     } catch (PreparationException e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -84,7 +84,7 @@ public class CommitHandler {
       throw e;
     }
 
-    writeOpsHandleFuture.ifPresent(WriteOperationsHandleFuture::get);
+    snapshotHandleFuture.ifPresent(SnapshotHandleFuture::get);
 
     commitState(snapshot);
     commitRecords(snapshot);
@@ -117,8 +117,7 @@ public class CommitHandler {
     }
   }
 
-  public Optional<WriteOperationsHandleFuture> prepare(Snapshot snapshot)
-      throws PreparationException {
+  public Optional<SnapshotHandleFuture> prepare(Snapshot snapshot) throws PreparationException {
     try {
       return prepareRecords(snapshot);
     } catch (NoMutationException e) {
@@ -135,26 +134,18 @@ public class CommitHandler {
     }
   }
 
-  private Optional<WriteOperationsHandleFuture> prepareRecords(Snapshot snapshot)
+  private Optional<SnapshotHandleFuture> prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
 
-    Optional<WriteOperationsHandleFuture> writeOpsHandleFuture;
-    PrepareMutationComposer composer;
-    if (writeOperationsHandler == null) {
-      composer = new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
-      snapshot.to(composer);
-      writeOpsHandleFuture = Optional.empty();
+    Optional<SnapshotHandleFuture> snapshotHandleFuture;
+    if (snapshotHandler == null) {
+      snapshotHandleFuture = Optional.empty();
     } else {
-      OperationAndResultHolder operationAndResultHolder = new OperationAndResultHolder();
-      composer =
-          new PrepareMutationComposer(
-              snapshot.getId(), tableMetadataManager, operationAndResultHolder);
-      snapshot.to(composer);
-      writeOpsHandleFuture =
-          Optional.of(
-              writeOperationsHandler.handle(
-                  tableMetadataManager, snapshot.getId(), composer, operationAndResultHolder));
+      snapshotHandleFuture = Optional.of(snapshotHandler.handle(tableMetadataManager, snapshot));
     }
+    PrepareMutationComposer composer =
+        new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+    snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
     ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
@@ -164,7 +155,7 @@ public class CommitHandler {
     }
     parallelExecutor.prepare(tasks, snapshot.getId());
 
-    return writeOpsHandleFuture;
+    return snapshotHandleFuture;
   }
 
   public void validate(Snapshot snapshot) throws ValidationException {
@@ -261,7 +252,7 @@ public class CommitHandler {
   }
 
   // This setter should be called right after the constructor is called.
-  public void setWriteOperationsHandler(WriteOperationsHandler writeOperationsHandler) {
-    this.writeOperationsHandler = writeOperationsHandler;
+  public void setSnapshotHandler(SnapshotHandler snapshotHandler) {
+    this.snapshotHandler = snapshotHandler;
   }
 }

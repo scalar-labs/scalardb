@@ -25,7 +25,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.transaction.consensuscommit.WriteOperationsHandler.WriteOperationsHandleFuture;
+import com.scalar.db.transaction.consensuscommit.SnapshotHandler.SnapshotHandleFuture;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -224,8 +224,9 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      // Two-phase commit interface needs to wait until handling write operations is completed...
-      commit.prepare(crud.getSnapshot()).ifPresent(WriteOperationsHandleFuture::get);
+      // If SnapshotHandler is set, two-phase commit interface needs to wait until the snapshot
+      // handling is completed.
+      commit.prepare(crud.getSnapshot()).ifPresent(SnapshotHandleFuture::get);
     } finally {
       needRollback = true;
     }
