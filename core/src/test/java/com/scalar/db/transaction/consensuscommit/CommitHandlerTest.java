@@ -1,8 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -11,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
@@ -22,11 +25,16 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.SnapshotHandler.SnapshotHandleFuture;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -49,6 +57,8 @@ public class CommitHandlerTest {
   @Mock protected Coordinator coordinator;
   @Mock protected TransactionTableMetadataManager tableMetadataManager;
   @Mock protected ConsensusCommitConfig config;
+  @Mock protected SnapshotHandler snapshotHandler;
+  @Mock protected SnapshotHandleFuture snapshotHandleFuture;
 
   private CommitHandler handler;
   protected ParallelExecutor parallelExecutor;
@@ -143,14 +153,24 @@ public class CommitHandlerTest {
     return snapshot;
   }
 
-  @Test
-  public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively()
+  private void setSnapshotHandlerIfNeeded(boolean withSnapshotHandler) {
+    if (withSnapshotHandler) {
+      doReturn(snapshotHandleFuture).when(snapshotHandler).handle(any(), any());
+      handler.setSnapshotHandler(snapshotHandler);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
+      boolean withSnapshotHandler)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
+    setSnapshotHandlerIfNeeded(withSnapshotHandler);
 
     // Act
     handler.commit(snapshot);
@@ -158,16 +178,20 @@ public class CommitHandlerTest {
     // Assert
     verify(storage, times(4)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verifySnapshotHandler(withSnapshotHandler, snapshot);
   }
 
-  @Test
-  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce()
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
+      boolean withSnapshotHandler)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
+    setSnapshotHandlerIfNeeded(withSnapshotHandler);
 
     // Act
     handler.commit(snapshot);
@@ -175,6 +199,7 @@ public class CommitHandlerTest {
     // Assert
     verify(storage, times(2)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verifySnapshotHandler(withSnapshotHandler, snapshot);
   }
 
   @Test
@@ -352,7 +377,7 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void commit_validationconflictexceptionthrowninvalidation_shouldabortandrollbackrecords()
+  public void commit_ValidationConflictExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
       throws ExecutionException, CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
@@ -618,6 +643,42 @@ public class CommitHandlerTest {
     verify(handler, never()).rollbackRecords(snapshot);
   }
 
+  @Test
+  public void commit_SnapshotHandlerGiven_ShouldWaitSnapshotHandlerFinishesBeforeCommitState()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothing().when(storage).mutate(anyList());
+    doThrowExceptionWhenCoordinatorPutState(TransactionState.COMMITTED, CoordinatorException.class);
+    // Lambda can be spied...
+    SnapshotHandler delayedSnapshotHandler =
+        spy(
+            new SnapshotHandler() {
+              @Override
+              public SnapshotHandleFuture handle(
+                  TransactionTableMetadataManager tableMetadataManager, Snapshot ss) {
+                Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(2));
+                return snapshotHandleFuture;
+              }
+            });
+    handler.setSnapshotHandler(delayedSnapshotHandler);
+
+    // Act
+    Instant start = Instant.now();
+    assertThatThrownBy(() -> handler.commit(snapshot))
+        .isInstanceOf(UnknownTransactionStatusException.class);
+    Instant end = Instant.now();
+
+    // Assert
+    verify(storage, times(2)).mutate(anyList());
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verify(handler, never()).rollbackRecords(snapshot);
+    verify(delayedSnapshotHandler).handle(tableMetadataManager, snapshot);
+    // This means `commit()` waited until `SnapshotHandler.handle()` is completed before throwing
+    // an exception from `commitState()`.
+    assertThat(Duration.between(start, end)).isGreaterThanOrEqualTo(Duration.ofSeconds(2));
+  }
+
   protected void doThrowExceptionWhenCoordinatorPutState(
       TransactionState targetState, Class<? extends Exception> exceptionClass)
       throws CoordinatorException {
@@ -632,5 +693,13 @@ public class CommitHandlerTest {
   protected void verifyCoordinatorPutState(TransactionState expectedTransactionState)
       throws CoordinatorException {
     verify(coordinator).putState(new Coordinator.State(anyId(), expectedTransactionState));
+  }
+
+  private void verifySnapshotHandler(boolean withSnapshotHandler, Snapshot snapshot) {
+    if (withSnapshotHandler) {
+      verify(snapshotHandler).handle(eq(tableMetadataManager), eq(snapshot));
+    } else {
+      verify(snapshotHandler, never()).handle(any(), any());
+    }
   }
 }

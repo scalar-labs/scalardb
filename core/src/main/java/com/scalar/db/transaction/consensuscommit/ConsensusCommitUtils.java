@@ -301,6 +301,12 @@ public final class ConsensusCommitUtils {
     return message;
   }
 
+  /**
+   * Returns the next `tx_version` based on the current value.
+   *
+   * @param currentTxVersion The current `tx_version`, if it exists, or null otherwise.
+   * @return The next `tx_version`.
+   */
   public static int getNextTxVersion(@Nullable Integer currentTxVersion) {
     if (currentTxVersion == null) {
       return 1;

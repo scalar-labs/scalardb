@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.error.CoreError;
@@ -36,7 +37,7 @@ public class CommitHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
-  @Nullable private SnapshotHandler snapshotHandler;
+  @LazyInit @Nullable private SnapshotHandler snapshotHandler;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -251,8 +252,14 @@ public class CommitHandler {
     }
   }
 
-  // This setter should be called right after the constructor is called.
+  /**
+   * Sets the {@link SnapshotHandler}. This method must be called immediately after the constructor
+   * is invoked.
+   *
+   * @param snapshotHandler The snapshot handler to set.
+   * @throws NullPointerException If the argument is null.
+   */
   public void setSnapshotHandler(SnapshotHandler snapshotHandler) {
-    this.snapshotHandler = snapshotHandler;
+    this.snapshotHandler = checkNotNull(snapshotHandler);
   }
 }
