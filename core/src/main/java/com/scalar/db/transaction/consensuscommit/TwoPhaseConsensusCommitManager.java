@@ -355,9 +355,4 @@ public class TwoPhaseConsensusCommitManager
     admin.close();
     parallelExecutor.close();
   }
-
-  // This setter should be called right after the constructor is called.
-  public void setSnapshotHandler(SnapshotHandler snapshotHandler) {
-    commit.setSnapshotHandler(snapshotHandler);
-  }
 }

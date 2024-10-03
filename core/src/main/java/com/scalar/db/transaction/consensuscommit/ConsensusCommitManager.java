@@ -50,7 +50,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
-  private final CommitHandler commit;
+  protected final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
@@ -402,10 +402,5 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     if (isGroupCommitEnabled()) {
       groupCommitter.close();
     }
-  }
-
-  // This setter should be called right after the constructor is called.
-  public void setSnapshotHandler(SnapshotHandler snapshotHandler) {
-    commit.setSnapshotHandler(snapshotHandler);
   }
 }
