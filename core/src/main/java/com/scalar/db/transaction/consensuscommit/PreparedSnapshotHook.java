@@ -1,10 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
-public interface SnapshotHandler {
-  SnapshotHandleFuture handle(
+public interface PreparedSnapshotHook {
+  PreparedSnapshotHookFuture handle(
       TransactionTableMetadataManager transactionTableMetadataManager, Snapshot snapshot);
 
-  interface SnapshotHandleFuture {
+  interface PreparedSnapshotHookFuture {
     void get();
   }
 }

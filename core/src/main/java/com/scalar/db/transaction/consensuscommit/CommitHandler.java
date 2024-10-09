@@ -19,7 +19,7 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import com.scalar.db.transaction.consensuscommit.SnapshotHandler.SnapshotHandleFuture;
+import com.scalar.db.transaction.consensuscommit.PreparedSnapshotHook.PreparedSnapshotHookFuture;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,7 @@ public class CommitHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
-  @LazyInit @Nullable private SnapshotHandler snapshotHandler;
+  @LazyInit @Nullable private PreparedSnapshotHook preparedSnapshotHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -56,9 +56,9 @@ public class CommitHandler {
   protected void onValidateFailure(Snapshot snapshot) {}
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    Optional<SnapshotHandleFuture> snapshotHandleFuture;
+    Optional<PreparedSnapshotHookFuture> snapshotHookFuture;
     try {
-      snapshotHandleFuture = prepare(snapshot);
+      snapshotHookFuture = prepare(snapshot);
     } catch (PreparationException e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -85,7 +85,7 @@ public class CommitHandler {
       throw e;
     }
 
-    snapshotHandleFuture.ifPresent(SnapshotHandleFuture::get);
+    snapshotHookFuture.ifPresent(PreparedSnapshotHookFuture::get);
 
     commitState(snapshot);
     commitRecords(snapshot);
@@ -118,7 +118,8 @@ public class CommitHandler {
     }
   }
 
-  public Optional<SnapshotHandleFuture> prepare(Snapshot snapshot) throws PreparationException {
+  public Optional<PreparedSnapshotHookFuture> prepare(Snapshot snapshot)
+      throws PreparationException {
     try {
       return prepareRecords(snapshot);
     } catch (NoMutationException e) {
@@ -135,14 +136,14 @@ public class CommitHandler {
     }
   }
 
-  private Optional<SnapshotHandleFuture> prepareRecords(Snapshot snapshot)
+  private Optional<PreparedSnapshotHookFuture> prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
 
-    Optional<SnapshotHandleFuture> snapshotHandleFuture;
-    if (snapshotHandler == null) {
-      snapshotHandleFuture = Optional.empty();
+    Optional<PreparedSnapshotHookFuture> snapshotHookFuture;
+    if (preparedSnapshotHook == null) {
+      snapshotHookFuture = Optional.empty();
     } else {
-      snapshotHandleFuture = Optional.of(snapshotHandler.handle(tableMetadataManager, snapshot));
+      snapshotHookFuture = Optional.of(preparedSnapshotHook.handle(tableMetadataManager, snapshot));
     }
     PrepareMutationComposer composer =
         new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
@@ -156,7 +157,7 @@ public class CommitHandler {
     }
     parallelExecutor.prepare(tasks, snapshot.getId());
 
-    return snapshotHandleFuture;
+    return snapshotHookFuture;
   }
 
   public void validate(Snapshot snapshot) throws ValidationException {
@@ -253,13 +254,13 @@ public class CommitHandler {
   }
 
   /**
-   * Sets the {@link SnapshotHandler}. This method must be called immediately after the constructor
-   * is invoked.
+   * Sets the {@link PreparedSnapshotHook}. This method must be called immediately after the
+   * constructor is invoked.
    *
-   * @param snapshotHandler The snapshot handler to set.
+   * @param preparedSnapshotHook The snapshot hook to set.
    * @throws NullPointerException If the argument is null.
    */
-  public void setSnapshotHandler(SnapshotHandler snapshotHandler) {
-    this.snapshotHandler = checkNotNull(snapshotHandler);
+  public void setPreparedSnapshotHook(PreparedSnapshotHook preparedSnapshotHook) {
+    this.preparedSnapshotHook = checkNotNull(preparedSnapshotHook);
   }
 }
