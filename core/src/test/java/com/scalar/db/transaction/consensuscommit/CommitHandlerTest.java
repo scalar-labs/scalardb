@@ -678,6 +678,60 @@ public class CommitHandlerTest {
     assertThat(Duration.between(start, end)).isGreaterThanOrEqualTo(Duration.ofSeconds(2));
   }
 
+  @Test
+  public void commit_FailingSnapshotHookGiven_ShouldThrowCommitException()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothingWhenCoordinatorPutState();
+    doThrow(new RuntimeException("Something is wrong"))
+        .when(preparedSnapshotHook)
+        .handle(any(), any());
+    handler.setPreparedSnapshotHook(preparedSnapshotHook);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(storage, never()).mutate(anyList());
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(handler).rollbackRecords(snapshot);
+  }
+
+  @Test
+  public void commit_FailingSnapshotHookFutureGiven_ShouldThrowCommitException()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothing().when(storage).mutate(anyList());
+    doNothingWhenCoordinatorPutState();
+    // Lambda can't be spied...
+    PreparedSnapshotHook failingPreparedSnapshotHook =
+        spy(
+            new PreparedSnapshotHook() {
+              @Override
+              public PreparedSnapshotHookFuture handle(
+                  TransactionTableMetadataManager tableMetadataManager, Snapshot ss) {
+                return () -> {
+                  throw new RuntimeException("Something is wrong");
+                };
+              }
+            });
+    handler.setPreparedSnapshotHook(failingPreparedSnapshotHook);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(storage, times(2)).mutate(anyList());
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(handler).rollbackRecords(snapshot);
+  }
+
   protected void doThrowExceptionWhenCoordinatorPutState(
       TransactionState targetState, Class<? extends Exception> exceptionClass)
       throws CoordinatorException {

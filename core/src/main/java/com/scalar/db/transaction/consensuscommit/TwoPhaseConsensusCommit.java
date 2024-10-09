@@ -223,13 +223,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      // PreparedSnapshotHook is not supported in two-phase commit interface.
-      commit
-          .prepare(crud.getSnapshot())
-          .ifPresent(
-              future -> {
-                throw new AssertionError();
-              });
+      commit.prepare(crud.getSnapshot());
     } finally {
       needRollback = true;
     }

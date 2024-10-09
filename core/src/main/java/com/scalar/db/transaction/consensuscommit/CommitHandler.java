@@ -55,10 +55,46 @@ public class CommitHandler {
 
   protected void onValidateFailure(Snapshot snapshot) {}
 
-  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    Optional<PreparedSnapshotHookFuture> snapshotHookFuture;
+  private Optional<PreparedSnapshotHookFuture> invokePreparedSnapshotHook(Snapshot snapshot)
+      throws UnknownTransactionStatusException, CommitException {
     try {
-      snapshotHookFuture = prepare(snapshot);
+      if (preparedSnapshotHook == null) {
+        return Optional.empty();
+      }
+
+      return Optional.of(preparedSnapshotHook.handle(tableMetadataManager, snapshot));
+    } catch (Exception e) {
+      abortState(snapshot.getId());
+      rollbackRecords(snapshot);
+      // TODO: This method is actually a part of preparation phase. But the callback method name
+      //       `onPrepareFailure()` should be renamed to more reasonable one.
+      onPrepareFailure(snapshot);
+      throw new CommitException(e.getMessage(), e, snapshot.getId());
+    }
+  }
+
+  private void waitPreparedSnapshotHookFuture(
+      Snapshot snapshot, @Nullable PreparedSnapshotHookFuture snapshotHookFuture)
+      throws UnknownTransactionStatusException, CommitException {
+    if (snapshotHookFuture == null) {
+      return;
+    }
+    try {
+      snapshotHookFuture.get();
+    } catch (Exception e) {
+      abortState(snapshot.getId());
+      rollbackRecords(snapshot);
+      // TODO: This method is actually a part of validation phase. But the callback method name
+      //       `onValidateFailure()` should be renamed to more reasonable one.
+      onValidateFailure(snapshot);
+      throw new CommitException(e.getMessage(), e, snapshot.getId());
+    }
+  }
+
+  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+    Optional<PreparedSnapshotHookFuture> snapshotHookFuture = invokePreparedSnapshotHook(snapshot);
+    try {
+      prepare(snapshot);
     } catch (PreparationException e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -85,7 +121,7 @@ public class CommitHandler {
       throw e;
     }
 
-    snapshotHookFuture.ifPresent(PreparedSnapshotHookFuture::get);
+    waitPreparedSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
 
     commitState(snapshot);
     commitRecords(snapshot);
@@ -118,10 +154,9 @@ public class CommitHandler {
     }
   }
 
-  public Optional<PreparedSnapshotHookFuture> prepare(Snapshot snapshot)
-      throws PreparationException {
+  public void prepare(Snapshot snapshot) throws PreparationException {
     try {
-      return prepareRecords(snapshot);
+      prepareRecords(snapshot);
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
@@ -136,15 +171,8 @@ public class CommitHandler {
     }
   }
 
-  private Optional<PreparedSnapshotHookFuture> prepareRecords(Snapshot snapshot)
+  private void prepareRecords(Snapshot snapshot)
       throws ExecutionException, PreparationConflictException {
-
-    Optional<PreparedSnapshotHookFuture> snapshotHookFuture;
-    if (preparedSnapshotHook == null) {
-      snapshotHookFuture = Optional.empty();
-    } else {
-      snapshotHookFuture = Optional.of(preparedSnapshotHook.handle(tableMetadataManager, snapshot));
-    }
     PrepareMutationComposer composer =
         new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
     snapshot.to(composer);
@@ -156,8 +184,6 @@ public class CommitHandler {
       tasks.add(() -> storage.mutate(mutations.get(key)));
     }
     parallelExecutor.prepare(tasks, snapshot.getId());
-
-    return snapshotHookFuture;
   }
 
   public void validate(Snapshot snapshot) throws ValidationException {
