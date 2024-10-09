@@ -17,9 +17,9 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.transaction.consensuscommit.BeforePreparationSnapshotHook.BeforePreparationSnapshotHookFuture;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import com.scalar.db.transaction.consensuscommit.PreparedSnapshotHook.PreparedSnapshotHookFuture;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,7 @@ public class CommitHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
-  @LazyInit @Nullable private PreparedSnapshotHook preparedSnapshotHook;
+  @LazyInit @Nullable private BeforePreparationSnapshotHook beforePreparationSnapshotHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -55,14 +55,14 @@ public class CommitHandler {
 
   protected void onValidateFailure(Snapshot snapshot) {}
 
-  private Optional<PreparedSnapshotHookFuture> invokePreparedSnapshotHook(Snapshot snapshot)
-      throws UnknownTransactionStatusException, CommitException {
+  private Optional<BeforePreparationSnapshotHookFuture> invokeBeforePreparationSnapshotHook(
+      Snapshot snapshot) throws UnknownTransactionStatusException, CommitException {
     try {
-      if (preparedSnapshotHook == null) {
+      if (beforePreparationSnapshotHook == null) {
         return Optional.empty();
       }
 
-      return Optional.of(preparedSnapshotHook.handle(tableMetadataManager, snapshot));
+      return Optional.of(beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot));
     } catch (Exception e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
@@ -73,8 +73,8 @@ public class CommitHandler {
     }
   }
 
-  private void waitPreparedSnapshotHookFuture(
-      Snapshot snapshot, @Nullable PreparedSnapshotHookFuture snapshotHookFuture)
+  private void waitBeforePreparationSnapshotHookFuture(
+      Snapshot snapshot, @Nullable BeforePreparationSnapshotHookFuture snapshotHookFuture)
       throws UnknownTransactionStatusException, CommitException {
     if (snapshotHookFuture == null) {
       return;
@@ -92,7 +92,8 @@ public class CommitHandler {
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    Optional<PreparedSnapshotHookFuture> snapshotHookFuture = invokePreparedSnapshotHook(snapshot);
+    Optional<BeforePreparationSnapshotHookFuture> snapshotHookFuture =
+        invokeBeforePreparationSnapshotHook(snapshot);
     try {
       prepare(snapshot);
     } catch (PreparationException e) {
@@ -121,7 +122,7 @@ public class CommitHandler {
       throw e;
     }
 
-    waitPreparedSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
+    waitBeforePreparationSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
 
     commitState(snapshot);
     commitRecords(snapshot);
@@ -280,13 +281,14 @@ public class CommitHandler {
   }
 
   /**
-   * Sets the {@link PreparedSnapshotHook}. This method must be called immediately after the
-   * constructor is invoked.
+   * Sets the {@link BeforePreparationSnapshotHook}. This method must be called immediately after
+   * the constructor is invoked.
    *
-   * @param preparedSnapshotHook The snapshot hook to set.
+   * @param beforePreparationSnapshotHook The snapshot hook to set.
    * @throws NullPointerException If the argument is null.
    */
-  public void setPreparedSnapshotHook(PreparedSnapshotHook preparedSnapshotHook) {
-    this.preparedSnapshotHook = checkNotNull(preparedSnapshotHook);
+  public void setBeforePreparationSnapshotHook(
+      BeforePreparationSnapshotHook beforePreparationSnapshotHook) {
+    this.beforePreparationSnapshotHook = checkNotNull(beforePreparationSnapshotHook);
   }
 }

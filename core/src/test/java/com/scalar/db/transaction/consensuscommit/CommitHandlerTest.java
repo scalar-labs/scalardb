@@ -25,7 +25,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.PreparedSnapshotHook.PreparedSnapshotHookFuture;
+import com.scalar.db.transaction.consensuscommit.BeforePreparationSnapshotHook.BeforePreparationSnapshotHookFuture;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -57,8 +57,8 @@ public class CommitHandlerTest {
   @Mock protected Coordinator coordinator;
   @Mock protected TransactionTableMetadataManager tableMetadataManager;
   @Mock protected ConsensusCommitConfig config;
-  @Mock protected PreparedSnapshotHook preparedSnapshotHook;
-  @Mock protected PreparedSnapshotHookFuture preparedSnapshotHookFuture;
+  @Mock protected BeforePreparationSnapshotHook beforePreparationSnapshotHook;
+  @Mock protected BeforePreparationSnapshotHookFuture beforePreparationSnapshotHookFuture;
 
   private CommitHandler handler;
   protected ParallelExecutor parallelExecutor;
@@ -153,10 +153,12 @@ public class CommitHandlerTest {
     return snapshot;
   }
 
-  private void setPreparedSnapshotHookIfNeeded(boolean withSnapshotHook) {
+  private void setBeforePreparationSnapshotHookIfNeeded(boolean withSnapshotHook) {
     if (withSnapshotHook) {
-      doReturn(preparedSnapshotHookFuture).when(preparedSnapshotHook).handle(any(), any());
-      handler.setPreparedSnapshotHook(preparedSnapshotHook);
+      doReturn(beforePreparationSnapshotHookFuture)
+          .when(beforePreparationSnapshotHook)
+          .handle(any(), any());
+      handler.setBeforePreparationSnapshotHook(beforePreparationSnapshotHook);
     }
   }
 
@@ -170,7 +172,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
-    setPreparedSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
 
     // Act
     handler.commit(snapshot);
@@ -190,7 +192,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
-    setPreparedSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
 
     // Act
     handler.commit(snapshot);
@@ -650,17 +652,17 @@ public class CommitHandlerTest {
     doNothing().when(storage).mutate(anyList());
     doThrowExceptionWhenCoordinatorPutState(TransactionState.COMMITTED, CoordinatorException.class);
     // Lambda can't be spied...
-    PreparedSnapshotHook delayedPreparedSnapshotHook =
+    BeforePreparationSnapshotHook delayedBeforePreparationSnapshotHook =
         spy(
-            new PreparedSnapshotHook() {
+            new BeforePreparationSnapshotHook() {
               @Override
-              public PreparedSnapshotHookFuture handle(
+              public BeforePreparationSnapshotHookFuture handle(
                   TransactionTableMetadataManager tableMetadataManager, Snapshot ss) {
                 Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(2));
-                return preparedSnapshotHookFuture;
+                return beforePreparationSnapshotHookFuture;
               }
             });
-    handler.setPreparedSnapshotHook(delayedPreparedSnapshotHook);
+    handler.setBeforePreparationSnapshotHook(delayedBeforePreparationSnapshotHook);
 
     // Act
     Instant start = Instant.now();
@@ -672,7 +674,7 @@ public class CommitHandlerTest {
     verify(storage, times(2)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(handler, never()).rollbackRecords(snapshot);
-    verify(delayedPreparedSnapshotHook).handle(tableMetadataManager, snapshot);
+    verify(delayedBeforePreparationSnapshotHook).handle(tableMetadataManager, snapshot);
     // This means `commit()` waited until the callback was completed before throwing
     // an exception from `commitState()`.
     assertThat(Duration.between(start, end)).isGreaterThanOrEqualTo(Duration.ofSeconds(2));
@@ -685,9 +687,9 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothingWhenCoordinatorPutState();
     doThrow(new RuntimeException("Something is wrong"))
-        .when(preparedSnapshotHook)
+        .when(beforePreparationSnapshotHook)
         .handle(any(), any());
-    handler.setPreparedSnapshotHook(preparedSnapshotHook);
+    handler.setBeforePreparationSnapshotHook(beforePreparationSnapshotHook);
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
@@ -708,18 +710,18 @@ public class CommitHandlerTest {
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
     // Lambda can't be spied...
-    PreparedSnapshotHook failingPreparedSnapshotHook =
+    BeforePreparationSnapshotHook failingBeforePreparationSnapshotHook =
         spy(
-            new PreparedSnapshotHook() {
+            new BeforePreparationSnapshotHook() {
               @Override
-              public PreparedSnapshotHookFuture handle(
+              public BeforePreparationSnapshotHookFuture handle(
                   TransactionTableMetadataManager tableMetadataManager, Snapshot ss) {
                 return () -> {
                   throw new RuntimeException("Something is wrong");
                 };
               }
             });
-    handler.setPreparedSnapshotHook(failingPreparedSnapshotHook);
+    handler.setBeforePreparationSnapshotHook(failingBeforePreparationSnapshotHook);
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
@@ -750,9 +752,9 @@ public class CommitHandlerTest {
 
   private void verifySnapshotHook(boolean withSnapshotHook, Snapshot snapshot) {
     if (withSnapshotHook) {
-      verify(preparedSnapshotHook).handle(eq(tableMetadataManager), eq(snapshot));
+      verify(beforePreparationSnapshotHook).handle(eq(tableMetadataManager), eq(snapshot));
     } else {
-      verify(preparedSnapshotHook, never()).handle(any(), any());
+      verify(beforePreparationSnapshotHook, never()).handle(any(), any());
     }
   }
 }
