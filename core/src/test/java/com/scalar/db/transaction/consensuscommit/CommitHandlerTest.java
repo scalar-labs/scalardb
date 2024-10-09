@@ -181,6 +181,8 @@ public class CommitHandlerTest {
     verify(storage, times(4)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifySnapshotHook(withSnapshotHook, snapshot);
+    verify(handler, never()).onPrepareFailure(any());
+    verify(handler, never()).onValidateFailure(any());
   }
 
   @ParameterizedTest
@@ -201,6 +203,8 @@ public class CommitHandlerTest {
     verify(storage, times(2)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifySnapshotHook(withSnapshotHook, snapshot);
+    verify(handler, never()).onPrepareFailure(any());
+    verify(handler, never()).onValidateFailure(any());
   }
 
   @Test
@@ -678,6 +682,8 @@ public class CommitHandlerTest {
     // This means `commit()` waited until the callback was completed before throwing
     // an exception from `commitState()`.
     assertThat(Duration.between(start, end)).isGreaterThanOrEqualTo(Duration.ofSeconds(2));
+    verify(handler, never()).onPrepareFailure(any());
+    verify(handler, never()).onValidateFailure(any());
   }
 
   @Test
@@ -685,7 +691,6 @@ public class CommitHandlerTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    doNothingWhenCoordinatorPutState();
     doThrow(new RuntimeException("Something is wrong"))
         .when(beforePreparationSnapshotHook)
         .handle(any(), any());
@@ -700,6 +705,8 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onPrepareFailure(any());
+    verify(handler, never()).onValidateFailure(any());
   }
 
   @Test
@@ -708,7 +715,6 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doNothingWhenCoordinatorPutState();
     // Lambda can't be spied...
     BeforePreparationSnapshotHook failingBeforePreparationSnapshotHook =
         spy(
@@ -732,6 +738,8 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+    verify(handler, never()).onPrepareFailure(any());
+    verify(handler).onValidateFailure(any());
   }
 
   protected void doThrowExceptionWhenCoordinatorPutState(
