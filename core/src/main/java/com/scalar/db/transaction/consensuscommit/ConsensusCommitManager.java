@@ -75,7 +75,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
-  public ConsensusCommitManager(DatabaseConfig databaseConfig) {
+  protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
     storage = storageFactory.getStorage();
