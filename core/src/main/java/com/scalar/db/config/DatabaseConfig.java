@@ -54,6 +54,8 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN = SCAN_PREFIX + "enabled";
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
+
+  public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
@@ -171,7 +173,10 @@ public class DatabaseConfig {
   }
 
   public static long getMetadataCacheExpirationTimeSecs(Properties properties) {
-    return getLong(properties, METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
+    return getLong(
+        properties,
+        METADATA_CACHE_EXPIRATION_TIME_SECS,
+        DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
   }
 
   public static long getActiveTransactionManagementExpirationTimeMillis(Properties properties) {
