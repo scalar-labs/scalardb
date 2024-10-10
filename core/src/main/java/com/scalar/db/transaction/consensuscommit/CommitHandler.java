@@ -57,11 +57,11 @@ public class CommitHandler {
 
   private Optional<BeforePreparationSnapshotHookFuture> invokeBeforePreparationSnapshotHook(
       Snapshot snapshot) throws UnknownTransactionStatusException, CommitException {
-    try {
-      if (beforePreparationSnapshotHook == null) {
-        return Optional.empty();
-      }
+    if (beforePreparationSnapshotHook == null) {
+      return Optional.empty();
+    }
 
+    try {
       return Optional.of(beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot));
     } catch (Exception e) {
       abortState(snapshot.getId());
@@ -79,6 +79,7 @@ public class CommitHandler {
     if (snapshotHookFuture == null) {
       return;
     }
+
     try {
       snapshotHookFuture.get();
     } catch (Exception e) {
