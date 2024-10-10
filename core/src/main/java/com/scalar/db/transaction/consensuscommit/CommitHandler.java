@@ -69,7 +69,10 @@ public class CommitHandler {
       // TODO: This method is actually a part of preparation phase. But the callback method name
       //       `onPrepareFailure()` should be renamed to more reasonable one.
       onPrepareFailure(snapshot);
-      throw new CommitException(e.getMessage(), e, snapshot.getId());
+      throw new CommitException(
+          CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
     }
   }
 
@@ -88,7 +91,10 @@ public class CommitHandler {
       // TODO: This method is actually a part of validation phase. But the callback method name
       //       `onValidateFailure()` should be renamed to more reasonable one.
       onValidateFailure(snapshot);
-      throw new CommitException(e.getMessage(), e, snapshot.getId());
+      throw new CommitException(
+          CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
     }
   }
 
