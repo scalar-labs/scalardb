@@ -35,7 +35,8 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
-    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs())
+        .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -61,7 +62,8 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
-    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs())
+        .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
@@ -88,7 +90,8 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isFalse();
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
-    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs())
+        .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
@@ -117,7 +120,8 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorage()).isEqualTo("cassandra");
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
-    assertThat(config.getMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.getMetadataCacheExpirationTimeSecs())
+        .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
