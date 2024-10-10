@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.error.CoreError;
@@ -16,12 +17,14 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.transaction.consensuscommit.BeforePreparationSnapshotHook.BeforePreparationSnapshotHookFuture;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +36,8 @@ public class CommitHandler {
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+
+  @LazyInit @Nullable private BeforePreparationSnapshotHook beforePreparationSnapshotHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -50,7 +55,52 @@ public class CommitHandler {
 
   protected void onValidateFailure(Snapshot snapshot) {}
 
+  private Optional<BeforePreparationSnapshotHookFuture> invokeBeforePreparationSnapshotHook(
+      Snapshot snapshot) throws UnknownTransactionStatusException, CommitException {
+    if (beforePreparationSnapshotHook == null) {
+      return Optional.empty();
+    }
+
+    try {
+      return Optional.of(beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot));
+    } catch (Exception e) {
+      abortState(snapshot.getId());
+      rollbackRecords(snapshot);
+      // TODO: This method is actually a part of preparation phase. But the callback method name
+      //       `onPrepareFailure()` should be renamed to more reasonable one.
+      onPrepareFailure(snapshot);
+      throw new CommitException(
+          CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
+    }
+  }
+
+  private void waitBeforePreparationSnapshotHookFuture(
+      Snapshot snapshot, @Nullable BeforePreparationSnapshotHookFuture snapshotHookFuture)
+      throws UnknownTransactionStatusException, CommitException {
+    if (snapshotHookFuture == null) {
+      return;
+    }
+
+    try {
+      snapshotHookFuture.get();
+    } catch (Exception e) {
+      abortState(snapshot.getId());
+      rollbackRecords(snapshot);
+      // TODO: This method is actually a part of validation phase. But the callback method name
+      //       `onValidateFailure()` should be renamed to more reasonable one.
+      onValidateFailure(snapshot);
+      throw new CommitException(
+          CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
+    }
+  }
+
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+    Optional<BeforePreparationSnapshotHookFuture> snapshotHookFuture =
+        invokeBeforePreparationSnapshotHook(snapshot);
     try {
       prepare(snapshot);
     } catch (PreparationException e) {
@@ -78,6 +128,8 @@ public class CommitHandler {
       onValidateFailure(snapshot);
       throw e;
     }
+
+    waitBeforePreparationSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
 
     commitState(snapshot);
     commitRecords(snapshot);
@@ -233,5 +285,17 @@ public class CommitHandler {
       logger.warn("Rolling back records failed. Transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
+  }
+
+  /**
+   * Sets the {@link BeforePreparationSnapshotHook}. This method must be called immediately after
+   * the constructor is invoked.
+   *
+   * @param beforePreparationSnapshotHook The snapshot hook to set.
+   * @throws NullPointerException If the argument is null.
+   */
+  public void setBeforePreparationSnapshotHook(
+      BeforePreparationSnapshotHook beforePreparationSnapshotHook) {
+    this.beforePreparationSnapshotHook = checkNotNull(beforePreparationSnapshotHook);
   }
 }

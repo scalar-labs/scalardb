@@ -596,4 +596,22 @@ public class ConsensusCommitUtilsTest {
         .isFalse();
     assertThat(ConsensusCommitUtils.isAfterImageColumn("aaa", metadata)).isFalse();
   }
+
+  @Test
+  void getNextTxVersion_NullGiven_shouldReturnInitialVersion() {
+    // Act Assert
+    assertThat(ConsensusCommitUtils.getNextTxVersion(null)).isEqualTo(1);
+  }
+
+  @Test
+  void getNextTxVersion_OneGiven_shouldReturnNextVersion() {
+    // Act Assert
+    assertThat(ConsensusCommitUtils.getNextTxVersion(1)).isEqualTo(2);
+  }
+
+  @Test
+  void getNextTxVersion_LargeValueGiven_shouldReturnNextVersion() {
+    // Act Assert
+    assertThat(ConsensusCommitUtils.getNextTxVersion(100000)).isEqualTo(100001);
+  }
 }
