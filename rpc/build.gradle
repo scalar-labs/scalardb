@@ -10,6 +10,7 @@ dependencies {
     api "io.grpc:grpc-protobuf:${grpcVersion}"
     api "io.grpc:grpc-stub:${grpcVersion}"
     api "io.grpc:grpc-services:${grpcVersion}"
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
     implementation "javax.annotation:javax.annotation-api:${annotationVersion}"
 }
 
