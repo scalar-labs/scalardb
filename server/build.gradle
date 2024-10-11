@@ -35,6 +35,7 @@ dependencies {
     implementation "info.picocli:picocli:${picocliVersion}"
     implementation("com.scalar-labs:scalar-admin:${scalarAdminVersion}") {
         exclude group: 'io.grpc'
+        exclude group: 'com.google.protobuf'
         exclude group: 'org.slf4j'
     }
     implementation "io.dropwizard.metrics:metrics-core:${dropwizardMetricsVersion}"
