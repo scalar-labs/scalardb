@@ -24,7 +24,6 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -162,6 +161,18 @@ public class Snapshot {
     return new ArrayList<>(deleteSet.values());
   }
 
+  public List<Entry<Key, Put>> getKeysAndPutsInWriteSet() {
+    return new ArrayList<>(writeSet.entrySet());
+  }
+
+  public List<Entry<Key, Delete>> getKeysAndDeletesInDeleteSet() {
+    return new ArrayList<>(deleteSet.entrySet());
+  }
+
+  public Map<Key, Optional<TransactionResult>> getReadSetMap() {
+    return new HashMap<>(readSet);
+  }
+
   public Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
       throws CrudException {
     if (deleteSet.containsKey(key)) {
@@ -252,39 +263,6 @@ public class Snapshot {
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
       composer.add(entry.getValue(), result);
     }
-  }
-
-  /**
-   * Returns the read set. This is only for internal use. It doesn't copy the values for performance
-   * reasons.
-   *
-   * @return the read set. Don't modify the value.
-   */
-  @SuppressFBWarnings(value = {"EI_EXPOSE_REP"})
-  public Map<Key, Optional<TransactionResult>> getReadSet() {
-    return readSet;
-  }
-
-  /**
-   * Returns the write set. This is only for internal use. It doesn't copy the values for
-   * performance reasons.
-   *
-   * @return the write set. Don't modify the value.
-   */
-  @SuppressFBWarnings(value = {"EI_EXPOSE_REP"})
-  public Map<Key, Put> getWriteSet() {
-    return writeSet;
-  }
-
-  /**
-   * Returns the delete set. This is only for internal use. It doesn't copy the values for
-   * performance reasons.
-   *
-   * @return the delete set. Don't modify the value.
-   */
-  @SuppressFBWarnings(value = {"EI_EXPOSE_REP"})
-  public Map<Key, Delete> getDeleteSet() {
-    return deleteSet;
   }
 
   private boolean isWriteSetOverlappedWith(Scan scan) {
