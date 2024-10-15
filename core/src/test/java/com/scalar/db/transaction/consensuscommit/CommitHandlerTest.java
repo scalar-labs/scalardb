@@ -765,7 +765,6 @@ public class CommitHandlerTest {
     Snapshot snapshot =
         prepareSnapshotWithDifferentPartitionPut(
             Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    doNothingWhenCoordinatorPutState();
     handler.setBeforePreparationSnapshotHook(beforePreparationSnapshotHook);
 
     // Act
