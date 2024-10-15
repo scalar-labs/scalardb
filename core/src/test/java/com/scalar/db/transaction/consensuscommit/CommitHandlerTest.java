@@ -34,7 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -118,11 +118,17 @@ public class CommitHandlerTest {
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() {
+    return prepareSnapshotWithDifferentPartitionPut(
+        Isolation.SNAPSHOT, SerializableStrategy.EXTRA_WRITE);
+  }
+
+  private Snapshot prepareSnapshotWithDifferentPartitionPut(
+      Isolation isolation, SerializableStrategy serializableStrategy) {
     Snapshot snapshot =
         new Snapshot(
             anyId(),
-            Isolation.SNAPSHOT,
-            SerializableStrategy.EXTRA_WRITE,
+            isolation,
+            serializableStrategy,
             tableMetadataManager,
             new ParallelExecutor(config));
 
@@ -135,12 +141,13 @@ public class CommitHandlerTest {
     return snapshot;
   }
 
-  private Snapshot prepareSnapshotWithSamePartitionPut() {
+  private Snapshot prepareSnapshotWithSamePartitionPut(
+      Isolation isolation, SerializableStrategy serializableStrategy) {
     Snapshot snapshot =
         new Snapshot(
             anyId(),
-            Isolation.SNAPSHOT,
-            SerializableStrategy.EXTRA_WRITE,
+            isolation,
+            serializableStrategy,
             tableMetadataManager,
             new ParallelExecutor(config));
 
@@ -163,13 +170,21 @@ public class CommitHandlerTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = {false, true})
+  // The combination of BeforePreparationSnapshotHook and EXTRA_WRITE is not supported and tested
+  // in another test case.
+  @CsvSource({
+    "false, SNAPSHOT, EXTRA_READ",
+    "false, SERIALIZABLE, EXTRA_READ",
+    "false, SERIALIZABLE, EXTRA_WRITE",
+    "true, SNAPSHOT, EXTRA_READ",
+    "true, SERIALIZABLE, EXTRA_READ",
+  })
   public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
-      boolean withSnapshotHook)
+      boolean withSnapshotHook, Isolation isolation, SerializableStrategy serializableStrategy)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut(isolation, serializableStrategy);
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
     setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
@@ -186,12 +201,21 @@ public class CommitHandlerTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(boolean withSnapshotHook)
+  // The combination of BeforePreparationSnapshotHook and EXTRA_WRITE is not supported and tested
+  // in another test case.
+  @CsvSource({
+    "false, SNAPSHOT, EXTRA_READ",
+    "false, SERIALIZABLE, EXTRA_READ",
+    "false, SERIALIZABLE, EXTRA_WRITE",
+    "true, SNAPSHOT, EXTRA_READ",
+    "true, SERIALIZABLE, EXTRA_READ",
+  })
+  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
+      boolean withSnapshotHook, Isolation isolation, SerializableStrategy serializableStrategy)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
+    Snapshot snapshot = prepareSnapshotWithSamePartitionPut(isolation, serializableStrategy);
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
     setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
@@ -705,7 +729,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
-    verify(handler).onPrepareFailure(any());
+    verify(handler).onPrepareFailure(snapshot);
     verify(handler, never()).onValidateFailure(any());
   }
 
@@ -731,7 +755,30 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
     verify(handler, never()).onPrepareFailure(any());
-    verify(handler).onValidateFailure(any());
+    verify(handler).onValidateFailure(snapshot);
+  }
+
+  @Test
+  public void commit_SnapshotHookAndExtraWriteGiven_ShouldThrowCommitException()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    Snapshot snapshot =
+        prepareSnapshotWithDifferentPartitionPut(
+            Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    doNothingWhenCoordinatorPutState();
+    handler.setBeforePreparationSnapshotHook(beforePreparationSnapshotHook);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(storage, never()).mutate(anyList());
+    verify(coordinator).putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
+    verify(handler).rollbackRecords(snapshot);
+    verify(handler).onPrepareFailure(snapshot);
+    verify(handler, never()).onValidateFailure(any());
   }
 
   protected void doThrowExceptionWhenCoordinatorPutState(

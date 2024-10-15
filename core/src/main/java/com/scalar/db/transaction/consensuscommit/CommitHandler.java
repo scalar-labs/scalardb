@@ -62,6 +62,11 @@ public class CommitHandler {
     }
 
     try {
+      if (snapshot.getIsolation() == Isolation.SERIALIZABLE
+          && snapshot.getStrategy() == SerializableStrategy.EXTRA_WRITE) {
+        throw new IllegalArgumentException(
+            CoreError.BEFORE_PREPARATION_SNAPSHOT_HOOK_WITH_EXTRA_WRITE_NOT_SUPPORTED.getMessage());
+      }
       return Optional.of(beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot));
     } catch (Exception e) {
       abortState(snapshot.getId());
