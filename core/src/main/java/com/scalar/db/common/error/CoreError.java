@@ -659,6 +659,24 @@ public enum CoreError implements ScalarDbError {
       "The variable key column size must be greater than or equal to 64",
       "",
       ""),
+  DATA_LOADER_INVALID_COLUMN_NON_EXISTENT(
+      Category.USER_ERROR,
+      "0144",
+      "Invalid key: Column %s does not exist in the table %s in namespace %s.",
+      "",
+      ""),
+  DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
+      Category.USER_ERROR,
+      "0145",
+      "Invalid base64 encoding for blob value for column %s in table %s in namespace %s",
+      "",
+      ""),
+  DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
+      Category.USER_ERROR,
+      "0146",
+      "Invalid number specified for column %s in table %s in namespace %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
