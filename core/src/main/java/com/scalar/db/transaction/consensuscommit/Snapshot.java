@@ -27,7 +27,6 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -155,24 +154,12 @@ public class Snapshot {
     return readSet.getOrDefault(key, Optional.empty());
   }
 
-  /**
-   * Returns the Put operations in write set. This is only for internal use. It doesn't copy the
-   * values for performance reasons.
-   *
-   * @return the Put operations in the write set. Don't modify them.
-   */
-  public Collection<Put> getPutsInWriteSet() {
-    return writeSet.values();
+  public List<Put> getPutsInWriteSet() {
+    return new ArrayList<>(writeSet.values());
   }
 
-  /**
-   * Returns the Delete operations in delete set. This is only for internal use. It doesn't copy the
-   * values for performance reasons.
-   *
-   * @return the Delete operations in the delete set. Don't modify them.
-   */
-  public Collection<Delete> getDeletesInDeleteSet() {
-    return deleteSet.values();
+  public List<Delete> getDeletesInDeleteSet() {
+    return new ArrayList<>(deleteSet.values());
   }
 
   public Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
@@ -268,35 +255,35 @@ public class Snapshot {
   }
 
   /**
-   * Returns the read set map. This is only for internal use. It doesn't copy the values for
-   * performance reasons.
+   * Returns the read set. This is only for internal use. It doesn't copy the values for performance
+   * reasons.
    *
-   * @return the read set map. Don't modify them.
+   * @return the read set. Don't modify the value.
    */
   @SuppressFBWarnings(value = {"EI_EXPOSE_REP"})
-  public Map<Key, Optional<TransactionResult>> getReadSetMap() {
+  public Map<Key, Optional<TransactionResult>> getReadSet() {
     return readSet;
   }
 
   /**
-   * Returns the write set map. This is only for internal use. It doesn't copy the values for
+   * Returns the write set. This is only for internal use. It doesn't copy the values for
    * performance reasons.
    *
-   * @return the write set map. Don't modify them.
+   * @return the write set. Don't modify the value.
    */
   @SuppressFBWarnings(value = {"EI_EXPOSE_REP"})
-  public Map<Key, Put> getWriteSetMap() {
+  public Map<Key, Put> getWriteSet() {
     return writeSet;
   }
 
   /**
-   * Returns the delete set map. This is only for internal use. It doesn't copy the values for
+   * Returns the delete set. This is only for internal use. It doesn't copy the values for
    * performance reasons.
    *
-   * @return the delete set map. Don't modify them.
+   * @return the delete set. Don't modify the value.
    */
   @SuppressFBWarnings(value = {"EI_EXPOSE_REP"})
-  public Map<Key, Delete> getDeleteSetMap() {
+  public Map<Key, Delete> getDeleteSet() {
     return deleteSet;
   }
 
