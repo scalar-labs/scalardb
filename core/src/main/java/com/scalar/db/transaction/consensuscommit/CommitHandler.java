@@ -17,13 +17,13 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.transaction.consensuscommit.BeforePreparationSnapshotHook.BeforePreparationSnapshotHookFuture;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -55,8 +55,8 @@ public class CommitHandler {
 
   protected void onValidateFailure(Snapshot snapshot) {}
 
-  private Optional<BeforePreparationSnapshotHookFuture> invokeBeforePreparationSnapshotHook(
-      Snapshot snapshot) throws UnknownTransactionStatusException, CommitException {
+  private Optional<Future<Void>> invokeBeforePreparationSnapshotHook(Snapshot snapshot)
+      throws UnknownTransactionStatusException, CommitException {
     if (beforePreparationSnapshotHook == null) {
       return Optional.empty();
     }
@@ -77,7 +77,7 @@ public class CommitHandler {
   }
 
   private void waitBeforePreparationSnapshotHookFuture(
-      Snapshot snapshot, @Nullable BeforePreparationSnapshotHookFuture snapshotHookFuture)
+      Snapshot snapshot, @Nullable Future<Void> snapshotHookFuture)
       throws UnknownTransactionStatusException, CommitException {
     if (snapshotHookFuture == null) {
       return;
@@ -99,8 +99,7 @@ public class CommitHandler {
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
-    Optional<BeforePreparationSnapshotHookFuture> snapshotHookFuture =
-        invokeBeforePreparationSnapshotHook(snapshot);
+    Optional<Future<Void>> snapshotHookFuture = invokeBeforePreparationSnapshotHook(snapshot);
     try {
       prepare(snapshot);
     } catch (PreparationException e) {

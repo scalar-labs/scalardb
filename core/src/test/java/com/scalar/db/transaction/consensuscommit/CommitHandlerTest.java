@@ -25,10 +25,10 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.BeforePreparationSnapshotHook.BeforePreparationSnapshotHookFuture;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +58,7 @@ public class CommitHandlerTest {
   @Mock protected TransactionTableMetadataManager tableMetadataManager;
   @Mock protected ConsensusCommitConfig config;
   @Mock protected BeforePreparationSnapshotHook beforePreparationSnapshotHook;
-  @Mock protected BeforePreparationSnapshotHookFuture beforePreparationSnapshotHookFuture;
+  @Mock protected Future<Void> beforePreparationSnapshotHookFuture;
 
   private CommitHandler handler;
   protected ParallelExecutor parallelExecutor;
@@ -660,7 +660,7 @@ public class CommitHandlerTest {
         spy(
             new BeforePreparationSnapshotHook() {
               @Override
-              public BeforePreparationSnapshotHookFuture handle(
+              public Future<Void> handle(
                   TransactionTableMetadataManager tableMetadataManager, Snapshot ss) {
                 Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(2));
                 return beforePreparationSnapshotHookFuture;
@@ -711,23 +711,15 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_FailingSnapshotHookFutureGiven_ShouldThrowCommitException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
+          InterruptedException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    // Lambda can't be spied...
-    BeforePreparationSnapshotHook failingBeforePreparationSnapshotHook =
-        spy(
-            new BeforePreparationSnapshotHook() {
-              @Override
-              public BeforePreparationSnapshotHookFuture handle(
-                  TransactionTableMetadataManager tableMetadataManager, Snapshot ss) {
-                return () -> {
-                  throw new RuntimeException("Something is wrong");
-                };
-              }
-            });
-    handler.setBeforePreparationSnapshotHook(failingBeforePreparationSnapshotHook);
+    doThrow(new RuntimeException("Something is wrong"))
+        .when(beforePreparationSnapshotHookFuture)
+        .get();
+    setBeforePreparationSnapshotHookIfNeeded(true);
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
