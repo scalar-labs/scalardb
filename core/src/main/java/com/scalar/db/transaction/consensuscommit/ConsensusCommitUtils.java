@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 public final class ConsensusCommitUtils {
 
@@ -298,5 +299,19 @@ public final class ConsensusCommitUtils {
       return message.replaceFirst("PutIf|PutIfExists", condition.getClass().getSimpleName());
     }
     return message;
+  }
+
+  /**
+   * Returns the next `tx_version` based on the current value.
+   *
+   * @param currentTxVersion The current `tx_version`, if it exists, or null otherwise.
+   * @return The next `tx_version`.
+   */
+  public static int getNextTxVersion(@Nullable Integer currentTxVersion) {
+    if (currentTxVersion == null) {
+      return 1;
+    } else {
+      return currentTxVersion + 1;
+    }
   }
 }

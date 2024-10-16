@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNextTxVersion;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
@@ -66,7 +67,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     if (!base.isInsertModeEnabled() && result != null) { // overwrite existing record
       createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
-      putBuilder.intValue(Attribute.VERSION, version + 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(version));
 
       // check if the record is not interrupted by other conflicting transactions
       if (result.isDeemedAsCommitted()) {
@@ -82,7 +83,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
                 .build());
       }
     } else { // initial record or insert mode enabled
-      putBuilder.intValue(Attribute.VERSION, 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(null));
 
       // check if the record is not created by other conflicting transactions
       putBuilder.condition(ConditionBuilder.putIfNotExists());
@@ -107,7 +108,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     if (result != null) {
       createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
-      putBuilder.intValue(Attribute.VERSION, version + 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(version));
 
       // check if the record is not interrupted by other conflicting transactions
       if (result.isDeemedAsCommitted()) {
@@ -122,7 +123,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
                 .build());
       }
     } else {
-      putBuilder.intValue(Attribute.VERSION, 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(null));
 
       // check if the record is not created by other conflicting transactions
       putBuilder.condition(ConditionBuilder.putIfNotExists());
