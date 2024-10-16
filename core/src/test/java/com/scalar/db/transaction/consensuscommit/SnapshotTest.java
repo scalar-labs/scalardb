@@ -41,14 +41,13 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.transaction.consensuscommit.Snapshot.ReadWriteSets;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1844,20 +1843,38 @@ public class SnapshotTest {
   }
 
   @Test
-  void getKeysAndPutsInWriteSet_ShouldReturnProperValue() {
+  void getReadWriteSet_ReadSetAndWriteSetGiven_ShouldReturnProperValue() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+
+    Get get1 = prepareGet();
+    TransactionResult result1 = prepareResult("t1");
+    Snapshot.Key readKey1 = new Snapshot.Key(get1);
+    snapshot.put(readKey1, Optional.of(result1));
+    Get get2 = prepareAnotherGet();
+    TransactionResult result2 = prepareResult("t2");
+    Snapshot.Key readKey2 = new Snapshot.Key(get2);
+    snapshot.put(readKey2, Optional.of(result2));
+
     Put put1 = preparePut();
-    Snapshot.Key key1 = new Snapshot.Key(put1);
-    snapshot.put(key1, put1);
+    Snapshot.Key putKey1 = new Snapshot.Key(put1);
+    snapshot.put(putKey1, put1);
     Put put2 = prepareAnotherPut();
-    Snapshot.Key key2 = new Snapshot.Key(put2);
-    snapshot.put(key2, put2);
+    Snapshot.Key putKey2 = new Snapshot.Key(put2);
+    snapshot.put(putKey2, put2);
 
     // Act
-    List<Entry<Snapshot.Key, Put>> entries = snapshot.getKeysAndPutsInWriteSet();
+    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
     {
       // The method returns an immutable value, so the following update shouldn't be included.
+      Get delayedGet =
+          new Get(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(ANY_NAMESPACE_NAME)
+              .forTable(ANY_TABLE_NAME);
+      TransactionResult delayedResult = prepareResult("t3");
+      snapshot.put(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
+
       Put delayedPut =
           new Put(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
@@ -1868,11 +1885,23 @@ public class SnapshotTest {
     }
 
     // Assert
-    assertThat(entries).size().isEqualTo(2);
-    for (Map.Entry<Snapshot.Key, Put> entry : entries) {
-      if (entry.getKey().equals(key1)) {
+    assertThat(readWriteSets.readSetMap).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Optional<TransactionResult>> entry :
+        readWriteSets.readSetMap.entrySet()) {
+      if (entry.getKey().equals(readKey1)) {
+        assertThat(entry.getValue()).isPresent().get().isEqualTo(result1);
+      } else if (entry.getKey().equals(readKey2)) {
+        assertThat(entry.getValue()).isPresent().get().isEqualTo(result2);
+      } else {
+        throw new AssertionError("Unexpected key: " + entry.getKey());
+      }
+    }
+
+    assertThat(readWriteSets.writeSet).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Put> entry : readWriteSets.writeSet) {
+      if (entry.getKey().equals(putKey1)) {
         assertThat(entry.getValue()).isEqualTo(put1);
-      } else if (entry.getKey().equals(key2)) {
+      } else if (entry.getKey().equals(putKey2)) {
         assertThat(entry.getValue()).isEqualTo(put2);
       } else {
         throw new AssertionError("Unexpected key: " + entry.getKey());
@@ -1881,56 +1910,28 @@ public class SnapshotTest {
   }
 
   @Test
-  void getKeysAndDeletesInDeleteSet_ShouldReturnProperValue() {
+  void getReadWriteSet_ReadSetAndDeleteSetGiven_ShouldReturnProperValue() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Delete delete1 = prepareDelete();
-    Snapshot.Key key1 = new Snapshot.Key(delete1);
-    snapshot.put(key1, delete1);
-    Delete delete2 = prepareAnotherDelete();
-    Snapshot.Key key2 = new Snapshot.Key(delete2);
-    snapshot.put(key2, delete2);
 
-    // Act
-    List<Entry<Snapshot.Key, Delete>> entries = snapshot.getKeysAndDeletesInDeleteSet();
-    {
-      // The method returns an immutable value, so the following update shouldn't be included.
-      Delete delayedDelete =
-          new Delete(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
-              .withConsistency(Consistency.LINEARIZABLE)
-              .forNamespace(ANY_NAMESPACE_NAME)
-              .forTable(ANY_TABLE_NAME);
-      snapshot.put(new Snapshot.Key(delayedDelete), delayedDelete);
-    }
-
-    // Assert
-    assertThat(entries).size().isEqualTo(2);
-    for (Map.Entry<Snapshot.Key, Delete> entry : entries) {
-      if (entry.getKey().equals(key1)) {
-        assertThat(entry.getValue()).isEqualTo(delete1);
-      } else if (entry.getKey().equals(key2)) {
-        assertThat(entry.getValue()).isEqualTo(delete2);
-      } else {
-        throw new AssertionError("Unexpected key: " + entry.getKey());
-      }
-    }
-  }
-
-  @Test
-  void getReadSetMap_ShouldReturnProperValue() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Get get1 = prepareGet();
     TransactionResult result1 = prepareResult("t1");
-    Snapshot.Key key1 = new Snapshot.Key(get1);
-    snapshot.put(key1, Optional.of(result1));
+    Snapshot.Key readKey1 = new Snapshot.Key(get1);
+    snapshot.put(readKey1, Optional.of(result1));
     Get get2 = prepareAnotherGet();
     TransactionResult result2 = prepareResult("t2");
-    Snapshot.Key key2 = new Snapshot.Key(get2);
-    snapshot.put(key2, Optional.of(result2));
+    Snapshot.Key readKey2 = new Snapshot.Key(get2);
+    snapshot.put(readKey2, Optional.of(result2));
+
+    Delete delete1 = prepareDelete();
+    Snapshot.Key deleteKey1 = new Snapshot.Key(delete1);
+    snapshot.put(deleteKey1, delete1);
+    Delete delete2 = prepareAnotherDelete();
+    Snapshot.Key deleteKey2 = new Snapshot.Key(delete2);
+    snapshot.put(deleteKey2, delete2);
 
     // Act
-    Map<Snapshot.Key, Optional<TransactionResult>> readSetMap = snapshot.getReadSetMap();
+    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
     {
       // The method returns an immutable value, so the following update shouldn't be included.
       Get delayedGet =
@@ -1940,15 +1941,34 @@ public class SnapshotTest {
               .forTable(ANY_TABLE_NAME);
       TransactionResult delayedResult = prepareResult("t3");
       snapshot.put(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
+
+      Delete delayedDelete =
+          new Delete(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(ANY_NAMESPACE_NAME)
+              .forTable(ANY_TABLE_NAME);
+      snapshot.put(new Snapshot.Key(delayedDelete), delayedDelete);
     }
 
     // Assert
-    assertThat(readSetMap).size().isEqualTo(2);
-    for (Map.Entry<Snapshot.Key, Optional<TransactionResult>> entry : readSetMap.entrySet()) {
-      if (entry.getKey().equals(key1)) {
+    assertThat(readWriteSets.readSetMap).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Optional<TransactionResult>> entry :
+        readWriteSets.readSetMap.entrySet()) {
+      if (entry.getKey().equals(readKey1)) {
         assertThat(entry.getValue()).isPresent().get().isEqualTo(result1);
-      } else if (entry.getKey().equals(key2)) {
+      } else if (entry.getKey().equals(readKey2)) {
         assertThat(entry.getValue()).isPresent().get().isEqualTo(result2);
+      } else {
+        throw new AssertionError("Unexpected key: " + entry.getKey());
+      }
+    }
+
+    assertThat(readWriteSets.deleteSet).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Delete> entry : readWriteSets.deleteSet) {
+      if (entry.getKey().equals(deleteKey1)) {
+        assertThat(entry.getValue()).isEqualTo(delete1);
+      } else if (entry.getKey().equals(deleteKey2)) {
+        assertThat(entry.getValue()).isEqualTo(delete2);
       } else {
         throw new AssertionError("Unexpected key: " + entry.getKey());
       }

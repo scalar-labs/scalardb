@@ -67,7 +67,8 @@ public class CommitHandler {
         throw new IllegalArgumentException(
             CoreError.BEFORE_PREPARATION_SNAPSHOT_HOOK_WITH_EXTRA_WRITE_NOT_SUPPORTED.getMessage());
       }
-      return Optional.of(beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot));
+      return Optional.of(
+          beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot.getReadWriteSets()));
     } catch (Exception e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
