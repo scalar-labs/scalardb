@@ -659,12 +659,6 @@ public enum CoreError implements ScalarDbError {
       "The variable key column size must be greater than or equal to 64",
       "",
       ""),
-  BEFORE_PREPARATION_SNAPSHOT_HOOK_WITH_EXTRA_WRITE_NOT_SUPPORTED(
-      Category.INTERNAL_ERROR,
-      "0145",
-      "Before-preparation snapshot hook with EXTRA_WRITE strategy is not supported",
-      "",
-      ""),
 
   //
   // Errors for the concurrency error category

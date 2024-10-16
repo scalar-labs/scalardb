@@ -105,13 +105,10 @@ public class Snapshot {
     return id;
   }
 
+  @VisibleForTesting
   @Nonnull
   Isolation getIsolation() {
     return isolation;
-  }
-
-  SerializableStrategy getStrategy() {
-    return strategy;
   }
 
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet
