@@ -26,6 +26,7 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -159,6 +160,10 @@ public class Snapshot {
 
   public List<Delete> getDeletesInDeleteSet() {
     return new ArrayList<>(deleteSet.values());
+  }
+
+  public ReadWriteSets getReadWriteSets() {
+    return new ReadWriteSets(id, readSet, writeSet.entrySet(), deleteSet.entrySet());
   }
 
   public Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
@@ -651,6 +656,40 @@ public class Snapshot {
           .add("partitionKey", partitionKey)
           .add("clusteringKey", clusteringKey)
           .toString();
+    }
+  }
+
+  public static class ReadWriteSets {
+    public final String transactionId;
+    public final Map<Key, Optional<TransactionResult>> readSetMap;
+    public final List<Entry<Key, Put>> writeSet;
+    public final List<Entry<Key, Delete>> deleteSet;
+
+    public ReadWriteSets(
+        String transactionId,
+        Map<Key, Optional<TransactionResult>> readSetMap,
+        Collection<Entry<Key, Put>> writeSet,
+        Collection<Entry<Key, Delete>> deleteSet) {
+      this.transactionId = transactionId;
+      this.readSetMap = new HashMap<>(readSetMap);
+      this.writeSet = new ArrayList<>(writeSet);
+      this.deleteSet = new ArrayList<>(deleteSet);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof ReadWriteSets)) return false;
+      ReadWriteSets that = (ReadWriteSets) o;
+      return Objects.equals(transactionId, that.transactionId)
+          && Objects.equals(readSetMap, that.readSetMap)
+          && Objects.equals(writeSet, that.writeSet)
+          && Objects.equals(deleteSet, that.deleteSet);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(transactionId, readSetMap, writeSet, deleteSet);
     }
   }
 }
