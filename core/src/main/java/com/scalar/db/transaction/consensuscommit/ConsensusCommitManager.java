@@ -50,7 +50,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
-  private final CommitHandler commit;
+  protected final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
@@ -75,7 +75,7 @@ public class ConsensusCommitManager extends ActiveTransactionManagedDistributedT
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
-  ConsensusCommitManager(DatabaseConfig databaseConfig) {
+  protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     StorageFactory storageFactory = StorageFactory.create(databaseConfig.getProperties());
     storage = storageFactory.getStorage();
