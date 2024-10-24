@@ -270,12 +270,12 @@ class CoordinatorGroupCommitterTest {
 
       // Act
       // Assert
-      assertThat(keyManipulator.isFullKey("012345678901234567890123:" + childTxId)).isTrue();
-      assertThat(keyManipulator.isFullKey("abcdefghijklmnopqrstuvwx:" + childTxId)).isTrue();
-      assertThat(keyManipulator.isFullKey("cdefghijklmnopqrstuvwxyz:" + childTxId)).isTrue();
-      assertThat(keyManipulator.isFullKey("ABCDEFGHIJKLMNOPQRSTUVWX:" + childTxId)).isTrue();
-      assertThat(keyManipulator.isFullKey("CDEFGHIJKLMNOPQRSTUVWXYZ:" + childTxId)).isTrue();
-      assertThat(keyManipulator.isFullKey("0123456789abcdefghijWXYZ:" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("012345678901234567890123$" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("abcdefghijklmnopqrstuvwx$" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("cdefghijklmnopqrstuvwxyz$" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("ABCDEFGHIJKLMNOPQRSTUVWX$" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("CDEFGHIJKLMNOPQRSTUVWXYZ$" + childTxId)).isTrue();
+      assertThat(keyManipulator.isFullKey("0123456789abcdefghijWXYZ$" + childTxId)).isTrue();
     }
 
     @Test
@@ -285,8 +285,8 @@ class CoordinatorGroupCommitterTest {
 
       // Act
       // Assert
-      assertThat(keyManipulator.isFullKey("01234567890123456789012:" + childTxId)).isFalse();
-      assertThat(keyManipulator.isFullKey("0123456789012345678901234:" + childTxId)).isFalse();
+      assertThat(keyManipulator.isFullKey("01234567890123456789012$" + childTxId)).isFalse();
+      assertThat(keyManipulator.isFullKey("0123456789012345678901234$" + childTxId)).isFalse();
       assertThat(keyManipulator.isFullKey("012345678901234567890123" + childTxId)).isFalse();
       assertThat(keyManipulator.isFullKey("0123456789012345678901234" + childTxId)).isFalse();
     }
@@ -331,7 +331,7 @@ class CoordinatorGroupCommitterTest {
 
       // Act
       // Assert
-      assertThat(keyManipulator.fullKey(parentKey, childKey)).isEqualTo(parentKey + ":" + childKey);
+      assertThat(keyManipulator.fullKey(parentKey, childKey)).isEqualTo(parentKey + "$" + childKey);
     }
   }
 }

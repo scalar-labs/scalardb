@@ -659,6 +659,13 @@ public enum CoreError implements ScalarDbError {
       "The variable key column size must be greater than or equal to 64",
       "",
       ""),
+  COSMOS_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
+      Category.USER_ERROR,
+      "0145",
+      "The value of the column %s in the primary key contains an illegal character. "
+          + "Primary key columns must not contain any of the following characters: ':', '/', '\\', '#', '?'. Value: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
