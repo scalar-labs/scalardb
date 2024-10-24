@@ -20,6 +20,21 @@ public class QueryRequest implements PaginatedRequest {
   }
 
   @Override
+  public PaginatedRequestResponse execute() {
+    QueryResponse response = client.query(dynamoRequest);
+
+    return new PaginatedRequestResponse(
+        response.items(), response.hasLastEvaluatedKey(), response.lastEvaluatedKey());
+  }
+
+  @Override
+  public PaginatedRequestResponse execute(int limit) {
+    QueryRequest request =
+        new QueryRequest(this.client, this.dynamoRequest.toBuilder().limit(limit).build());
+    return request.execute();
+  }
+
+  @Override
   public PaginatedRequestResponse execute(Map<String, AttributeValue> exclusiveStartKey) {
     QueryRequest request =
         new QueryRequest(
@@ -29,15 +44,16 @@ public class QueryRequest implements PaginatedRequest {
   }
 
   @Override
-  public PaginatedRequestResponse execute() {
-    QueryResponse response = client.query(dynamoRequest);
-
-    return new PaginatedRequestResponse(
-        response.items(), response.hasLastEvaluatedKey(), response.lastEvaluatedKey());
-  }
-
-  @Override
-  public Integer limit() {
-    return dynamoRequest.limit();
+  public PaginatedRequestResponse execute(
+      Map<String, AttributeValue> exclusiveStartKey, int limit) {
+    QueryRequest request =
+        new QueryRequest(
+            this.client,
+            this.dynamoRequest
+                .toBuilder()
+                .exclusiveStartKey(exclusiveStartKey)
+                .limit(limit)
+                .build());
+    return request.execute();
   }
 }

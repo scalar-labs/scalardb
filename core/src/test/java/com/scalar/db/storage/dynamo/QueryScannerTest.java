@@ -40,11 +40,10 @@ public class QueryScannerTest {
     Map<String, AttributeValue> item = Collections.emptyMap();
     List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
     when(request.execute()).thenReturn(response);
-    when(request.limit()).thenReturn(null);
     when(response.items()).thenReturn(items);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
@@ -71,11 +70,10 @@ public class QueryScannerTest {
     Map<String, AttributeValue> item = Collections.emptyMap();
     List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
     when(request.execute()).thenReturn(response);
-    when(request.limit()).thenReturn(null);
     when(response.items()).thenReturn(items);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
 
     // Act
     List<Result> results1 = queryScanner.all();
@@ -100,9 +98,8 @@ public class QueryScannerTest {
     when(response.items()).thenReturn(items);
     when(resultInterpreter.interpret(item)).thenReturn(result);
     when(request.execute()).thenReturn(response);
-    when(request.limit()).thenReturn(null);
 
-    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
 
     // Act
     Iterator<Result> iterator = queryScanner.iterator();
@@ -134,9 +131,8 @@ public class QueryScannerTest {
     when(resultInterpreter.interpret(item)).thenReturn(result);
     when(request.execute()).thenReturn(response);
     when(request.execute(lastEvaluatedKey)).thenReturn(response);
-    when(request.limit()).thenReturn(null);
 
-    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
@@ -164,26 +160,27 @@ public class QueryScannerTest {
   @Test
   public void one_RequestWithLimitAndResponseWithLastEvaluatedKey_ShouldReturnResults() {
     // Arrange
+    int limit = 3;
+
     Map<String, AttributeValue> item = Collections.emptyMap();
-    List<Map<String, AttributeValue>> items = Arrays.asList(item, item);
+    List<Map<String, AttributeValue>> items1 = Arrays.asList(item, item);
+    List<Map<String, AttributeValue>> items2 = Collections.singletonList(item);
     Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
 
-    when(request.limit()).thenReturn(4);
-    when(response.items()).thenReturn(items);
+    when(response.items()).thenReturn(items1).thenReturn(items2);
     when(response.hasLastEvaluatedKey()).thenReturn(true);
     when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
-    when(request.execute()).thenReturn(response);
-    when(request.execute(lastEvaluatedKey)).thenReturn(response);
+    when(request.execute(limit)).thenReturn(response);
+    when(request.execute(lastEvaluatedKey, limit - items1.size())).thenReturn(response);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(request, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, limit, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
     Optional<Result> actual2 = queryScanner.one();
     Optional<Result> actual3 = queryScanner.one();
     Optional<Result> actual4 = queryScanner.one();
-    Optional<Result> actual5 = queryScanner.one();
 
     // Assert
     assertThat(actual1).isPresent();
@@ -192,12 +189,10 @@ public class QueryScannerTest {
     assertThat(actual2.get()).isEqualTo(result);
     assertThat(actual3).isPresent();
     assertThat(actual3.get()).isEqualTo(result);
-    assertThat(actual4).isPresent();
-    assertThat(actual4.get()).isEqualTo(result);
-    assertThat(actual5).isNotPresent();
+    assertThat(actual4).isNotPresent();
 
-    verify(resultInterpreter, times(4)).interpret(item);
-    verify(request).execute(lastEvaluatedKey);
-    verify(request).execute();
+    verify(resultInterpreter, times(limit)).interpret(item);
+    verify(request).execute(limit);
+    verify(request).execute(lastEvaluatedKey, limit - items1.size());
   }
 }
