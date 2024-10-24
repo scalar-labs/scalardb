@@ -1,7 +1,9 @@
 package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -9,7 +11,9 @@ import static org.mockito.Mockito.when;
 import com.azure.cosmos.CosmosClient;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
@@ -18,6 +22,7 @@ import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
@@ -215,5 +220,106 @@ public class CosmosTest {
     verify(selectStatementHandler).handle(captor.capture());
     Scan actualScan = captor.getValue();
     assertThat(actualScan.getProjections()).containsExactlyInAnyOrder("col1", "col2");
+  }
+
+  @Test
+  public void
+      get_IllegalArgumentExceptionThrownByOperationChecker_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Get get = Get.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+    doThrow(IllegalArgumentException.class).when(operationChecker).check(get);
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.get(get)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      scan_IllegalArgumentExceptionThrownByOperationChecker_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Scan scan = Scan.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+    doThrow(IllegalArgumentException.class).when(operationChecker).check(scan);
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.scan(scan)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      put_IllegalArgumentExceptionThrownByOperationChecker_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Put put = Put.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+    doThrow(IllegalArgumentException.class).when(operationChecker).check(put);
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.put(put)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      put_MultiplePutsGiven_IllegalArgumentExceptionThrownByOperationChecker_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Put put1 = Put.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+    Put put2 = Put.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+
+    doThrow(IllegalArgumentException.class).when(operationChecker).check(Arrays.asList(put1, put2));
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.put(Arrays.asList(put1, put2)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      delete_IllegalArgumentExceptionThrownByOperationChecker_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+    doThrow(IllegalArgumentException.class).when(operationChecker).check(delete);
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.delete(delete)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      delete_MultipleDeletesGiven_IllegalArgumentExceptionThrownByOperationChecker_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Delete delete1 =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+    Delete delete2 =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+
+    doThrow(IllegalArgumentException.class)
+        .when(operationChecker)
+        .check(Arrays.asList(delete1, delete2));
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.delete(Arrays.asList(delete1, delete2)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      mutate_IllegalArgumentExceptionThrownByOperationChecker_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Put put = Put.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+    Delete delete =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(partitionKey).build();
+
+    doThrow(IllegalArgumentException.class)
+        .when(operationChecker)
+        .check(Arrays.asList(put, delete));
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.mutate(Arrays.asList(put, delete)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }
