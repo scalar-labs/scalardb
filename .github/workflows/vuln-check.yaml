@@ -17,7 +17,7 @@ on:
       CR_PAT:
         required: true
       SLACK_SECURITY_WEBHOOK_URL:
-        required: true
+        required: false
 
 jobs:
   call-vuln-check:
