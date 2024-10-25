@@ -41,6 +41,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.transaction.consensuscommit.Snapshot.ReadWriteSets;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1839,5 +1840,138 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void getReadWriteSet_ReadSetAndWriteSetGiven_ShouldReturnProperValue() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+
+    Get get1 = prepareGet();
+    TransactionResult result1 = prepareResult("t1");
+    Snapshot.Key readKey1 = new Snapshot.Key(get1);
+    snapshot.put(readKey1, Optional.of(result1));
+    Get get2 = prepareAnotherGet();
+    TransactionResult result2 = prepareResult("t2");
+    Snapshot.Key readKey2 = new Snapshot.Key(get2);
+    snapshot.put(readKey2, Optional.of(result2));
+
+    Put put1 = preparePut();
+    Snapshot.Key putKey1 = new Snapshot.Key(put1);
+    snapshot.put(putKey1, put1);
+    Put put2 = prepareAnotherPut();
+    Snapshot.Key putKey2 = new Snapshot.Key(put2);
+    snapshot.put(putKey2, put2);
+
+    // Act
+    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
+    {
+      // The method returns an immutable value, so the following update shouldn't be included.
+      Get delayedGet =
+          new Get(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(ANY_NAMESPACE_NAME)
+              .forTable(ANY_TABLE_NAME);
+      TransactionResult delayedResult = prepareResult("t3");
+      snapshot.put(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
+
+      Put delayedPut =
+          new Put(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(ANY_NAMESPACE_NAME)
+              .forTable(ANY_TABLE_NAME)
+              .withValue(ANY_NAME_3, ANY_TEXT_3);
+      snapshot.put(new Snapshot.Key(delayedPut), delayedPut);
+    }
+
+    // Assert
+    assertThat(readWriteSets.readSetMap).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Optional<TransactionResult>> entry :
+        readWriteSets.readSetMap.entrySet()) {
+      if (entry.getKey().equals(readKey1)) {
+        assertThat(entry.getValue()).isPresent().get().isEqualTo(result1);
+      } else if (entry.getKey().equals(readKey2)) {
+        assertThat(entry.getValue()).isPresent().get().isEqualTo(result2);
+      } else {
+        throw new AssertionError("Unexpected key: " + entry.getKey());
+      }
+    }
+
+    assertThat(readWriteSets.writeSet).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Put> entry : readWriteSets.writeSet) {
+      if (entry.getKey().equals(putKey1)) {
+        assertThat(entry.getValue()).isEqualTo(put1);
+      } else if (entry.getKey().equals(putKey2)) {
+        assertThat(entry.getValue()).isEqualTo(put2);
+      } else {
+        throw new AssertionError("Unexpected key: " + entry.getKey());
+      }
+    }
+  }
+
+  @Test
+  void getReadWriteSet_ReadSetAndDeleteSetGiven_ShouldReturnProperValue() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+
+    Get get1 = prepareGet();
+    TransactionResult result1 = prepareResult("t1");
+    Snapshot.Key readKey1 = new Snapshot.Key(get1);
+    snapshot.put(readKey1, Optional.of(result1));
+    Get get2 = prepareAnotherGet();
+    TransactionResult result2 = prepareResult("t2");
+    Snapshot.Key readKey2 = new Snapshot.Key(get2);
+    snapshot.put(readKey2, Optional.of(result2));
+
+    Delete delete1 = prepareDelete();
+    Snapshot.Key deleteKey1 = new Snapshot.Key(delete1);
+    snapshot.put(deleteKey1, delete1);
+    Delete delete2 = prepareAnotherDelete();
+    Snapshot.Key deleteKey2 = new Snapshot.Key(delete2);
+    snapshot.put(deleteKey2, delete2);
+
+    // Act
+    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
+    {
+      // The method returns an immutable value, so the following update shouldn't be included.
+      Get delayedGet =
+          new Get(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(ANY_NAMESPACE_NAME)
+              .forTable(ANY_TABLE_NAME);
+      TransactionResult delayedResult = prepareResult("t3");
+      snapshot.put(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
+
+      Delete delayedDelete =
+          new Delete(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(ANY_NAMESPACE_NAME)
+              .forTable(ANY_TABLE_NAME);
+      snapshot.put(new Snapshot.Key(delayedDelete), delayedDelete);
+    }
+
+    // Assert
+    assertThat(readWriteSets.readSetMap).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Optional<TransactionResult>> entry :
+        readWriteSets.readSetMap.entrySet()) {
+      if (entry.getKey().equals(readKey1)) {
+        assertThat(entry.getValue()).isPresent().get().isEqualTo(result1);
+      } else if (entry.getKey().equals(readKey2)) {
+        assertThat(entry.getValue()).isPresent().get().isEqualTo(result2);
+      } else {
+        throw new AssertionError("Unexpected key: " + entry.getKey());
+      }
+    }
+
+    assertThat(readWriteSets.deleteSet).size().isEqualTo(2);
+    for (Map.Entry<Snapshot.Key, Delete> entry : readWriteSets.deleteSet) {
+      if (entry.getKey().equals(deleteKey1)) {
+        assertThat(entry.getValue()).isEqualTo(delete1);
+      } else if (entry.getKey().equals(deleteKey2)) {
+        assertThat(entry.getValue()).isEqualTo(delete2);
+      } else {
+        throw new AssertionError("Unexpected key: " + entry.getKey());
+      }
+    }
   }
 }
