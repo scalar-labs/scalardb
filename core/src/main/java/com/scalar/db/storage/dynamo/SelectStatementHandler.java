@@ -171,10 +171,6 @@ public class SelectStatementHandler {
       }
     }
 
-    if (scan.getLimit() > 0) {
-      builder.limit(scan.getLimit());
-    }
-
     if (!scan.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
       projectionExpression(builder, scan, expressionAttributeNames);
@@ -194,10 +190,6 @@ public class SelectStatementHandler {
   private Scanner executeFullScan(ScanAll scan, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     ScanRequest.Builder builder = ScanRequest.builder().tableName(dynamoOperation.getTableName());
-
-    if (scan.getLimit() > 0) {
-      builder.limit(scan.getLimit());
-    }
 
     if (!scan.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
