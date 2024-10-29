@@ -663,7 +663,7 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0145",
       "The value of the column %s in the primary key contains an illegal character. "
-          + "Primary key columns must not contain any of the following characters: ':', '/', '\\', '#', '?'. Value: %s",
+          + "Primary-key columns must not contain any of the following characters: ':', '/', '\\', '#', '?'. Value: %s",
       "",
       ""),
 

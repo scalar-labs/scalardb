@@ -26,12 +26,11 @@ import com.scalar.db.io.TextColumn;
 public class CosmosOperationChecker extends OperationChecker {
 
   private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
-    // Colons are not allowed in primary key columns due to the `ConcatenationVisitor` limitation
+    // Colons are not allowed in primary-key columns due to the `ConcatenationVisitor` limitation.
     ':',
 
-    // The following characters are not allowed in primary key columns because they are restricted
-    // and cannot be used in the `Id` property of a Cosmos DB document. See the following link for
-    // more information:
+    // The following characters are not allowed in primary-key columns because they are restricted
+    // and cannot be used in the `Id` property of a Cosmos DB document. For more information, see:
     // https://learn.microsoft.com/en-us/dotnet/api/microsoft.azure.cosmos.databaseproperties.id?view=azure-dotnet#remarks
     '/',
     '\\',
