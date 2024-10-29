@@ -25,6 +25,20 @@ import com.scalar.db.io.TextColumn;
 
 public class CosmosOperationChecker extends OperationChecker {
 
+  private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
+    // Colons are not allowed in primary key columns due to the `ConcatenationVisitor` limitation
+    ':',
+
+    // The following characters are not allowed in primary key columns because they are restricted
+    // and cannot be used in the `Id` property of a Cosmos DB document. See the following link for
+    // more information:
+    // https://learn.microsoft.com/en-us/dotnet/api/microsoft.azure.cosmos.databaseproperties.id?view=azure-dotnet#remarks
+    '/',
+    '\\',
+    '#',
+    '?'
+  };
+
   private static final ColumnVisitor PRIMARY_KEY_COLUMN_CHECKER =
       new ColumnVisitor() {
         @Override
@@ -47,14 +61,12 @@ public class CosmosOperationChecker extends OperationChecker {
           String value = column.getTextValue();
           assert value != null;
 
-          if (value.indexOf(':') != -1
-              || value.indexOf('/') != -1
-              || value.indexOf('\\') != -1
-              || value.indexOf('#') != -1
-              || value.indexOf('?') != -1) {
-            throw new IllegalArgumentException(
-                CoreError.COSMOS_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER.buildMessage(
-                    column.getName(), value));
+          for (char illegalCharacter : ILLEGAL_CHARACTERS_IN_PRIMARY_KEY) {
+            if (value.indexOf(illegalCharacter) != -1) {
+              throw new IllegalArgumentException(
+                  CoreError.COSMOS_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER.buildMessage(
+                      column.getName(), value));
+            }
           }
         }
 
