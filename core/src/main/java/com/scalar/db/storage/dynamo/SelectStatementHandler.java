@@ -142,16 +142,16 @@ public class SelectStatementHandler {
 
     builder.expressionAttributeNames(expressionAttributeNames);
 
+    int limit = 0;
     if (selection instanceof Scan) {
       Scan scan = (Scan) selection;
-      if (scan.getLimit() > 0) {
-        builder.limit(scan.getLimit());
-      }
+      limit = scan.getLimit();
     }
+
     com.scalar.db.storage.dynamo.request.QueryRequest request =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        request, new ResultInterpreter(selection.getProjections(), tableMetadata));
+        request, limit, new ResultInterpreter(selection.getProjections(), tableMetadata));
   }
 
   private Scanner executeScan(Scan scan, TableMetadata tableMetadata) {
@@ -171,10 +171,6 @@ public class SelectStatementHandler {
       }
     }
 
-    if (scan.getLimit() > 0) {
-      builder.limit(scan.getLimit());
-    }
-
     if (!scan.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
       projectionExpression(builder, scan, expressionAttributeNames);
@@ -184,20 +180,17 @@ public class SelectStatementHandler {
     if (scan.getConsistency() != Consistency.EVENTUAL) {
       builder.consistentRead(true);
     }
+
     com.scalar.db.storage.dynamo.request.QueryRequest queryRequest =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        queryRequest, new ResultInterpreter(scan.getProjections(), tableMetadata));
+        queryRequest, scan.getLimit(), new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private Scanner executeFullScan(ScanAll scan, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     ScanRequest.Builder builder = ScanRequest.builder().tableName(dynamoOperation.getTableName());
 
-    if (scan.getLimit() > 0) {
-      builder.limit(scan.getLimit());
-    }
-
     if (!scan.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
       projectionExpression(builder, scan, expressionAttributeNames);
@@ -207,10 +200,13 @@ public class SelectStatementHandler {
     if (scan.getConsistency() != Consistency.EVENTUAL) {
       builder.consistentRead(true);
     }
+
     com.scalar.db.storage.dynamo.request.ScanRequest requestWrapper =
         new com.scalar.db.storage.dynamo.request.ScanRequest(client, builder.build());
     return new QueryScanner(
-        requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
+        requestWrapper,
+        scan.getLimit(),
+        new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private void projectionExpression(
