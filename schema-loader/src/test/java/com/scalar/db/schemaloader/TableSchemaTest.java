@@ -152,7 +152,13 @@ public class TableSchemaTest {
             + "  \"c3\": \"BLOB\","
             + "  \"c4\": \"INT\","
             + "  \"c5\": \"BOOLEAN\","
-            + "  \"c6\": \"INT\""
+            + "  \"c6\": \"FLOAT\""
+            + "  \"c7\": \"DOUBLE\""
+            + "  \"c8\": \"BIGINT\""
+            + "  \"c9\": \"DATE\""
+            + "  \"c10\": \"TIME\""
+            + "  \"c11\": \"TIMESTAMP\""
+            + "  \"c12\": \"TIMESTAMPTZ\""
             + "},"
             + "\"ru\": 5000,"
             + "\"compaction-strategy\": \"LCS\","
@@ -172,6 +178,12 @@ public class TableSchemaTest {
     tableBuilder.addColumn("c4", DataType.INT);
     tableBuilder.addColumn("c5", DataType.BOOLEAN);
     tableBuilder.addColumn("c6", DataType.INT);
+    tableBuilder.addColumn("c7", DataType.DOUBLE);
+    tableBuilder.addColumn("c8", DataType.BIGINT);
+    tableBuilder.addColumn("c9", DataType.DATE);
+    tableBuilder.addColumn("c10", DataType.TIME);
+    tableBuilder.addColumn("c11", DataType.TIMESTAMP);
+    tableBuilder.addColumn("c12", DataType.TIMESTAMPTZ);
     TableMetadata expectedTableMetadata = tableBuilder.build();
 
     // Act

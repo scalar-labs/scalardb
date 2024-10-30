@@ -69,7 +69,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   }
 
   protected Set<DataType> getSecondaryIndexTypes() {
-    return new HashSet<>(Arrays.asList(DataType.values()));
+    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
   }
 
   private void createTables() throws ExecutionException {

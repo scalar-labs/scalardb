@@ -196,8 +196,8 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private ListMultimap<DataType, DataType> getColumnTypes() {
     ListMultimap<DataType, DataType> columnTypes = ArrayListMultimap.create();
-    for (DataType firstColumnType : DataType.values()) {
-      for (DataType secondColumnType : DataType.values()) {
+    for (DataType firstColumnType : DataType.valuesWithoutTimesRelatedTypes()) {
+      for (DataType secondColumnType : DataType.valuesWithoutTimesRelatedTypes()) {
         columnTypes.put(firstColumnType, secondColumnType);
       }
     }

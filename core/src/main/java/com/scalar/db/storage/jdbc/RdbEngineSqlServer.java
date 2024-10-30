@@ -177,6 +177,14 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return "INT";
       case TEXT:
         return "VARCHAR(8000)";
+      case DATE:
+        return "DATE";
+      case TIME:
+        return "TIME";
+      case TIMESTAMP:
+        return "DATETIME2";
+      case TIMESTAMPTZ:
+        return "DATETIMEOFFSET";
       default:
         throw new AssertionError();
     }
