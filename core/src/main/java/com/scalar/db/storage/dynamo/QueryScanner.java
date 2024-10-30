@@ -13,25 +13,34 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
+@NotThreadSafe
 public class QueryScanner implements Scanner {
 
   private final PaginatedRequest request;
   private final ResultInterpreter resultInterpreter;
 
   private Iterator<Map<String, AttributeValue>> itemsIterator;
+  @Nullable private Integer remainingLimit;
   @Nullable private Map<String, AttributeValue> lastEvaluatedKey;
-  private int totalResultCount;
 
   private ScannerIterator scannerIterator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public QueryScanner(PaginatedRequest request, ResultInterpreter resultInterpreter) {
+  public QueryScanner(PaginatedRequest request, int limit, ResultInterpreter resultInterpreter) {
     this.request = request;
-    this.resultInterpreter = resultInterpreter;
 
-    handleResponse(request.execute());
+    if (limit > 0) {
+      remainingLimit = limit;
+      handleResponse(request.execute(limit));
+    } else {
+      remainingLimit = null;
+      handleResponse(request.execute());
+    }
+
+    this.resultInterpreter = resultInterpreter;
   }
 
   @Override
@@ -49,7 +58,11 @@ public class QueryScanner implements Scanner {
       return true;
     }
     if (lastEvaluatedKey != null) {
-      handleResponse(request.execute(lastEvaluatedKey));
+      if (remainingLimit != null) {
+        handleResponse(request.execute(lastEvaluatedKey, remainingLimit));
+      } else {
+        handleResponse(request.execute(lastEvaluatedKey));
+      }
       return itemsIterator.hasNext();
     }
     return false;
@@ -57,10 +70,11 @@ public class QueryScanner implements Scanner {
 
   private void handleResponse(PaginatedRequestResponse response) {
     List<Map<String, AttributeValue>> items = response.items();
-    totalResultCount += items.size();
+    if (remainingLimit != null) {
+      remainingLimit -= items.size();
+    }
     itemsIterator = items.iterator();
-    if ((request.limit() == null || totalResultCount < request.limit())
-        && response.hasLastEvaluatedKey()) {
+    if ((remainingLimit == null || remainingLimit > 0) && response.hasLastEvaluatedKey()) {
       lastEvaluatedKey = response.lastEvaluatedKey();
     } else {
       lastEvaluatedKey = null;
