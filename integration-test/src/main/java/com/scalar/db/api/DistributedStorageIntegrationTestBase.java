@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
@@ -1451,54 +1452,100 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void scan_ScanLargeData_ShouldRetrieveExpectedValues()
       throws ExecutionException, IOException {
+    int recordCount = 345;
+
     // Arrange
     Key partitionKey = new Key(COL_NAME1, 1);
-    for (int i = 0; i < 345; i++) {
+    for (int i = 0; i < recordCount; i++) {
       Key clusteringKey = new Key(COL_NAME4, i);
       storage.put(
           new Put(partitionKey, clusteringKey)
               .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
     }
+
     Scan scan = new Scan(partitionKey);
 
     // Act
     List<Result> results = scanAll(scan);
 
     // Assert
-    assertThat(results.size()).isEqualTo(345);
-    for (int i = 0; i < 345; i++) {
-      assertThat(results.get(i).getValue(COL_NAME1).isPresent()).isTrue();
-      assertThat(results.get(i).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-      assertThat(results.get(i).getValue(COL_NAME4).isPresent()).isTrue();
-      assertThat(results.get(i).getValue(COL_NAME4).get().getAsInt()).isEqualTo(i);
+    assertThat(results.size()).isEqualTo(recordCount);
+    for (int i = 0; i < recordCount; i++) {
+      assertThat(results.get(i).getInt(COL_NAME1)).isEqualTo(1);
+      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(i);
     }
   }
 
   @Test
   public void scan_ScanLargeDataWithOrdering_ShouldRetrieveExpectedValues()
       throws ExecutionException, IOException {
+    int recordCount = 345;
+    int fetchCount = 234;
+
     // Arrange
     Key partitionKey = new Key(COL_NAME1, 1);
-    for (int i = 0; i < 345; i++) {
+    for (int i = 0; i < recordCount; i++) {
       Key clusteringKey = new Key(COL_NAME4, i);
       storage.put(
           new Put(partitionKey, clusteringKey)
               .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
     }
-    Scan scan = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.ASC));
+
+    Scan scanAsc = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.ASC));
+    Scan scanDesc = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.DESC));
 
     // Act
-    List<Result> results = new ArrayList<>();
-    try (Scanner scanner = storage.scan(scan)) {
+    List<Result> resultsAsc = new ArrayList<>();
+    try (Scanner scanner = storage.scan(scanAsc)) {
       Iterator<Result> iterator = scanner.iterator();
-      for (int i = 0; i < 234; i++) {
-        results.add(iterator.next());
+      for (int i = 0; i < fetchCount; i++) {
+        resultsAsc.add(iterator.next());
+      }
+    }
+
+    List<Result> resultsDesc = new ArrayList<>();
+    try (Scanner scanner = storage.scan(scanDesc)) {
+      Iterator<Result> iterator = scanner.iterator();
+      for (int i = 0; i < fetchCount; i++) {
+        resultsDesc.add(iterator.next());
       }
     }
 
     // Assert
-    assertThat(results.size()).isEqualTo(234);
-    for (int i = 0; i < 234; i++) {
+    assertThat(resultsAsc.size()).isEqualTo(fetchCount);
+    for (int i = 0; i < fetchCount; i++) {
+      assertThat(resultsAsc.get(i).getInt(COL_NAME1)).isEqualTo(1);
+      assertThat(resultsAsc.get(i).getInt(COL_NAME4)).isEqualTo(i);
+    }
+
+    assertThat(resultsDesc.size()).isEqualTo(fetchCount);
+    for (int i = 0; i < fetchCount; i++) {
+      assertThat(resultsDesc.get(i).getInt(COL_NAME1)).isEqualTo(1);
+      assertThat(resultsDesc.get(i).getInt(COL_NAME4)).isEqualTo(recordCount - i - 1);
+    }
+  }
+
+  @Test
+  public void scan_ScanLargeDataWithLimit_ShouldRetrieveExpectedValues() throws ExecutionException {
+    // Arrange
+    int recordCount = 345;
+    int limit = 234;
+
+    Key partitionKey = new Key(COL_NAME1, 1);
+    for (int i = 0; i < recordCount; i++) {
+      Key clusteringKey = new Key(COL_NAME4, i);
+      storage.put(
+          new Put(partitionKey, clusteringKey)
+              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+    }
+    Scan scan = new Scan(partitionKey).withLimit(limit);
+
+    // Act
+    List<Result> results = storage.scan(scan).all();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(limit);
+    for (int i = 0; i < limit; i++) {
       assertThat(results.get(i).getInt(COL_NAME1)).isEqualTo(1);
       assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(i);
     }
@@ -1726,6 +1773,69 @@ public abstract class DistributedStorageIntegrationTestBase {
     assertThat(results.get(0).getContainedColumnNames()).containsOnly(COL_NAME3, COL_NAME5);
     assertThat(results.get(0).getInt(COL_NAME3)).isEqualTo(0);
     assertThat(results.get(0).getBoolean(COL_NAME5)).isTrue();
+  }
+
+  @Test
+  public void scan_ScanAllLargeData_ShouldRetrieveExpectedValues()
+      throws ExecutionException, IOException {
+    int recordCount = 345;
+
+    // Arrange
+    Key clusteringKey = new Key(COL_NAME4, 1);
+    for (int i = 0; i < recordCount; i++) {
+      Key partitionKey = new Key(COL_NAME1, i);
+      storage.put(
+          new Put(partitionKey, clusteringKey)
+              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+    }
+
+    ScanAll scanAll = new ScanAll();
+
+    // Act
+    List<Result> results = scanAll(scanAll);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(recordCount);
+
+    Set<Integer> partitionKeys = new HashSet<>();
+    for (int i = 0; i < recordCount; i++) {
+      partitionKeys.add(results.get(i).getInt(COL_NAME1));
+      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(1);
+    }
+    assertThat(partitionKeys.size()).isEqualTo(recordCount);
+    assertThat(partitionKeys).allMatch(i -> i >= 0 && i < recordCount);
+  }
+
+  @Test
+  public void scan_ScanAllLargeDataWithLimit_ShouldRetrieveExpectedValues()
+      throws ExecutionException {
+    // Arrange
+    int recordCount = 345;
+    int limit = 234;
+
+    Key clusteringKey = new Key(COL_NAME4, 1);
+    for (int i = 0; i < recordCount; i++) {
+      Key partitionKey = new Key(COL_NAME1, i);
+      storage.put(
+          new Put(partitionKey, clusteringKey)
+              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+    }
+
+    Scan scan = new ScanAll().withLimit(limit);
+
+    // Act
+    List<Result> results = storage.scan(scan).all();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(limit);
+
+    Set<Integer> partitionKeys = new HashSet<>();
+    for (int i = 0; i < limit; i++) {
+      partitionKeys.add(results.get(i).getInt(COL_NAME1));
+      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(1);
+    }
+    assertThat(partitionKeys.size()).isEqualTo(limit);
+    assertThat(partitionKeys).allMatch(i -> i >= 0 && i < recordCount);
   }
 
   private void populateRecords() {
