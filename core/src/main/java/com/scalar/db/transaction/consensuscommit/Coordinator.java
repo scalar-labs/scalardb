@@ -99,10 +99,13 @@ public class Coordinator {
 
     // Scan with the full ID for a delayed group that contains only a single transaction.
     // The normal lookup logic can be used as is.
+    // FIXME: Update the comments.
+    /*
     Optional<State> stateOfDelayedTxn = get(createGetWith(fullId));
     if (stateOfDelayedTxn.isPresent()) {
       return stateOfDelayedTxn;
     }
+     */
 
     // Scan with the parent ID for a normal group that contains multiple transactions.
     Keys<String, String, String> idForGroupCommit = keyManipulator.keysFromFullKey(fullId);
@@ -111,13 +114,19 @@ public class Coordinator {
     String childId = idForGroupCommit.childKey;
     Get get = createGetWith(parentId);
     Optional<State> state = get(get);
-    return state.flatMap(
-        s -> {
-          if (s.getChildIds().contains(childId)) {
-            return state;
-          }
-          return Optional.empty();
-        });
+    Optional<State> stateContainingTargetTxId =
+        state.flatMap(
+            s -> {
+              if (s.getChildIds().contains(childId)) {
+                return state;
+              }
+              return Optional.empty();
+            });
+    if (stateContainingTargetTxId.isPresent()) {
+      return stateContainingTargetTxId;
+    }
+
+    return get(createGetWith(fullId));
   }
 
   public void putState(Coordinator.State state) throws CoordinatorException {
