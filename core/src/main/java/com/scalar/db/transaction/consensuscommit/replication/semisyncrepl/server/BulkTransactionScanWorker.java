@@ -131,7 +131,10 @@ public class BulkTransactionScanWorker extends BaseScanWorker {
     } else {
       assert scanResult.nextScanTimestampMillis != null;
       lastScannedTimestampMap.put(partitionId, scanResult.nextScanTimestampMillis);
-      lastBulkTransactionTimestampMap.put(partitionId, lastBulkTxnTsMillis);
+      // FIXME: Just avoid NPE
+      if (lastBulkTxnTsMillis != null) {
+        lastBulkTransactionTimestampMap.put(partitionId, lastBulkTxnTsMillis);
+      }
     }
 
     return scannedBulkTxns.size() >= conf.fetchSize;
