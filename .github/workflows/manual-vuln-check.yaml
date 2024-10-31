@@ -12,5 +12,3 @@ jobs:
       target-ref: ${{ github.ref_name }}
     secrets:
       CR_PAT: ${{ secrets.CR_PAT }}
-      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
-
