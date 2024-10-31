@@ -16,12 +16,12 @@ class Metrics {
   public final AtomicInteger blkTxnOpCountToScanBlkTxns = new AtomicInteger();
   public final AtomicLong txnOpDurationMillisToAppendValueToRecord = new AtomicLong();
   public final AtomicInteger txnOpCountToAppendValueToRecord = new AtomicInteger();
-  public final AtomicLong recordOpDurationMillisToSetPrepTxIdInRecord = new AtomicLong();
   public final AtomicInteger recordOpCountToGetRecord = new AtomicInteger();
   public final AtomicLong recordOpDurationMillisToGetRecord = new AtomicLong();
-  public final AtomicInteger recordOpCountToSetPrepTxIdInRecord = new AtomicInteger();
   public final AtomicLong recordOpDurationMillisToUpdateRecord = new AtomicLong();
   public final AtomicInteger recordOpCountToUpdateRecord = new AtomicInteger();
+  public final AtomicInteger coordSteteOpCountToGet = new AtomicInteger();
+  public final AtomicLong coordStateOpDurationMillisToGet = new AtomicLong();
   public final AtomicInteger recordHandleTxns = new AtomicInteger();
   public final AtomicInteger recordRetryTxns = new AtomicInteger();
   public final AtomicInteger exceptions = new AtomicInteger();
@@ -60,6 +60,11 @@ class Metrics {
             + "      \"ScanBlkTxns\":{\"Count\":%d, \"DurationMs\":%f}\n"
             + "    }\n"
             + "  },\n"
+            + "  \"CoordState\":{\n"
+            + "    \"Ops\":{\n"
+            + "      \"Get\":{\"Count\":%d, \"DurationMs\":%f}\n"
+            + "    }\n"
+            + "  },\n"
             + "  \"Txn\":{\n"
             + "    \"ScannedTxns\":%d,\n"
             + "    \"TxnState\":{\n"
@@ -77,7 +82,6 @@ class Metrics {
             + "    \"RetryTxns\":%d,\n"
             + "    \"Ops\":{\n"
             + "      \"GetRecord\":{\"Count\":%d, \"DurationMs\":%f},\n"
-            + "      \"SetPrepTxIdInRecord\":{\"Count\":%d, \"DurationMs\":%f},\n"
             + "      \"UpdateRecord\":{\"Count\":%d, \"DurationMs\":%f}\n"
             + "    }\n"
             + "  },\n"
@@ -87,6 +91,8 @@ class Metrics {
         blkTxnScannedTxns.get(),
         blkTxnOpCountToScanBlkTxns.get(),
         meanDuration(blkTxnOpCountToScanBlkTxns.get(), blkTxnOpDurationMillisToScanBlkTxns.get()),
+        coordSteteOpCountToGet.get(),
+        meanDuration(coordSteteOpCountToGet.get(), coordStateOpDurationMillisToGet.get()),
         txnScannedTxns.get(),
         txnCommittedTxns.get(),
         txnUncommittedTxns.get(),
@@ -100,10 +106,6 @@ class Metrics {
         recordRetryTxns.get(),
         recordOpCountToGetRecord.get(),
         meanDuration(recordOpCountToGetRecord.get(), recordOpDurationMillisToGetRecord.get()),
-        recordOpCountToSetPrepTxIdInRecord.get(),
-        meanDuration(
-            recordOpCountToSetPrepTxIdInRecord.get(),
-            recordOpDurationMillisToSetPrepTxIdInRecord.get()),
         recordOpCountToUpdateRecord.get(),
         meanDuration(recordOpCountToUpdateRecord.get(), recordOpDurationMillisToUpdateRecord.get()),
         transactionHandleWorkerJson);

@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.server;
 
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.BulkTransaction;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationTransactionRepository.ScanResult;
@@ -183,17 +184,18 @@ public class MetricsLogger {
     return resultWithDuration.result;
   }
 
-  public void execSetPrepTxIdInRecord(Task<Void> task) {
-    ResultWithDuration<Void> resultWithDuration = captureDuration(task);
+  public Optional<Coordinator.State> execGetCoordinatorState(
+      Task<Optional<Coordinator.State>> task) {
+    ResultWithDuration<Optional<Coordinator.State>> resultWithDuration = captureDuration(task);
     if (!isEnabled) {
-      return;
+      return resultWithDuration.result;
     }
     withPrintAndCleanup(
         metrics -> {
-          metrics.recordOpCountToSetPrepTxIdInRecord.incrementAndGet();
-          metrics.recordOpDurationMillisToSetPrepTxIdInRecord.addAndGet(
-              resultWithDuration.durationInMillis);
+          metrics.coordSteteOpCountToGet.incrementAndGet();
+          metrics.coordStateOpDurationMillisToGet.addAndGet(resultWithDuration.durationInMillis);
         });
+    return resultWithDuration.result;
   }
 
   public void execUpdateRecord(Task<Void> task) {

@@ -123,7 +123,8 @@ class TransactionHandler {
             Record record = updatedRecord.get();
             if (record == null) {
               // If null, it means the record prepared above was too old.
-              Optional<Record> recordOpt = replicationRecordRepository.get(key);
+              Optional<Record> recordOpt =
+                  metricsLogger.execGetRecord(() -> replicationRecordRepository.get(key));
               if (!recordOpt.isPresent()) {
                 throw new AssertionError("The record must exist. Key: " + key);
               }
@@ -182,7 +183,8 @@ class TransactionHandler {
   boolean handleTransaction(ExecutorService executorService, Transaction transaction)
       throws Exception {
     Optional<Coordinator.State> coordinatorState =
-        coordinatorStateRepository.get(transaction.transactionId);
+        metricsLogger.execGetCoordinatorState(
+            () -> coordinatorStateRepository.get(transaction.transactionId));
     if (!coordinatorState.isPresent()) {
       metricsLogger.incrementUncommittedTransactions();
       // This logic might be needed in TransactionScanner.
