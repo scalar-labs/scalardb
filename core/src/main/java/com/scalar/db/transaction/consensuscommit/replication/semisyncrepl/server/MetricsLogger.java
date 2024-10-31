@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 
 public class MetricsLogger {
   private final boolean isEnabled;
+  private final boolean isPrettyPrint;
   private final Map<Instant, Metrics> metricsMap = new ConcurrentHashMap<>();
   private final AtomicReference<Instant> keyHolder = new AtomicReference<>();
   private final AtomicReference<TransactionHandleWorker> transactionHandleWorker =
@@ -22,6 +23,9 @@ public class MetricsLogger {
   public MetricsLogger() {
     String metricsEnabled = System.getenv("LOG_APPLIER_METRICS_ENABLED");
     this.isEnabled = metricsEnabled != null && metricsEnabled.equalsIgnoreCase("true");
+    String metricsPrettyPrintEnabled = System.getenv("LOG_APPLIER_METRICS_PRETTY_PRINT_ENABLED");
+    this.isPrettyPrint =
+        metricsPrettyPrintEnabled != null && metricsPrettyPrintEnabled.equalsIgnoreCase("true");
   }
 
   public void setTransactionHandleWorker(TransactionHandleWorker transactionHandleWorker) {
@@ -42,7 +46,11 @@ public class MetricsLogger {
       return;
     }
     if (!oldKey.equals(currentKey)) {
-      System.out.printf("[%s] Metrics:\n%s\n\n", currentKey, metricsMap.get(oldKey).toJson());
+      String json = metricsMap.get(oldKey).toJson();
+      if (!isPrettyPrint) {
+        json = json.replaceAll("\\s", "");
+      }
+      System.out.printf("[%s] Metrics:%s\n\n", currentKey, json);
     }
   }
 
