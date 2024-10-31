@@ -50,7 +50,7 @@ public class MetricsLogger {
       if (!isPrettyPrint) {
         json = json.replaceAll("\\s", "");
       }
-      System.out.printf("[%s] Metrics:%s\n\n", currentKey, json);
+      System.out.printf("[%s] Metrics: %s\n\n", currentKey, json);
     }
   }
 

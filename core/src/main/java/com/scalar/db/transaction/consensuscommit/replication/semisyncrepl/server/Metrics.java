@@ -53,6 +53,7 @@ class Metrics {
 
     return String.format(
         "{\n"
+            + "  \"CurrentTimestampMs\":%d,\n"
             + "  \"Common\":{\"Exceptions\":%d},\n"
             + "  \"BulkTxn\":{\n"
             + "    \"ScannedTxns\":%d,\n"
@@ -87,6 +88,7 @@ class Metrics {
             + "  },\n"
             + "  \"TxnHandleWorker\":%s\n"
             + "}",
+        System.currentTimeMillis(),
         exceptions.get(),
         blkTxnScannedTxns.get(),
         blkTxnOpCountToScanBlkTxns.get(),
