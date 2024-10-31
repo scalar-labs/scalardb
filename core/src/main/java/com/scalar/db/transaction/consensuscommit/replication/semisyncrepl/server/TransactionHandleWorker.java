@@ -95,10 +95,10 @@ public class TransactionHandleWorker {
 
   public String toJson() {
     return String.format(
-        "{\"Thread\":{\"Txn\":{\"Total\":%d, \"Active\":%d}, \"Record\":{\"Total\":%d, \"Active\":%d}}}",
-        ((ThreadPoolExecutor) transactionHandlerExecutorService).getPoolSize(),
+        "{\"Thread\":{\"Txn\":{\"QueueLength\":%d, \"Active\":%d}, \"Record\":{\"QueueLength\":%d, \"Active\":%d}}}",
+        ((ThreadPoolExecutor) transactionHandlerExecutorService).getQueue().size(),
         ((ThreadPoolExecutor) transactionHandlerExecutorService).getActiveCount(),
-        ((ThreadPoolExecutor) recordHandlerExecutorService).getPoolSize(),
+        ((ThreadPoolExecutor) recordHandlerExecutorService).getQueue().size(),
         ((ThreadPoolExecutor) recordHandlerExecutorService).getActiveCount());
   }
 }
