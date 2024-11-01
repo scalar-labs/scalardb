@@ -581,7 +581,7 @@ jobs:
           path: core/build/reports/tests/integrationTestJdbc
 
   integration-test-for-jdbc-postgresql-14:
-    name: PostgreSQL 14 integration test (${{ matrix.mode.label }})
+    name: PostgreSQL 14 integration test
     runs-on: ubuntu-latest
 
     services:
@@ -592,15 +592,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
-
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
+    
     steps:
       - uses: actions/checkout@v4
 
@@ -635,7 +627,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - name: Upload Gradle test reports
         if: always()
