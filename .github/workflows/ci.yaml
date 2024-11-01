@@ -304,7 +304,8 @@ jobs:
         run: |
           Write-Host "Launching Cosmos DB Emulator"
           Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
-          Start-CosmosDbEmulator -Consistency Strong
+          # Set startup timeout to 10min (600s), the default is 4min
+          Start-CosmosDbEmulator -Consistency Strong -Timeout 600
 
       - name: Install TLS/SSL certificate
         run: |
