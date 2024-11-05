@@ -13,10 +13,13 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +36,26 @@ public class CosmosOperationCheckerTest {
   private static final String CKEY1 = "c1";
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
+
+  private static final TableMetadata TABLE_METADATA1 =
+      TableMetadata.newBuilder()
+          .addColumn(PKEY1, DataType.INT)
+          .addColumn(CKEY1, DataType.INT)
+          .addColumn(COL1, DataType.INT)
+          .addColumn(COL2, DataType.BLOB)
+          .addPartitionKey(PKEY1)
+          .addClusteringKey(CKEY1)
+          .addSecondaryIndex(COL1)
+          .build();
+
+  private static final TableMetadata TABLE_METADATA2 =
+      TableMetadata.newBuilder()
+          .addColumn(PKEY1, DataType.TEXT)
+          .addColumn(CKEY1, DataType.TEXT)
+          .addPartitionKey(PKEY1)
+          .addClusteringKey(CKEY1)
+          .build();
+
   @Mock private TableMetadataManager metadataManager;
   private CosmosOperationChecker operationChecker;
 
@@ -54,8 +77,9 @@ public class CosmosOperationCheckerTest {
   }
 
   @Test
-  public void check_ForPutWithCondition_ShouldBehaveProperly() {
+  public void check_ForPutWithCondition_ShouldBehaveProperly() throws ExecutionException {
     // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(buildPutWithCondition(putIfExists())))
@@ -126,8 +150,9 @@ public class CosmosOperationCheckerTest {
   }
 
   @Test
-  public void check_ForDeleteWithCondition_ShouldBehaveProperly() {
+  public void check_ForDeleteWithCondition_ShouldBehaveProperly() throws ExecutionException {
     // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(buildDeleteWithCondition(deleteIfExists())))
@@ -197,8 +222,11 @@ public class CosmosOperationCheckerTest {
   }
 
   @Test
-  public void check_ForMutationsWithPutWithCondition_ShouldBehaveProperly() {
+  public void check_ForMutationsWithPutWithCondition_ShouldBehaveProperly()
+      throws ExecutionException {
     // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
     Put put =
         Put.newBuilder()
             .namespace(NAMESPACE_NAME)
@@ -296,8 +324,11 @@ public class CosmosOperationCheckerTest {
   }
 
   @Test
-  public void check_ForMutationsWithDeleteWithCondition_ShouldBehaveProperly() {
+  public void check_ForMutationsWithDeleteWithCondition_ShouldBehaveProperly()
+      throws ExecutionException {
     // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
     Delete delete =
         Delete.newBuilder()
             .namespace(NAMESPACE_NAME)
@@ -392,6 +423,284 @@ public class CosmosOperationCheckerTest {
                                             "blob".getBytes(StandardCharsets.UTF_8)))
                                 .build()),
                         delete)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      check_GetGiven_WhenIllegalCharacterInPrimaryKeyColumn_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Get get1 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a:b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Get get3 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "a:b"))
+            .build();
+    Get get4 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a/b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Get get5 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "a/b"))
+            .build();
+    Get get6 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a\\b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Get get7 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "a\\b"))
+            .build();
+    Get get8 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a#b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Get get9 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "a#b"))
+            .build();
+    Get get10 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a?b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Get get11 =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "a?b"))
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(get1)).doesNotThrowAnyException();
+    assertThatThrownBy(() -> operationChecker.check(get2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get3))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get4))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get5))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get6))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get7))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get8))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get9))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get10))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(get11))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      check_ScanGiven_WhenIllegalCharacterInPrimaryKeyColumn_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Scan scan1 =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .start(Key.ofText(CKEY1, "ab"))
+            .end(Key.ofText(CKEY1, "ab"))
+            .build();
+    Scan scan2 =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a:b"))
+            .start(Key.ofText(CKEY1, "ab"))
+            .end(Key.ofText(CKEY1, "ab"))
+            .build();
+    Scan scan3 =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .start(Key.ofText(CKEY1, "a:b"))
+            .end(Key.ofText(CKEY1, "ab"))
+            .build();
+    Scan scan4 =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .start(Key.ofText(CKEY1, "ab"))
+            .end(Key.ofText(CKEY1, "a:b"))
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(scan1)).doesNotThrowAnyException();
+    assertThatThrownBy(() -> operationChecker.check(scan2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(scan3))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(scan4))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      check_PutGiven_WhenIllegalCharacterInPrimaryKeyColumn_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a:b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Put put3 =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "a:b"))
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(put1)).doesNotThrowAnyException();
+    assertThatThrownBy(() -> operationChecker.check(put2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(put3))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      check_DeleteGiven_WhenIllegalCharacterInPrimaryKeyColumn_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Delete delete1 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Delete delete2 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a:b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Delete delete3 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "a:b"))
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(delete1)).doesNotThrowAnyException();
+    assertThatThrownBy(() -> operationChecker.check(delete2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(delete3))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      check_MutationsGiven_WhenIllegalCharacterInPrimaryKeyColumn_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a:b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Delete delete1 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "ab"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+    Delete delete2 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a:b"))
+            .clusteringKey(Key.ofText(CKEY1, "ab"))
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(Arrays.asList(put1, delete1)))
+        .doesNotThrowAnyException();
+    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put2, delete1)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put1, delete2)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
