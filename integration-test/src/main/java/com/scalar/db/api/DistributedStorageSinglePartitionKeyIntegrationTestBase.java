@@ -70,7 +70,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   protected Set<DataType> getPartitionKeyTypes() {
-    return new HashSet<>(Arrays.asList(DataType.values()));
+    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
   }
 
   protected boolean isFloatTypeKeySupported() {

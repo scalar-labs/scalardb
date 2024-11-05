@@ -18,7 +18,7 @@ public class CosmosSingleClusteringKeyScanIntegrationTest
   protected Set<DataType> getClusteringKeyTypes() {
     // Return types without BLOB because blob is not supported for clustering key for now
     Set<DataType> clusteringKeyTypes = new HashSet<>();
-    for (DataType dataType : DataType.values()) {
+    for (DataType dataType : DataType.valuesWithoutTimesRelatedTypes()) {
       if (dataType == DataType.BLOB) {
         continue;
       }
