@@ -647,6 +647,13 @@ public enum CoreError implements ScalarDbError {
           + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
+  COSMOS_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
+      Category.USER_ERROR,
+      "0145",
+      "The value of the column %s in the primary key contains an illegal character. "
+          + "Primary-key columns must not contain any of the following characters in Cosmos DB: ':', '/', '\\', '#', '?'. Value: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

@@ -14,7 +14,8 @@ import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * A visitor class to make a concatenated key string for the partition key
+ * A visitor class to make a concatenated key string for the partition key. This uses a colon as a
+ * key separator, so the text column value should not contain colons.
  *
  * @author Yuji Ito
  */
@@ -27,7 +28,6 @@ public class ConcatenationVisitor implements ValueVisitor {
   }
 
   public String build() {
-    // TODO What if the string or blob value includes `:`?
     return String.join(":", values);
   }
 
