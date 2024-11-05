@@ -572,6 +572,13 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0124", "Columns must be specified. Table: %s", "", ""),
   SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE(
       Category.USER_ERROR, "0125", "Invalid column type. Table: %s; Column: %s; Type: %s", "", ""),
+  COSMOS_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
+      Category.USER_ERROR,
+      "0145",
+      "The value of the column %s in the primary key contains an illegal character. "
+          + "Primary-key columns must not contain any of the following characters in Cosmos DB: ':', '/', '\\', '#', '?'. Value: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
