@@ -21,11 +21,11 @@ public class DynamoMultipleClusteringKeyScanIntegrationTest
   protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
     // Return types without BLOB because blob is not supported for clustering key for now
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
-    for (DataType firstClusteringKeyType : DataType.values()) {
+    for (DataType firstClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
       if (firstClusteringKeyType == DataType.BLOB) {
         continue;
       }
-      for (DataType secondClusteringKeyType : DataType.values()) {
+      for (DataType secondClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
         if (secondClusteringKeyType == DataType.BLOB) {
           continue;
         }

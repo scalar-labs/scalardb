@@ -163,7 +163,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     List<OperatorAndDataType> ret = new ArrayList<>();
     for (Operator operator : Operator.values()) {
       if (operator != Operator.LIKE && operator != Operator.NOT_LIKE) {
-        for (DataType dataType : DataType.values()) {
+        for (DataType dataType : DataType.valuesWithoutTimesRelatedTypes()) {
           ret.add(new OperatorAndDataType(operator, dataType));
         }
       }
