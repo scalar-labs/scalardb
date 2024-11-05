@@ -29,6 +29,7 @@ public class CassandraAdminRepairIntegrationTest
     adminTestUtils = new CassandraAdminTestUtils(properties, clusterManager);
   }
 
+  @Override
   protected boolean isTimestampTypeSupported() {
     return false;
   }
