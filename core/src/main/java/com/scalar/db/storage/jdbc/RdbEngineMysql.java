@@ -203,6 +203,13 @@ class RdbEngineMysql implements RdbEngineStrategy {
         return "INT";
       case TEXT:
         return "LONGTEXT";
+      case DATE:
+        return "DATE";
+      case TIME:
+        return "TIME";
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
+        return "DATETIME";
       default:
         throw new AssertionError();
     }

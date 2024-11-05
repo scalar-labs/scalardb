@@ -84,13 +84,13 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
   protected ListMultimap<DataType, DataType> getPartitionKeyTypes() {
     ListMultimap<DataType, DataType> partitionKeyTypes = ArrayListMultimap.create();
-    for (DataType firstPartitionKeyType : DataType.values()) {
+    for (DataType firstPartitionKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
       if (!isFloatTypeKeySupported()
           && (firstPartitionKeyType == DataType.FLOAT
               || firstPartitionKeyType == DataType.DOUBLE)) {
         continue;
       }
-      for (DataType secondPartitionKeyType : DataType.values()) {
+      for (DataType secondPartitionKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
         if (!isFloatTypeKeySupported()
             && (secondPartitionKeyType == DataType.FLOAT
                 || secondPartitionKeyType == DataType.DOUBLE)) {
