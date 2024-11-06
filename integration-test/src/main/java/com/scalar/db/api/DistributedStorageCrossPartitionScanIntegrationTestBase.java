@@ -24,7 +24,6 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -118,7 +117,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   }
 
   protected Column<?> getRandomColumn(Random random, String columnName, DataType dataType) {
-    return ScalarDbUtils.toColumn(TestUtils.getRandomValue(random, columnName, dataType));
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType);
   }
 
   private String getNamespaceName() {
@@ -237,8 +236,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     List<Put> puts = new ArrayList<>();
 
     if (firstColumnType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(COL_NAME1).stream()
-          .map(ScalarDbUtils::toColumn)
+      TestUtils.booleanColumns(COL_NAME1)
           .forEach(
               firstColumn ->
                   prepareRecords(firstColumnType, firstColumn, secondColumnType, puts, ret));
@@ -277,8 +275,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
       List<Put> puts,
       List<Tuple> ret) {
     if (secondColumnType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(COL_NAME2).stream()
-          .map(ScalarDbUtils::toColumn)
+      TestUtils.booleanColumns(COL_NAME2).stream()
           .forEach(
               secondColumn -> {
                 ret.add(new Tuple(firstColumn, secondColumn));

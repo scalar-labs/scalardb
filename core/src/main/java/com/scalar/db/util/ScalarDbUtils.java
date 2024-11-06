@@ -104,14 +104,14 @@ public final class ScalarDbUtils {
 
   public static Put copyAndSetTargetToIfNot(
       Put put, Optional<String> namespace, Optional<String> tableName) {
-    Put ret = new Put(put); // copy
+    Put ret = Put.newBuilder(put).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }
 
   public static Delete copyAndSetTargetToIfNot(
       Delete delete, Optional<String> namespace, Optional<String> tableName) {
-    Delete ret = new Delete(delete); // copy
+    Delete ret = Delete.newBuilder(delete).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }

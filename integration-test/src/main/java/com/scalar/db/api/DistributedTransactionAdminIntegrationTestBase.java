@@ -432,6 +432,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .withValue(COL_NAME9, 1.0d)
               .withValue(COL_NAME10, true)
               .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
+              // TODO add put values for data, time, timestamp and timestamptz
               .forNamespace(namespace1)
               .forTable(TABLE1));
 
@@ -532,7 +533,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .booleanValue(COL_NAME7, true)
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
-              // TODO add put values for data, time, timestamp and timestamptz
+              // TODO add put values for date, time, timestamp and timestamptz
               .build());
 
       // Act
@@ -717,6 +718,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .booleanValue(COL_NAME7, true)
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
+              // TODO add put values for date, time, timestamp and timestamptz
               .build());
 
       // Act

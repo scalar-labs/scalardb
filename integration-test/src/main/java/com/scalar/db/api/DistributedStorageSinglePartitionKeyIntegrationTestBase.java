@@ -3,9 +3,9 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
@@ -154,59 +154,53 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
       random.setSeed(seed);
 
       truncateTable(partitionKeyType);
-      List<Value<?>> partitionKeyValues = prepareRecords(partitionKeyType);
+      List<Column<?>> partitionKeyValues = prepareRecords(partitionKeyType);
 
       String description = description(partitionKeyType);
 
       // for get
-      for (Value<?> partitionKeyValue : partitionKeyValues) {
+      for (Column<?> partitionKeyValue : partitionKeyValues) {
         // Arrange
         Get get = prepareGet(partitionKeyType, partitionKeyValue);
 
         // Act
-        Optional<Result> result = storage.get(get);
+        Optional<Result> optResult = storage.get(get);
 
         // Assert
-        assertThat(result).describedAs(description).isPresent();
-        assertThat(result.get().getValue(PARTITION_KEY).isPresent())
-            .describedAs(description)
-            .isTrue();
-        assertThat(result.get().getValue(PARTITION_KEY).get())
+        assertThat(optResult).describedAs(description).isPresent();
+        Result result = optResult.get();
+        assertThat(result.contains(PARTITION_KEY)).describedAs(description).isTrue();
+        assertThat(result.getColumns().get(PARTITION_KEY))
             .describedAs(description)
             .isEqualTo(partitionKeyValue);
-        assertThat(result.get().getValue(COL_NAME).isPresent()).describedAs(description).isTrue();
-        assertThat(result.get().getValue(COL_NAME).get().getAsInt())
-            .describedAs(description)
-            .isEqualTo(1);
+        assertThat(result.contains(COL_NAME)).describedAs(description).isTrue();
+        assertThat(result.getInt(COL_NAME)).describedAs(description).isEqualTo(1);
       }
 
       // for scan
-      for (Value<?> partitionKeyValue : partitionKeyValues) {
+      for (Column<?> partitionKeyValue : partitionKeyValues) {
         // Arrange
         Scan scan = prepareScan(partitionKeyType, partitionKeyValue);
 
         // Act Assert
         try (Scanner scanner = storage.scan(scan)) {
-          Optional<Result> result = scanner.one();
+          Optional<Result> optResult = scanner.one();
 
-          assertThat(result).describedAs(description).isPresent();
-          assertThat(result.get().getValue(PARTITION_KEY).isPresent())
-              .describedAs(description)
-              .isTrue();
-          assertThat(result.get().getValue(PARTITION_KEY).get())
+          assertThat(optResult).describedAs(description).isPresent();
+          Result result = optResult.get();
+          assertThat(result.contains(PARTITION_KEY)).describedAs(description).isTrue();
+          assertThat(result.getColumns().get(PARTITION_KEY))
               .describedAs(description)
               .isEqualTo(partitionKeyValue);
-          assertThat(result.get().getValue(COL_NAME).isPresent()).describedAs(description).isTrue();
-          assertThat(result.get().getValue(COL_NAME).get().getAsInt())
-              .describedAs(description)
-              .isEqualTo(1);
+          assertThat(result.contains(COL_NAME)).describedAs(description).isTrue();
+          assertThat(result.getInt(COL_NAME)).describedAs(description).isEqualTo(1);
 
           assertThat(scanner.one()).isNotPresent();
         }
       }
 
       // for delete
-      for (Value<?> partitionKeyValue : partitionKeyValues) {
+      for (Column<?> partitionKeyValue : partitionKeyValues) {
         // Arrange
         Delete delete = prepareDelete(partitionKeyType, partitionKeyValue);
 
@@ -220,24 +214,24 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
     }
   }
 
-  private List<Value<?>> prepareRecords(DataType partitionKeyType) throws ExecutionException {
-    List<Value<?>> ret = new ArrayList<>();
+  private List<Column<?>> prepareRecords(DataType partitionKeyType) throws ExecutionException {
+    List<Column<?>> ret = new ArrayList<>();
     List<Put> puts = new ArrayList<>();
 
     if (partitionKeyType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(PARTITION_KEY)
+      TestUtils.booleanColumns(PARTITION_KEY)
           .forEach(
               partitionKeyValue -> {
                 ret.add(partitionKeyValue);
                 puts.add(preparePut(partitionKeyType, partitionKeyValue));
               });
     } else {
-      Set<Value<?>> valueSet = new HashSet<>();
+      Set<Column<?>> valueSet = new HashSet<>();
 
       // Add min and max partition key values
       Arrays.asList(
-              getMinValue(PARTITION_KEY, partitionKeyType),
-              getMaxValue(PARTITION_KEY, partitionKeyType))
+              getColumnWithMinValue(PARTITION_KEY, partitionKeyType),
+              getColumnWithMaxValue(PARTITION_KEY, partitionKeyType))
           .forEach(
               partitionKeyValue -> {
                 valueSet.add(partitionKeyValue);
@@ -248,9 +242,10 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
       IntStream.range(0, PARTITION_KEY_NUM - 2)
           .forEach(
               i -> {
-                Value<?> partitionKeyValue;
+                Column<?> partitionKeyValue;
                 while (true) {
-                  partitionKeyValue = getRandomValue(random, PARTITION_KEY, partitionKeyType);
+                  partitionKeyValue =
+                      getColumnWithRandomValue(random, PARTITION_KEY, partitionKeyType);
                   // reject duplication
                   if (!valueSet.contains(partitionKeyValue)) {
                     valueSet.add(partitionKeyValue);
@@ -272,44 +267,53 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
     return ret;
   }
 
-  private Put preparePut(DataType partitionKeyType, Value<?> partitionKeyValue) {
-    return new Put(new Key(partitionKeyValue))
-        .withValue(COL_NAME, 1)
-        .forNamespace(namespace)
-        .forTable(getTableName(partitionKeyType));
+  private Put preparePut(DataType partitionKeyType, Column<?> partitionKeyValue) {
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(getTableName(partitionKeyType))
+        .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
+        .intValue(COL_NAME, 1)
+        .build();
   }
 
-  private Get prepareGet(DataType partitionKeyType, Value<?> partitionKeyValue) {
-    return new Get(new Key(partitionKeyValue))
-        .forNamespace(namespace)
-        .forTable(getTableName(partitionKeyType));
+  private Get prepareGet(DataType partitionKeyType, Column<?> partitionKeyValue) {
+    return Get.newBuilder()
+        .namespace(namespace)
+        .table(getTableName(partitionKeyType))
+        .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
+        .build();
   }
 
-  private Scan prepareScan(DataType partitionKeyType, Value<?> partitionKeyValue) {
-    return new Scan(new Key(partitionKeyValue))
-        .forNamespace(namespace)
-        .forTable(getTableName(partitionKeyType));
+  private Scan prepareScan(DataType partitionKeyType, Column<?> partitionKeyValue) {
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(getTableName(partitionKeyType))
+        .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
+        .build();
   }
 
-  private Delete prepareDelete(DataType partitionKeyType, Value<?> partitionKeyValue) {
-    return new Delete(new Key(partitionKeyValue))
-        .forNamespace(namespace)
-        .forTable(getTableName(partitionKeyType));
+  private Delete prepareDelete(DataType partitionKeyType, Column<?> partitionKeyValue) {
+    return Delete.newBuilder()
+        .namespace(namespace)
+        .table(getTableName(partitionKeyType))
+        .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
+        .build();
   }
 
   private String description(DataType partitionKeyType) {
     return String.format("failed with partitionKeyType: %s", partitionKeyType);
   }
 
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    return TestUtils.getRandomValue(random, columnName, dataType);
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType);
   }
 
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
-    return TestUtils.getMinValue(columnName, dataType);
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMinValue(columnName, dataType);
   }
 
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    return TestUtils.getMaxValue(columnName, dataType);
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMaxValue(columnName, dataType);
   }
 }

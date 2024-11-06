@@ -3,9 +3,9 @@ package com.scalar.db.api;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import java.util.ArrayList;
@@ -268,28 +268,25 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
                   partitionKey.second);
 
           // Act
-          Optional<Result> result = storage.get(get);
+          Optional<Result> resultOpt = storage.get(get);
 
           // Assert
-          Assertions.assertThat(result).describedAs(description).isPresent();
-          Assertions.assertThat(result.get().getValue(FIRST_PARTITION_KEY).isPresent())
+          Assertions.assertThat(resultOpt).describedAs(description).isPresent();
+          Result result = resultOpt.get();
+          Assertions.assertThat(result.contains(FIRST_PARTITION_KEY))
               .describedAs(description)
               .isTrue();
-          Assertions.assertThat(result.get().getValue(FIRST_PARTITION_KEY).get())
+          Assertions.assertThat(result.getColumns().get(FIRST_PARTITION_KEY))
               .describedAs(description)
               .isEqualTo(partitionKey.first);
-          Assertions.assertThat(result.get().getValue(SECOND_PARTITION_KEY).isPresent())
+          Assertions.assertThat(result.contains(SECOND_PARTITION_KEY))
               .describedAs(description)
               .isTrue();
-          Assertions.assertThat(result.get().getValue(SECOND_PARTITION_KEY).get())
+          Assertions.assertThat(result.getColumns().get(SECOND_PARTITION_KEY))
               .describedAs(description)
               .isEqualTo(partitionKey.second);
-          Assertions.assertThat(result.get().getValue(COL_NAME).isPresent())
-              .describedAs(description)
-              .isTrue();
-          Assertions.assertThat(result.get().getValue(COL_NAME).get().getAsInt())
-              .describedAs(description)
-              .isEqualTo(1);
+          Assertions.assertThat(result.contains(COL_NAME)).describedAs(description).isTrue();
+          Assertions.assertThat(result.getInt(COL_NAME)).describedAs(description).isEqualTo(1);
         }
 
         // for delete
@@ -325,7 +322,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     List<PartitionKey> ret = new ArrayList<>();
 
     if (firstPartitionKeyType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(FIRST_PARTITION_KEY)
+      TestUtils.booleanColumns(FIRST_PARTITION_KEY)
           .forEach(
               firstPartitionKeyValue ->
                   prepareRecords(
@@ -335,12 +332,12 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
                       puts,
                       ret));
     } else {
-      Set<Value<?>> valueSet = new HashSet<>();
+      Set<Column<?>> valueSet = new HashSet<>();
 
       // Add min and max partition key values
       Arrays.asList(
-              getMinValue(FIRST_PARTITION_KEY, firstPartitionKeyType),
-              getMaxValue(FIRST_PARTITION_KEY, firstPartitionKeyType))
+              getColumnWithMinValue(FIRST_PARTITION_KEY, firstPartitionKeyType),
+              getColumnWithMaxValue(FIRST_PARTITION_KEY, firstPartitionKeyType))
           .forEach(
               firstPartitionKeyValue -> {
                 valueSet.add(firstPartitionKeyValue);
@@ -355,10 +352,10 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       IntStream.range(0, FIRST_PARTITION_KEY_NUM - 2)
           .forEach(
               i -> {
-                Value<?> firstPartitionKeyValue;
+                Column<?> firstPartitionKeyValue;
                 while (true) {
                   firstPartitionKeyValue =
-                      getRandomValue(random, FIRST_PARTITION_KEY, firstPartitionKeyType);
+                      getColumnWithRandomValue(random, FIRST_PARTITION_KEY, firstPartitionKeyType);
                   // reject duplication
                   if (!valueSet.contains(firstPartitionKeyValue)) {
                     valueSet.add(firstPartitionKeyValue);
@@ -385,12 +382,12 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
   private void prepareRecords(
       DataType firstPartitionKeyType,
-      Value<?> firstPartitionKeyValue,
+      Column<?> firstPartitionKeyValue,
       DataType secondPartitionKeyType,
       List<Put> puts,
       List<PartitionKey> ret) {
     if (secondPartitionKeyType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(SECOND_PARTITION_KEY)
+      TestUtils.booleanColumns(SECOND_PARTITION_KEY)
           .forEach(
               secondPartitionKeyValue -> {
                 ret.add(new PartitionKey(firstPartitionKeyValue, secondPartitionKeyValue));
@@ -402,12 +399,12 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
                         secondPartitionKeyValue));
               });
     } else {
-      Set<Value<?>> valueSet = new HashSet<>();
+      Set<Column<?>> valueSet = new HashSet<>();
 
       // min and max second partition key values
       Arrays.asList(
-              getMinValue(SECOND_PARTITION_KEY, secondPartitionKeyType),
-              getMaxValue(SECOND_PARTITION_KEY, secondPartitionKeyType))
+              getColumnWithMinValue(SECOND_PARTITION_KEY, secondPartitionKeyType),
+              getColumnWithMaxValue(SECOND_PARTITION_KEY, secondPartitionKeyType))
           .forEach(
               secondPartitionKeyValue -> {
                 ret.add(new PartitionKey(firstPartitionKeyValue, secondPartitionKeyValue));
@@ -422,8 +419,8 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
       for (int i = 0; i < SECOND_PARTITION_KEY_NUM - 2; i++) {
         while (true) {
-          Value<?> secondPartitionKeyValue =
-              getRandomValue(random, SECOND_PARTITION_KEY, secondPartitionKeyType);
+          Column<?> secondPartitionKeyValue =
+              getColumnWithRandomValue(random, SECOND_PARTITION_KEY, secondPartitionKeyType);
           // reject duplication
           if (!valueSet.contains(secondPartitionKeyValue)) {
             ret.add(new PartitionKey(firstPartitionKeyValue, secondPartitionKeyValue));
@@ -443,33 +440,42 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
   private Put preparePut(
       DataType firstPartitionKeyType,
-      Value<?> firstPartitionKeyValue,
+      Column<?> firstPartitionKeyValue,
       DataType secondPartitionKeyType,
-      Value<?> secondPartitionKeyValue) {
-    return new Put(new Key(firstPartitionKeyValue, secondPartitionKeyValue))
-        .withValue(COL_NAME, 1)
-        .forNamespace(getNamespaceName(firstPartitionKeyType))
-        .forTable(getTableName(firstPartitionKeyType, secondPartitionKeyType));
+      Column<?> secondPartitionKeyValue) {
+    return Put.newBuilder()
+        .namespace(getNamespaceName(firstPartitionKeyType))
+        .table(getTableName(firstPartitionKeyType, secondPartitionKeyType))
+        .partitionKey(
+            Key.newBuilder().add(firstPartitionKeyValue).add(secondPartitionKeyValue).build())
+        .intValue(COL_NAME, 1)
+        .build();
   }
 
   private Get prepareGet(
       DataType firstPartitionKeyType,
-      Value<?> firstPartitionKeyValue,
+      Column<?> firstPartitionKeyValue,
       DataType secondPartitionKeyType,
-      Value<?> secondPartitionKeyValue) {
-    return new Get(new Key(firstPartitionKeyValue, secondPartitionKeyValue))
-        .forNamespace(getNamespaceName(firstPartitionKeyType))
-        .forTable(getTableName(firstPartitionKeyType, secondPartitionKeyType));
+      Column<?> secondPartitionKeyValue) {
+    return Get.newBuilder()
+        .namespace(getNamespaceName(firstPartitionKeyType))
+        .table(getTableName(firstPartitionKeyType, secondPartitionKeyType))
+        .partitionKey(
+            Key.newBuilder().add(firstPartitionKeyValue).add(secondPartitionKeyValue).build())
+        .build();
   }
 
   private Delete prepareDelete(
       DataType firstPartitionKeyType,
-      Value<?> firstPartitionKeyValue,
+      Column<?> firstPartitionKeyValue,
       DataType secondPartitionKeyType,
-      Value<?> secondPartitionKeyValue) {
-    return new Delete(new Key(firstPartitionKeyValue, secondPartitionKeyValue))
-        .forNamespace(getNamespaceName(firstPartitionKeyType))
-        .forTable(getTableName(firstPartitionKeyType, secondPartitionKeyType));
+      Column<?> secondPartitionKeyValue) {
+    return Delete.newBuilder()
+        .namespace(getNamespaceName(firstPartitionKeyType))
+        .table(getTableName(firstPartitionKeyType, secondPartitionKeyType))
+        .partitionKey(
+            Key.newBuilder().add(firstPartitionKeyValue).add(secondPartitionKeyValue).build())
+        .build();
   }
 
   private String description(DataType firstPartitionKeyType, DataType secondPartitionKeyType) {
@@ -478,23 +484,24 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
         firstPartitionKeyType, secondPartitionKeyType);
   }
 
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    return TestUtils.getRandomValue(random, columnName, dataType);
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType);
   }
 
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
-    return TestUtils.getMinValue(columnName, dataType);
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMinValue(columnName, dataType);
   }
 
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    return TestUtils.getMaxValue(columnName, dataType);
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMaxValue(columnName, dataType);
   }
 
   private static class PartitionKey {
-    public final Value<?> first;
-    public final Value<?> second;
+    public final Column<?> first;
+    public final Column<?> second;
 
-    public PartitionKey(Value<?> first, Value<?> second) {
+    public PartitionKey(Column<?> first, Column<?> second) {
       this.first = first;
       this.second = second;
     }

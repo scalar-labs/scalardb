@@ -2,12 +2,11 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -166,7 +165,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (OrderingType orderingType : OrderingType.values()) {
           for (boolean withLimit : Arrays.asList(false, true)) {
             scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
@@ -178,14 +177,14 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       OrderingType orderingType,
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    List<Value<?>> expected =
+    List<Column<?>> expected =
         getExpected(clusteringKeyValues, null, null, null, null, orderingType);
 
     int limit = getLimit(withLimit, expected);
@@ -214,7 +213,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
           for (boolean endInclusive : Arrays.asList(true, false)) {
             for (OrderingType orderingType : OrderingType.values()) {
@@ -236,7 +235,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithClusteringKeyRange_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       boolean startInclusive,
@@ -245,8 +244,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> startClusteringKeyValue;
-    Value<?> endClusteringKeyValue;
+    Column<?> startClusteringKeyValue;
+    Column<?> endClusteringKeyValue;
     if (clusteringKeyType == DataType.BOOLEAN) {
       startClusteringKeyValue = clusteringKeyValues.get(0);
       endClusteringKeyValue = clusteringKeyValues.get(1);
@@ -255,7 +254,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       endClusteringKeyValue = clusteringKeyValues.get(14);
     }
 
-    List<Value<?>> expected =
+    List<Column<?>> expected =
         getExpected(
             clusteringKeyValues,
             startClusteringKeyValue,
@@ -304,7 +303,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
           for (boolean endInclusive : Arrays.asList(true, false)) {
             for (OrderingType orderingType : OrderingType.values()) {
@@ -326,7 +325,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       boolean startInclusive,
@@ -335,14 +334,14 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> startAndEndClusteringKeyValue;
+    Column<?> startAndEndClusteringKeyValue;
     if (clusteringKeyType == DataType.BOOLEAN) {
       startAndEndClusteringKeyValue = clusteringKeyValues.get(0);
     } else {
       startAndEndClusteringKeyValue = clusteringKeyValues.get(9);
     }
 
-    List<Value<?>> expected =
+    List<Column<?>> expected =
         getExpected(
             clusteringKeyValues,
             startAndEndClusteringKeyValue,
@@ -391,7 +390,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
           for (boolean endInclusive : Arrays.asList(true, false)) {
             for (OrderingType orderingType : OrderingType.values()) {
@@ -413,7 +412,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       boolean startInclusive,
@@ -422,9 +421,9 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> startClusteringKeyValue = getMinValue(CLUSTERING_KEY, clusteringKeyType);
-    Value<?> endClusteringKeyValue = getMaxValue(CLUSTERING_KEY, clusteringKeyType);
-    List<Value<?>> expected =
+    Column<?> startClusteringKeyValue = getColumnWithMinValue(CLUSTERING_KEY, clusteringKeyType);
+    Column<?> endClusteringKeyValue = getColumnWithMaxValue(CLUSTERING_KEY, clusteringKeyType);
+    List<Column<?>> expected =
         getExpected(
             clusteringKeyValues,
             startClusteringKeyValue,
@@ -473,7 +472,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
           for (OrderingType orderingType : OrderingType.values()) {
             for (boolean withLimit : Arrays.asList(false, true)) {
@@ -492,7 +491,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithClusteringKeyStartRange_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       boolean startInclusive,
@@ -500,14 +499,14 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> startClusteringKeyValue;
+    Column<?> startClusteringKeyValue;
     if (clusteringKeyType == DataType.BOOLEAN) {
       startClusteringKeyValue = clusteringKeyValues.get(0);
     } else {
       startClusteringKeyValue = clusteringKeyValues.get(4);
     }
 
-    List<Value<?>> expected =
+    List<Column<?>> expected =
         getExpected(
             clusteringKeyValues, startClusteringKeyValue, startInclusive, null, null, orderingType);
 
@@ -546,7 +545,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean startInclusive : Arrays.asList(true, false)) {
           for (OrderingType orderingType : OrderingType.values()) {
             for (boolean withLimit : Arrays.asList(false, true)) {
@@ -565,7 +564,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       boolean startInclusive,
@@ -573,8 +572,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> startClusteringKeyValue = getMinValue(CLUSTERING_KEY, clusteringKeyType);
-    List<Value<?>> expected =
+    Column<?> startClusteringKeyValue = getColumnWithMinValue(CLUSTERING_KEY, clusteringKeyType);
+    List<Column<?>> expected =
         getExpected(
             clusteringKeyValues, startClusteringKeyValue, startInclusive, null, null, orderingType);
 
@@ -613,7 +612,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean endInclusive : Arrays.asList(true, false)) {
           for (OrderingType orderingType : OrderingType.values()) {
             for (boolean withLimit : Arrays.asList(false, true)) {
@@ -632,7 +631,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithClusteringKeyEndRange_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       boolean endInclusive,
@@ -640,14 +639,14 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> endClusteringKeyValue;
+    Column<?> endClusteringKeyValue;
     if (clusteringKeyType == DataType.BOOLEAN) {
       endClusteringKeyValue = clusteringKeyValues.get(1);
     } else {
       endClusteringKeyValue = clusteringKeyValues.get(14);
     }
 
-    List<Value<?>> expected =
+    List<Column<?>> expected =
         getExpected(
             clusteringKeyValues, null, null, endClusteringKeyValue, endInclusive, orderingType);
 
@@ -686,7 +685,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         random.setSeed(seed);
 
         truncateTable(clusteringKeyType, clusteringOrder);
-        List<Value<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
+        List<Column<?>> clusteringKeyValues = prepareRecords(clusteringKeyType, clusteringOrder);
         for (boolean endInclusive : Arrays.asList(true, false)) {
           for (OrderingType orderingType : OrderingType.values()) {
             for (boolean withLimit : Arrays.asList(false, true)) {
@@ -705,7 +704,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private void scan_WithClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
-      List<Value<?>> clusteringKeyValues,
+      List<Column<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
       boolean endInclusive,
@@ -713,8 +712,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> endClusteringKey = getMaxValue(CLUSTERING_KEY, clusteringKeyType);
-    List<Value<?>> expected =
+    Column<?> endClusteringKey = getColumnWithMaxValue(CLUSTERING_KEY, clusteringKeyType);
+    List<Column<?>> expected =
         getExpected(clusteringKeyValues, null, null, endClusteringKey, endInclusive, orderingType);
 
     int limit = getLimit(withLimit, expected);
@@ -744,25 +743,25 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
             clusteringKeyType, clusteringOrder, null, endInclusive, orderingType, withLimit));
   }
 
-  private List<Value<?>> prepareRecords(DataType clusteringKeyType, Order clusteringOrder)
+  private List<Column<?>> prepareRecords(DataType clusteringKeyType, Order clusteringOrder)
       throws ExecutionException {
-    List<Value<?>> ret = new ArrayList<>();
+    List<Column<?>> ret = new ArrayList<>();
     List<Put> puts = new ArrayList<>();
 
     if (clusteringKeyType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(CLUSTERING_KEY)
+      TestUtils.booleanColumns(CLUSTERING_KEY)
           .forEach(
               clusteringKeyValue -> {
                 ret.add(clusteringKeyValue);
                 puts.add(preparePut(clusteringKeyType, clusteringOrder, clusteringKeyValue));
               });
     } else {
-      Set<Value<?>> valueSet = new HashSet<>();
+      Set<Column<?>> valueSet = new HashSet<>();
 
       // Add min and max clustering key values
       Arrays.asList(
-              getMinValue(CLUSTERING_KEY, clusteringKeyType),
-              getMaxValue(CLUSTERING_KEY, clusteringKeyType))
+              getColumnWithMinValue(CLUSTERING_KEY, clusteringKeyType),
+              getColumnWithMaxValue(CLUSTERING_KEY, clusteringKeyType))
           .forEach(
               clusteringKeyValue -> {
                 valueSet.add(clusteringKeyValue);
@@ -773,9 +772,10 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       IntStream.range(0, CLUSTERING_KEY_NUM - 2)
           .forEach(
               i -> {
-                Value<?> clusteringKeyValue;
+                Column<?> clusteringKeyValue;
                 while (true) {
-                  clusteringKeyValue = getRandomValue(random, CLUSTERING_KEY, clusteringKeyType);
+                  clusteringKeyValue =
+                      getColumnWithRandomValue(random, CLUSTERING_KEY, clusteringKeyType);
                   // reject duplication
                   if (!valueSet.contains(clusteringKeyValue)) {
                     valueSet.add(clusteringKeyValue);
@@ -811,27 +811,31 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   private Put preparePut(
-      DataType clusteringKeyType, Order clusteringOrder, Value<?> clusteringKeyValue) {
-    return new Put(getPartitionKey(), new Key(clusteringKeyValue))
-        .withValue(COL_NAME, 1)
-        .forNamespace(namespace)
-        .forTable(getTableName(clusteringKeyType, clusteringOrder));
+      DataType clusteringKeyType, Order clusteringOrder, Column<?> clusteringKeyValue) {
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(getTableName(clusteringKeyType, clusteringOrder))
+        .partitionKey(getPartitionKey())
+        .clusteringKey(Key.newBuilder().add(clusteringKeyValue).build())
+        .intValue(COL_NAME, 1)
+        .build();
   }
 
   private Key getPartitionKey() {
-    return new Key(PARTITION_KEY, 1);
+    return Key.ofInt(PARTITION_KEY, 1);
   }
 
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    return TestUtils.getRandomValue(random, columnName, dataType);
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType);
   }
 
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
-    return TestUtils.getMinValue(columnName, dataType);
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMinValue(columnName, dataType);
   }
 
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    return TestUtils.getMaxValue(columnName, dataType);
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMaxValue(columnName, dataType);
   }
 
   private String description(
@@ -862,15 +866,15 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     }
   }
 
-  private List<Value<?>> getExpected(
-      List<Value<?>> clusteringKeyValues,
-      @Nullable Value<?> startClusteringKeyValue,
+  private List<Column<?>> getExpected(
+      List<Column<?>> clusteringKeyValues,
+      @Nullable Column<?> startClusteringKeyValue,
       @Nullable Boolean startInclusive,
-      @Nullable Value<?> endClusteringKeyValue,
+      @Nullable Column<?> endClusteringKeyValue,
       @Nullable Boolean endInclusive,
       OrderingType orderingType) {
-    List<Value<?>> ret = new ArrayList<>();
-    for (Value<?> clusteringKeyValue : clusteringKeyValues) {
+    List<Column<?>> ret = new ArrayList<>();
+    for (Column<?> clusteringKeyValue : clusteringKeyValues) {
       if (startClusteringKeyValue != null && startInclusive != null) {
         int compare =
             Objects.compare(
@@ -899,7 +903,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     return ret;
   }
 
-  private int getLimit(boolean withLimit, List<Value<?>> expected) {
+  private int getLimit(boolean withLimit, List<Column<?>> expected) {
     int limit = 0;
     if (withLimit && !expected.isEmpty()) {
       if (expected.size() == 1) {
@@ -914,28 +918,30 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   private Scan getScan(
       DataType clusteringKeyType,
       Order clusteringOrder,
-      @Nullable Value<?> startClusteringKeyValue,
+      @Nullable Column<?> startClusteringKeyValue,
       @Nullable Boolean startInclusive,
-      @Nullable Value<?> endClusteringKeyValue,
+      @Nullable Column<?> endClusteringKeyValue,
       @Nullable Boolean endInclusive,
       OrderingType orderingType,
       int limit) {
-    Scan scan =
-        new Scan(getPartitionKey())
-            .forNamespace(namespace)
-            .forTable(getTableName(clusteringKeyType, clusteringOrder));
+    ScanBuilder.BuildableScanWithPartitionKey scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(getTableName(clusteringKeyType, clusteringOrder))
+            .partitionKey(getPartitionKey());
     if (startClusteringKeyValue != null && startInclusive != null) {
-      scan.withStart(new Key(startClusteringKeyValue), startInclusive);
+      scan.start(Key.newBuilder().add(startClusteringKeyValue).build(), startInclusive);
     }
     if (endClusteringKeyValue != null && endInclusive != null) {
-      scan.withEnd(new Key(endClusteringKeyValue), endInclusive);
+      scan.end(Key.newBuilder().add(endClusteringKeyValue).build(), endInclusive);
     }
     switch (orderingType) {
       case SPECIFIED:
-        scan.withOrdering(new Ordering(CLUSTERING_KEY, clusteringOrder));
+        scan.ordering(TestUtils.getOrdering(CLUSTERING_KEY, clusteringOrder));
         break;
       case REVERSED:
-        scan.withOrdering(new Ordering(CLUSTERING_KEY, TestUtils.reverseOrder(clusteringOrder)));
+        scan.ordering(
+            TestUtils.getOrdering(CLUSTERING_KEY, TestUtils.reverseOrder(clusteringOrder)));
         break;
       case NOTHING:
         break;
@@ -943,17 +949,17 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
         throw new AssertionError();
     }
     if (limit > 0) {
-      scan.withLimit(limit);
+      scan.limit(limit);
     }
-    return scan;
+    return scan.build();
   }
 
   private void assertScanResult(
-      List<Result> actualResults, List<Value<?>> expected, String description) {
-    List<Value<?>> actual = new ArrayList<>();
+      List<Result> actualResults, List<Column<?>> expected, String description) {
+    List<Column<?>> actual = new ArrayList<>();
     for (Result actualResult : actualResults) {
-      assertThat(actualResult.getValue(CLUSTERING_KEY).isPresent()).isTrue();
-      actual.add(actualResult.getValue(CLUSTERING_KEY).get());
+      assertThat(actualResult.contains(CLUSTERING_KEY)).isTrue();
+      actual.add(actualResult.getColumns().get(CLUSTERING_KEY));
     }
     assertThat(actual).describedAs(description).isEqualTo(expected);
   }
