@@ -5,12 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ListMultimap;
-import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.ScanBuilder.BuildableScanWithPartitionKey;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -568,9 +568,9 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey =
-        new ClusteringKey(getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+        new ClusteringKey(getColumnWithMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
     ClusteringKey endClusteringKey =
-        new ClusteringKey(getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+        new ClusteringKey(getColumnWithMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -725,7 +725,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey =
-        new ClusteringKey(getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+        new ClusteringKey(getColumnWithMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
     List<ClusteringKey> expected =
         getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, orderingType);
 
@@ -874,7 +874,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey endClusteringKey =
-        new ClusteringKey(getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+        new ClusteringKey(getColumnWithMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
     List<ClusteringKey> expected =
         getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, orderingType);
 
@@ -957,13 +957,13 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
-      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      Column<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
       clusteringKeys =
           clusteringKeys.stream()
               .filter(c -> c.first.equals(firstClusteringKeyValue))
               .collect(Collectors.toList());
     } else {
-      Value<?> firstClusteringKeyValue =
+      Column<?> firstClusteringKeyValue =
           clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
       clusteringKeys =
           clusteringKeys.stream()
@@ -1073,13 +1073,13 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
-      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      Column<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
       clusteringKeys =
           clusteringKeys.stream()
               .filter(c -> c.first.equals(firstClusteringKeyValue))
               .collect(Collectors.toList());
     } else {
-      Value<?> firstClusteringKeyValue =
+      Column<?> firstClusteringKeyValue =
           clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
       clusteringKeys =
           clusteringKeys.stream()
@@ -1187,20 +1187,22 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> firstClusteringKeyValue =
+    Column<?> firstClusteringKeyValue =
         useMinValueForFirstClusteringKeyValue
-            ? getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType)
-            : getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
+            ? getColumnWithMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType)
+            : getColumnWithMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
     clusteringKeys =
         clusteringKeys.stream()
             .filter(c -> c.first.equals(firstClusteringKeyValue))
             .collect(Collectors.toList());
     ClusteringKey startClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue, getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+            firstClusteringKeyValue,
+            getColumnWithMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
     ClusteringKey endClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue, getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+            firstClusteringKeyValue,
+            getColumnWithMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -1285,13 +1287,13 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
-      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      Column<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
       clusteringKeys =
           clusteringKeys.stream()
               .filter(c -> c.first.equals(firstClusteringKeyValue))
               .collect(Collectors.toList());
     } else {
-      Value<?> firstClusteringKeyValue =
+      Column<?> firstClusteringKeyValue =
           clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
       clusteringKeys =
           clusteringKeys.stream()
@@ -1385,14 +1387,16 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> firstClusteringKeyValue = getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
+    Column<?> firstClusteringKeyValue =
+        getColumnWithMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
     clusteringKeys =
         clusteringKeys.stream()
             .filter(c -> c.first.equals(firstClusteringKeyValue))
             .collect(Collectors.toList());
     ClusteringKey startClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue, getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+            firstClusteringKeyValue,
+            getColumnWithMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
     List<ClusteringKey> expected =
         getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, orderingType);
 
@@ -1471,13 +1475,13 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
-      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      Column<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
       clusteringKeys =
           clusteringKeys.stream()
               .filter(c -> c.first.equals(firstClusteringKeyValue))
               .collect(Collectors.toList());
     } else {
-      Value<?> firstClusteringKeyValue =
+      Column<?> firstClusteringKeyValue =
           clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
       clusteringKeys =
           clusteringKeys.stream()
@@ -1571,14 +1575,16 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Value<?> firstClusteringKeyValue = getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
+    Column<?> firstClusteringKeyValue =
+        getColumnWithMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
     clusteringKeys =
         clusteringKeys.stream()
             .filter(c -> c.first.equals(firstClusteringKeyValue))
             .collect(Collectors.toList());
     ClusteringKey endClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue, getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+            firstClusteringKeyValue,
+            getColumnWithMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
 
     List<ClusteringKey> expected =
         getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, orderingType);
@@ -1629,7 +1635,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     List<Put> puts = new ArrayList<>();
 
     if (firstClusteringKeyType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(FIRST_CLUSTERING_KEY)
+      TestUtils.booleanColumns(FIRST_CLUSTERING_KEY)
           .forEach(
               firstClusteringKeyValue ->
                   prepareRecords(
@@ -1641,12 +1647,12 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
                       puts,
                       ret));
     } else {
-      Set<Value<?>> valueSet = new HashSet<>();
+      Set<Column<?>> valueSet = new HashSet<>();
 
       // Add min and max first clustering key values
       Arrays.asList(
-              getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType),
-              getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType))
+              getColumnWithMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType),
+              getColumnWithMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType))
           .forEach(
               firstClusteringKeyValue -> {
                 valueSet.add(firstClusteringKeyValue);
@@ -1663,7 +1669,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       IntStream.range(0, FIRST_CLUSTERING_KEY_NUM - 2)
           .forEach(
               i -> {
-                Value<?> firstClusteringKeyValue;
+                Column<?> firstClusteringKeyValue;
                 while (true) {
                   firstClusteringKeyValue = getFirstClusteringKeyValue(firstClusteringKeyType);
                   // reject duplication
@@ -1705,13 +1711,13 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   private void prepareRecords(
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
-      Value<?> firstClusteringKeyValue,
+      Column<?> firstClusteringKeyValue,
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
       List<Put> puts,
       List<ClusteringKey> ret) {
     if (secondClusteringKeyType == DataType.BOOLEAN) {
-      TestUtils.booleanValues(SECOND_CLUSTERING_KEY)
+      TestUtils.booleanColumns(SECOND_CLUSTERING_KEY)
           .forEach(
               secondClusteringKeyValue -> {
                 ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
@@ -1725,12 +1731,12 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
                         secondClusteringKeyValue));
               });
     } else {
-      Set<Value<?>> valueSet = new HashSet<>();
+      Set<Column<?>> valueSet = new HashSet<>();
 
       // min and max second clustering key values
       Arrays.asList(
-              getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
-              getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType))
+              getColumnWithMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
+              getColumnWithMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType))
           .forEach(
               secondClusteringKeyValue -> {
                 ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
@@ -1746,10 +1752,11 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
               });
 
       for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - 2; i++) {
-        Value<?> secondClusteringKeyValue;
+        Column<?> secondClusteringKeyValue;
         while (true) {
           secondClusteringKeyValue =
-              getRandomValue(random.get(), SECOND_CLUSTERING_KEY, secondClusteringKeyType);
+              getColumnWithRandomValue(
+                  random.get(), SECOND_CLUSTERING_KEY, secondClusteringKeyType);
           // reject duplication
           if (!valueSet.contains(secondClusteringKeyValue)) {
             valueSet.add(secondClusteringKeyValue);
@@ -1773,19 +1780,23 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   private Put preparePut(
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
-      Value<?> firstClusteringKeyValue,
+      Column<?> firstClusteringKeyValue,
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
-      Value<?> secondClusteringKeyValue) {
-    return new Put(getPartitionKey(), new Key(firstClusteringKeyValue, secondClusteringKeyValue))
-        .withValue(COL_NAME, 1)
-        .forNamespace(getNamespaceName(firstClusteringKeyType))
-        .forTable(
+      Column<?> secondClusteringKeyValue) {
+    return Put.newBuilder()
+        .namespace(getNamespaceName(firstClusteringKeyType))
+        .table(
             getTableName(
                 firstClusteringKeyType,
                 firstClusteringOrder,
                 secondClusteringKeyType,
-                secondClusteringOrder));
+                secondClusteringOrder))
+        .partitionKey(getPartitionKey())
+        .clusteringKey(
+            Key.newBuilder().add(firstClusteringKeyValue).add(secondClusteringKeyValue).build())
+        .intValue(COL_NAME, 1)
+        .build();
   }
 
   private int getFirstClusteringKeyIndex(int i, DataType secondClusteringKeyType) {
@@ -1823,23 +1834,24 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   private Key getPartitionKey() {
-    return new Key(PARTITION_KEY, 1);
+    return Key.ofInt(PARTITION_KEY, 1);
   }
 
-  private Value<?> getFirstClusteringKeyValue(DataType dataType) {
-    return getRandomValue(random.get(), FIRST_CLUSTERING_KEY, dataType);
+  private Column<?> getFirstClusteringKeyValue(DataType dataType) {
+    return getColumnWithRandomValue(random.get(), FIRST_CLUSTERING_KEY, dataType);
   }
 
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    return TestUtils.getRandomValue(random, columnName, dataType);
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType);
   }
 
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
-    return TestUtils.getMinValue(columnName, dataType);
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMinValue(columnName, dataType);
   }
 
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    return TestUtils.getMaxValue(columnName, dataType);
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMaxValue(columnName, dataType);
   }
 
   private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
@@ -1901,50 +1913,54 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       @Nullable Boolean endInclusive,
       OrderingType orderingType,
       int limit) {
-    Scan scan =
-        new Scan(getPartitionKey())
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
+    BuildableScanWithPartitionKey scan =
+        Scan.newBuilder()
+            .namespace(getNamespaceName(firstClusteringKeyType))
+            .table(
                 getTableName(
                     firstClusteringKeyType,
                     firstClusteringOrder,
                     secondClusteringKeyType,
-                    secondClusteringOrder));
+                    secondClusteringOrder))
+            .partitionKey(getPartitionKey());
     if (startClusteringKey != null && startInclusive != null) {
       Key key;
       if (startClusteringKey.second != null) {
-        key = new Key(startClusteringKey.first, startClusteringKey.second);
+        key = Key.newBuilder().add(startClusteringKey.first).add(startClusteringKey.second).build();
       } else {
-        key = new Key(startClusteringKey.first);
+        key = Key.newBuilder().add(startClusteringKey.first).build();
       }
-      scan.withStart(key, startInclusive);
+      scan.start(key, startInclusive);
     }
     if (endClusteringKey != null && endInclusive != null) {
       Key key;
       if (endClusteringKey.second != null) {
-        key = new Key(endClusteringKey.first, endClusteringKey.second);
+        key = Key.newBuilder().add(endClusteringKey.first).add(endClusteringKey.second).build();
       } else {
-        key = new Key(endClusteringKey.first);
+        key = Key.newBuilder().add(endClusteringKey.first).build();
       }
-      scan.withEnd(key, endInclusive);
+      scan.end(key, endInclusive);
     }
     switch (orderingType) {
       case BOTH_SPECIFIED:
-        scan.withOrdering(new Ordering(FIRST_CLUSTERING_KEY, firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, secondClusteringOrder));
+        scan.orderings(
+            TestUtils.getOrdering(FIRST_CLUSTERING_KEY, firstClusteringOrder),
+            TestUtils.getOrdering(SECOND_CLUSTERING_KEY, secondClusteringOrder));
         break;
       case ONLY_FIRST_SPECIFIED:
-        scan.withOrdering(new Ordering(FIRST_CLUSTERING_KEY, firstClusteringOrder));
+        scan.ordering(TestUtils.getOrdering(FIRST_CLUSTERING_KEY, firstClusteringOrder));
         break;
       case BOTH_SPECIFIED_AND_REVERSED:
-        scan.withOrdering(
-                new Ordering(FIRST_CLUSTERING_KEY, TestUtils.reverseOrder(firstClusteringOrder)))
-            .withOrdering(
-                new Ordering(SECOND_CLUSTERING_KEY, TestUtils.reverseOrder(secondClusteringOrder)));
+        scan.orderings(
+            TestUtils.getOrdering(
+                FIRST_CLUSTERING_KEY, TestUtils.reverseOrder(firstClusteringOrder)),
+            TestUtils.getOrdering(
+                SECOND_CLUSTERING_KEY, TestUtils.reverseOrder(secondClusteringOrder)));
         break;
       case ONLY_FIRST_SPECIFIED_AND_REVERSED:
-        scan.withOrdering(
-            new Ordering(FIRST_CLUSTERING_KEY, TestUtils.reverseOrder(firstClusteringOrder)));
+        scan.ordering(
+            TestUtils.getOrdering(
+                FIRST_CLUSTERING_KEY, TestUtils.reverseOrder(firstClusteringOrder)));
         break;
       case NOTHING:
         break;
@@ -1952,21 +1968,21 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
         throw new AssertionError();
     }
     if (limit > 0) {
-      scan.withLimit(limit);
+      scan.limit(limit);
     }
-    return scan;
+    return scan.build();
   }
 
   private void assertScanResult(
       List<Result> actualResults, List<ClusteringKey> expected, String description) {
     List<ClusteringKey> actual = new ArrayList<>();
     for (Result actualResult : actualResults) {
-      assertThat(actualResult.getValue(FIRST_CLUSTERING_KEY).isPresent()).isTrue();
-      assertThat(actualResult.getValue(SECOND_CLUSTERING_KEY).isPresent()).isTrue();
+      assertThat(actualResult.contains(FIRST_CLUSTERING_KEY)).isTrue();
+      assertThat(actualResult.contains(SECOND_CLUSTERING_KEY)).isTrue();
       actual.add(
           new ClusteringKey(
-              actualResult.getValue(FIRST_CLUSTERING_KEY).get(),
-              actualResult.getValue(SECOND_CLUSTERING_KEY).get()));
+              actualResult.getColumns().get(FIRST_CLUSTERING_KEY),
+              actualResult.getColumns().get(SECOND_CLUSTERING_KEY)));
     }
     assertThat(actual).describedAs(description).isEqualTo(expected);
   }
@@ -2103,15 +2119,15 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   private static class ClusteringKey implements Comparable<ClusteringKey> {
-    public final Value<?> first;
-    @Nullable public final Value<?> second;
+    public final Column<?> first;
+    @Nullable public final Column<?> second;
 
-    public ClusteringKey(Value<?> first, @Nullable Value<?> second) {
+    public ClusteringKey(Column<?> first, @Nullable Column<?> second) {
       this.first = first;
       this.second = second;
     }
 
-    public ClusteringKey(Value<?> first) {
+    public ClusteringKey(Column<?> first) {
       this(first, null);
     }
 

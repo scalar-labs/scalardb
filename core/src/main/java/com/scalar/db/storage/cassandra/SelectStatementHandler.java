@@ -25,7 +25,6 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -183,7 +182,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              List<Value<?>> start = k.get();
+              List<Column<?>> start = k.getColumns();
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
@@ -210,7 +209,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              List<Value<?>> end = k.get();
+              List<Column<?>> end = k.getColumns();
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {

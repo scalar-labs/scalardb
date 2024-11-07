@@ -18,7 +18,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -188,8 +187,8 @@ public class OperationChecker {
       }
 
       for (int i = 0; i < startClusteringKey.size() - 1; i++) {
-        Value<?> startValue = startClusteringKey.get().get(i);
-        Value<?> endValue = endClusteringKey.get().get(i);
+        Column<?> startValue = startClusteringKey.getColumns().get(i);
+        Column<?> endValue = endClusteringKey.getColumns().get(i);
         if (!startValue.equals(endValue)) {
           throw new IllegalArgumentException(message.get());
         }

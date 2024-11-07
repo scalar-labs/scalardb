@@ -1,8 +1,8 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.Value;
 import com.scalar.db.util.TestUtils;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,28 +36,29 @@ public class DynamoSecondaryIndexIntegrationTest
   }
 
   @Override
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
       return DynamoTestUtils.getRandomDynamoDoubleValue(random, columnName);
     }
     // don't allow empty value since secondary index cannot contain empty value
-    return TestUtils.getRandomValue(random, columnName, dataType, false);
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType, false);
   }
 
   @Override
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
       return DynamoTestUtils.getMinDynamoDoubleValue(columnName);
     }
     // don't allow empty value since secondary index cannot contain empty value
-    return TestUtils.getMinValue(columnName, dataType, false);
+    return TestUtils.getColumnWithMinValue(columnName, dataType, false);
   }
 
   @Override
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
       return DynamoTestUtils.getMaxDynamoDoubleValue(columnName);
     }
-    return super.getMaxValue(columnName, dataType);
+    return super.getColumnWithMaxValue(columnName, dataType);
   }
 }
