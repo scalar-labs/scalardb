@@ -315,8 +315,8 @@ public class SelectStatementHandler {
 
   private Key getKeyWithoutLastValue(Key originalKey) {
     Key.Builder keyBuilder = Key.newBuilder();
-    for (int i = 0; i < originalKey.get().size() - 1; i++) {
-      keyBuilder.add(originalKey.get().get(i));
+    for (int i = 0; i < originalKey.getColumns().size() - 1; i++) {
+      keyBuilder.add(originalKey.getColumns().get(i));
     }
     return keyBuilder.build();
   }
@@ -506,12 +506,14 @@ public class SelectStatementHandler {
   private boolean isScanForDescClusteringOrder(Scan scan, TableMetadata tableMetadata) {
     if (scan.getStartClusteringKey().isPresent()) {
       Key startClusteringKey = scan.getStartClusteringKey().get();
-      String lastValueName = startClusteringKey.get().get(startClusteringKey.size() - 1).getName();
+      String lastValueName =
+          startClusteringKey.getColumns().get(startClusteringKey.size() - 1).getName();
       return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
     }
     if (scan.getEndClusteringKey().isPresent()) {
       Key endClusteringKey = scan.getEndClusteringKey().get();
-      String lastValueName = endClusteringKey.get().get(endClusteringKey.size() - 1).getName();
+      String lastValueName =
+          endClusteringKey.getColumns().get(endClusteringKey.size() - 1).getName();
       return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
     }
     return false;

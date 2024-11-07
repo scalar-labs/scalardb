@@ -6,7 +6,6 @@ import com.google.common.collect.Streams;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
-import com.scalar.db.io.Value;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,8 +31,8 @@ public class CosmosOperation {
 
     if (operation.getClusteringKey().isPresent()) {
       Set<String> set =
-          operation.getClusteringKey().get().get().stream()
-              .map(Value::getName)
+          operation.getClusteringKey().get().getColumns().stream()
+              .map(Column::getName)
               .collect(Collectors.toSet());
       return set.containsAll(metadata.getClusteringKeyNames());
     } else {

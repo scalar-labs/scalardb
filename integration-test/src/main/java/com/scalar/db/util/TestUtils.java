@@ -3,24 +3,18 @@ package com.scalar.db.util;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobColumn;
-import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
-import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
-import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatColumn;
-import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntColumn;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,37 +32,9 @@ public final class TestUtils {
 
   private TestUtils() {}
 
-  public static Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    return getRandomValue(random, columnName, dataType, false);
-  }
-
-  public static Value<?> getRandomValue(
-      Random random, String columnName, DataType dataType, boolean allowEmpty) {
-    switch (dataType) {
-      case BIGINT:
-        return new BigIntValue(columnName, nextBigInt(random));
-      case INT:
-        return new IntValue(columnName, random.nextInt());
-      case FLOAT:
-        return new FloatValue(columnName, nextFloat(random));
-      case DOUBLE:
-        return new DoubleValue(columnName, nextDouble(random));
-      case BLOB:
-        int length =
-            allowEmpty ? random.nextInt(MAX_BLOB_LENGTH) : random.nextInt(MAX_BLOB_LENGTH - 1) + 1;
-        byte[] bytes = new byte[length];
-        random.nextBytes(bytes);
-        return new BlobValue(columnName, bytes);
-      case TEXT:
-        int count =
-            allowEmpty ? random.nextInt(MAX_TEXT_COUNT) : random.nextInt(MAX_TEXT_COUNT - 1) + 1;
-        return new TextValue(
-            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
-      case BOOLEAN:
-        return new BooleanValue(columnName, random.nextBoolean());
-      default:
-        throw new AssertionError();
-    }
+  public static Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
+    return getColumnWithRandomValue(random, columnName, dataType, false);
   }
 
   public static Column<?> getColumnWithRandomValue(
@@ -117,58 +83,59 @@ public final class TestUtils {
     return random.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
   }
 
-  public static Value<?> getMinValue(String columnName, DataType dataType) {
-    return getMinValue(columnName, dataType, false);
+  public static Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
+    return getColumnWithMinValue(columnName, dataType, false);
   }
 
-  public static Value<?> getMinValue(String columnName, DataType dataType, boolean allowEmpty) {
+  public static Column<?> getColumnWithMinValue(
+      String columnName, DataType dataType, boolean allowEmpty) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MIN_VALUE);
+        return BigIntColumn.of(columnName, BigIntValue.MIN_VALUE);
       case INT:
-        return new IntValue(columnName, Integer.MIN_VALUE);
+        return IntColumn.of(columnName, Integer.MIN_VALUE);
       case FLOAT:
-        return new FloatValue(columnName, Float.MIN_VALUE);
+        return FloatColumn.of(columnName, Float.MIN_VALUE);
       case DOUBLE:
-        return new DoubleValue(columnName, Double.MIN_VALUE);
+        return DoubleColumn.of(columnName, Double.MIN_VALUE);
       case BLOB:
-        return new BlobValue(columnName, allowEmpty ? new byte[0] : new byte[] {0x00});
+        return BlobColumn.of(columnName, allowEmpty ? new byte[0] : new byte[] {0x00});
       case TEXT:
-        return new TextValue(columnName, allowEmpty ? "" : "\u0001");
+        return TextColumn.of(columnName, allowEmpty ? "" : "\u0001");
       case BOOLEAN:
-        return new BooleanValue(columnName, false);
+        return BooleanColumn.of(columnName, false);
       default:
         throw new AssertionError();
     }
   }
 
-  public static Value<?> getMaxValue(String columnName, DataType dataType) {
+  public static Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MAX_VALUE);
+        return BigIntColumn.of(columnName, BigIntValue.MAX_VALUE);
       case INT:
-        return new IntValue(columnName, Integer.MAX_VALUE);
+        return IntColumn.of(columnName, Integer.MAX_VALUE);
       case FLOAT:
-        return new FloatValue(columnName, Float.MAX_VALUE);
+        return FloatColumn.of(columnName, Float.MAX_VALUE);
       case DOUBLE:
-        return new DoubleValue(columnName, Double.MAX_VALUE);
+        return DoubleColumn.of(columnName, Double.MAX_VALUE);
       case BLOB:
         byte[] blobBytes = new byte[MAX_BLOB_LENGTH];
         Arrays.fill(blobBytes, (byte) 0xff);
-        return new BlobValue(columnName, blobBytes);
+        return BlobColumn.of(columnName, blobBytes);
       case TEXT:
         StringBuilder builder = new StringBuilder();
         IntStream.range(0, MAX_TEXT_COUNT).forEach(i -> builder.append(Character.MAX_VALUE));
-        return new TextValue(columnName, builder.toString());
+        return TextColumn.of(columnName, builder.toString());
       case BOOLEAN:
-        return new BooleanValue(columnName, true);
+        return BooleanColumn.of(columnName, true);
       default:
         throw new AssertionError();
     }
   }
 
-  public static List<BooleanValue> booleanValues(String columnName) {
-    return Arrays.asList(new BooleanValue(columnName, false), new BooleanValue(columnName, true));
+  public static List<BooleanColumn> booleanColumns(String columnName) {
+    return Arrays.asList(BooleanColumn.of(columnName, false), BooleanColumn.of(columnName, true));
   }
 
   public static Order reverseOrder(Order order) {
@@ -177,6 +144,17 @@ public final class TestUtils {
         return Order.DESC;
       case DESC:
         return Order.ASC;
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  public static Ordering getOrdering(String columnName, Order order) {
+    switch (order) {
+      case ASC:
+        return Ordering.asc(columnName);
+      case DESC:
+        return Ordering.desc(columnName);
       default:
         throw new AssertionError();
     }

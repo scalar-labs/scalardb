@@ -4,7 +4,6 @@ import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.Properties;
 import java.util.Random;
 
@@ -33,7 +32,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
   protected Column<?> getRandomColumn(Random random, String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
-        return ScalarDbUtils.toColumn(JdbcTestUtils.getRandomOracleDoubleValue(random, columnName));
+        return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
     }
     return super.getRandomColumn(random, columnName, dataType);

@@ -4,7 +4,7 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.Column;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -69,12 +69,12 @@ public class DynamoMutation extends DynamoOperation {
     int i = 0;
 
     if (withKey) {
-      for (Value<?> unusedKey : put.getPartitionKey().get()) {
+      for (Column<?> unusedKey : put.getPartitionKey().getColumns()) {
         expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
         i++;
       }
       if (put.getClusteringKey().isPresent()) {
-        for (Value<?> unusedKey : put.getClusteringKey().get().get()) {
+        for (Column<?> unusedKey : put.getClusteringKey().get().getColumns()) {
           expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
           i++;
         }
@@ -105,12 +105,12 @@ public class DynamoMutation extends DynamoOperation {
     int i = 0;
 
     if (withKey) {
-      for (Value<?> key : put.getPartitionKey().get()) {
+      for (Column<?> key : put.getPartitionKey().getColumns()) {
         columnMap.put(COLUMN_NAME_ALIAS + i, key.getName());
         i++;
       }
       if (put.getClusteringKey().isPresent()) {
-        for (Value<?> key : put.getClusteringKey().get().get()) {
+        for (Column<?> key : put.getClusteringKey().get().getColumns()) {
           columnMap.put(COLUMN_NAME_ALIAS + i, key.getName());
           i++;
         }

@@ -3,9 +3,9 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
@@ -150,12 +150,15 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
 
       for (int i = 0; i < ATTEMPT_COUNT; i++) {
         // Arrange
-        Value<?> secondaryIndexValue = getRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
+        Column<?> secondaryIndexValue =
+            getColumnWithRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
         prepareRecords(secondaryIndexType, secondaryIndexValue);
         Scan scan =
-            new Scan(new Key(secondaryIndexValue))
-                .forNamespace(namespace)
-                .forTable(getTableName(secondaryIndexType));
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(getTableName(secondaryIndexType))
+                .partitionKey(Key.newBuilder().add(secondaryIndexValue).build())
+                .build();
 
         // Act
         List<Result> results = scanAll(scan);
@@ -174,12 +177,14 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
       truncateTable(secondaryIndexType);
 
       // Arrange
-      Value<?> secondaryIndexValue = getMaxValue(INDEX_COL_NAME, secondaryIndexType);
+      Column<?> secondaryIndexValue = getColumnWithMaxValue(INDEX_COL_NAME, secondaryIndexType);
       prepareRecords(secondaryIndexType, secondaryIndexValue);
       Scan scan =
-          new Scan(new Key(secondaryIndexValue))
-              .forNamespace(namespace)
-              .forTable(getTableName(secondaryIndexType));
+          Scan.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.newBuilder().add(secondaryIndexValue).build())
+              .build();
 
       // Act
       List<Result> results = scanAll(scan);
@@ -197,12 +202,14 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
       truncateTable(secondaryIndexType);
 
       // Arrange
-      Value<?> secondaryIndexValue = getMinValue(INDEX_COL_NAME, secondaryIndexType);
+      Column<?> secondaryIndexValue = getColumnWithMinValue(INDEX_COL_NAME, secondaryIndexType);
       prepareRecords(secondaryIndexType, secondaryIndexValue);
       Scan scan =
-          new Scan(new Key(secondaryIndexValue))
-              .forNamespace(namespace)
-              .forTable(getTableName(secondaryIndexType));
+          Scan.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.newBuilder().add(secondaryIndexValue).build())
+              .build();
 
       // Act
       List<Result> results = scanAll(scan);
@@ -219,13 +226,14 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     truncateTable(secondaryIndexType);
 
     // Arrange
-    Value<?> secondaryIndexValue = getRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
+    Column<?> secondaryIndexValue =
+        getColumnWithRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
     prepareRecords(secondaryIndexType, secondaryIndexValue);
     Scan scan =
         Scan.newBuilder()
             .namespace(getNamespace())
             .table(getTableName(secondaryIndexType))
-            .indexKey(Key.ofInt(INDEX_COL_NAME, secondaryIndexValue.getAsInt()))
+            .indexKey(Key.ofInt(INDEX_COL_NAME, secondaryIndexValue.getIntValue()))
             .where(ConditionBuilder.column(PARTITION_KEY).isEqualToInt(1))
             .or(ConditionBuilder.column(PARTITION_KEY).isEqualToInt(2))
             .build();
@@ -238,27 +246,29 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     assertThat(results.get(0).contains(PARTITION_KEY)).isTrue();
     assertThat(results.get(0).getInt(PARTITION_KEY)).isEqualTo(1);
     assertThat(results.get(0).contains(INDEX_COL_NAME)).isTrue();
-    assertThat(results.get(0).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getAsInt());
+    assertThat(results.get(0).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getIntValue());
     assertThat(results.get(1).contains(PARTITION_KEY)).isTrue();
     assertThat(results.get(1).getInt(PARTITION_KEY)).isEqualTo(2);
     assertThat(results.get(1).contains(INDEX_COL_NAME)).isTrue();
-    assertThat(results.get(1).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getAsInt());
+    assertThat(results.get(1).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getIntValue());
   }
 
-  private void prepareRecords(DataType secondaryIndexType, Value<?> secondaryIndexValue)
+  private void prepareRecords(DataType secondaryIndexType, Column<?> secondaryIndexValue)
       throws ExecutionException {
     for (int i = 0; i < DATA_NUM; i++) {
       Put put =
-          new Put(new Key(PARTITION_KEY, i))
-              .withValue(secondaryIndexValue)
-              .withValue(COL_NAME, 1)
-              .forNamespace(namespace)
-              .forTable(getTableName(secondaryIndexType));
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, i))
+              .value(secondaryIndexValue)
+              .intValue(COL_NAME, 1)
+              .build();
       storage.put(put);
     }
   }
 
-  private void assertResults(List<Result> results, Value<?> secondaryIndexValue) {
+  private void assertResults(List<Result> results, Column<?> secondaryIndexValue) {
     assertThat(results.size()).isEqualTo(DATA_NUM);
 
     Set<Integer> partitionKeySet = new HashSet<>();
@@ -267,12 +277,12 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     }
 
     for (Result result : results) {
-      assertThat(result.getValue(PARTITION_KEY).isPresent()).isTrue();
-      partitionKeySet.remove(result.getValue(PARTITION_KEY).get().getAsInt());
-      assertThat(result.getValue(INDEX_COL_NAME).isPresent()).isTrue();
-      assertThat(result.getValue(INDEX_COL_NAME).get()).isEqualTo(secondaryIndexValue);
-      assertThat(result.getValue(COL_NAME).isPresent()).isTrue();
-      assertThat(result.getValue(COL_NAME).get().getAsInt()).isEqualTo(1);
+      assertThat(result.contains(PARTITION_KEY)).isTrue();
+      partitionKeySet.remove(result.getInt(PARTITION_KEY));
+      assertThat(result.contains(INDEX_COL_NAME)).isTrue();
+      assertThat(result.getColumns().get(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue);
+      assertThat(result.contains(COL_NAME)).isTrue();
+      assertThat(result.getInt(COL_NAME)).isEqualTo(1);
     }
 
     assertThat(partitionKeySet).isEmpty();
@@ -284,15 +294,16 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     }
   }
 
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    return TestUtils.getRandomValue(random, columnName, dataType, true);
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
+    return TestUtils.getColumnWithRandomValue(random, columnName, dataType, true);
   }
 
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
-    return TestUtils.getMinValue(columnName, dataType, true);
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMinValue(columnName, dataType, true);
   }
 
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    return TestUtils.getMaxValue(columnName, dataType);
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
+    return TestUtils.getColumnWithMaxValue(columnName, dataType);
   }
 }
