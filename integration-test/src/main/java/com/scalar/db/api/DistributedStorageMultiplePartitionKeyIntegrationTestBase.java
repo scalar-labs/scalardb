@@ -268,11 +268,11 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
                   partitionKey.second);
 
           // Act
-          Optional<Result> resultOpt = storage.get(get);
+          Optional<Result> optResult = storage.get(get);
 
           // Assert
-          Assertions.assertThat(resultOpt).describedAs(description).isPresent();
-          Result result = resultOpt.get();
+          Assertions.assertThat(optResult).describedAs(description).isPresent();
+          Result result = optResult.get();
           Assertions.assertThat(result.contains(FIRST_PARTITION_KEY))
               .describedAs(description)
               .isTrue();
