@@ -21,7 +21,7 @@ public class DynamoSecondaryIndexIntegrationTest
   protected Set<DataType> getSecondaryIndexTypes() {
     // Return types without BOOLEAN because boolean is not supported for secondary index for now
     Set<DataType> clusteringKeyTypes = new HashSet<>();
-    for (DataType dataType : DataType.valuesWithoutTimesRelatedTypes()) {
+    for (DataType dataType : DataType.values()) {
       if (dataType == DataType.BOOLEAN) {
         continue;
       }

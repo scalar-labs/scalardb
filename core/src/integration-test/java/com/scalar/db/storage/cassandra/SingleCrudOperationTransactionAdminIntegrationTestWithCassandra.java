@@ -17,9 +17,4 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCassandra
   protected Map<String, String> getCreationOptions() {
     return Collections.singletonMap(CassandraAdmin.REPLICATION_FACTOR, "1");
   }
-
-  @Override
-  protected boolean isTimestampTypeSupported() {
-    return false;
-  }
 }

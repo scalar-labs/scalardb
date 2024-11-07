@@ -92,10 +92,6 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       case DOUBLE:
         return "DOUBLE";
       case TEXT:
-      case DATE:
-      case TIME:
-      case TIMESTAMP:
-      case TIMESTAMPTZ:
         return "TEXT";
       case BLOB:
         return "BLOB";

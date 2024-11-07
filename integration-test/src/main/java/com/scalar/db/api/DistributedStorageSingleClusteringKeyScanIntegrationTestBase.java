@@ -80,7 +80,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   protected Set<DataType> getClusteringKeyTypes() {
-    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
+    return new HashSet<>(Arrays.asList(DataType.values()));
   }
 
   private void createTables() throws ExecutionException {

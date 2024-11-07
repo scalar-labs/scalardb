@@ -314,10 +314,6 @@ public abstract class DynamoAdminTestBase {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
 
@@ -457,10 +453,6 @@ public abstract class DynamoAdminTestBase {
     columns.put("c5", AttributeValue.builder().s("int").build());
     columns.put("c6", AttributeValue.builder().s("double").build());
     columns.put("c7", AttributeValue.builder().s("float").build());
-    columns.put("c8", AttributeValue.builder().s("date").build());
-    columns.put("c9", AttributeValue.builder().s("time").build());
-    columns.put("c10", AttributeValue.builder().s("timestamp").build());
-    columns.put("c11", AttributeValue.builder().s("timestamptz").build());
     itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
     itemValues.put(
         DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
@@ -513,10 +505,6 @@ public abstract class DynamoAdminTestBase {
             .addColumn("c5", DataType.BLOB)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
 
@@ -618,10 +606,6 @@ public abstract class DynamoAdminTestBase {
     columns.put("c5", AttributeValue.builder().s("blob").build());
     columns.put("c6", AttributeValue.builder().s("double").build());
     columns.put("c7", AttributeValue.builder().s("float").build());
-    columns.put("c8", AttributeValue.builder().s("date").build());
-    columns.put("c9", AttributeValue.builder().s("time").build());
-    columns.put("c10", AttributeValue.builder().s("timestamp").build());
-    columns.put("c11", AttributeValue.builder().s("timestamptz").build());
     itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
     itemValues.put(
         DynamoAdmin.METADATA_ATTR_PARTITION_KEY,

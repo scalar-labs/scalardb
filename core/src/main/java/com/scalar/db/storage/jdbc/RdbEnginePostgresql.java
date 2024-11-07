@@ -197,14 +197,6 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return "INT";
       case TEXT:
         return "TEXT";
-      case DATE:
-        return "DATE";
-      case TIME:
-        return "TIME";
-      case TIMESTAMP:
-        return "TIMESTAMP";
-      case TIMESTAMPTZ:
-        return "TIMESTAMP WITH TIME ZONE";
       default:
         throw new AssertionError();
     }

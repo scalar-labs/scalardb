@@ -102,8 +102,8 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
 
   protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
-    for (DataType firstClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
-      for (DataType secondClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
+    for (DataType firstClusteringKeyType : DataType.values()) {
+      for (DataType secondClusteringKeyType : DataType.values()) {
         clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
       }
     }

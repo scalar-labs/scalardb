@@ -211,15 +211,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 "c6", DataType.DOUBLE.toString(), null, null, false),
             new SelectAllFromMetadataTableResultSetMocker.Row(
-                "c7", DataType.FLOAT.toString(), null, null, false),
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                "c8", DataType.DATE.toString(), null, null, false),
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                "c9", DataType.TIME.toString(), null, null, false),
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                "c10", DataType.TIMESTAMP.toString(), null, null, false),
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                "c11", DataType.TIMESTAMPTZ.toString(), null, null, false));
+                "c7", DataType.FLOAT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection.prepareStatement(any())).thenReturn(selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -242,10 +234,6 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
     assertThat(actualMetadata).isEqualTo(expectedMetadata);
@@ -478,7 +466,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForMysql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME,`c10` DATETIME,`c11` DATETIME, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -490,7 +478,7 @@ public class JdbcAdminTest {
     when(config.getMysqlVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineMysql(config),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME,`c10` DATETIME,`c11` DATETIME, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -499,7 +487,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForPostgresql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -509,7 +497,8 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlServer_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME,[c10] DATETIME2,[c11] DATETIMEOFFSET, PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -518,7 +507,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -532,7 +521,7 @@ public class JdbcAdminTest {
     when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineOracle(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -543,7 +532,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlite_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" TEXT,\"c9\" TEXT,\"c10\" TEXT,\"c11\" TEXT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -571,10 +560,6 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -605,7 +590,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.MYSQL,
-        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME,`c10` DATETIME,`c11` DATETIME, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -615,7 +600,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX IF NOT EXISTS \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -626,7 +611,8 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME,[c10] DATETIME2,[c11] DATETIMEOFFSET, PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -636,7 +622,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -648,7 +634,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQLITE,
-        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" TEXT,\"c9\" TEXT,\"c10\" TEXT,\"c11\" TEXT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -677,10 +663,6 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -1018,11 +1000,7 @@ public class JdbcAdminTest {
             + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
         "INSERT INTO `"
             + METADATA_SCHEMA
-            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,false,8)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,false,9)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,false,10)",
-        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,false,11)");
+            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
   @Test
@@ -1063,11 +1041,7 @@ public class JdbcAdminTest {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
         "INSERT INTO \""
             + METADATA_SCHEMA
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,false,8)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,false,9)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,false,10)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,false,11)");
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
   }
 
   @Test
@@ -1107,11 +1081,7 @@ public class JdbcAdminTest {
             + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
         "INSERT INTO ["
             + METADATA_SCHEMA
-            + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,0,8)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,0,9)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,0,10)",
-        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,0,11)");
+            + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
   @Test
@@ -1144,11 +1114,7 @@ public class JdbcAdminTest {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
         "INSERT INTO \""
             + METADATA_SCHEMA
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,0,8)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,0,9)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,0,10)",
-        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,0,11)");
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
   @Test
@@ -1187,11 +1153,7 @@ public class JdbcAdminTest {
             + "$metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,FALSE,6)",
         "INSERT INTO \""
             + METADATA_SCHEMA
-            + "$metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)",
-        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,FALSE,8)",
-        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,FALSE,9)",
-        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,FALSE,10)",
-        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,FALSE,11)");
+            + "$metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)");
   }
 
   private void addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
@@ -1211,10 +1173,6 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -1259,10 +1217,6 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -1298,10 +1252,6 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
-            .addColumn("c8", DataType.DATE)
-            .addColumn("c9", DataType.TIME)
-            .addColumn("c10", DataType.TIMESTAMP)
-            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();

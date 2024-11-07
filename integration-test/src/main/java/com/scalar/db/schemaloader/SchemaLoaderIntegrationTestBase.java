@@ -51,6 +51,34 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private static final String TABLE_1 = "test_table1";
   private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
   private static final String TABLE_2 = "test_table2";
+  private static final TableMetadata TABLE_1_METADATA =
+      TableMetadata.newBuilder()
+          .addPartitionKey("pk1")
+          .addClusteringKey("ck1", Order.DESC)
+          .addClusteringKey("ck2", Order.ASC)
+          .addColumn("pk1", DataType.INT)
+          .addColumn("ck1", DataType.INT)
+          .addColumn("ck2", DataType.TEXT)
+          .addColumn("col1", DataType.INT)
+          .addColumn("col2", DataType.BIGINT)
+          .addColumn("col3", DataType.FLOAT)
+          .addColumn("col4", DataType.DOUBLE)
+          .addColumn("col5", DataType.TEXT)
+          .addColumn("col6", DataType.BLOB)
+          .addColumn("col7", DataType.BOOLEAN)
+          .addSecondaryIndex("col1")
+          .addSecondaryIndex("col5")
+          .build();
+  private static final TableMetadata TABLE_2_METADATA =
+      TableMetadata.newBuilder()
+          .addPartitionKey("pk1")
+          .addClusteringKey("ck1", Order.ASC)
+          .addColumn("pk1", DataType.INT)
+          .addColumn("ck1", DataType.INT)
+          .addColumn("col1", DataType.INT)
+          .addColumn("col2", DataType.BIGINT)
+          .addColumn("col3", DataType.FLOAT)
+          .build();
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;
@@ -58,45 +86,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private String namespace2;
   private String systemNamespaceName;
   private AdminTestUtils adminTestUtils;
-
-  private TableMetadata getTable1Metadata() {
-    TableMetadata.Builder builder =
-        TableMetadata.newBuilder()
-            .addPartitionKey("pk1")
-            .addClusteringKey("ck1", Order.DESC)
-            .addClusteringKey("ck2", Order.ASC)
-            .addColumn("pk1", DataType.INT)
-            .addColumn("ck1", DataType.INT)
-            .addColumn("ck2", DataType.TEXT)
-            .addColumn("col1", DataType.INT)
-            .addColumn("col2", DataType.BIGINT)
-            .addColumn("col3", DataType.FLOAT)
-            .addColumn("col4", DataType.DOUBLE)
-            .addColumn("col5", DataType.TEXT)
-            .addColumn("col6", DataType.BLOB)
-            .addColumn("col7", DataType.BOOLEAN)
-            .addColumn("col8", DataType.DATE)
-            .addColumn("col9", DataType.TIME)
-            .addColumn("col10", DataType.TIMESTAMPTZ);
-    if (isTimestampTypeSupported()) {
-      builder.addColumn("col11", DataType.TIMESTAMP);
-    }
-
-    builder.addSecondaryIndex("col1").addSecondaryIndex("col5");
-    return builder.build();
-  }
-
-  private TableMetadata getTable2Metadata() {
-    return TableMetadata.newBuilder()
-        .addPartitionKey("pk1")
-        .addClusteringKey("ck1", Order.ASC)
-        .addColumn("pk1", DataType.INT)
-        .addColumn("ck1", DataType.INT)
-        .addColumn("col1", DataType.INT)
-        .addColumn("col2", DataType.BIGINT)
-        .addColumn("col3", DataType.FLOAT)
-        .build();
-  }
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -168,12 +157,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
                         .put("col5", "TEXT")
                         .put("col6", "BLOB")
                         .put("col7", "BOOLEAN")
-                        .put("col8", "DATE")
-                        .put("col9", "TIME")
-                        .putAll(
-                            isTimestampTypeSupported()
-                                ? ImmutableMap.of("col10", "TIMESTAMPTZ", "col11", "TIMESTAMP")
-                                : ImmutableMap.of("col10", "TIMESTAMPTZ"))
                         .build())
                 .put("secondary-index", Arrays.asList("col1", "col5"))
                 .build(),
@@ -210,16 +193,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
                     .put("col5", "TEXT")
                     .put("col6", "BLOB")
                     .put("col7", "BOOLEAN")
-                    .put("col8", "DATE")
-                    .put("col9", "TIME")
-                    .putAll(
-                        isTimestampTypeSupported()
-                            ? ImmutableMap.of("col10", "TIMESTAMPTZ", "col11", "TIMESTAMP")
-                            : ImmutableMap.of("col10", "TIMESTAMPTZ"))
-                    .put("col12", "TEXT")
-                    .put("col13", "BLOB")
+                    .put("col8", "TEXT")
+                    .put("col9", "BLOB")
                     .build())
-            .put("secondary-index", Arrays.asList("col3", "col12"))
+            .put("secondary-index", Arrays.asList("col3", "col8"))
             .put("compaction-strategy", "LCS")
             .put("network-strategy", "SimpleStrategy")
             .put("replication-factor", "1")
@@ -425,9 +402,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(storageAdmin.namespaceExists(namespace2)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
-        .isEqualTo(getTable1Metadata());
-    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(getTable2Metadata());
+    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
+    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isFalse();
   }
 
@@ -457,9 +433,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(storageAdmin.namespaceExists(namespace2)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(adminTestUtils.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
-        .isEqualTo(getTable1Metadata());
-    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(getTable2Metadata());
+    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1)).isEqualTo(TABLE_1_METADATA);
+    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(TABLE_2_METADATA);
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
@@ -472,16 +447,16 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(exitCodeCreation).isZero();
 
     TableMetadata expectedTable1Metadata =
-        TableMetadata.newBuilder(getTable1Metadata())
-            .addColumn("col12", DataType.TEXT)
-            .addColumn("col13", DataType.BLOB)
+        TableMetadata.newBuilder(TABLE_1_METADATA)
+            .addColumn("col8", DataType.TEXT)
+            .addColumn("col9", DataType.BLOB)
             .removeSecondaryIndex("col1")
             .removeSecondaryIndex("col5")
             .addSecondaryIndex("col3")
-            .addSecondaryIndex("col12")
+            .addSecondaryIndex("col8")
             .build();
     TableMetadata expectedTable2Metadata =
-        TableMetadata.newBuilder(getTable2Metadata()).addColumn("col4", DataType.TEXT).build();
+        TableMetadata.newBuilder(TABLE_2_METADATA).addColumn("col4", DataType.TEXT).build();
 
     // Act
     int exitCodeAlteration =
@@ -579,9 +554,5 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   protected void waitForCreationIfNecessary() {
     // Do nothing
-  }
-
-  protected boolean isTimestampTypeSupported() {
-    return true;
   }
 }

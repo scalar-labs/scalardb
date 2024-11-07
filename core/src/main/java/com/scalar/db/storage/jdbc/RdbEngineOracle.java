@@ -210,13 +210,6 @@ class RdbEngineOracle implements RdbEngineStrategy {
         return "NUMBER(10)";
       case TEXT:
         return "VARCHAR2(4000)";
-      case DATE:
-        return "DATE";
-      case TIME:
-      case TIMESTAMP:
-        return "TIMESTAMP";
-      case TIMESTAMPTZ:
-        return "TIMESTAMP WITH TIME ZONE";
       default:
         throw new AssertionError();
     }

@@ -518,14 +518,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         return DataType.BOOLEAN;
       case "blob":
         return DataType.BLOB;
-      case "date":
-        return DataType.DATE;
-      case "time":
-        return DataType.TIME;
-      case "timestamp":
-        return DataType.TIMESTAMP;
-      case "timestamptz":
-        return DataType.TIMESTAMPTZ;
       default:
         throw new ExecutionException("Unknown column type: " + columnType);
     }
