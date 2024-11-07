@@ -52,11 +52,12 @@ public class Put extends Mutation {
       Key partitionKey,
       @Nullable Key clusteringKey,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       Map<String, Column<?>> columns,
       @Nullable MutationCondition condition,
       boolean implicitPreReadEnabled,
       boolean insertModeEnabled) {
-    super(namespace, tableName, partitionKey, clusteringKey, consistency, condition);
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, attributes, condition);
     this.columns = columns;
     this.implicitPreReadEnabled = implicitPreReadEnabled;
     this.insertModeEnabled = insertModeEnabled;
@@ -863,10 +864,11 @@ public class Put extends Mutation {
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
         .add("columns", getColumns())
-        .add("consistency", getConsistency())
         .add("condition", getCondition())
         .add("implicitPreReadEnabled", isImplicitPreReadEnabled())
         .add("insertModeEnabled", isInsertModeEnabled())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
         .toString();
   }
 }

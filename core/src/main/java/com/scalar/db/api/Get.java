@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.GetBuilder.BuildableGetOrGetWithIndexFromExisting;
 import com.scalar.db.api.GetBuilder.Namespace;
@@ -26,10 +27,18 @@ public class Get extends Selection {
       Key partitionKey,
       @Nullable Key clusteringKey,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       List<String> projections,
       ImmutableSet<Conjunction> conjunctions) {
     super(
-        namespace, tableName, partitionKey, clusteringKey, consistency, projections, conjunctions);
+        namespace,
+        tableName,
+        partitionKey,
+        clusteringKey,
+        consistency,
+        attributes,
+        projections,
+        conjunctions);
   }
 
   /**
@@ -181,6 +190,7 @@ public class Get extends Selection {
         .add("projections", getProjections())
         .add("conjunctions", getConjunctions())
         .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
         .toString();
   }
 }

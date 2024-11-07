@@ -4,6 +4,7 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -541,6 +542,42 @@ public class OperationBuilder {
      * @return the scan operation builder
      */
     T clearConditions();
+  }
+
+  public interface Attribute<T> {
+    /**
+     * Adds the specified attribute.
+     *
+     * @param name the name of the attribute
+     * @param value the value of the attribute
+     * @return the operation builder
+     */
+    T attribute(String name, String value);
+
+    /**
+     * Adds the specified attributes.
+     *
+     * @param attributes the attributes to add
+     * @return the operation builder
+     */
+    T attributes(Map<String, String> attributes);
+  }
+
+  public interface ClearAttribute<T> {
+    /**
+     * Clears all attributes.
+     *
+     * @return the operation builder
+     */
+    T clearAttributes();
+
+    /**
+     * Clears the attribute with the specified name.
+     *
+     * @param name the name of the attribute
+     * @return the operation builder
+     */
+    T clearAttribute(String name);
   }
 
   public abstract static class TableBuilder<T> implements Table<T> {

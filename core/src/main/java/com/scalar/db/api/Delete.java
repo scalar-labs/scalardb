@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DeleteBuilder.BuildableFromExisting;
 import com.scalar.db.api.DeleteBuilder.Namespace;
 import com.scalar.db.io.Key;
@@ -25,8 +26,9 @@ public class Delete extends Mutation {
       Key partitionKey,
       @Nullable Key clusteringKey,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       @Nullable MutationCondition condition) {
-    super(namespace, tableName, partitionKey, clusteringKey, consistency, condition);
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, attributes, condition);
   }
 
   /**
@@ -171,8 +173,9 @@ public class Delete extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("consistency", getConsistency())
         .add("condition", getCondition())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
         .toString();
   }
 }

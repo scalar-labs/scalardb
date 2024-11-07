@@ -3,6 +3,8 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.OperationBuilder.Attribute;
+import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -22,6 +24,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -73,10 +76,14 @@ public class UpdateBuilder {
   }
 
   public static class Buildable extends OperationBuilder.Buildable<Update>
-      implements ClusteringKey<Buildable>, Condition<Buildable>, Values<Buildable> {
+      implements ClusteringKey<Buildable>,
+          Condition<Buildable>,
+          Values<Buildable>,
+          Attribute<Buildable> {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     @Nullable MutationCondition condition;
+    Map<String, String> attributes = new HashMap<>();
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -86,6 +93,21 @@ public class UpdateBuilder {
     public Buildable clusteringKey(Key clusteringKey) {
       checkNotNull(clusteringKey);
       this.clusteringKey = clusteringKey;
+      return this;
+    }
+
+    @Override
+    public Buildable attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public Buildable attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
       return this;
     }
 
@@ -202,6 +224,7 @@ public class UpdateBuilder {
           tableName,
           partitionKey,
           clusteringKey,
+          ImmutableMap.copyOf(attributes),
           ImmutableMap.copyOf(columns),
           condition);
     }
@@ -214,7 +237,8 @@ public class UpdateBuilder {
           ClearClusteringKey<BuildableFromExisting>,
           ClearValues<BuildableFromExisting>,
           ClearCondition<BuildableFromExisting>,
-          ClearNamespace<BuildableFromExisting> {
+          ClearNamespace<BuildableFromExisting>,
+          ClearAttribute<BuildableFromExisting> {
 
     BuildableFromExisting(Update update) {
       super(
@@ -224,6 +248,7 @@ public class UpdateBuilder {
       this.clusteringKey = update.getClusteringKey().orElse(null);
       this.columns.putAll(update.getColumns());
       this.condition = update.getCondition().orElse(null);
+      this.attributes.putAll(update.getAttributes());
     }
 
     @Override
@@ -250,6 +275,18 @@ public class UpdateBuilder {
     @Override
     public BuildableFromExisting clusteringKey(Key clusteringKey) {
       super.clusteringKey(clusteringKey);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
       return this;
     }
 
@@ -370,6 +407,18 @@ public class UpdateBuilder {
     @Override
     public BuildableFromExisting clearNamespace() {
       this.namespaceName = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttributes() {
+      attributes.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttribute(String name) {
+      attributes.remove(name);
       return this;
     }
   }

@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
@@ -29,9 +30,10 @@ public abstract class Selection extends Operation {
       Key partitionKey,
       @Nullable Key clusteringKey,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       List<String> projections,
       ImmutableSet<Conjunction> conjunctions) {
-    super(namespace, tableName, partitionKey, clusteringKey, consistency);
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, attributes);
     this.projections = projections;
     this.conjunctions = conjunctions;
   }
