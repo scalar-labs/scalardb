@@ -1,8 +1,12 @@
 package com.scalar.db.api;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -11,6 +15,29 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class ScanWithIndex extends Scan {
+
+  ScanWithIndex(
+      @Nullable String namespace,
+      String tableName,
+      Key indexKey,
+      @Nullable Consistency consistency,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions,
+      int limit) {
+    super(
+        namespace,
+        tableName,
+        indexKey,
+        consistency,
+        projections,
+        conjunctions,
+        null,
+        false,
+        null,
+        false,
+        ImmutableList.of(),
+        limit);
+  }
 
   /**
    * @param indexKey an index key

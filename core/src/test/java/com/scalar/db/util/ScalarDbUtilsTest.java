@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
@@ -41,15 +42,33 @@ public class ScalarDbUtilsTest {
   @Test
   public void copyAndSetTargetToIfNot_GetGiven_ShouldReturnDifferentInstance() {
     // Arrange
-    Get get = new Get(new Key("c1", "v1"));
+    Get get = Get.newBuilder().table(TABLE.get()).partitionKey(Key.ofText("c1", "v1")).build();
 
     // Act
     Get actual = ScalarDbUtils.copyAndSetTargetToIfNot(get, NAMESPACE, TABLE);
 
     // Assert
     assertThat(actual == get).isFalse();
+    assertThat(actual instanceof GetWithIndex).isFalse();
     assertThat(get.forNamespace()).isNotPresent();
-    assertThat(get.forTable()).isNotPresent();
+    assertThat(get.forTable()).isEqualTo(TABLE);
+    assertThat(actual.forNamespace()).isEqualTo(NAMESPACE);
+    assertThat(actual.forTable()).isEqualTo(TABLE);
+  }
+
+  @Test
+  public void copyAndSetTargetToIfNot_GetWithIndexGiven_ShouldReturnDifferentInstance() {
+    // Arrange
+    Get getWithIndex = Get.newBuilder().table(TABLE.get()).indexKey(Key.ofText("c1", "v1")).build();
+
+    // Act
+    Get actual = ScalarDbUtils.copyAndSetTargetToIfNot(getWithIndex, NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual == getWithIndex).isFalse();
+    assertThat(actual instanceof GetWithIndex).isTrue();
+    assertThat(getWithIndex.forNamespace()).isNotPresent();
+    assertThat(getWithIndex.forTable()).isEqualTo(TABLE);
     assertThat(actual.forNamespace()).isEqualTo(NAMESPACE);
     assertThat(actual.forTable()).isEqualTo(TABLE);
   }
@@ -57,7 +76,7 @@ public class ScalarDbUtilsTest {
   @Test
   public void copyAndSetTargetToIfNot_ScanGiven_ShouldReturnDifferentInstance() {
     // Arrange
-    Scan scan = new Scan(new Key("c1", "v1"));
+    Scan scan = Scan.newBuilder().table(TABLE.get()).partitionKey(Key.ofText("c1", "v1")).build();
 
     // Act
     Scan actual = ScalarDbUtils.copyAndSetTargetToIfNot(scan, NAMESPACE, TABLE);
@@ -67,7 +86,7 @@ public class ScalarDbUtilsTest {
     assertThat(actual instanceof ScanWithIndex).isFalse();
     assertThat(actual instanceof ScanAll).isFalse();
     assertThat(scan.forNamespace()).isNotPresent();
-    assertThat(scan.forTable()).isNotPresent();
+    assertThat(scan.forTable()).isEqualTo(TABLE);
     assertThat(actual.forNamespace()).isEqualTo(NAMESPACE);
     assertThat(actual.forTable()).isEqualTo(TABLE);
   }
@@ -75,7 +94,7 @@ public class ScalarDbUtilsTest {
   @Test
   public void copyAndSetTargetToIfNot_ScanAllGiven_ShouldReturnDifferentInstance() {
     // Arrange
-    Scan scanAll = new ScanAll();
+    Scan scanAll = Scan.newBuilder().table(TABLE.get()).all().build();
 
     // Act
     Scan actual = ScalarDbUtils.copyAndSetTargetToIfNot(scanAll, NAMESPACE, TABLE);
@@ -84,7 +103,7 @@ public class ScalarDbUtilsTest {
     assertThat(actual == scanAll).isFalse();
     assertThat(actual instanceof ScanAll).isTrue();
     assertThat(scanAll.forNamespace()).isNotPresent();
-    assertThat(scanAll.forTable()).isNotPresent();
+    assertThat(scanAll.forTable()).isEqualTo(TABLE);
     assertThat(actual.forNamespace()).isEqualTo(NAMESPACE);
     assertThat(actual.forTable()).isEqualTo(TABLE);
   }
@@ -92,7 +111,8 @@ public class ScalarDbUtilsTest {
   @Test
   public void copyAndSetTargetToIfNot_ScanWithIndexGiven_ShouldReturnDifferentInstance() {
     // Arrange
-    Scan scanWithIndex = new ScanWithIndex(new Key("c2", "v2"));
+    Scan scanWithIndex =
+        Scan.newBuilder().table(TABLE.get()).indexKey(Key.ofText("c1", "v1")).build();
 
     // Act
     Scan actual = ScalarDbUtils.copyAndSetTargetToIfNot(scanWithIndex, NAMESPACE, TABLE);
@@ -101,7 +121,7 @@ public class ScalarDbUtilsTest {
     assertThat(actual == scanWithIndex).isFalse();
     assertThat(actual instanceof ScanWithIndex).isTrue();
     assertThat(scanWithIndex.forNamespace()).isNotPresent();
-    assertThat(scanWithIndex.forTable()).isNotPresent();
+    assertThat(scanWithIndex.forTable()).isEqualTo(TABLE);
     assertThat(actual.forNamespace()).isEqualTo(NAMESPACE);
     assertThat(actual.forTable()).isEqualTo(TABLE);
   }
@@ -109,7 +129,7 @@ public class ScalarDbUtilsTest {
   @Test
   public void copyAndSetTargetToIfNot_PutGiven_ShouldReturnDifferentInstance() {
     // Arrange
-    Put put = new Put(new Key("c1", "v1"));
+    Put put = Put.newBuilder().table(TABLE.get()).partitionKey(Key.ofText("c1", "v1")).build();
 
     // Act
     Put actual = ScalarDbUtils.copyAndSetTargetToIfNot(put, NAMESPACE, TABLE);
@@ -117,7 +137,7 @@ public class ScalarDbUtilsTest {
     // Assert
     assertThat(actual == put).isFalse();
     assertThat(put.forNamespace()).isNotPresent();
-    assertThat(put.forTable()).isNotPresent();
+    assertThat(put.forTable()).isEqualTo(TABLE);
     assertThat(actual.forNamespace()).isEqualTo(NAMESPACE);
     assertThat(actual.forTable()).isEqualTo(TABLE);
   }
@@ -125,7 +145,8 @@ public class ScalarDbUtilsTest {
   @Test
   public void copyAndSetTargetToIfNot_DeleteGiven_ShouldReturnDifferentInstance() {
     // Arrange
-    Delete delete = new Delete(new Key("c1", "v1"));
+    Delete delete =
+        Delete.newBuilder().table(TABLE.get()).partitionKey(Key.ofText("c1", "v1")).build();
 
     // Act
     Delete actual = ScalarDbUtils.copyAndSetTargetToIfNot(delete, NAMESPACE, TABLE);
@@ -133,7 +154,7 @@ public class ScalarDbUtilsTest {
     // Assert
     assertThat(actual == delete).isFalse();
     assertThat(delete.forNamespace()).isNotPresent();
-    assertThat(delete.forTable()).isNotPresent();
+    assertThat(delete.forTable()).isEqualTo(TABLE);
     assertThat(actual.forNamespace()).isEqualTo(NAMESPACE);
     assertThat(actual.forTable()).isEqualTo(TABLE);
   }
@@ -192,8 +213,9 @@ public class ScalarDbUtilsTest {
   @Test
   public void copyAndSetTargetToIfNot_MutationsGiven_ShouldReturnDifferentInstance() {
     // Arrange
-    Put put = new Put(new Key("c1", "v1"));
-    Delete delete = new Delete(new Key("c1", "v1"));
+    Put put = Put.newBuilder().table(TABLE.get()).partitionKey(Key.ofText("c1", "v1")).build();
+    Delete delete =
+        Delete.newBuilder().table(TABLE.get()).partitionKey(Key.ofText("c1", "v1")).build();
     Insert insert =
         Insert.newBuilder().table(TABLE.get()).partitionKey(Key.ofText("c1", "v1")).build();
     Upsert upsert =
@@ -213,9 +235,9 @@ public class ScalarDbUtilsTest {
     assertThat(actual.get(3) == upsert).isFalse();
     assertThat(actual.get(4) == update).isFalse();
     assertThat(put.forNamespace()).isNotPresent();
-    assertThat(put.forTable()).isNotPresent();
+    assertThat(put.forTable()).isEqualTo(TABLE);
     assertThat(delete.forNamespace()).isNotPresent();
-    assertThat(delete.forTable()).isNotPresent();
+    assertThat(delete.forTable()).isEqualTo(TABLE);
     assertThat(insert.forNamespace()).isNotPresent();
     assertThat(insert.forTable()).isEqualTo(TABLE);
     assertThat(upsert.forNamespace()).isNotPresent();

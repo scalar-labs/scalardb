@@ -17,16 +17,16 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class Insert extends Mutation {
 
-  private final Map<String, Column<?>> columns;
+  private final ImmutableMap<String, Column<?>> columns;
 
   Insert(
       @Nullable String namespace,
       String tableName,
       Key partitionKey,
       @Nullable Key clusteringKey,
-      Map<String, Column<?>> columns) {
-    super(namespace, tableName, partitionKey, clusteringKey, null);
-    this.columns = ImmutableMap.copyOf(columns);
+      ImmutableMap<String, Column<?>> columns) {
+    super(namespace, tableName, partitionKey, clusteringKey, null, null);
+    this.columns = columns;
   }
 
   public Map<String, Column<?>> getColumns() {
@@ -120,7 +120,7 @@ public class Insert extends Mutation {
 
   /**
    * Build a {@code Insert} operation from an existing {@code Insert} object using a builder. The
-   * builder will be parametrized by default with all the existing {@code Insert} object attributes.
+   * builder will be parametrized by default with all the existing {@code Insert} parameters.
    *
    * @param insert an existing {@code Insert} operation
    * @return a {@code Insert} operation builder

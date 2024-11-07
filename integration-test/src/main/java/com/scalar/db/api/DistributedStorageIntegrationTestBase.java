@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.api.Scan.Ordering;
-import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -113,7 +111,6 @@ public abstract class DistributedStorageIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     truncateTable();
-    storage.with(namespace, TABLE);
   }
 
   private void truncateTable() throws ExecutionException {
@@ -153,10 +150,14 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void operation_NoTargetGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    storage.with(null, TABLE);
-    Key partitionKey = new Key(COL_NAME1, 0);
-    Key clusteringKey = new Key(COL_NAME4, 0);
-    Get get = new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, 0);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Get get =
+        Get.newBuilder()
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
@@ -165,11 +166,15 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void operation_WrongNamespaceGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    storage.with("wrong_" + namespace, TABLE); // a wrong namespace
-    Key partitionKey = new Key(COL_NAME1, 0);
-    Key clusteringKey = new Key(COL_NAME4, 0);
-    Get get = new Get(partitionKey, clusteringKey);
-
+    Key partitionKey = Key.ofInt(COL_NAME1, 0);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Get get =
+        Get.newBuilder()
+            .namespace("wrong_" + namespace) // a wrong namespace
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
     // Act Assert
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
@@ -177,10 +182,15 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void operation_WrongTableGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    storage.with(namespace, "wrong_" + TABLE); // a wrong table
-    Key partitionKey = new Key(COL_NAME1, 0);
-    Key clusteringKey = new Key(COL_NAME4, 0);
-    Get get = new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, 0);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table("wrong_" + TABLE) // a wrong table
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
@@ -189,7 +199,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void operation_DefaultNamespaceGiven_ShouldWorkProperly() {
     Properties properties = getProperties(TEST_NAME);
-    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, getNamespace());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
     final DistributedStorage storageWithDefaultNamespace =
         StorageFactory.create(properties).getStorage();
     try {
@@ -272,8 +282,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act Assert
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Get get = new Get(partitionKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Get get = Get.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build();
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -352,11 +362,15 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(Key.ofInt(COL_NAME1, pKey))
-            .withProjection(COL_NAME1)
-            .withProjection(COL_NAME2)
-            .withProjection(COL_NAME3)
-            .withProjection(COL_NAME6);
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .projection(COL_NAME1)
+            .projection(COL_NAME2)
+            .projection(COL_NAME3)
+            .projection(COL_NAME6)
+            .build();
     List<Result> actual = scanAll(scan);
 
     // Assert
@@ -384,7 +398,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
     Scanner scanner = storage.scan(scan);
 
     // Assert
@@ -430,7 +449,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
     double t1 = System.currentTimeMillis();
     List<Result> actual = scanAll(scan);
     double t2 = System.currentTimeMillis();
@@ -460,9 +484,13 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(COL_NAME1, pKey))
-            .withStart(new Key(COL_NAME4, 0), true)
-            .withEnd(new Key(COL_NAME4, 2), false);
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .start(Key.ofInt(COL_NAME4, 0))
+            .end(Key.ofInt(COL_NAME4, 2), false)
+            .build();
     List<Result> actual = scanAll(scan);
 
     // verify
@@ -486,9 +514,13 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(COL_NAME1, pKey))
-            .withStart(new Key(COL_NAME4, 0), false)
-            .withEnd(new Key(COL_NAME4, 2), true);
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .start(Key.ofInt(COL_NAME4, 0), false)
+            .end(Key.ofInt(COL_NAME4, 2))
+            .build();
     List<Result> actual = scanAll(scan);
 
     // verify
@@ -510,8 +542,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     List<Put> puts = preparePuts();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
     Scan scan =
-        new Scan(new Key(COL_NAME1, 0))
-            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.ASC));
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 0))
+            .start(Key.ofInt(COL_NAME4, 0))
+            .end(Key.ofInt(COL_NAME4, 2))
+            .ordering(Scan.Ordering.asc(COL_NAME4))
+            .build();
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -533,8 +571,16 @@ public abstract class DistributedStorageIntegrationTestBase {
     List<Put> puts = preparePuts();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
     Scan scan =
-        new Scan(new Key(COL_NAME1, 0))
-            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC));
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 0))
+            .start(Key.ofInt(COL_NAME4, 0))
+            .end(Key.ofInt(COL_NAME4, 2))
+            .ordering(Scan.Ordering.desc(COL_NAME4))
+            .build();
+    new Scan(Key.ofInt(COL_NAME1, 0))
+        .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC));
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -557,9 +603,13 @@ public abstract class DistributedStorageIntegrationTestBase {
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
 
     Scan scan =
-        new Scan(new Key(COL_NAME1, 0))
-            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC))
-            .withLimit(1);
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 0))
+            .ordering(Scan.Ordering.desc(COL_NAME4))
+            .limit(1)
+            .build();
 
     // exercise
     List<Result> actual = scanAll(scan);
@@ -580,7 +630,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Act
     Scan scan =
         Scan.newBuilder()
-            .namespace(getNamespace())
+            .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(COL_NAME1, 0))
             .start(Key.ofInt(COL_NAME4, 0))
@@ -609,7 +659,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     scanner.forEach(actual::add);
@@ -639,7 +694,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     Optional<Result> result = scanner.one();
@@ -672,7 +732,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     List<Result> all = scanner.all();
@@ -705,7 +770,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     actual.add(scanner.iterator().next());
@@ -735,9 +805,15 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
-    Get get = new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     storage.put(puts.get(pKey * 2 + cKey));
@@ -764,9 +840,15 @@ public abstract class DistributedStorageIntegrationTestBase {
     int cKey = 0;
     List<Put> puts = preparePuts();
     puts.get(0).withCondition(new PutIfNotExists());
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
-    Get get = new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     storage.put(puts.get(0));
@@ -794,7 +876,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -827,7 +914,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1).withCondition(new PutIfNotExists());
     puts.get(2).withCondition(new PutIfNotExists());
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -853,32 +945,70 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void put_PutWithoutValuesGiven_ShouldStoreProperly() throws ExecutionException {
     // Arrange
-    Key partitionKey = new Key(COL_NAME1, 0);
-    Key clusteringKey = new Key(COL_NAME4, 0);
+    Key partitionKey = Key.ofInt(COL_NAME1, 0);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
 
     // Act
-    assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
+    assertThatCode(
+            () ->
+                storage.put(
+                    Put.newBuilder()
+                        .namespace(namespace)
+                        .table(TABLE)
+                        .partitionKey(partitionKey)
+                        .clusteringKey(clusteringKey)
+                        .build()))
         .doesNotThrowAnyException();
 
     // Assert
-    Optional<Result> result = storage.get(new Get(partitionKey, clusteringKey));
+    Optional<Result> result =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .build());
     assertThat(result).isPresent();
   }
 
   @Test
   public void put_PutWithoutValuesGivenTwice_ShouldStoreProperly() throws ExecutionException {
     // Arrange
-    Key partitionKey = new Key(COL_NAME1, 0);
-    Key clusteringKey = new Key(COL_NAME4, 0);
+    Key partitionKey = Key.ofInt(COL_NAME1, 0);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
 
     // Act
-    assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
+    assertThatCode(
+            () ->
+                storage.put(
+                    Put.newBuilder()
+                        .namespace(namespace)
+                        .table(TABLE)
+                        .partitionKey(partitionKey)
+                        .clusteringKey(clusteringKey)
+                        .build()))
         .doesNotThrowAnyException();
-    assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
+    assertThatCode(
+            () ->
+                storage.put(
+                    Put.newBuilder()
+                        .namespace(namespace)
+                        .table(TABLE)
+                        .partitionKey(partitionKey)
+                        .clusteringKey(clusteringKey)
+                        .build()))
         .doesNotThrowAnyException();
 
     // Assert
-    Optional<Result> result = storage.get(new Get(partitionKey, clusteringKey));
+    Optional<Result> result =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .build());
     assertThat(result).isPresent();
   }
 
@@ -893,7 +1023,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1).withCondition(new PutIfNotExists());
     puts.get(2).withCondition(new PutIfNotExists());
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
 
     // Act
     assertThatThrownBy(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -922,11 +1057,29 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     List<Result> results;
-    results = scanAll(new Scan(new Key(COL_NAME1, 0)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 0))
+                .build());
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(COL_NAME1, 3)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 3))
+                .build());
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(COL_NAME1, 6)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 6))
+                .build());
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -942,11 +1095,29 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     List<Result> results;
-    results = scanAll(new Scan(new Key(COL_NAME1, 0)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 0))
+                .build());
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(COL_NAME1, 3)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 3))
+                .build());
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(COL_NAME1, 6)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 6))
+                .build());
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -968,7 +1139,13 @@ public abstract class DistributedStorageIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 0))
+                .build());
     assertThat(results.size()).isEqualTo(2);
     assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
     assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
@@ -1167,14 +1344,16 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(partitionKey));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build());
     assertThat(results.size()).isEqualTo(2);
     assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
     assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
@@ -1205,8 +1384,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -1214,7 +1393,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
 
     // Assert
-    Optional<Result> actual = storage.get(new Get(partitionKey, clusteringKey));
+    Optional<Result> actual =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .build());
     assertThat(actual.isPresent()).isFalse();
   }
 
@@ -1225,8 +1411,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -1239,7 +1425,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(NoMutationException.class);
 
     // Assert
-    Optional<Result> actual = storage.get(new Get(partitionKey, clusteringKey));
+    Optional<Result> actual =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .build());
     assertThat(actual.isPresent()).isTrue();
   }
 
@@ -1250,8 +1443,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -1264,7 +1457,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
 
     // Assert
-    Optional<Result> actual = storage.get(new Get(partitionKey, clusteringKey));
+    Optional<Result> actual =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .build());
     assertThat(actual.isPresent()).isFalse();
   }
 
@@ -1289,7 +1489,13 @@ public abstract class DistributedStorageIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 0))
+                .build());
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -1299,7 +1505,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
 
     // Act
     assertThatCode(() -> storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -1334,11 +1545,29 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     List<Result> results;
-    results = scanAll(new Scan(new Key(COL_NAME1, 0)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 0))
+                .build());
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(COL_NAME1, 3)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 3))
+                .build());
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(COL_NAME1, 6)));
+    results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(COL_NAME1, 6))
+                .build());
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -1355,7 +1584,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int cKey = 0;
     Delete delete = prepareDelete(pKey, cKey);
 
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .build();
 
     // Act
     assertThatCode(() -> storage.mutate(Arrays.asList(delete, puts.get(1), puts.get(2))))
@@ -1380,9 +1614,15 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
-    Get get = new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     storage.mutate(Collections.singletonList(puts.get(pKey * 2 + cKey)));
@@ -1412,14 +1652,22 @@ public abstract class DistributedStorageIntegrationTestBase {
     int cKey = 0;
 
     // Act
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
-    Delete delete = new Delete(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
     assertThatCode(() -> storage.mutate(Collections.singletonList(delete)))
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> actual = scanAll(new Scan(partitionKey));
+    List<Result> actual =
+        scanAll(
+            Scan.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build());
     assertThat(actual.size()).isEqualTo(2);
     assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
     assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
@@ -1442,8 +1690,8 @@ public abstract class DistributedStorageIntegrationTestBase {
   public void put_PutWithoutClusteringKeyGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     int pKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Put put = new Put(partitionKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Put put = Put.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build();
 
     // Act Assert
     assertThatCode(() -> storage.put(put)).isInstanceOf(IllegalArgumentException.class);
@@ -1454,8 +1702,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Put put = new Put(partitionKey).withValue(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .intValue(COL_NAME4, cKey)
+            .build();
 
     // Act Assert
     assertThatCode(() -> storage.put(put)).isInstanceOf(IllegalArgumentException.class);
@@ -1482,8 +1736,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     storage.put(preparePuts().get(0)); // (0,0)
     int c3 = 0;
-    Get getBuiltByConstructor = new Get(new Key(COL_NAME3, c3));
-    Get getBuiltByBuilder =
+    Get get =
         Get.newBuilder()
             .namespace(namespace)
             .table(TABLE)
@@ -1491,17 +1744,12 @@ public abstract class DistributedStorageIntegrationTestBase {
             .build();
 
     // Act
-    Optional<Result> actual1 = storage.get(getBuiltByConstructor);
-    Optional<Result> actual2 = storage.get(getBuiltByBuilder);
+    Optional<Result> actual = storage.get(get);
 
     // Assert
-    assertThat(actual1.isPresent()).isTrue();
-    assertThat(actual1.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
-    assertThat(actual1.get().getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-
-    assertThat(actual2).isEqualTo(actual1);
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
+    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
   }
 
   @Test
@@ -1558,7 +1806,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     populateRecords();
     int c3 = 3;
-    Get get = new Get(new Key(COL_NAME3, c3));
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
@@ -1569,8 +1822,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     populateRecords();
     int c3 = 3;
-    Scan scanBuiltByConstructor = new Scan(new Key(COL_NAME3, c3));
-    Scan scanBuiltByBuilder =
+    Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
             .table(TABLE)
@@ -1578,15 +1830,14 @@ public abstract class DistributedStorageIntegrationTestBase {
             .build();
 
     // Act
-    List<Result> actual1 = scanAll(scanBuiltByConstructor);
-    List<Result> actual2 = scanAll(scanBuiltByBuilder);
+    List<Result> actual = scanAll(scan);
 
     // Assert
-    assertThat(actual1.size()).isEqualTo(3); // (1,2), (2,1), (3,0)
+    assertThat(actual.size()).isEqualTo(3); // (1,2), (2,1), (3,0)
     List<List<Integer>> expectedValues =
         new ArrayList<>(
             Arrays.asList(Arrays.asList(1, 2), Arrays.asList(2, 1), Arrays.asList(3, 0)));
-    for (Result result : actual1) {
+    for (Result result : actual) {
       assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
       assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
 
@@ -1597,8 +1848,6 @@ public abstract class DistributedStorageIntegrationTestBase {
       expectedValues.remove(col1AndCol4);
     }
     assertThat(expectedValues).isEmpty();
-
-    assertThat(actual2).isEqualTo(actual1);
   }
 
   @Test
@@ -1606,7 +1855,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     populateRecords();
     String c2 = "test";
-    Scan scan = new Scan(new Key(COL_NAME2, c2));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofText(COL_NAME2, c2))
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> scanAll(scan)).isInstanceOf(IllegalArgumentException.class);
@@ -1618,15 +1872,21 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
 
     // Arrange
-    Key partitionKey = new Key(COL_NAME1, 1);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
     for (int i = 0; i < recordCount; i++) {
-      Key clusteringKey = new Key(COL_NAME4, i);
+      Key clusteringKey = Key.ofInt(COL_NAME4, i);
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .build());
     }
 
-    Scan scan = new Scan(partitionKey);
+    Scan scan =
+        Scan.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build();
 
     // Act
     List<Result> results = scanAll(scan);
@@ -1646,16 +1906,33 @@ public abstract class DistributedStorageIntegrationTestBase {
     int fetchCount = 234;
 
     // Arrange
-    Key partitionKey = new Key(COL_NAME1, 1);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
     for (int i = 0; i < recordCount; i++) {
-      Key clusteringKey = new Key(COL_NAME4, i);
+      Key clusteringKey = Key.ofInt(COL_NAME4, i);
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .build());
     }
 
-    Scan scanAsc = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.ASC));
-    Scan scanDesc = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.DESC));
+    Scan scanAsc =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .ordering(Scan.Ordering.asc(COL_NAME4))
+            .build();
+    Scan scanDesc =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .ordering(Scan.Ordering.desc(COL_NAME4))
+            .build();
 
     // Act
     List<Result> resultsAsc = new ArrayList<>();
@@ -1694,14 +1971,25 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
     int limit = 234;
 
-    Key partitionKey = new Key(COL_NAME1, 1);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
     for (int i = 0; i < recordCount; i++) {
-      Key clusteringKey = new Key(COL_NAME4, i);
+      Key clusteringKey = Key.ofInt(COL_NAME4, i);
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .build());
     }
-    Scan scan = new Scan(partitionKey).withLimit(limit);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .limit(limit)
+            .build();
 
     // Act
     List<Result> results = storage.scan(scan).all();
@@ -1719,7 +2007,7 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     populateRecords();
-    ScanAll scanAll = new ScanAll();
+    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
 
     // Act
     List<Result> results = scanAll(scanAll);
@@ -1748,14 +2036,38 @@ public abstract class DistributedStorageIntegrationTestBase {
   public void scan_ScanAllWithLimitGiven_ShouldRetrieveExpectedRecords()
       throws ExecutionException, IOException {
     // Arrange
-    Put p1 = new Put(Key.ofInt(COL_NAME1, 1), Key.ofInt(COL_NAME4, 1));
-    Put p2 = new Put(Key.ofInt(COL_NAME1, 1), Key.ofInt(COL_NAME4, 2));
-    Put p3 = new Put(Key.ofInt(COL_NAME1, 2), Key.ofInt(COL_NAME4, 1));
-    Put p4 = new Put(Key.ofInt(COL_NAME1, 3), Key.ofInt(COL_NAME4, 0));
+    Put p1 =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 1))
+            .clusteringKey(Key.ofInt(COL_NAME4, 1))
+            .build();
+    Put p2 =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 1))
+            .clusteringKey(Key.ofInt(COL_NAME4, 2))
+            .build();
+    Put p3 =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 2))
+            .clusteringKey(Key.ofInt(COL_NAME4, 1))
+            .build();
+    Put p4 =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 3))
+            .clusteringKey(Key.ofInt(COL_NAME4, 0))
+            .build();
     storage.put(ImmutableList.of(p1, p2));
     storage.put(p3);
     storage.put(p4);
-    ScanAll scanAll = new ScanAll().withLimit(2);
+    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().limit(2).build();
 
     // Act
     List<Result> results = scanAll(scanAll);
@@ -1806,8 +2118,13 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
 
     // Act
-    ScanAll scanAll =
-        new ScanAll().withProjections(Arrays.asList(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6));
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .all()
+            .projections(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6)
+            .build();
     List<Result> actualResults = scanAll(scanAll);
 
     // Assert
@@ -1837,13 +2154,18 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     for (int i = 0; i < 345; i++) {
-      Key partitionKey = new Key(COL_NAME1, i % 4);
-      Key clusteringKey = new Key(COL_NAME4, i);
+      Key partitionKey = Key.ofInt(COL_NAME1, i % 4);
+      Key clusteringKey = Key.ofInt(COL_NAME4, i);
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .build());
     }
-    Scan scan = new ScanAll();
+    Scan scan = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
 
     // Act
     List<Result> results = scanAll(scan);
@@ -1894,17 +2216,26 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     Put put =
-        new Put(Key.ofInt(COL_NAME1, 0), Key.ofInt(COL_NAME4, 0))
-            .withTextValue(COL_NAME2, "foo")
-            .withIntValue(COL_NAME3, 0)
-            .withBooleanValue(COL_NAME5, true)
-            .forNamespace(namespace)
-            .forTable(TABLE);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 0))
+            .clusteringKey(Key.ofInt(COL_NAME4, 0))
+            .textValue(COL_NAME2, "foo")
+            .intValue(COL_NAME3, 0)
+            .booleanValue(COL_NAME5, true)
+            .build();
     storage.put(put);
 
     // Act
     Scan scan =
-        new Scan(Key.ofInt(COL_NAME1, 0)).withProjection(COL_NAME3).withProjection(COL_NAME5);
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 0))
+            .projection(COL_NAME3)
+            .projection(COL_NAME5)
+            .build();
     List<Result> results = scanAll(scan);
 
     // Assert
@@ -1919,16 +2250,26 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     Put put =
-        new Put(Key.ofInt(COL_NAME1, 0), Key.ofInt(COL_NAME4, 0))
-            .withTextValue(COL_NAME2, "foo")
-            .withIntValue(COL_NAME3, 0)
-            .withBooleanValue(COL_NAME5, true)
-            .forNamespace(namespace)
-            .forTable(TABLE);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(COL_NAME1, 0))
+            .clusteringKey(Key.ofInt(COL_NAME4, 0))
+            .textValue(COL_NAME2, "foo")
+            .intValue(COL_NAME3, 0)
+            .booleanValue(COL_NAME5, true)
+            .build();
     storage.put(put);
 
     // Act
-    ScanAll scanAll = new ScanAll().withProjection(COL_NAME3).withProjection(COL_NAME5);
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .all()
+            .projection(COL_NAME3)
+            .projection(COL_NAME5)
+            .build();
     List<Result> results = scanAll(scanAll);
 
     // Assert
@@ -1944,15 +2285,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
 
     // Arrange
-    Key clusteringKey = new Key(COL_NAME4, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 1);
     for (int i = 0; i < recordCount; i++) {
-      Key partitionKey = new Key(COL_NAME1, i);
+      Key partitionKey = Key.ofInt(COL_NAME1, i);
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .build());
     }
 
-    ScanAll scanAll = new ScanAll();
+    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
 
     // Act
     List<Result> results = scanAll(scanAll);
@@ -1976,15 +2322,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
     int limit = 234;
 
-    Key clusteringKey = new Key(COL_NAME4, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 1);
     for (int i = 0; i < recordCount; i++) {
-      Key partitionKey = new Key(COL_NAME1, i);
+      Key partitionKey = Key.ofInt(COL_NAME1, i);
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withBlobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()]));
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .build());
     }
 
-    Scan scan = new ScanAll().withLimit(limit);
+    Scan scan = Scan.newBuilder().namespace(namespace).table(TABLE).all().limit(limit).build();
 
     // Act
     List<Result> results = storage.scan(scan).all();
@@ -2007,9 +2358,14 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private Get prepareGet(int pKey, int cKey) {
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
-    return new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    return Get.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private List<Put> preparePuts() {
@@ -2021,13 +2377,18 @@ public abstract class DistributedStorageIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(COL_NAME1, i);
-                          Key clusteringKey = new Key(COL_NAME4, j);
+                          Key partitionKey = Key.ofInt(COL_NAME1, i);
+                          Key clusteringKey = Key.ofInt(COL_NAME4, j);
                           Put put =
-                              new Put(partitionKey, clusteringKey)
-                                  .withValue(COL_NAME2, Integer.toString(i + j))
-                                  .withValue(COL_NAME3, i + j)
-                                  .withValue(COL_NAME5, j % 2 == 0);
+                              Put.newBuilder()
+                                  .namespace(namespace)
+                                  .table(TABLE)
+                                  .partitionKey(partitionKey)
+                                  .clusteringKey(clusteringKey)
+                                  .textValue(COL_NAME2, Integer.toString(i + j))
+                                  .intValue(COL_NAME3, i + j)
+                                  .booleanValue(COL_NAME5, j % 2 == 0)
+                                  .build();
                           puts.add(put);
                         }));
 
@@ -2035,9 +2396,14 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private Delete prepareDelete(int pKey, int cKey) {
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
-    return new Delete(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    return Delete.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private List<Delete> prepareDeletes() {
@@ -2049,9 +2415,15 @@ public abstract class DistributedStorageIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(COL_NAME1, i);
-                          Key clusteringKey = new Key(COL_NAME4, j);
-                          Delete delete = new Delete(partitionKey, clusteringKey);
+                          Key partitionKey = Key.ofInt(COL_NAME1, i);
+                          Key clusteringKey = Key.ofInt(COL_NAME4, j);
+                          Delete delete =
+                              Delete.newBuilder()
+                                  .namespace(namespace)
+                                  .table(TABLE)
+                                  .partitionKey(partitionKey)
+                                  .clusteringKey(clusteringKey)
+                                  .build();
                           deletes.add(delete);
                         }));
 

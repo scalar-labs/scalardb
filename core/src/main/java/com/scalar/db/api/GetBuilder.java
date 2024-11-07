@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.OperationBuilder.And;
 import com.scalar.db.api.OperationBuilder.Buildable;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
@@ -135,15 +136,18 @@ public class GetBuilder extends SelectionBuilder {
 
     @Override
     public Get build() {
-      Get get = new Get(partitionKey, clusteringKey);
-      get.forNamespace(namespaceName).forTable(tableName);
-      if (!projections.isEmpty()) {
-        get.withProjections(projections);
-      }
-      if (consistency != null) {
-        get.withConsistency(consistency);
-      }
-      return get;
+      return build(ImmutableSet.of());
+    }
+
+    private Get build(ImmutableSet<Conjunction> conjunctions) {
+      return new Get(
+          namespaceName,
+          tableName,
+          partitionKey,
+          clusteringKey,
+          consistency,
+          projections,
+          conjunctions);
     }
   }
 
@@ -341,7 +345,7 @@ public class GetBuilder extends SelectionBuilder {
 
     @Override
     public Get build() {
-      return (Get) addConjunctionsTo(super.build(), where);
+      return super.build(getConjunctions(where));
     }
   }
 
@@ -420,15 +424,12 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     public Get build() {
-      GetWithIndex getWithIndex = new GetWithIndex(indexKey);
-      getWithIndex.forNamespace(namespaceName).forTable(tableName);
-      if (!projections.isEmpty()) {
-        getWithIndex.withProjections(projections);
-      }
-      if (consistency != null) {
-        getWithIndex.withConsistency(consistency);
-      }
-      return getWithIndex;
+      return build(ImmutableSet.of());
+    }
+
+    private Get build(ImmutableSet<Conjunction> conjunctions) {
+      return new GetWithIndex(
+          namespaceName, tableName, indexKey, consistency, projections, conjunctions);
     }
   }
 
@@ -583,7 +584,7 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     public Get build() {
-      return (Get) addConjunctionsTo(buildableGetWithIndex.build(), where);
+      return buildableGetWithIndex.build(getConjunctions(where));
     }
   }
 
@@ -771,28 +772,24 @@ public class GetBuilder extends SelectionBuilder {
 
     @Override
     public Get build() {
-      Get get;
+      return build(
+          conjunctions.stream().map(Conjunction::of).collect(ImmutableSet.toImmutableSet()));
+    }
 
+    private Get build(ImmutableSet<Conjunction> conjunctions) {
       if (isGetWithIndex) {
-        get = new GetWithIndex(indexKey);
+        return new GetWithIndex(
+            namespaceName, tableName, indexKey, consistency, projections, conjunctions);
       } else {
-        get = new Get(partitionKey, clusteringKey);
+        return new Get(
+            namespaceName,
+            tableName,
+            partitionKey,
+            clusteringKey,
+            consistency,
+            projections,
+            conjunctions);
       }
-
-      if (!conjunctions.isEmpty()) {
-        get.withConjunctions(
-            conjunctions.stream().map(Conjunction::of).collect(Collectors.toSet()));
-      }
-
-      get.forNamespace(namespaceName).forTable(tableName);
-      if (!projections.isEmpty()) {
-        get.withProjections(projections);
-      }
-      if (consistency != null) {
-        get.withConsistency(consistency);
-      }
-
-      return get;
     }
   }
 
@@ -893,7 +890,7 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     public Get build() {
-      return (Get) addConjunctionsTo(BuildableGetFromExisting.build(), where);
+      return BuildableGetFromExisting.build(getConjunctions(where));
     }
   }
 

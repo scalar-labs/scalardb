@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.ScanBuilder.Namespace;
 import com.scalar.db.io.Key;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -29,11 +31,33 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class Scan extends Selection {
 
   private final List<Ordering> orderings;
-  private Optional<Key> startClusteringKey;
+  @Nullable private Key startClusteringKey;
   private boolean startInclusive;
-  private Optional<Key> endClusteringKey;
+  @Nullable private Key endClusteringKey;
   private boolean endInclusive;
   private int limit;
+
+  Scan(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Consistency consistency,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions,
+      @Nullable Key startClusteringKey,
+      boolean startInclusive,
+      @Nullable Key endClusteringKey,
+      boolean endInclusive,
+      List<Ordering> orderings,
+      int limit) {
+    super(namespace, tableName, partitionKey, null, consistency, projections, conjunctions);
+    this.startClusteringKey = startClusteringKey;
+    this.startInclusive = startInclusive;
+    this.endClusteringKey = endClusteringKey;
+    this.endInclusive = endInclusive;
+    this.orderings = orderings;
+    this.limit = limit;
+  }
 
   /**
    * Constructs a {@code Scan} with the specified partition {@link Key}.
@@ -46,8 +70,8 @@ public class Scan extends Selection {
   @SuppressWarnings("InlineMeSuggester")
   public Scan(Key partitionKey) {
     super(partitionKey, null);
-    startClusteringKey = Optional.empty();
-    endClusteringKey = Optional.empty();
+    startClusteringKey = null;
+    endClusteringKey = null;
     orderings = new ArrayList<>();
     limit = 0;
   }
@@ -57,7 +81,7 @@ public class Scan extends Selection {
    *
    * @param scan a Scan
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     Scan#newBuilder(Scan)} ()} instead
+   *     Scan#newBuilder(Scan)} instead
    */
   @Deprecated
   @SuppressWarnings("InlineMeSuggester")
@@ -82,7 +106,7 @@ public class Scan extends Selection {
 
   /**
    * Build a {@code Scan} operation from an existing {@code Scan} object using a builder. The
-   * builder will be parametrized by default with all the existing {@code Scan} attributes
+   * builder will be parametrized by default with all the existing {@code Scan} parameters.
    *
    * @param scan an existing {@code Scan} operation
    * @return a {@code Scan} operation builder
@@ -116,7 +140,7 @@ public class Scan extends Selection {
    */
   @Deprecated
   public Scan withStart(Key clusteringKey, boolean inclusive) {
-    startClusteringKey = Optional.ofNullable(clusteringKey);
+    startClusteringKey = clusteringKey;
     startInclusive = inclusive;
     return this;
   }
@@ -128,7 +152,7 @@ public class Scan extends Selection {
    */
   @Nonnull
   public Optional<Key> getStartClusteringKey() {
-    return startClusteringKey;
+    return Optional.ofNullable(startClusteringKey);
   }
 
   /**
@@ -164,7 +188,7 @@ public class Scan extends Selection {
    */
   @Deprecated
   public Scan withEnd(Key clusteringKey, boolean inclusive) {
-    endClusteringKey = Optional.ofNullable(clusteringKey);
+    endClusteringKey = clusteringKey;
     endInclusive = inclusive;
     return this;
   }
@@ -176,7 +200,7 @@ public class Scan extends Selection {
    */
   @Nonnull
   public Optional<Key> getEndClusteringKey() {
-    return endClusteringKey;
+    return Optional.ofNullable(endClusteringKey);
   }
 
   /**
@@ -291,11 +315,6 @@ public class Scan extends Selection {
     return (Scan) super.withProjections(projections);
   }
 
-  @Override
-  Scan withConjunctions(Collection<Conjunction> conjunctions) {
-    return (Scan) super.withConjunctions(conjunctions);
-  }
-
   /**
    * Indicates whether some other object is "equal to" this object. The other object is considered
    * equal if:
@@ -321,12 +340,12 @@ public class Scan extends Selection {
       return false;
     }
     Scan other = (Scan) o;
-    return (startClusteringKey.equals(other.startClusteringKey)
+    return Objects.equals(startClusteringKey, other.startClusteringKey)
         && startInclusive == other.startInclusive
         && endInclusive == other.endInclusive
-        && endClusteringKey.equals(other.endClusteringKey)
+        && Objects.equals(endClusteringKey, other.endClusteringKey)
         && orderings.equals(other.orderings)
-        && limit == other.limit);
+        && limit == other.limit;
   }
 
   @Override
