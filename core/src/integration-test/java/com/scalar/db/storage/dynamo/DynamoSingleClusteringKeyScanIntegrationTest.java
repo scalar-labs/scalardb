@@ -1,8 +1,8 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.Value;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
@@ -36,26 +36,27 @@ public class DynamoSingleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
       return DynamoTestUtils.getRandomDynamoDoubleValue(random, columnName);
     }
-    return super.getRandomValue(random, columnName, dataType);
+    return super.getColumnWithRandomValue(random, columnName, dataType);
   }
 
   @Override
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
       return DynamoTestUtils.getMinDynamoDoubleValue(columnName);
     }
-    return super.getMinValue(columnName, dataType);
+    return super.getColumnWithMinValue(columnName, dataType);
   }
 
   @Override
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
       return DynamoTestUtils.getMaxDynamoDoubleValue(columnName);
     }
-    return super.getMaxValue(columnName, dataType);
+    return super.getColumnWithMaxValue(columnName, dataType);
   }
 }
