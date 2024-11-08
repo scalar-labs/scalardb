@@ -83,27 +83,6 @@ public class Coordinator {
 
   @VisibleForTesting
   Optional<Coordinator.State> getStateForGroupCommit(String fullId) throws CoordinatorException {
-    // Reading a coordinator state is likely to occur during lazy recovery, as follows:
-    // 1. Transaction T1 starts and creates PREPARED state records but hasn't committed or aborted
-    //    yet.
-    // 2. Transaction T2 starts and reads the PREPARED state records created by T1.
-    // 3. T2 reads the coordinator table record for T1 to decide whether to roll back or roll
-    //    forward.
-    //
-    // The likelihood of step 2 would increase if T1 is delayed.
-    //
-    // With the group commit feature enabled, delayed transactions are isolated from a normal group
-    // that is looked up by a parent ID into a delayed group that is looked up by a full ID.
-    // Therefore, looking up with the full transaction ID should be tried first to minimize read
-    // operations as much as possible.
-
-    // Scan with the full ID for a delayed group that contains only a single transaction.
-    // The normal lookup logic can be used as is.
-    Optional<State> stateOfDelayedTxn = get(createGetWith(fullId));
-    if (stateOfDelayedTxn.isPresent()) {
-      return stateOfDelayedTxn;
-    }
-
     // Scan with the parent ID for a normal group that contains multiple transactions.
     Keys<String, String, String> idForGroupCommit = keyManipulator.keysFromFullKey(fullId);
 
@@ -111,13 +90,22 @@ public class Coordinator {
     String childId = idForGroupCommit.childKey;
     Get get = createGetWith(parentId);
     Optional<State> state = get(get);
-    return state.flatMap(
-        s -> {
-          if (s.getChildIds().contains(childId)) {
-            return state;
-          }
-          return Optional.empty();
-        });
+    // The current implementation is optimized for cases where the target transaction is properly
+    // group-committed, by first checking with the parent ID. However, if the target transaction was
+    // delayed and committed individually, two read operations are required.
+    Optional<State> stateContainingTargetTxId =
+        state.flatMap(
+            s -> {
+              if (s.getChildIds().contains(childId)) {
+                return state;
+              }
+              return Optional.empty();
+            });
+    if (stateContainingTargetTxId.isPresent()) {
+      return stateContainingTargetTxId;
+    }
+
+    return get(createGetWith(fullId));
   }
 
   public void putState(Coordinator.State state) throws CoordinatorException {
@@ -246,7 +234,8 @@ public class Coordinator {
     putState(new Coordinator.State(id, TransactionState.ABORTED));
   }
 
-  private Get createGetWith(String id) {
+  @VisibleForTesting
+  Get createGetWith(String id) {
     return new Get(new Key(Attribute.toIdValue(id)))
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(coordinatorNamespace)
