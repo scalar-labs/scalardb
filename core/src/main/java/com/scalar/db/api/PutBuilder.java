@@ -26,6 +26,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -91,8 +92,6 @@ public class PutBuilder {
     @Nullable com.scalar.db.api.Consistency consistency;
     final Map<String, String> attributes = new HashMap<>();
     @Nullable MutationCondition condition;
-    boolean implicitPreReadEnabled;
-    boolean insertModeEnabled;
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -235,37 +234,45 @@ public class PutBuilder {
 
     @Override
     public Buildable disableImplicitPreRead() {
-      implicitPreReadEnabled = false;
+      ConsensusCommitOperationAttribute.disableImplicitPreRead(attributes);
       return this;
     }
 
     @Override
     public Buildable enableImplicitPreRead() {
-      implicitPreReadEnabled = true;
+      ConsensusCommitOperationAttribute.enableImplicitPreRead(attributes);
       return this;
     }
 
     @Override
     public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
-      this.implicitPreReadEnabled = implicitPreReadEnabled;
+      if (implicitPreReadEnabled) {
+        ConsensusCommitOperationAttribute.enableImplicitPreRead(attributes);
+      } else {
+        ConsensusCommitOperationAttribute.disableImplicitPreRead(attributes);
+      }
       return this;
     }
 
     @Override
     public Buildable disableInsertMode() {
-      insertModeEnabled = false;
+      ConsensusCommitOperationAttribute.disableInsertMode(attributes);
       return this;
     }
 
     @Override
     public Buildable enableInsertMode() {
-      insertModeEnabled = true;
+      ConsensusCommitOperationAttribute.enableInsertMode(attributes);
       return this;
     }
 
     @Override
     public Buildable insertModeEnabled(boolean insertModeEnabled) {
-      this.insertModeEnabled = insertModeEnabled;
+      if (insertModeEnabled) {
+        ConsensusCommitOperationAttribute.enableInsertMode(attributes);
+      } else {
+        ConsensusCommitOperationAttribute.disableInsertMode(attributes);
+      }
       return this;
     }
 
@@ -279,9 +286,7 @@ public class PutBuilder {
           consistency,
           ImmutableMap.copyOf(attributes),
           condition,
-          columns,
-          implicitPreReadEnabled,
-          insertModeEnabled);
+          columns);
     }
   }
 
@@ -302,8 +307,6 @@ public class PutBuilder {
       this.consistency = put.getConsistency();
       this.condition = put.getCondition().orElse(null);
       this.attributes.putAll(put.getAttributes());
-      this.implicitPreReadEnabled = put.isImplicitPreReadEnabled();
-      this.insertModeEnabled = put.isInsertModeEnabled();
     }
 
     @Override

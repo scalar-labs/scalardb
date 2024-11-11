@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute.isImplicitPreReadEnabled;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Consistency;
@@ -195,7 +196,7 @@ public class CrudHandler {
     Snapshot.Key key = new Snapshot.Key(put);
 
     if (put.getCondition().isPresent()
-        && (!put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key))) {
+        && (!isImplicitPreReadEnabled(put) && !snapshot.containsKeyInReadSet(key))) {
       throw new IllegalArgumentException(
           CoreError
               .CONSENSUS_COMMIT_PUT_CANNOT_HAVE_CONDITION_WHEN_TARGET_RECORD_UNREAD_AND_IMPLICIT_PRE_READ_DISABLED
@@ -203,7 +204,7 @@ public class CrudHandler {
     }
 
     if (put.getCondition().isPresent()) {
-      if (put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key)) {
+      if (isImplicitPreReadEnabled(put) && !snapshot.containsKeyInReadSet(key)) {
         read(key, createGet(key));
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
@@ -233,7 +234,7 @@ public class CrudHandler {
     // For each put in the write set, if implicit pre-read is enabled and the record is not read
     // yet, read the record
     for (Put put : snapshot.getPutsInWriteSet()) {
-      if (put.isImplicitPreReadEnabled()) {
+      if (isImplicitPreReadEnabled(put)) {
         Snapshot.Key key = new Snapshot.Key(put);
         if (!snapshot.containsKeyInReadSet(key)) {
           tasks.add(() -> read(key, createGet(key)));

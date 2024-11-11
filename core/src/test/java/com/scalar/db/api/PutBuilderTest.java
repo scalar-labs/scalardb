@@ -12,6 +12,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
@@ -90,8 +91,8 @@ public class PutBuilderTest {
             .condition(condition1)
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
-            .disableImplicitPreRead()
-            .disableInsertMode()
+            .enableImplicitPreRead()
+            .enableInsertMode()
             .build();
 
     // Assert
@@ -103,7 +104,17 @@ public class PutBuilderTest {
                 partitionKey1,
                 clusteringKey1,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                ImmutableMap.of(
+                    "a1",
+                    "v1",
+                    "a2",
+                    "v2",
+                    "a3",
+                    "v3",
+                    ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED,
+                    "true",
+                    ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED,
+                    "true"),
                 condition1,
                 ImmutableMap.<String, Column<?>>builder()
                     .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
@@ -120,9 +131,7 @@ public class PutBuilderTest {
                     .put("int2", IntColumn.of("int2", Integer.MAX_VALUE))
                     .put("text1", TextColumn.of("text1", "a_value"))
                     .put("text2", TextColumn.of("text2", "another_value"))
-                    .build(),
-                false,
-                false));
+                    .build()));
   }
 
   @Test
@@ -184,26 +193,30 @@ public class PutBuilderTest {
   public void build_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Put existingPut =
-        new Put(partitionKey1, clusteringKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConsistency(Consistency.EVENTUAL)
-            .withBigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .withBigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
-            .withBlobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
-            .withBlobValue("blob2", ByteBuffer.allocate(1))
-            .withBooleanValue("bool1", true)
-            .withBooleanValue("bool2", Boolean.TRUE)
-            .withDoubleValue("double1", Double.MAX_VALUE)
-            .withDoubleValue("double2", Double.valueOf(Double.MAX_VALUE))
-            .withFloatValue("float1", Float.MAX_VALUE)
-            .withFloatValue("float2", Float.valueOf(Float.MAX_VALUE))
-            .withIntValue("int1", Integer.MAX_VALUE)
-            .withIntValue("int2", Integer.valueOf(Integer.MAX_VALUE))
-            .withTextValue("text", "a_value")
-            .withCondition(condition1)
-            .setImplicitPreReadEnabled(true)
-            .setInsertModeEnabled(true);
+        new Put(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+            condition1,
+            ImmutableMap.<String, Column<?>>builder()
+                .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
+                .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
+                .put("blob1", BlobColumn.of("blob1", "blob".getBytes(StandardCharsets.UTF_8)))
+                .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(1)))
+                .put("bool1", BooleanColumn.of("bool1", true))
+                .put("bool2", BooleanColumn.of("bool2", true))
+                .put("double1", DoubleColumn.of("double1", Double.MAX_VALUE))
+                .put("double2", DoubleColumn.of("double2", Double.MAX_VALUE))
+                .put("float1", FloatColumn.of("float1", Float.MAX_VALUE))
+                .put("float2", FloatColumn.of("float2", Float.MAX_VALUE))
+                .put("int1", IntColumn.of("int1", Integer.MAX_VALUE))
+                .put("int2", IntColumn.of("int2", Integer.MAX_VALUE))
+                .put("text1", TextColumn.of("text1", "a_value"))
+                .put("text2", TextColumn.of("text2", "another_value"))
+                .build());
 
     // Act
     Put newPut = Put.newBuilder(existingPut).build();
@@ -239,9 +252,7 @@ public class PutBuilderTest {
                 .put("int2", IntColumn.of("int2", Integer.MAX_VALUE))
                 .put("text1", TextColumn.of("text1", "a_value"))
                 .put("text2", TextColumn.of("text2", "another_value"))
-                .build(),
-            false,
-            false);
+                .build());
 
     // Act
     Put newPut =
@@ -284,7 +295,17 @@ public class PutBuilderTest {
                 partitionKey2,
                 clusteringKey2,
                 Consistency.LINEARIZABLE,
-                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                ImmutableMap.of(
+                    "a4",
+                    "v4",
+                    "a5",
+                    "v5",
+                    "a6",
+                    "v6",
+                    ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED,
+                    "true",
+                    ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED,
+                    "true"),
                 condition2,
                 ImmutableMap.<String, Column<?>>builder()
                     .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MIN_VALUE))
@@ -301,9 +322,7 @@ public class PutBuilderTest {
                     .put("int2", IntColumn.of("int2", Integer.MIN_VALUE))
                     .put("text1", TextColumn.of("text1", "another_value"))
                     .put("text2", TextColumn.of("text2", "foo"))
-                    .build(),
-                true,
-                true));
+                    .build()));
   }
 
   @Test

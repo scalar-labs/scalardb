@@ -19,6 +19,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.Value;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -42,10 +43,6 @@ public class Put extends Mutation {
 
   private final Map<String, Column<?>> columns;
 
-  private boolean implicitPreReadEnabled;
-
-  private boolean insertModeEnabled;
-
   Put(
       @Nullable String namespace,
       String tableName,
@@ -54,13 +51,9 @@ public class Put extends Mutation {
       @Nullable Consistency consistency,
       ImmutableMap<String, String> attributes,
       @Nullable MutationCondition condition,
-      Map<String, Column<?>> columns,
-      boolean implicitPreReadEnabled,
-      boolean insertModeEnabled) {
+      Map<String, Column<?>> columns) {
     super(namespace, tableName, partitionKey, clusteringKey, consistency, attributes, condition);
     this.columns = columns;
-    this.implicitPreReadEnabled = implicitPreReadEnabled;
-    this.insertModeEnabled = insertModeEnabled;
   }
 
   /**
@@ -104,8 +97,6 @@ public class Put extends Mutation {
   public Put(Put put) {
     super(put);
     columns = new LinkedHashMap<>(put.columns);
-    implicitPreReadEnabled = put.implicitPreReadEnabled;
-    insertModeEnabled = put.insertModeEnabled;
   }
 
   /**
@@ -779,41 +770,31 @@ public class Put extends Mutation {
   }
 
   /**
-   * Returns whether implicit pre-read is enabled for this Put.
+   * Returns whether implicit pre-read is enabled for this Put. This is a utility method for
+   * Consensus Commit.
    *
    * @return whether implicit pre-read is enabled for this Put
+   * @deprecated As of release 3.15.0. Will be removed in release 5.0.0. Use {@link
+   *     ConsensusCommitOperationAttribute#isImplicitPreReadEnabled(Put)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public boolean isImplicitPreReadEnabled() {
-    return implicitPreReadEnabled;
+    return ConsensusCommitOperationAttribute.isImplicitPreReadEnabled(this);
   }
 
   /**
-   * Sets whether implicit pre-read is enabled for this Put.
-   *
-   * @param implicitPreReadEnabled whether the implicit pre-read is enabled for this Put
-   */
-  Put setImplicitPreReadEnabled(boolean implicitPreReadEnabled) {
-    this.implicitPreReadEnabled = implicitPreReadEnabled;
-    return this;
-  }
-
-  /**
-   * Returns whether the insert mode is enabled for this Put.
+   * Returns whether the insert mode is enabled for this Put. This is a utility method for Consensus
+   * Commit.
    *
    * @return whether the insert mode is enabled for this Put
+   * @deprecated As of release 3.15.0. Will be removed in release 5.0.0. Use {@link
+   *     ConsensusCommitOperationAttribute#isInsertModeEnabled(Put)} instead
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public boolean isInsertModeEnabled() {
-    return insertModeEnabled;
-  }
-
-  /**
-   * Sets whether the insert mode is enabled for this Put.
-   *
-   * @param insertModeEnabled whether the insert mode is enabled for this Put
-   */
-  Put setInsertModeEnabled(boolean insertModeEnabled) {
-    this.insertModeEnabled = insertModeEnabled;
-    return this;
+    return ConsensusCommitOperationAttribute.isInsertModeEnabled(this);
   }
 
   @Override
@@ -846,14 +827,12 @@ public class Put extends Mutation {
       return false;
     }
     Put other = (Put) o;
-    return columns.equals(other.columns)
-        && implicitPreReadEnabled == other.implicitPreReadEnabled
-        && insertModeEnabled == other.insertModeEnabled;
+    return columns.equals(other.columns);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), columns, implicitPreReadEnabled, insertModeEnabled);
+    return Objects.hash(super.hashCode(), columns);
   }
 
   @Override
@@ -867,8 +846,6 @@ public class Put extends Mutation {
         .add("attributes", getAttributes())
         .add("condition", getCondition())
         .add("columns", getColumns())
-        .add("implicitPreReadEnabled", isImplicitPreReadEnabled())
-        .add("insertModeEnabled", isInsertModeEnabled())
         .toString();
   }
 }

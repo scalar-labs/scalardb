@@ -1,5 +1,8 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute.isImplicitPreReadEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute.isInsertModeEnabled;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
@@ -135,7 +138,7 @@ public class Snapshot {
           CoreError.CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED.buildMessage());
     }
     if (writeSet.containsKey(key)) {
-      if (put.isInsertModeEnabled()) {
+      if (isInsertModeEnabled(put)) {
         throw new IllegalArgumentException(
             CoreError.CONSENSUS_COMMIT_INSERTING_ALREADY_WRITTEN_DATA_NOT_ALLOWED.buildMessage());
       }
@@ -149,7 +152,7 @@ public class Snapshot {
       // merged put. However, if the previous put is in insert mode, this doesn’t apply. This is
       // because, in insert mode, the read set is not used during the preparation phase. Therefore,
       // we only need to enable the implicit pre-read if the previous put is not in insert mode
-      if (put.isImplicitPreReadEnabled() && !originalPut.isInsertModeEnabled()) {
+      if (isImplicitPreReadEnabled(put) && !isInsertModeEnabled(originalPut)) {
         putBuilder.enableImplicitPreRead();
       }
 
@@ -162,7 +165,7 @@ public class Snapshot {
   public void putIntoDeleteSet(Key key, Delete delete) {
     Put put = writeSet.get(key);
     if (put != null) {
-      if (put.isInsertModeEnabled()) {
+      if (isInsertModeEnabled(put)) {
         throw new IllegalArgumentException(
             CoreError.CONSENSUS_COMMIT_DELETING_ALREADY_INSERTED_DATA_NOT_ALLOWED.buildMessage());
       }

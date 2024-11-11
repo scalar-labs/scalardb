@@ -776,7 +776,6 @@ public class CrudHandlerTest {
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(ConditionBuilder.putIfExists())
-            .disableImplicitPreRead()
             .build();
 
     // Act Assert
@@ -1030,19 +1029,20 @@ public class CrudHandlerTest {
     when(put1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put1.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(put1.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
-    when(put1.isImplicitPreReadEnabled()).thenReturn(true);
+    when(put1.getAttribute(ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED))
+        .thenReturn(Optional.of("true"));
 
     Put put2 = mock(Put.class);
     when(put2.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put2.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(put2.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_2));
-    when(put2.isImplicitPreReadEnabled()).thenReturn(true);
+    when(put2.getAttribute(ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED))
+        .thenReturn(Optional.of("true"));
 
     Put put3 = mock(Put.class);
     when(put3.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put3.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(put3.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_3));
-    when(put3.isImplicitPreReadEnabled()).thenReturn(false);
 
     when(snapshot.getPutsInWriteSet()).thenReturn(Arrays.asList(put1, put2, put3));
 
