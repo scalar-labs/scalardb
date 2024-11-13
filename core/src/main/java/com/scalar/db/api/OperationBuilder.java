@@ -64,7 +64,7 @@ public class OperationBuilder {
 
   public interface ClearClusteringKey<T> {
     /**
-     * Remove the clustering key
+     * Removes the clustering key
      *
      * @return the operation builder
      */

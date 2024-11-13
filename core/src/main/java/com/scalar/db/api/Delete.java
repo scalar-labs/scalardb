@@ -8,6 +8,7 @@ import com.scalar.db.api.DeleteBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -17,6 +18,16 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Delete extends Mutation {
+
+  Delete(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Key clusteringKey,
+      @Nullable Consistency consistency,
+      @Nullable MutationCondition condition) {
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, condition);
+  }
 
   /**
    * Constructs a {@code Delete} with the specified partition {@code Key}.
@@ -69,7 +80,7 @@ public class Delete extends Mutation {
 
   /**
    * Build a {@code Delete} operation from an existing {@code Delete} object using a builder. The
-   * builder will be parametrized by default with all the existing {@code Delete} attributes
+   * builder will be parametrized by default with all the existing {@code Delete} parameters.
    *
    * @param delete an existing {@code Delete} operation
    * @return a {@code Delete} operation builder
