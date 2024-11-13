@@ -647,7 +647,7 @@ public enum CoreError implements ScalarDbError {
           + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
-  TRANSPARENT_DATA_ENCRYPTION_NOT_ENABLED(
+  ENCRYPTION_NOT_ENABLED(
       Category.USER_ERROR,
       "0143",
       "The encryption feature is not enabled. To encrypt data at rest, you must enable this feature. Note that this feature is supported only in the ScalarDB Enterprise edition",
