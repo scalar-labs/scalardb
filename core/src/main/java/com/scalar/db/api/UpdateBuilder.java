@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -196,7 +197,13 @@ public class UpdateBuilder {
 
     @Override
     public Update build() {
-      return new Update(namespaceName, tableName, partitionKey, clusteringKey, columns, condition);
+      return new Update(
+          namespaceName,
+          tableName,
+          partitionKey,
+          clusteringKey,
+          ImmutableMap.copyOf(columns),
+          condition);
     }
   }
 

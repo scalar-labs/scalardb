@@ -46,6 +46,22 @@ public class Put extends Mutation {
 
   private boolean insertModeEnabled;
 
+  Put(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Key clusteringKey,
+      @Nullable Consistency consistency,
+      Map<String, Column<?>> columns,
+      @Nullable MutationCondition condition,
+      boolean implicitPreReadEnabled,
+      boolean insertModeEnabled) {
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, condition);
+    this.columns = columns;
+    this.implicitPreReadEnabled = implicitPreReadEnabled;
+    this.insertModeEnabled = insertModeEnabled;
+  }
+
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
@@ -102,7 +118,7 @@ public class Put extends Mutation {
 
   /**
    * Build a {@code Put} operation from an existing {@code Put} object using a builder. The builder
-   * will be parametrized by default with all the existing {@code Put} object attributes.
+   * will be parametrized by default with all the existing {@code Put} parameters.
    *
    * @param put an existing {@code Put} operation
    * @return a {@code Put} operation builder

@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
 import com.scalar.db.api.OperationBuilder.ClearValues;
@@ -186,7 +187,8 @@ public class InsertBuilder {
 
     @Override
     public Insert build() {
-      return new Insert(namespaceName, tableName, partitionKey, clusteringKey, columns);
+      return new Insert(
+          namespaceName, tableName, partitionKey, clusteringKey, ImmutableMap.copyOf(columns));
     }
   }
 

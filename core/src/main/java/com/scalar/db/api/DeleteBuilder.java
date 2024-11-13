@@ -92,16 +92,8 @@ public class DeleteBuilder {
 
     @Override
     public Delete build() {
-      Delete delete = new Delete(partitionKey, clusteringKey);
-      delete.forNamespace(namespaceName).forTable(tableName);
-      if (condition != null) {
-        delete.withCondition(condition);
-      }
-      if (consistency != null) {
-        delete.withConsistency(consistency);
-      }
-
-      return delete;
+      return new Delete(
+          namespaceName, tableName, partitionKey, clusteringKey, consistency, condition);
     }
   }
 

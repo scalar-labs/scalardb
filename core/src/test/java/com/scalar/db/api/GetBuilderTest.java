@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
@@ -162,23 +163,24 @@ public class GetBuilderTest {
 
     // Assert
     Get expected =
-        new Get(partitionKey1, clusteringKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConjunctions(
-                ImmutableSet.of(
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10))))
-            .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-            .withConsistency(Consistency.EVENTUAL);
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.EVENTUAL,
+            Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+            ImmutableSet.of(
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10))));
 
     assertThat(get1).isEqualTo(expected);
     assertThat(get2).isEqualTo(expected);
@@ -209,21 +211,22 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -304,19 +307,20 @@ public class GetBuilderTest {
 
     // Assert
     Get expected =
-        new Get(partitionKey1, clusteringKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConjunctions(
-                ImmutableSet.of(
-                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
-                    Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10)),
-                    Conjunction.of(
-                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                    Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
-            .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-            .withConsistency(Consistency.EVENTUAL);
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.EVENTUAL,
+            Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+            ImmutableSet.of(
+                Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                Conjunction.of(
+                    ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))));
 
     assertThat(get1).isEqualTo(expected);
     assertThat(get2).isEqualTo(expected);
@@ -342,14 +346,16 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
-                        Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10))))
-                .withConsistency(Consistency.SEQUENTIAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.SEQUENTIAL,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                    Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -375,18 +381,19 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                        Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                    Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -414,19 +421,20 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("col1").isGreaterThanInt(10),
-                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("col1").isGreaterThanInt(10),
+                        ConditionBuilder.column("col2").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -456,19 +464,20 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -498,17 +507,18 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck2").isGreaterThanInt(10)),
-                        Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                    Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -595,19 +605,20 @@ public class GetBuilderTest {
       buildGet_FromExistingAndUpdateAllParametersExceptConjunctions_ShouldBuildGetWithUpdatedParameters() {
     // Arrange
     Get existingGet =
-        new Get(partitionKey1, clusteringKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withProjections(Arrays.asList("c1", "c2"))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .withConjunctions(
-                ImmutableSet.of(
-                    Conjunction.of(
-                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                    Conjunction.of(
-                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10))));
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.LINEARIZABLE,
+            Arrays.asList("c1", "c2"),
+            ImmutableSet.of(
+                Conjunction.of(
+                    ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                Conjunction.of(
+                    ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10))));
 
     // Act
     Get newGet =
@@ -626,19 +637,20 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey2, clusteringKey2)
-                .forNamespace(NAMESPACE_2)
-                .forTable(TABLE_2)
-                .withConsistency(Consistency.EVENTUAL)
-                .withProjections(Arrays.asList("c3", "c4", "c5", "c6", "c7"))
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10)))));
+            new Get(
+                NAMESPACE_2,
+                TABLE_2,
+                partitionKey2,
+                clusteringKey2,
+                Consistency.EVENTUAL,
+                Arrays.asList("c3", "c4", "c5", "c6", "c7"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -656,23 +668,24 @@ public class GetBuilderTest {
             .consistency(Consistency.EVENTUAL)
             .build();
     Get expected =
-        new Get(partitionKey2, clusteringKey2)
-            .forNamespace(NAMESPACE_2)
-            .forTable(TABLE_2)
-            .withConjunctions(
-                ImmutableSet.of(
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10))))
-            .withProjections(Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"))
-            .withConsistency(Consistency.LINEARIZABLE);
+        new Get(
+            NAMESPACE_2,
+            TABLE_2,
+            partitionKey2,
+            clusteringKey2,
+            Consistency.LINEARIZABLE,
+            Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
+            ImmutableSet.of(
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10))));
 
     // Act
     Get newGet1 =
@@ -807,20 +820,22 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10))))
-                .withConsistency(Consistency.SEQUENTIAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.SEQUENTIAL,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -846,17 +861,19 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                        Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
-                .withConsistency(Consistency.SEQUENTIAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.SEQUENTIAL,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                    Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -883,24 +900,26 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("col2").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
-                .withConsistency(Consistency.SEQUENTIAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.SEQUENTIAL,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("col2").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                        ConditionBuilder.column("col2").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -927,18 +946,20 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("col1").isGreaterThanInt(10),
-                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
-                .withConsistency(Consistency.SEQUENTIAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.SEQUENTIAL,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("col1").isGreaterThanInt(10),
+                        ConditionBuilder.column("col2").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -967,18 +988,20 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10))))
-                .withConsistency(Consistency.SEQUENTIAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.SEQUENTIAL,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1007,16 +1030,18 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck2").isGreaterThanInt(10)),
-                        Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
-                .withConsistency(Consistency.SEQUENTIAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                Consistency.SEQUENTIAL,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                    Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1038,12 +1063,15 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forNamespace(NAMESPACE_2)
-                .forTable(TABLE_2)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
+            new Get(
+                NAMESPACE_2,
+                TABLE_2,
+                partitionKey1,
+                null,
+                null,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1063,11 +1091,15 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(partitionKey1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
+            new Get(
+                null,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableList.of(),
+                ImmutableSet.of(
+                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1205,23 +1237,23 @@ public class GetBuilderTest {
 
     // Assert
     Get expected =
-        new GetWithIndex(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConjunctions(
-                ImmutableSet.of(
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10))))
-            .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-            .withConsistency(Consistency.EVENTUAL);
+        new GetWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.EVENTUAL,
+            Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+            ImmutableSet.of(
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10))));
 
     assertThat(get1).isEqualTo(expected);
     assertThat(get2).isEqualTo(expected);
@@ -1252,21 +1284,21 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new GetWithIndex(indexKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                            ConditionBuilder.column("col1").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                        ConditionBuilder.column("col1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1326,19 +1358,19 @@ public class GetBuilderTest {
 
     // Assert
     Get expected =
-        new GetWithIndex(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConjunctions(
-                ImmutableSet.of(
-                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
-                    Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10)),
-                    Conjunction.of(
-                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                    Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
-            .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-            .withConsistency(Consistency.EVENTUAL);
+        new GetWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.EVENTUAL,
+            Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+            ImmutableSet.of(
+                Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                Conjunction.of(ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                Conjunction.of(
+                    ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))));
 
     assertThat(get1).isEqualTo(expected);
     assertThat(get2).isEqualTo(expected);
@@ -1369,18 +1401,18 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new GetWithIndex(indexKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                        Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                    Conjunction.of(ConditionBuilder.column("col1").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1408,19 +1440,19 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new GetWithIndex(indexKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck4").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("col1").isGreaterThanInt(10),
-                            ConditionBuilder.column("col2").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck4").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("col1").isGreaterThanInt(10),
+                        ConditionBuilder.column("col2").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1450,19 +1482,19 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new GetWithIndex(indexKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10)),
-                        Conjunction.of(
-                            ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck3").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10)),
+                    Conjunction.of(
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck3").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1492,17 +1524,17 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new GetWithIndex(indexKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConjunctions(
-                    ImmutableSet.of(
-                        Conjunction.of(
-                            ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                            ConditionBuilder.column("ck2").isGreaterThanInt(10)),
-                        Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10))))
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"))
-                .withConsistency(Consistency.EVENTUAL));
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(
+                    Conjunction.of(
+                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                        ConditionBuilder.column("ck2").isGreaterThanInt(10)),
+                    Conjunction.of(ConditionBuilder.column("ck3").isGreaterThanInt(10)))));
   }
 
   @Test
@@ -1640,23 +1672,23 @@ public class GetBuilderTest {
             .consistency(Consistency.EVENTUAL)
             .build();
     Get expected =
-        new GetWithIndex(indexKey2)
-            .forNamespace(NAMESPACE_2)
-            .forTable(TABLE_2)
-            .withConjunctions(
-                ImmutableSet.of(
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck3").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10)),
-                    Conjunction.of(
-                        ConditionBuilder.column("ck1").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck2").isGreaterThanInt(10),
-                        ConditionBuilder.column("ck4").isGreaterThanInt(10),
-                        ConditionBuilder.column("col1").isGreaterThanInt(10))))
-            .withProjections(Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"))
-            .withConsistency(Consistency.LINEARIZABLE);
+        new GetWithIndex(
+            NAMESPACE_2,
+            TABLE_2,
+            indexKey2,
+            Consistency.LINEARIZABLE,
+            Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
+            ImmutableSet.of(
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck3").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10)),
+                Conjunction.of(
+                    ConditionBuilder.column("ck1").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck2").isGreaterThanInt(10),
+                    ConditionBuilder.column("ck4").isGreaterThanInt(10),
+                    ConditionBuilder.column("col1").isGreaterThanInt(10))));
 
     // Act
     Get newGet1 =
