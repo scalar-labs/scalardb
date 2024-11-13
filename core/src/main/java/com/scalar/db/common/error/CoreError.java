@@ -666,6 +666,8 @@ public enum CoreError implements ScalarDbError {
           + "Primary-key columns must not contain any of the following characters in Cosmos DB: ':', '/', '\\', '#', '?'. Value: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_INSERTING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
+      Category.USER_ERROR, "0146", "Inserting already-written data is not allowed", "", ""),
 
   //
   // Errors for the concurrency error category

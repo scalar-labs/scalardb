@@ -27,7 +27,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -47,9 +46,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -294,80 +293,189 @@ public class SnapshotTest {
   }
 
   @Test
-  public void put_ResultGiven_ShouldHoldWhatsGivenInReadSet() {
+  public void putIntoReadSet_ResultGiven_ShouldHoldWhatsGivenInReadSet() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
 
     // Act
-    snapshot.put(key, Optional.of(result));
+    snapshot.putIntoReadSet(key, Optional.of(result));
 
     // Assert
     assertThat(readSet.get(key)).isEqualTo(Optional.of(result));
   }
 
   @Test
-  public void put_PutGiven_ShouldHoldWhatsGivenInWriteSet() {
+  public void putIntoGetSet_ResultGiven_ShouldHoldWhatsGivenInReadSet() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Get get = prepareGet();
+    TransactionResult result = prepareResult(ANY_ID);
+
+    // Act
+    snapshot.putIntoGetSet(get, Optional.of(result));
+
+    // Assert
+    assertThat(getSet.get(get)).isEqualTo(Optional.of(result));
+  }
+
+  @Test
+  public void putIntoWriteSet_PutGiven_ShouldHoldWhatsGivenInWriteSet() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Snapshot.Key key = new Snapshot.Key(put);
 
     // Act
-    snapshot.put(key, put);
+    snapshot.putIntoWriteSet(key, put);
 
     // Assert
     assertThat(writeSet.get(key)).isEqualTo(put);
   }
 
   @Test
-  public void put_PutGivenTwice_ShouldHoldMergedPut() {
+  public void putIntoWriteSet_PutGivenTwice_ShouldHoldMergedPut() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put1 = preparePut();
     Snapshot.Key key = new Snapshot.Key(put1);
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Put put2 =
-        new Put(partitionKey, clusteringKey)
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_TEXT_5)
-            .withTextValue(ANY_NAME_4, null);
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(ANY_NAME_3, ANY_TEXT_5)
+            .textValue(ANY_NAME_4, null)
+            .enableImplicitPreRead()
+            .build();
 
     // Act
-    snapshot.put(key, put1);
-    snapshot.put(key, put2);
+    snapshot.putIntoWriteSet(key, put1);
+    snapshot.putIntoWriteSet(key, put2);
 
     // Assert
-    assertThat(writeSet.get(key).getColumns())
+    Put mergedPut = writeSet.get(key);
+    assertThat(mergedPut.getColumns())
         .isEqualTo(
             ImmutableMap.of(
                 ANY_NAME_3,
                 TextColumn.of(ANY_NAME_3, ANY_TEXT_5),
                 ANY_NAME_4,
                 TextColumn.ofNull(ANY_NAME_4)));
+    assertThat(mergedPut.isImplicitPreReadEnabled()).isTrue();
   }
 
   @Test
-  public void put_DeleteGiven_ShouldHoldWhatsGivenInDeleteSet() {
+  public void putIntoWriteSet_PutGivenAfterDelete_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Delete delete = prepareDelete();
+    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.putIntoWriteSet(putKey, put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      putIntoWriteSet_PutWithInsertModeEnabledGivenAfterPut_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePut();
+    Put putWithInsertModeEnabled = Put.newBuilder(put).enableInsertMode().build();
+    Snapshot.Key key = new Snapshot.Key(put);
+
+    // Act Assert
+    snapshot.putIntoWriteSet(key, put);
+    assertThatThrownBy(() -> snapshot.putIntoWriteSet(key, putWithInsertModeEnabled))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      putIntoWriteSet_PutWithImplicitPreReadEnabledGivenAfterWithInsertModeEnabled_ShouldHoldMergedPutWithoutImplicitPreRead() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put putWithInsertModeEnabled = Put.newBuilder(preparePut()).enableInsertMode().build();
+
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Put putWithImplicitPreReadEnabled =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(ANY_NAME_3, ANY_TEXT_5)
+            .textValue(ANY_NAME_4, null)
+            .enableImplicitPreRead()
+            .build();
+
+    Snapshot.Key key = new Snapshot.Key(putWithInsertModeEnabled);
+
+    // Act
+    snapshot.putIntoWriteSet(key, putWithInsertModeEnabled);
+    snapshot.putIntoWriteSet(key, putWithImplicitPreReadEnabled);
+
+    // Assert
+    Put mergedPut = writeSet.get(key);
+    assertThat(mergedPut.getColumns())
+        .isEqualTo(
+            ImmutableMap.of(
+                ANY_NAME_3,
+                TextColumn.of(ANY_NAME_3, ANY_TEXT_5),
+                ANY_NAME_4,
+                TextColumn.ofNull(ANY_NAME_4)));
+    assertThat(mergedPut.isInsertModeEnabled()).isTrue();
+    assertThat(mergedPut.isImplicitPreReadEnabled()).isFalse();
+  }
+
+  @Test
+  public void putIntoDeleteSet_DeleteGiven_ShouldHoldWhatsGivenInDeleteSet() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Delete delete = prepareDelete();
     Snapshot.Key key = new Snapshot.Key(delete);
 
     // Act
-    snapshot.put(key, delete);
+    snapshot.putIntoDeleteSet(key, delete);
 
     // Assert
     assertThat(deleteSet.get(key)).isEqualTo(delete);
   }
 
   @Test
-  public void put_ScanGiven_ShouldHoldWhatsGivenInScanSet() {
+  public void putIntoDeleteSet_DeleteGivenAfterPut_PutSupercedesDelete() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+    snapshot.putIntoWriteSet(putKey, put);
+
+    Delete delete = prepareDelete();
+    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+
+    // Act
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+
+    // Assert
+    assertThat(writeSet.size()).isEqualTo(0);
+    assertThat(deleteSet.size()).isEqualTo(1);
+    assertThat(deleteSet.get(deleteKey)).isEqualTo(delete);
+  }
+
+  @Test
+  public void putIntoScanSet_ScanGiven_ShouldHoldWhatsGivenInScanSet() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Scan scan = prepareScan();
@@ -376,33 +484,64 @@ public class SnapshotTest {
     Map<Snapshot.Key, TransactionResult> expected = Collections.singletonMap(key, result);
 
     // Act
-    snapshot.put(scan, expected);
+    snapshot.putIntoScanSet(scan, expected);
 
     // Assert
     assertThat(scanSet.get(scan)).isEqualTo(expected);
   }
 
   @Test
-  public void mergeResult_KeyGivenContainedInWriteSet_ShouldReturnMergedResult()
+  public void getResult_KeyNeitherContainedInWriteSetNorReadSet_ShouldReturnEmpty()
       throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Put put =
-        new Put(partitionKey, clusteringKey)
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_TEXT_5)
-            .withTextValue(ANY_NAME_4, null);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
-    TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(key, Optional.of(result));
-    snapshot.put(key, put);
 
     // Act
-    Optional<TransactionResult> actual = snapshot.mergeResult(key, Optional.of(result));
+    Optional<TransactionResult> actual = snapshot.getResult(key);
+
+    // Assert
+    assertThat(actual).isNotPresent();
+  }
+
+  @Test
+  public void getResult_KeyContainedInWriteSetButNotContainedInReadSet_ShouldReturnProperResult()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePut();
+    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key);
+
+    // Assert
+    assertThat(actual).isPresent();
+
+    assertThat(actual.get().contains(ANY_NAME_1)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(actual.get().contains(ANY_NAME_2)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(actual.get().contains(ANY_NAME_3)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_3)).isEqualTo(ANY_TEXT_3);
+    assertThat(actual.get().contains(ANY_NAME_4)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
+  }
+
+  @Test
+  public void getResult_KeyContainedInWriteSetAndReadSetGiven_ShouldReturnMergedResult()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePutForMergeTest();
+    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoReadSet(key, Optional.of(result));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key);
 
     // Assert
     assertThat(actual).isPresent();
@@ -410,16 +549,18 @@ public class SnapshotTest {
   }
 
   @Test
-  public void mergeResult_KeyGivenContainedInDeleteSet_ShouldReturnEmpty() throws CrudException {
+  public void getResult_KeyContainedInDeleteSetAndReadSetGiven_ShouldReturnEmpty()
+      throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Delete delete = prepareDelete();
     Snapshot.Key key = new Snapshot.Key(delete);
-    snapshot.put(key, delete);
     TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoReadSet(key, Optional.of(result));
+    snapshot.putIntoDeleteSet(key, delete);
 
     // Act
-    Optional<TransactionResult> actual = snapshot.mergeResult(key, Optional.of(result));
+    Optional<TransactionResult> actual = snapshot.getResult(key);
 
     // Assert
     assertThat(actual).isNotPresent();
@@ -427,15 +568,115 @@ public class SnapshotTest {
 
   @Test
   public void
-      mergeResult_KeyGivenNeitherContainedInDeleteSetNorWriteSet_ShouldReturnOriginalResult()
+      getResult_KeyNeitherContainedInDeleteSetNorWriteSetButContainedInAndReadSetGiven_ShouldReturnOriginalResult()
           throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoReadSet(key, Optional.of(result));
 
     // Act
-    Optional<TransactionResult> actual = snapshot.mergeResult(key, Optional.of(result));
+    Optional<TransactionResult> actual = snapshot.getResult(key);
+
+    // Assert
+    assertThat(actual).isEqualTo(Optional.of(result));
+  }
+
+  @Test
+  public void getResult_KeyContainedInWriteSetAndGetNotContainedInGetSet_ShouldReturnEmpty()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isNotPresent();
+  }
+
+  @Test
+  public void getResult_KeyContainedInWriteSetAndGetNotContainedInGetSet_ShouldReturnProperResult()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePut();
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isPresent();
+
+    assertThat(actual.get().contains(ANY_NAME_1)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(actual.get().contains(ANY_NAME_2)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(actual.get().contains(ANY_NAME_3)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_3)).isEqualTo(ANY_TEXT_3);
+    assertThat(actual.get().contains(ANY_NAME_4)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
+  }
+
+  @Test
+  public void
+      getResult_KeyContainedInWriteSetAndGetContainedInGetSetGiven_ShouldReturnMergedResult()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePutForMergeTest();
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoGetSet(get, Optional.of(result));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isPresent();
+    assertMergedResultIsEqualTo(actual.get());
+  }
+
+  @Test
+  public void getResult_KeyContainedInDeleteSetAndGetContainedInGetSetGiven_ShouldReturnEmpty()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Delete delete = prepareDelete();
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoGetSet(get, Optional.of(result));
+    snapshot.putIntoDeleteSet(key, delete);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isNotPresent();
+  }
+
+  @Test
+  public void
+      getResult_KeyNeitherContainedInDeleteSetNorWriteSetAndGetContainedInGetSetGiven_ShouldReturnOriginalResult()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoGetSet(get, Optional.of(result));
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
 
     // Assert
     assertThat(actual).isEqualTo(Optional.of(result));
@@ -443,26 +684,196 @@ public class SnapshotTest {
 
   @Test
   public void
-      mergeResult_MatchedConjunctionAndKeyContainedInWriteSetGiven_ShouldReturnMergedResult()
+      getResult_KeyContainedInWriteSetAndGetContainedInGetSetWithMatchedConjunctionGiven_ShouldReturnMergedResult()
           throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePutForMergeTest();
     ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_5);
-    Set<Conjunction> conjunctions = ImmutableSet.of(Conjunction.of(condition));
     Get get = Get.newBuilder(prepareGet()).where(condition).build();
     Snapshot.Key key = new Snapshot.Key(get);
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(key, Optional.of(result));
-    snapshot.put(key, put);
+    snapshot.putIntoGetSet(get, Optional.of(result));
+    snapshot.putIntoWriteSet(key, put);
 
     // Act
-    Optional<TransactionResult> actual =
-        snapshot.mergeResult(key, Optional.of(result), conjunctions);
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
 
     // Assert
     assertThat(actual).isPresent();
     assertMergedResultIsEqualTo(actual.get());
+  }
+
+  @Test
+  public void
+      getResult_KeyNeitherContainedInDeleteSetNorWriteSetAndGetContainedInGetSetWithUnmatchedConjunction_ShouldReturnOriginalResult()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    TransactionResult result = prepareResult(ANY_ID);
+    ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_2);
+    Get get = Get.newBuilder(prepareGet()).where(condition).build();
+    snapshot.putIntoGetSet(get, Optional.of(result));
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isEqualTo(Optional.of(result));
+  }
+
+  @Test
+  public void
+      getResult_KeyContainedInWriteSetAndGetContainedInGetSetWithUnmatchedConjunctionGiven_ShouldReturnEmpty()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePutForMergeTest();
+    ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3);
+    Get get = Get.newBuilder(prepareGet()).where(condition).build();
+    Snapshot.Key key = new Snapshot.Key(get);
+    TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoGetSet(get, Optional.of(result));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void getResults_ScanNotContainedInScanSetGiven_ShouldReturnEmpty() throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Scan scan = prepareScan();
+
+    // Act
+    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+
+    // Assert
+    assertThat(results.isPresent()).isFalse();
+  }
+
+  @Test
+  public void getResults_ScanContainedInScanSetGiven_ShouldReturnProperResults()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Scan scan = prepareScan();
+
+    TransactionResult result1 = mock(TransactionResult.class);
+    TransactionResult result2 = mock(TransactionResult.class);
+    TransactionResult result3 = mock(TransactionResult.class);
+    Snapshot.Key key1 = mock(Snapshot.Key.class);
+    Snapshot.Key key2 = mock(Snapshot.Key.class);
+    Snapshot.Key key3 = mock(Snapshot.Key.class);
+    scanSet.put(scan, ImmutableMap.of(key1, result1, key2, result2, key3, result3));
+
+    // Act
+    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+
+    // Assert
+    assertThat(results).isPresent();
+
+    Iterator<Map.Entry<Snapshot.Key, TransactionResult>> entryIterator =
+        results.get().entrySet().iterator();
+
+    Map.Entry<Snapshot.Key, TransactionResult> entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key1);
+    assertThat(entry.getValue()).isEqualTo(result1);
+
+    entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key2);
+    assertThat(entry.getValue()).isEqualTo(result2);
+
+    entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key3);
+    assertThat(entry.getValue()).isEqualTo(result3);
+
+    assertThat(entryIterator.hasNext()).isFalse();
+  }
+
+  @Test
+  public void getResults_ScanContainedInScanSetGivenAndPutInWriteSet_ShouldReturnProperResults()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePutForMergeTest();
+    Scan scan = prepareScan();
+
+    TransactionResult result1 = prepareResult(ANY_ID);
+    TransactionResult result2 = mock(TransactionResult.class);
+    TransactionResult result3 = mock(TransactionResult.class);
+    Snapshot.Key key1 = new Snapshot.Key(put);
+    Snapshot.Key key2 = mock(Snapshot.Key.class);
+    Snapshot.Key key3 = mock(Snapshot.Key.class);
+    scanSet.put(scan, ImmutableMap.of(key1, result1, key2, result2, key3, result3));
+
+    snapshot.putIntoWriteSet(key1, put);
+
+    // Act
+    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+
+    // Assert
+    assertThat(results).isPresent();
+
+    Iterator<Map.Entry<Snapshot.Key, TransactionResult>> entryIterator =
+        results.get().entrySet().iterator();
+
+    Map.Entry<Snapshot.Key, TransactionResult> entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key1);
+    assertMergedResultIsEqualTo(entry.getValue());
+
+    entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key2);
+    assertThat(entry.getValue()).isEqualTo(result2);
+
+    entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key3);
+    assertThat(entry.getValue()).isEqualTo(result3);
+
+    assertThat(entryIterator.hasNext()).isFalse();
+  }
+
+  @Test
+  public void getResults_ScanContainedInScanSetGivenAndDeleteInDeleteSet_ShouldReturnProperResults()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Delete delete = prepareDelete();
+    Scan scan = prepareScan();
+
+    TransactionResult result1 = prepareResult(ANY_ID);
+    TransactionResult result2 = mock(TransactionResult.class);
+    TransactionResult result3 = mock(TransactionResult.class);
+    Snapshot.Key key1 = new Snapshot.Key(delete);
+    Snapshot.Key key2 = mock(Snapshot.Key.class);
+    Snapshot.Key key3 = mock(Snapshot.Key.class);
+    scanSet.put(scan, ImmutableMap.of(key1, result1, key2, result2, key3, result3));
+
+    snapshot.putIntoDeleteSet(key1, delete);
+
+    // Act
+    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+
+    // Assert
+    assertThat(results).isPresent();
+
+    Iterator<Map.Entry<Snapshot.Key, TransactionResult>> entryIterator =
+        results.get().entrySet().iterator();
+
+    Map.Entry<Snapshot.Key, TransactionResult> entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key2);
+    assertThat(entry.getValue()).isEqualTo(result2);
+
+    entry = entryIterator.next();
+    assertThat(entry.getKey()).isEqualTo(key3);
+    assertThat(entry.getValue()).isEqualTo(result3);
+
+    assertThat(entryIterator.hasNext()).isFalse();
   }
 
   private void assertMergedResultIsEqualTo(TransactionResult result) {
@@ -534,60 +945,6 @@ public class SnapshotTest {
   }
 
   @Test
-  public void
-      mergeResult_UnmatchedConjunctionAndKeyNeitherContainedInDeleteSetNorWriteSet_ShouldReturnOriginalResult()
-          throws CrudException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
-    TransactionResult result = prepareResult(ANY_ID);
-    ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_2);
-    Set<Conjunction> conjunctions = ImmutableSet.of(Conjunction.of(condition));
-
-    // Act
-    Optional<TransactionResult> actual =
-        snapshot.mergeResult(key, Optional.of(result), conjunctions);
-
-    // Assert
-    assertThat(actual).isEqualTo(Optional.of(result));
-  }
-
-  @Test
-  public void mergeResult_UnmatchedConjunctionAndKeyContainedInWriteSetGiven_ShouldReturnEmpty()
-      throws CrudException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Put put = preparePutForMergeTest();
-    ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3);
-    Set<Conjunction> conjunctions = ImmutableSet.of(Conjunction.of(condition));
-    Get get = Get.newBuilder(prepareGet()).where(condition).build();
-    Snapshot.Key key = new Snapshot.Key(get);
-    TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(key, Optional.of(result));
-    snapshot.put(key, put);
-
-    // Act
-    Optional<TransactionResult> actual =
-        snapshot.mergeResult(key, Optional.of(result), conjunctions);
-
-    // Assert
-    assertThat(actual).isEmpty();
-  }
-
-  @Test
-  public void get_ScanNotContainedInSnapshotGiven_ShouldReturnEmptyList() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Scan scan = prepareScan();
-
-    // Act
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.get(scan);
-
-    // Assert
-    assertThat(results.isPresent()).isFalse();
-  }
-
-  @Test
   public void to_PrepareMutationComposerGivenAndSnapshotIsolationSet_ShouldCallComposerProperly()
       throws PreparationConflictException, ExecutionException {
     // Arrange
@@ -595,10 +952,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
     configureBehavior();
 
     // Act
@@ -617,9 +974,9 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     configureBehavior();
 
     // Act
@@ -640,10 +997,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
 
     // Act
     snapshot.to(commitComposer);
@@ -662,10 +1019,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
     configureBehavior();
 
     // Act
@@ -686,10 +1043,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
     configureBehavior();
 
     // Act
@@ -709,10 +1066,10 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
     configureBehavior();
 
     // Act
@@ -734,9 +1091,9 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
-    snapshot.put(get, Optional.of(txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.putIntoGetSet(get, Optional.of(txResult));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraWrite(prepareComposer))
@@ -761,9 +1118,9 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
-    snapshot.put(new Snapshot.Key(get), Optional.empty());
-    snapshot.put(get, Optional.empty());
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.empty());
+    snapshot.putIntoGetSet(get, Optional.empty());
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
@@ -787,9 +1144,9 @@ public class SnapshotTest {
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
     Put put = preparePut();
-    snapshot.put(key, Optional.of(txResult));
-    snapshot.put(scan, Collections.singletonMap(key, txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(key, Optional.of(txResult));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
@@ -807,9 +1164,9 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
-    snapshot.put(get, Optional.of(txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.putIntoGetSet(get, Optional.of(txResult));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
         prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
@@ -830,9 +1187,9 @@ public class SnapshotTest {
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
-    snapshot.put(get, Optional.of(txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.putIntoGetSet(get, Optional.of(txResult));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Get getWithProjections =
@@ -854,9 +1211,9 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Get get = prepareAnotherGet();
     Put put = preparePut();
-    snapshot.put(new Snapshot.Key(get), Optional.empty());
-    snapshot.put(get, Optional.empty());
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.empty());
+    snapshot.putIntoGetSet(get, Optional.empty());
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
     Get getWithProjections =
@@ -880,9 +1237,9 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.put(key, Optional.of(txResult));
-    snapshot.put(scan, Collections.singletonMap(key, txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(key, Optional.of(txResult));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
@@ -908,9 +1265,9 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.put(key, Optional.of(txResult));
-    snapshot.put(scan, Collections.singletonMap(key, txResult));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(key, Optional.of(txResult));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Scanner scanner = mock(Scanner.class);
@@ -938,8 +1295,8 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID + "x");
-    snapshot.put(scan, Collections.emptyMap());
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
@@ -1009,10 +1366,10 @@ public class SnapshotTest {
     Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
     Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
 
-    snapshot.put(scan1, Collections.singletonMap(key1, new TransactionResult(result1)));
-    snapshot.put(scan2, Collections.singletonMap(key2, new TransactionResult(result2)));
-    snapshot.put(key1, Optional.of(new TransactionResult(result1)));
-    snapshot.put(key2, Optional.of(new TransactionResult(result2)));
+    snapshot.putIntoScanSet(scan1, Collections.singletonMap(key1, new TransactionResult(result1)));
+    snapshot.putIntoScanSet(scan2, Collections.singletonMap(key2, new TransactionResult(result2)));
+    snapshot.putIntoReadSet(key1, Optional.of(new TransactionResult(result1)));
+    snapshot.putIntoReadSet(key2, Optional.of(new TransactionResult(result2)));
 
     DistributedStorage storage = mock(DistributedStorage.class);
 
@@ -1054,9 +1411,9 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.put(new Snapshot.Key(get), Optional.of(result));
-    snapshot.put(get, Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(result));
+    snapshot.putIntoGetSet(get, Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
         Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
@@ -1079,9 +1436,9 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult changedResult = prepareResult(ANY_ID);
-    snapshot.put(new Snapshot.Key(get), Optional.of(result));
-    snapshot.put(get, Optional.of(result));
-    snapshot.put(new Snapshot.Key(put), put);
+    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(result));
+    snapshot.putIntoGetSet(get, Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getWithProjections =
         Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
@@ -1104,8 +1461,8 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(key, Optional.of(result));
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoReadSet(key, Optional.of(result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjections =
         Scan.newBuilder(scan)
@@ -1124,95 +1481,18 @@ public class SnapshotTest {
   }
 
   @Test
-  public void put_DeleteGivenAfterPut_PutSupercedesDelete() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(preparePut());
-    snapshot.put(putKey, put);
-
-    Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
-
-    // Act
-    snapshot.put(deleteKey, delete);
-
-    // Assert
-    assertThat(writeSet.size()).isEqualTo(0);
-    assertThat(deleteSet.size()).isEqualTo(1);
-    assertThat(deleteSet.get(deleteKey)).isEqualTo(delete);
-  }
-
-  @Test
-  public void put_PutGivenAfterDelete_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
-    snapshot.put(deleteKey, delete);
-
-    Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(preparePut());
-
-    // Act Assert
-    assertThatThrownBy(() -> snapshot.put(putKey, put))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void get_ScanGivenAndPutInWriteSetNotOverlappedWithScan_ShouldNotThrowException() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    // "text2"
-    Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
-    Scan scan =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
-            // ["text3", "text4"]
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_3), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_4), true)
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-
-    // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.get(scan));
-
-    // Assert
-    assertThat(thrown).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldNotThrowException() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Put put = preparePutWithPartitionKeyOnly();
-    Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
-    Scan scan = prepareScan();
-
-    // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.get(scan));
-
-    // Assert
-    assertThat(thrown).doesNotThrowAnyException();
-  }
-
-  @Test
   public void
       verify_ScanGivenAndPutKeyAlreadyPresentInScanSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(key, Optional.of(result));
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoReadSet(key, Optional.of(result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1228,9 +1508,9 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePutWithPartitionKeyOnly();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareScan();
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1247,14 +1527,14 @@ public class SnapshotTest {
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, infinite)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1270,7 +1550,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1279,7 +1559,7 @@ public class SnapshotTest {
             .consistency(Consistency.LINEARIZABLE)
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
             .build();
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1296,7 +1576,7 @@ public class SnapshotTest {
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
         prepareScan()
             // ["text1", "text3"]
@@ -1322,11 +1602,11 @@ public class SnapshotTest {
             // ["text1", "text2")
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
-    snapshot.put(scan1, Collections.emptyMap());
-    snapshot.put(scan2, Collections.emptyMap());
-    snapshot.put(scan3, Collections.emptyMap());
-    snapshot.put(scan4, Collections.emptyMap());
-    snapshot.put(scan5, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan1, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan2, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan3, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan4, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan5, Collections.emptyMap());
 
     // Act Assert
     Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
@@ -1351,7 +1631,7 @@ public class SnapshotTest {
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, "text3"]
@@ -1373,9 +1653,9 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    snapshot.put(scan1, Collections.emptyMap());
-    snapshot.put(scan2, Collections.emptyMap());
-    snapshot.put(scan3, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan1, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan2, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan3, Collections.emptyMap());
 
     // Act Assert
     Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
@@ -1396,7 +1676,7 @@ public class SnapshotTest {
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // ["text1", infinite)
@@ -1418,9 +1698,9 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    snapshot.put(scan1, Collections.emptyMap());
-    snapshot.put(scan2, Collections.emptyMap());
-    snapshot.put(scan3, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan1, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan2, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan3, Collections.emptyMap());
 
     // Act Assert
     Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
@@ -1439,7 +1719,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1448,7 +1728,7 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1469,7 +1749,7 @@ public class SnapshotTest {
             .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .build();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1478,7 +1758,7 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1509,8 +1789,8 @@ public class SnapshotTest {
             .build();
     Snapshot.Key putKey1 = new Snapshot.Key(put1);
     Snapshot.Key putKey2 = new Snapshot.Key(put2);
-    snapshot.put(putKey1, put1);
-    snapshot.put(putKey2, put2);
+    snapshot.putIntoWriteSet(putKey1, put1);
+    snapshot.putIntoWriteSet(putKey2, put2);
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1519,7 +1799,7 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1552,8 +1832,8 @@ public class SnapshotTest {
             .build();
     Snapshot.Key putKey1 = new Snapshot.Key(put1);
     Snapshot.Key putKey2 = new Snapshot.Key(put2);
-    snapshot.put(putKey1, put1);
-    snapshot.put(putKey2, put2);
+    snapshot.putIntoWriteSet(putKey1, put1);
+    snapshot.putIntoWriteSet(putKey2, put2);
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1563,7 +1843,7 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1579,7 +1859,7 @@ public class SnapshotTest {
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     ScanAll scanAll =
         new ScanAll()
             .withConsistency(Consistency.LINEARIZABLE)
@@ -1587,7 +1867,7 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scanAll, result);
-    snapshot.put(scanAll, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scanAll, Collections.singletonMap(key, result));
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
@@ -1604,7 +1884,7 @@ public class SnapshotTest {
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     ScanAll scanAll =
         new ScanAll()
             .withConsistency(Consistency.LINEARIZABLE)
@@ -1612,7 +1892,7 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME_2);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scanAll, result);
-    snapshot.put(scanAll, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scanAll, Collections.singletonMap(key, result));
 
     // Act Assert
     Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
@@ -1622,59 +1902,16 @@ public class SnapshotTest {
   }
 
   @Test
-  public void get_GetGivenAndAlreadyPresentInGetSet_ShouldReturnResult() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Get get = prepareGet();
-    TransactionResult expected = prepareResult(ANY_ID);
-    snapshot.put(get, Optional.of(expected));
-
-    // Act
-    Optional<TransactionResult> actual = snapshot.get(get);
-
-    // Assert
-    assertThat(actual).isPresent();
-    assertThat(actual.get()).isEqualTo(expected);
-  }
-
-  @Test
-  public void get_ScanAllGivenAndAlreadyPresentInScanSet_ShouldReturnKeys() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    // "text2"
-    Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
-
-    ScanAll scanAll =
-        new ScanAll()
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME_2)
-            .forTable(ANY_TABLE_NAME_2);
-    TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scanAll, result);
-    snapshot.put(scanAll, Collections.singletonMap(key, result));
-
-    // Act Assert
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.get(scanAll);
-
-    // Assert
-    assertThat(results).isNotEmpty();
-    assertThat(results.get()).containsKey(key);
-    assertThat(results.get().get(key)).isEqualTo(result);
-  }
-
-  @Test
   public void verify_CrossPartitionScanGivenAndPutInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1689,11 +1926,11 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1708,11 +1945,11 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.put(scan, Collections.singletonMap(key, result));
+    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1728,7 +1965,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
@@ -1746,7 +1983,7 @@ public class SnapshotTest {
                             ConditionBuilder.column(ANY_NAME_8).isNullInt()))
                     .build())
             .build();
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1762,14 +1999,14 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
             .or(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_4))
             .build();
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1785,14 +2022,14 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
             .where(ConditionBuilder.column(ANY_NAME_3).isLikeText("text%"))
             .and(ConditionBuilder.column(ANY_NAME_4).isNotLikeText("text"))
             .build();
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1808,14 +2045,14 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
             .clearConditions()
             .where(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_1))
             .or(ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_1))
             .build();
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1831,9 +2068,9 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
-    snapshot.put(putKey, put);
+    snapshot.putIntoWriteSet(putKey, put);
     Scan scan = Scan.newBuilder(prepareCrossPartitionScan()).clearConditions().build();
-    snapshot.put(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
     Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
@@ -1850,18 +2087,18 @@ public class SnapshotTest {
     Get get1 = prepareGet();
     TransactionResult result1 = prepareResult("t1");
     Snapshot.Key readKey1 = new Snapshot.Key(get1);
-    snapshot.put(readKey1, Optional.of(result1));
+    snapshot.putIntoReadSet(readKey1, Optional.of(result1));
     Get get2 = prepareAnotherGet();
     TransactionResult result2 = prepareResult("t2");
     Snapshot.Key readKey2 = new Snapshot.Key(get2);
-    snapshot.put(readKey2, Optional.of(result2));
+    snapshot.putIntoReadSet(readKey2, Optional.of(result2));
 
     Put put1 = preparePut();
     Snapshot.Key putKey1 = new Snapshot.Key(put1);
-    snapshot.put(putKey1, put1);
+    snapshot.putIntoWriteSet(putKey1, put1);
     Put put2 = prepareAnotherPut();
     Snapshot.Key putKey2 = new Snapshot.Key(put2);
-    snapshot.put(putKey2, put2);
+    snapshot.putIntoWriteSet(putKey2, put2);
 
     // Act
     ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
@@ -1873,7 +2110,7 @@ public class SnapshotTest {
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
       TransactionResult delayedResult = prepareResult("t3");
-      snapshot.put(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
+      snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
 
       Put delayedPut =
           new Put(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
@@ -1881,7 +2118,7 @@ public class SnapshotTest {
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME)
               .withValue(ANY_NAME_3, ANY_TEXT_3);
-      snapshot.put(new Snapshot.Key(delayedPut), delayedPut);
+      snapshot.putIntoWriteSet(new Snapshot.Key(delayedPut), delayedPut);
     }
 
     // Assert
@@ -1917,18 +2154,18 @@ public class SnapshotTest {
     Get get1 = prepareGet();
     TransactionResult result1 = prepareResult("t1");
     Snapshot.Key readKey1 = new Snapshot.Key(get1);
-    snapshot.put(readKey1, Optional.of(result1));
+    snapshot.putIntoReadSet(readKey1, Optional.of(result1));
     Get get2 = prepareAnotherGet();
     TransactionResult result2 = prepareResult("t2");
     Snapshot.Key readKey2 = new Snapshot.Key(get2);
-    snapshot.put(readKey2, Optional.of(result2));
+    snapshot.putIntoReadSet(readKey2, Optional.of(result2));
 
     Delete delete1 = prepareDelete();
     Snapshot.Key deleteKey1 = new Snapshot.Key(delete1);
-    snapshot.put(deleteKey1, delete1);
+    snapshot.putIntoDeleteSet(deleteKey1, delete1);
     Delete delete2 = prepareAnotherDelete();
     Snapshot.Key deleteKey2 = new Snapshot.Key(delete2);
-    snapshot.put(deleteKey2, delete2);
+    snapshot.putIntoDeleteSet(deleteKey2, delete2);
 
     // Act
     ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
@@ -1940,14 +2177,14 @@ public class SnapshotTest {
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
       TransactionResult delayedResult = prepareResult("t3");
-      snapshot.put(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
+      snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
 
       Delete delayedDelete =
           new Delete(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
-      snapshot.put(new Snapshot.Key(delayedDelete), delayedDelete);
+      snapshot.putIntoDeleteSet(new Snapshot.Key(delayedDelete), delayedDelete);
     }
 
     // Assert
