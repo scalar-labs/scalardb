@@ -118,7 +118,7 @@ public enum CoreError implements ScalarDbError {
   AUTH_NOT_ENABLED(
       Category.USER_ERROR,
       "0022",
-      "ScalarDB Auth is not enabled. To use ScalarDB Auth, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "The authentication and authorization feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF(
