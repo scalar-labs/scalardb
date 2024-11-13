@@ -243,19 +243,16 @@ public class PutBuilder {
 
     @Override
     public Put build() {
-      Put put = new Put(partitionKey, clusteringKey);
-      put.forNamespace(namespaceName).forTable(tableName);
-      columns.values().forEach(put::withValue);
-      if (consistency != null) {
-        put.withConsistency(consistency);
-      }
-      if (condition != null) {
-        put.withCondition(condition);
-      }
-      put.setImplicitPreReadEnabled(implicitPreReadEnabled);
-      put.setInsertModeEnabled(insertModeEnabled);
-
-      return put;
+      return new Put(
+          namespaceName,
+          tableName,
+          partitionKey,
+          clusteringKey,
+          consistency,
+          columns,
+          condition,
+          implicitPreReadEnabled,
+          insertModeEnabled);
     }
 
     @Override

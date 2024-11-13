@@ -1,8 +1,11 @@
 package com.scalar.db.api;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -14,6 +17,29 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class ScanAll extends Scan {
 
   private static final Key DUMMY_PARTITION_KEY = Key.of();
+
+  ScanAll(
+      String namespace,
+      String tableName,
+      @Nullable Consistency consistency,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions,
+      List<Scan.Ordering> orderings,
+      int limit) {
+    super(
+        namespace,
+        tableName,
+        DUMMY_PARTITION_KEY,
+        consistency,
+        projections,
+        conjunctions,
+        null,
+        false,
+        null,
+        false,
+        orderings,
+        limit);
+  }
 
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
@@ -159,11 +185,6 @@ public class ScanAll extends Scan {
   @Deprecated
   public ScanAll withProjections(Collection<String> projections) {
     return (ScanAll) super.withProjections(projections);
-  }
-
-  @Override
-  ScanAll withConjunctions(Collection<Conjunction> conjunctions) {
-    return (ScanAll) super.withConjunctions(conjunctions);
   }
 
   @Override
