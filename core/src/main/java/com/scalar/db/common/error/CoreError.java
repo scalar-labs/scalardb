@@ -118,7 +118,7 @@ public enum CoreError implements ScalarDbError {
   AUTH_NOT_ENABLED(
       Category.USER_ERROR,
       "0022",
-      "ScalarDB Auth is not enabled. To use ScalarDB Auth, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "The authentication and authorization feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF(
@@ -647,10 +647,10 @@ public enum CoreError implements ScalarDbError {
           + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
-  TRANSPARENT_DATA_ENCRYPTION_NOT_ENABLED(
+  ENCRYPTION_NOT_ENABLED(
       Category.USER_ERROR,
       "0143",
-      "ScalarDB Transparent Data Encryption is not enabled. To use ScalarDB Transparent Data Encryption, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "The encryption feature is not enabled. To encrypt data at rest, you must enable this feature. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   INVALID_VARIABLE_KEY_COLUMN_SIZE(
