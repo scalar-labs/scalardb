@@ -3,10 +3,13 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.GetBuilder.BuildableGetOrGetWithIndexFromExisting;
 import com.scalar.db.api.GetBuilder.Namespace;
 import com.scalar.db.io.Key;
 import java.util.Collection;
+import java.util.List;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -16,6 +19,18 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Get extends Selection {
+
+  Get(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Key clusteringKey,
+      @Nullable Consistency consistency,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions) {
+    super(
+        namespace, tableName, partitionKey, clusteringKey, consistency, projections, conjunctions);
+  }
 
   /**
    * Constructs a {@code Get} with the specified partition {@code Key}.
@@ -68,7 +83,7 @@ public class Get extends Selection {
 
   /**
    * Build a {@code Get} operation from an existing {@code Get} object using a builder. The builder
-   * will be parametrized by default with all the existing {@code Get} attributes
+   * will be parametrized by default with all the existing {@code Get} parameters.
    *
    * @param get an existing {@code Get} operation
    * @return a {@code Get} operation builder
@@ -131,11 +146,6 @@ public class Get extends Selection {
   @Override
   public Get withProjections(Collection<String> projections) {
     return (Get) super.withProjections(projections);
-  }
-
-  @Override
-  Get withConjunctions(Collection<Conjunction> conjunctions) {
-    return (Get) super.withConjunctions(conjunctions);
   }
 
   /**

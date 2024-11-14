@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.OperationBuilder.All;
 import com.scalar.db.api.OperationBuilder.And;
 import com.scalar.db.api.OperationBuilder.Buildable;
@@ -194,25 +195,23 @@ public class ScanBuilder extends SelectionBuilder {
 
     @Override
     public Scan build() {
-      Scan scan = new Scan(partitionKey);
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
-      orderings.forEach(scan::withOrdering);
-      if (startClusteringKey != null) {
-        scan.withStart(startClusteringKey, startInclusive);
-      }
-      if (endClusteringKey != null) {
-        scan.withEnd(endClusteringKey, endInclusive);
-      }
+      return build(ImmutableSet.of());
+    }
 
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      if (consistency != null) {
-        scan.withConsistency(consistency);
-      }
-
-      return scan;
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
+      return new Scan(
+          namespaceName,
+          tableName,
+          partitionKey,
+          consistency,
+          projections,
+          conjunctions,
+          startClusteringKey,
+          startInclusive,
+          endClusteringKey,
+          endInclusive,
+          orderings,
+          limit);
     }
   }
 
@@ -453,7 +452,7 @@ public class ScanBuilder extends SelectionBuilder {
 
     @Override
     public Scan build() {
-      return (Scan) addConjunctionsTo(super.build(), where);
+      return super.build(getConjunctions(where));
     }
   }
 
@@ -540,18 +539,12 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     public Scan build() {
-      Scan scan = new ScanWithIndex(indexKey);
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
+      return build(ImmutableSet.of());
+    }
 
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      if (consistency != null) {
-        scan.withConsistency(consistency);
-      }
-
-      return scan;
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
+      return new ScanWithIndex(
+          namespaceName, tableName, indexKey, consistency, projections, conjunctions, limit);
     }
   }
 
@@ -714,7 +707,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     public Scan build() {
-      return (Scan) addConjunctionsTo(buildableScanWithIndex.build(), where);
+      return buildableScanWithIndex.build(getConjunctions(where));
     }
   }
 
@@ -820,19 +813,12 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     public Scan build() {
-      Scan scan = new ScanAll();
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
-      orderings.forEach(scan::withOrdering);
+      return build(ImmutableSet.of());
+    }
 
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      if (consistency != null) {
-        scan.withConsistency(consistency);
-      }
-
-      return scan;
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
+      return new ScanAll(
+          namespaceName, tableName, consistency, projections, conjunctions, orderings, limit);
     }
   }
 
@@ -1012,7 +998,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     public Scan build() {
-      return (Scan) addConjunctionsTo(buildableScanAll.build(), where);
+      return buildableScanAll.build(getConjunctions(where));
     }
   }
 
@@ -1221,6 +1207,7 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScanOrScanAllFromExisting clearStart() {
       checkNotScanWithIndexOrScanAll();
       this.startClusteringKey = null;
+      this.startInclusive = false;
       return this;
     }
 
@@ -1228,6 +1215,7 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScanOrScanAllFromExisting clearEnd() {
       checkNotScanWithIndexOrScanAll();
       this.endClusteringKey = null;
+      this.endInclusive = false;
       return this;
     }
 
@@ -1287,38 +1275,32 @@ public class ScanBuilder extends SelectionBuilder {
 
     @Override
     public Scan build() {
-      Scan scan;
+      return build(
+          conjunctions.stream().map(Conjunction::of).collect(ImmutableSet.toImmutableSet()));
+    }
 
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
       if (isScanWithIndex) {
-        scan = new ScanWithIndex(indexKey);
+        return new ScanWithIndex(
+            namespaceName, tableName, indexKey, consistency, projections, conjunctions, limit);
       } else if (isScanAll) {
-        scan = new ScanAll();
-        orderings.forEach(scan::withOrdering);
+        return new ScanAll(
+            namespaceName, tableName, consistency, projections, conjunctions, orderings, limit);
       } else {
-        scan = new Scan(partitionKey);
-        orderings.forEach(scan::withOrdering);
-        if (startClusteringKey != null) {
-          scan.withStart(startClusteringKey, startInclusive);
-        }
-        if (endClusteringKey != null) {
-          scan.withEnd(endClusteringKey, endInclusive);
-        }
+        return new Scan(
+            namespaceName,
+            tableName,
+            partitionKey,
+            consistency,
+            projections,
+            conjunctions,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            orderings,
+            limit);
       }
-
-      if (!conjunctions.isEmpty()) {
-        scan.withConjunctions(
-            conjunctions.stream().map(Conjunction::of).collect(Collectors.toSet()));
-      }
-
-      scan.forNamespace(namespaceName)
-          .forTable(tableName)
-          .withLimit(limit)
-          .withConsistency(consistency);
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      return scan;
     }
   }
 
@@ -1456,7 +1438,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     public Scan build() {
-      return (Scan) addConjunctionsTo(buildableScanFromExisting.build(), where);
+      return buildableScanFromExisting.build(getConjunctions(where));
     }
   }
 

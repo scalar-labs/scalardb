@@ -14,7 +14,6 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
@@ -67,21 +66,14 @@ public final class ScalarDbUtils {
 
   public static Get copyAndSetTargetToIfNot(
       Get get, Optional<String> namespace, Optional<String> tableName) {
-    Get ret = new Get(get); // copy
+    Get ret = Get.newBuilder(get).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }
 
   public static Scan copyAndSetTargetToIfNot(
       Scan scan, Optional<String> namespace, Optional<String> tableName) {
-    Scan ret;
-    if (scan instanceof ScanAll) {
-      ret = new ScanAll((ScanAll) scan); // copy
-    } else if (scan instanceof ScanWithIndex) {
-      ret = new ScanWithIndex((ScanWithIndex) scan); // copy
-    } else {
-      ret = new Scan(scan); // copy
-    }
+    Scan ret = Scan.newBuilder(scan).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }

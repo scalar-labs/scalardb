@@ -1,13 +1,26 @@
 package com.scalar.db.api;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /** A command to retrieve an entry from the underlying storage by using an index. */
 @NotThreadSafe
 public class GetWithIndex extends Get {
+
+  GetWithIndex(
+      @Nullable String namespace,
+      String tableName,
+      Key indexKey,
+      @Nullable Consistency consistency,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions) {
+    super(namespace, tableName, indexKey, null, consistency, projections, conjunctions);
+  }
 
   /**
    * Constructs an {@code GetWithIndex} with the specified index {@code Key}.

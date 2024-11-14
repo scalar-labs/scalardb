@@ -70,25 +70,20 @@ abstract class SelectionBuilder {
     }
   }
 
-  static Selection addConjunctionsTo(Selection selection, Where where) {
-
+  static ImmutableSet<Conjunction> getConjunctions(Where where) {
     if (where.condition != null) {
       assert where.conjunctions.isEmpty() && where.disjunctions.isEmpty();
-      selection.withConjunctions(ImmutableSet.of(Conjunction.of(where.condition)));
+      return ImmutableSet.of(Conjunction.of(where.condition));
     } else if (where.conjunctions.isEmpty()) {
-      selection.withConjunctions(
-          Sets.cartesianProduct(new ArrayList<>(where.disjunctions)).stream()
-              .filter(conditions -> conditions.size() > 0)
-              .map(Conjunction::of)
-              .collect(Collectors.toSet()));
+      return Sets.cartesianProduct(new ArrayList<>(where.disjunctions)).stream()
+          .filter(conditions -> !conditions.isEmpty())
+          .map(Conjunction::of)
+          .collect(ImmutableSet.toImmutableSet());
     } else {
-      selection.withConjunctions(
-          where.conjunctions.stream()
-              .filter(conditions -> conditions.size() > 0)
-              .map(Conjunction::of)
-              .collect(Collectors.toSet()));
+      return where.conjunctions.stream()
+          .filter(conditions -> !conditions.isEmpty())
+          .map(Conjunction::of)
+          .collect(ImmutableSet.toImmutableSet());
     }
-
-    return selection;
   }
 }
