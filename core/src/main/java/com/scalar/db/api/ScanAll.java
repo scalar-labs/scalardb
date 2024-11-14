@@ -1,5 +1,7 @@
 package com.scalar.db.api;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.Collection;
@@ -22,6 +24,7 @@ public class ScanAll extends Scan {
       String namespace,
       String tableName,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       List<String> projections,
       ImmutableSet<Conjunction> conjunctions,
       List<Scan.Ordering> orderings,
@@ -31,6 +34,7 @@ public class ScanAll extends Scan {
         tableName,
         DUMMY_PARTITION_KEY,
         consistency,
+        attributes,
         projections,
         conjunctions,
         null,
@@ -201,5 +205,19 @@ public class ScanAll extends Scan {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode());
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", forNamespace())
+        .add("table", forTable())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
+        .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
+        .add("orderings", getOrderings())
+        .add("limit", getLimit())
+        .toString();
   }
 }

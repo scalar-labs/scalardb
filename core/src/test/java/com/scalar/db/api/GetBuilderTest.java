@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
@@ -73,16 +74,22 @@ public class GetBuilderTest {
             .projection("c2")
             .projections(Arrays.asList("c3", "c4"))
             .projections("c5", "c6")
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
     assertThat(get)
         .isEqualTo(
-            new Get(partitionKey1, clusteringKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withProjections(Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"))
-                .withConsistency(Consistency.EVENTUAL));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -105,6 +112,8 @@ public class GetBuilderTest {
             .projection("ck2")
             .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Get get2 =
         Get.newBuilder()
@@ -123,6 +132,8 @@ public class GetBuilderTest {
             .projection("ck2")
             .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Get get3 =
         Get.newBuilder()
@@ -141,6 +152,8 @@ public class GetBuilderTest {
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Get get4 =
         Get.newBuilder()
@@ -159,6 +172,8 @@ public class GetBuilderTest {
                     .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
@@ -169,6 +184,7 @@ public class GetBuilderTest {
             partitionKey1,
             clusteringKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -217,6 +233,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -313,6 +330,7 @@ public class GetBuilderTest {
             partitionKey1,
             clusteringKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -352,6 +370,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.SEQUENTIAL,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -387,6 +406,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -427,6 +447,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -470,6 +491,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -513,6 +535,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -611,6 +634,7 @@ public class GetBuilderTest {
             partitionKey1,
             clusteringKey1,
             Consistency.LINEARIZABLE,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             Arrays.asList("c1", "c2"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -632,6 +656,10 @@ public class GetBuilderTest {
             .projections(Arrays.asList("c3", "c4"))
             .projection("c5")
             .projections("c6", "c7")
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
@@ -643,6 +671,7 @@ public class GetBuilderTest {
                 partitionKey2,
                 clusteringKey2,
                 Consistency.EVENTUAL,
+                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
                 Arrays.asList("c3", "c4", "c5", "c6", "c7"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -666,6 +695,8 @@ public class GetBuilderTest {
             .where(ConditionBuilder.column("pk1").isGreaterThanInt(10))
             .projection("pk1")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Get expected =
         new Get(
@@ -674,6 +705,7 @@ public class GetBuilderTest {
             partitionKey2,
             clusteringKey2,
             Consistency.LINEARIZABLE,
+            ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
             Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -707,6 +739,10 @@ public class GetBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Get newGet2 =
         Get.newBuilder(get)
@@ -727,6 +763,10 @@ public class GetBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Get newGet3 =
         Get.newBuilder(get)
@@ -747,6 +787,10 @@ public class GetBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Get newGet4 =
         Get.newBuilder(get)
@@ -767,6 +811,10 @@ public class GetBuilderTest {
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Get newGet5 =
         Get.newBuilder(get)
@@ -787,6 +835,10 @@ public class GetBuilderTest {
                     .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
@@ -826,6 +878,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.SEQUENTIAL,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -867,6 +920,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.SEQUENTIAL,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -906,6 +960,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.SEQUENTIAL,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -952,6 +1007,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.SEQUENTIAL,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -994,6 +1050,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.SEQUENTIAL,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1036,6 +1093,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 Consistency.SEQUENTIAL,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1069,6 +1127,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
@@ -1097,6 +1156,7 @@ public class GetBuilderTest {
                 partitionKey1,
                 null,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)))));
@@ -1168,16 +1228,21 @@ public class GetBuilderTest {
             .projection("c2")
             .projections(Arrays.asList("c3", "c4"))
             .projections("c5", "c6")
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
     assertThat(get)
         .isEqualTo(
-            new GetWithIndex(indexKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withProjections(Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"))
-                .withConsistency(Consistency.EVENTUAL));
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1199,6 +1264,8 @@ public class GetBuilderTest {
             .projection("ck2")
             .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Get get2 =
         Get.newBuilder()
@@ -1216,6 +1283,8 @@ public class GetBuilderTest {
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Get get3 =
         Get.newBuilder()
@@ -1233,6 +1302,8 @@ public class GetBuilderTest {
                     .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
@@ -1242,6 +1313,7 @@ public class GetBuilderTest {
             TABLE_1,
             indexKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -1289,6 +1361,7 @@ public class GetBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1363,6 +1436,7 @@ public class GetBuilderTest {
             TABLE_1,
             indexKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -1406,6 +1480,7 @@ public class GetBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -1445,6 +1520,7 @@ public class GetBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1487,6 +1563,7 @@ public class GetBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1529,6 +1606,7 @@ public class GetBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1629,11 +1707,14 @@ public class GetBuilderTest {
       buildGetWithIndex_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
     // Arrange
     GetWithIndex existingGet =
-        new GetWithIndex(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withProjections(Arrays.asList("c1", "c2"))
-            .withConsistency(Consistency.LINEARIZABLE);
+        new GetWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+            Arrays.asList("c1", "c2"),
+            ImmutableSet.of());
 
     // Act
     Get newGet =
@@ -1646,16 +1727,23 @@ public class GetBuilderTest {
             .projections(Arrays.asList("c3", "c4"))
             .projection("c5")
             .projections("c6", "c7")
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new GetWithIndex(indexKey2)
-                .forNamespace(NAMESPACE_2)
-                .forTable(TABLE_2)
-                .withConsistency(Consistency.EVENTUAL)
-                .withProjections(Arrays.asList("c3", "c4", "c5", "c6", "c7")));
+            new GetWithIndex(
+                NAMESPACE_2,
+                TABLE_2,
+                indexKey2,
+                Consistency.EVENTUAL,
+                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                Arrays.asList("c3", "c4", "c5", "c6", "c7"),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1670,6 +1758,8 @@ public class GetBuilderTest {
             .where(ConditionBuilder.column("pk1").isGreaterThanInt(10))
             .projection("pk1")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Get expected =
         new GetWithIndex(
@@ -1677,6 +1767,7 @@ public class GetBuilderTest {
             TABLE_2,
             indexKey2,
             Consistency.LINEARIZABLE,
+            ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
             Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -1709,6 +1800,10 @@ public class GetBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Get newGet2 =
         Get.newBuilder(get)
@@ -1728,6 +1823,10 @@ public class GetBuilderTest {
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Get newGet3 =
         Get.newBuilder(get)
@@ -1747,6 +1846,10 @@ public class GetBuilderTest {
                     .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert

@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ScanBuilder.BuildableScanOrScanAllFromExisting;
 import com.scalar.db.api.ScanBuilder.Namespace;
@@ -30,11 +31,11 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class Scan extends Selection {
 
-  private final List<Ordering> orderings;
   @Nullable private Key startClusteringKey;
   private boolean startInclusive;
   @Nullable private Key endClusteringKey;
   private boolean endInclusive;
+  private final List<Ordering> orderings;
   private int limit;
 
   Scan(
@@ -42,6 +43,7 @@ public class Scan extends Selection {
       String tableName,
       Key partitionKey,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       List<String> projections,
       ImmutableSet<Conjunction> conjunctions,
       @Nullable Key startClusteringKey,
@@ -50,7 +52,15 @@ public class Scan extends Selection {
       boolean endInclusive,
       List<Ordering> orderings,
       int limit) {
-    super(namespace, tableName, partitionKey, null, consistency, projections, conjunctions);
+    super(
+        namespace,
+        tableName,
+        partitionKey,
+        null,
+        consistency,
+        attributes,
+        projections,
+        conjunctions);
     this.startClusteringKey = startClusteringKey;
     this.startInclusive = startInclusive;
     this.endClusteringKey = endClusteringKey;
@@ -366,9 +376,10 @@ public class Scan extends Selection {
         .add("namespace", forNamespace())
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
         .add("projections", getProjections())
         .add("conjunctions", getConjunctions())
-        .add("consistency", getConsistency())
         .add("startClusteringKey", startClusteringKey)
         .add("startInclusive", startInclusive)
         .add("endClusteringKey", endClusteringKey)

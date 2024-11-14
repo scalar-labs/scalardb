@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.Arrays;
@@ -266,5 +267,38 @@ public class GetTest {
 
     // Assert
     assertThat(ret).isFalse();
+  }
+
+  @Test
+  public void getAttribute_ShouldReturnProperValues() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "pv"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .indexKey(Key.ofText("pk", "pv"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
+
+    // Act Assert
+    assertThat(get.getAttribute("a1")).hasValue("v1");
+    assertThat(get.getAttribute("a2")).hasValue("v2");
+    assertThat(get.getAttribute("a3")).hasValue("v3");
+    assertThat(get.getAttributes()).isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
+
+    assertThat(getWithIndex.getAttribute("a1")).hasValue("v1");
+    assertThat(getWithIndex.getAttribute("a2")).hasValue("v2");
+    assertThat(getWithIndex.getAttribute("a3")).hasValue("v3");
+    assertThat(getWithIndex.getAttributes())
+        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
   }
 }

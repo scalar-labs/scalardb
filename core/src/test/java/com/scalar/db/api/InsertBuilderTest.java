@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
@@ -84,6 +85,8 @@ public class InsertBuilderTest {
             .intValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .textValue("text", "a_value")
             .value(TextColumn.of("text2", "another_value"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
@@ -113,6 +116,8 @@ public class InsertBuilderTest {
         .isEqualTo(Integer.valueOf(Integer.MAX_VALUE));
     assertThat(actual.getColumns().get("text").getTextValue()).isEqualTo("a_value");
     assertThat(actual.getColumns().get("text2").getTextValue()).isEqualTo("another_value");
+    assertThat(actual.getAttributes())
+        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
   }
 
   @Test
@@ -225,6 +230,8 @@ public class InsertBuilderTest {
             .intValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .textValue("text", "a_value")
             .value(TextColumn.of("text2", "another_value"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Act
@@ -249,6 +256,10 @@ public class InsertBuilderTest {
             .intValue("int2", Integer.valueOf(Integer.MIN_VALUE))
             .textValue("text", "another_value")
             .value(TextColumn.of("text2", "foo"))
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
@@ -278,6 +289,8 @@ public class InsertBuilderTest {
         .isEqualTo(Integer.valueOf(Integer.MIN_VALUE));
     assertThat(newInsert.getColumns().get("text").getTextValue()).isEqualTo("another_value");
     assertThat(newInsert.getColumns().get("text2").getTextValue()).isEqualTo("foo");
+    assertThat(newInsert.getAttributes())
+        .isEqualTo(ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"));
   }
 
   @Test

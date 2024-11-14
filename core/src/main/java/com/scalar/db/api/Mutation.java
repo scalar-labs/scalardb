@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,8 +27,9 @@ public abstract class Mutation extends Operation {
       Key partitionKey,
       @Nullable Key clusteringKey,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       @Nullable MutationCondition condition) {
-    super(namespace, tableName, partitionKey, clusteringKey, consistency);
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, attributes);
     this.condition = condition;
   }
 

@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,16 +64,21 @@ public class DeleteBuilderTest {
             .clusteringKey(clusteringKey1)
             .consistency(Consistency.EVENTUAL)
             .condition(condition1)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
     assertThat(delete)
         .isEqualTo(
-            new Delete(partitionKey1, clusteringKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withCondition(condition1)
-                .withConsistency(Consistency.EVENTUAL));
+            new Delete(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                condition1));
   }
 
   @Test
@@ -96,11 +102,14 @@ public class DeleteBuilderTest {
   public void build_FromExistingAndUpdateAllParameters_ShouldBuildDeleteWithUpdatedParameters() {
     // Arrange
     Delete existingDelete =
-        new Delete(partitionKey1, clusteringKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withCondition(condition1)
-            .withConsistency(Consistency.LINEARIZABLE);
+        new Delete(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+            condition1);
 
     // Act
     Delete newDelete =
@@ -111,16 +120,23 @@ public class DeleteBuilderTest {
             .table(TABLE_2)
             .consistency(Consistency.EVENTUAL)
             .condition(condition2)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
     assertThat(newDelete)
         .isEqualTo(
-            new Delete(partitionKey2, clusteringKey2)
-                .forNamespace(NAMESPACE_2)
-                .forTable(TABLE_2)
-                .withConsistency(Consistency.EVENTUAL)
-                .withCondition(condition2));
+            new Delete(
+                NAMESPACE_2,
+                TABLE_2,
+                partitionKey2,
+                clusteringKey2,
+                Consistency.EVENTUAL,
+                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                condition2));
   }
 
   @Test
