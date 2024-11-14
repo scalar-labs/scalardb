@@ -1,8 +1,8 @@
 package com.scalar.db.api;
 
-import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
-import java.util.Comparator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -25,18 +25,21 @@ public abstract class Operation {
   @Nullable private String namespace;
   private String tableName;
   private Consistency consistency;
+  private final ImmutableMap<String, String> attributes;
 
   Operation(
       @Nullable String namespace,
       String tableName,
       Key partitionKey,
       @Nullable Key clusteringKey,
-      @Nullable Consistency consistency) {
+      @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes) {
     this.partitionKey = Objects.requireNonNull(partitionKey);
     this.clusteringKey = clusteringKey;
     this.namespace = namespace;
     this.tableName = Objects.requireNonNull(tableName);
     this.consistency = consistency != null ? consistency : Consistency.SEQUENTIAL;
+    this.attributes = attributes;
   }
 
   /**
@@ -53,6 +56,7 @@ public abstract class Operation {
     namespace = null;
     tableName = null;
     consistency = Consistency.SEQUENTIAL;
+    attributes = ImmutableMap.of();
   }
 
   /**
@@ -72,6 +76,7 @@ public abstract class Operation {
     this.namespace = namespace;
     this.tableName = tableName;
     consistency = Consistency.SEQUENTIAL;
+    attributes = ImmutableMap.of();
   }
 
   /**
@@ -87,6 +92,7 @@ public abstract class Operation {
     namespace = operation.namespace;
     tableName = operation.tableName;
     consistency = operation.consistency;
+    attributes = operation.attributes;
   }
 
   /**
@@ -192,6 +198,25 @@ public abstract class Operation {
   }
 
   /**
+   * Returns the attributes for this operation.
+   *
+   * @return the attributes
+   */
+  public Map<String, String> getAttributes() {
+    return attributes;
+  }
+
+  /**
+   * Returns the value of the specified attribute.
+   *
+   * @param name the name of the attribute
+   * @return the value of the specified attribute
+   */
+  public Optional<String> getAttribute(String name) {
+    return Optional.ofNullable(attributes.get(name));
+  }
+
+  /**
    * Indicates whether some other object is "equal to" this object. The other object is considered
    * equal if:
    *
@@ -213,22 +238,17 @@ public abstract class Operation {
       return false;
     }
     Operation other = (Operation) o;
-    return ComparisonChain.start()
-            .compare(partitionKey, other.partitionKey)
-            .compare(
-                clusteringKey,
-                other.clusteringKey,
-                Comparator.nullsFirst(Comparator.naturalOrder()))
-            .compare(namespace, other.namespace, Comparator.nullsFirst(Comparator.naturalOrder()))
-            .compare(tableName, other.tableName, Comparator.nullsFirst(Comparator.naturalOrder()))
-            .compare(consistency, other.consistency)
-            .result()
-        == 0;
+    return Objects.equals(partitionKey, other.partitionKey)
+        && Objects.equals(clusteringKey, other.clusteringKey)
+        && Objects.equals(namespace, other.namespace)
+        && Objects.equals(tableName, other.tableName)
+        && Objects.equals(consistency, other.consistency)
+        && Objects.equals(attributes, other.attributes);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(partitionKey, clusteringKey, namespace, tableName, consistency);
+    return Objects.hash(partitionKey, clusteringKey, namespace, tableName, consistency, attributes);
   }
 
   /**

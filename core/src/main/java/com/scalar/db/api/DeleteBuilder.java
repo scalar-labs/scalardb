@@ -2,6 +2,9 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.OperationBuilder.Attribute;
+import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -11,6 +14,8 @@ import com.scalar.db.api.OperationBuilder.Consistency;
 import com.scalar.db.api.OperationBuilder.PartitionKeyBuilder;
 import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.io.Key;
+import java.util.HashMap;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 public class DeleteBuilder {
@@ -60,10 +65,14 @@ public class DeleteBuilder {
   }
 
   public static class Buildable extends OperationBuilder.Buildable<Delete>
-      implements ClusteringKey<Buildable>, Consistency<Buildable>, Condition<Buildable> {
+      implements ClusteringKey<Buildable>,
+          Consistency<Buildable>,
+          Condition<Buildable>,
+          Attribute<Buildable> {
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
+    final Map<String, String> attributes = new HashMap<>();
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -91,9 +100,30 @@ public class DeleteBuilder {
     }
 
     @Override
+    public Buildable attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public Buildable attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
     public Delete build() {
       return new Delete(
-          namespaceName, tableName, partitionKey, clusteringKey, consistency, condition);
+          namespaceName,
+          tableName,
+          partitionKey,
+          clusteringKey,
+          consistency,
+          ImmutableMap.copyOf(attributes),
+          condition);
     }
   }
 
@@ -103,17 +133,18 @@ public class DeleteBuilder {
           OperationBuilder.PartitionKey<BuildableFromExisting>,
           ClearCondition<BuildableFromExisting>,
           ClearClusteringKey<BuildableFromExisting>,
-          ClearNamespace<BuildableFromExisting> {
+          ClearNamespace<BuildableFromExisting>,
+          ClearAttribute<BuildableFromExisting> {
 
     BuildableFromExisting(Delete delete) {
       super(
           delete.forNamespace().orElse(null),
           delete.forTable().orElse(null),
           delete.getPartitionKey());
-
       this.clusteringKey = delete.getClusteringKey().orElse(null);
       this.consistency = delete.getConsistency();
       this.condition = delete.getCondition().orElse(null);
+      this.attributes.putAll(delete.getAttributes());
     }
 
     @Override
@@ -150,6 +181,18 @@ public class DeleteBuilder {
     }
 
     @Override
+    public BuildableFromExisting attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
+      return this;
+    }
+
+    @Override
     public BuildableFromExisting condition(MutationCondition condition) {
       super.condition(condition);
       return this;
@@ -170,6 +213,18 @@ public class DeleteBuilder {
     @Override
     public BuildableFromExisting clearNamespace() {
       this.namespaceName = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttributes() {
+      this.attributes.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttribute(String name) {
+      this.attributes.remove(name);
       return this;
     }
   }

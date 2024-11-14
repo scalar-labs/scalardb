@@ -24,9 +24,10 @@ public class Update extends Mutation {
       String tableName,
       Key partitionKey,
       @Nullable Key clusteringKey,
-      ImmutableMap<String, Column<?>> columns,
-      @Nullable MutationCondition condition) {
-    super(namespace, tableName, partitionKey, clusteringKey, null, condition);
+      ImmutableMap<String, String> attributes,
+      @Nullable MutationCondition condition,
+      ImmutableMap<String, Column<?>> columns) {
+    super(namespace, tableName, partitionKey, clusteringKey, null, attributes, condition);
     this.columns = columns;
   }
 
@@ -97,8 +98,9 @@ public class Update extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("columns", getColumns())
+        .add("attributes", getAttributes())
         .add("condition", getCondition())
+        .add("columns", getColumns())
         .toString();
   }
 

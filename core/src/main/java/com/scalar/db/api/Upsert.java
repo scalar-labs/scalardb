@@ -24,8 +24,9 @@ public class Upsert extends Mutation {
       String tableName,
       Key partitionKey,
       @Nullable Key clusteringKey,
+      ImmutableMap<String, String> attributes,
       ImmutableMap<String, Column<?>> columns) {
-    super(namespace, tableName, partitionKey, clusteringKey, null, null);
+    super(namespace, tableName, partitionKey, clusteringKey, null, attributes, null);
     this.columns = columns;
   }
 
@@ -105,6 +106,7 @@ public class Upsert extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
+        .add("attributes", getAttributes())
         .add("columns", getColumns())
         .toString();
   }

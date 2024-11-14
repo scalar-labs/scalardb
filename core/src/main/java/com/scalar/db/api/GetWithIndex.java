@@ -1,5 +1,7 @@
 package com.scalar.db.api;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.Collection;
@@ -17,9 +19,10 @@ public class GetWithIndex extends Get {
       String tableName,
       Key indexKey,
       @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
       List<String> projections,
       ImmutableSet<Conjunction> conjunctions) {
-    super(namespace, tableName, indexKey, null, consistency, projections, conjunctions);
+    super(namespace, tableName, indexKey, null, consistency, attributes, projections, conjunctions);
   }
 
   /**
@@ -111,5 +114,18 @@ public class GetWithIndex extends Get {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode());
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", forNamespace())
+        .add("table", forTable())
+        .add("indexKey", getPartitionKey())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
+        .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
+        .toString();
   }
 }

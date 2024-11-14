@@ -2,6 +2,9 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.OperationBuilder.Attribute;
+import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -24,6 +27,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -77,6 +81,7 @@ public class PutBuilder {
   public static class Buildable extends OperationBuilder.Buildable<Put>
       implements ClusteringKey<Buildable>,
           Consistency<Buildable>,
+          Attribute<Buildable>,
           Condition<Buildable>,
           Values<Buildable>,
           ImplicitPreReadEnabled<Buildable>,
@@ -84,6 +89,7 @@ public class PutBuilder {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
+    final Map<String, String> attributes = new HashMap<>();
     @Nullable MutationCondition condition;
     boolean implicitPreReadEnabled;
     boolean insertModeEnabled;
@@ -96,6 +102,28 @@ public class PutBuilder {
     public Buildable clusteringKey(Key clusteringKey) {
       checkNotNull(clusteringKey);
       this.clusteringKey = clusteringKey;
+      return this;
+    }
+
+    @Override
+    public Buildable consistency(com.scalar.db.api.Consistency consistency) {
+      checkNotNull(consistency);
+      this.consistency = consistency;
+      return this;
+    }
+
+    @Override
+    public Buildable attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public Buildable attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
       return this;
     }
 
@@ -249,17 +277,11 @@ public class PutBuilder {
           partitionKey,
           clusteringKey,
           consistency,
-          columns,
+          ImmutableMap.copyOf(attributes),
           condition,
+          columns,
           implicitPreReadEnabled,
           insertModeEnabled);
-    }
-
-    @Override
-    public Buildable consistency(com.scalar.db.api.Consistency consistency) {
-      checkNotNull(consistency);
-      this.consistency = consistency;
-      return this;
     }
   }
 
@@ -270,7 +292,8 @@ public class PutBuilder {
           ClearClusteringKey<BuildableFromExisting>,
           ClearValues<BuildableFromExisting>,
           ClearCondition<BuildableFromExisting>,
-          ClearNamespace<BuildableFromExisting> {
+          ClearNamespace<BuildableFromExisting>,
+          ClearAttribute<BuildableFromExisting> {
 
     BuildableFromExisting(Put put) {
       super(put.forNamespace().orElse(null), put.forTable().orElse(null), put.getPartitionKey());
@@ -278,6 +301,7 @@ public class PutBuilder {
       this.columns.putAll(put.getColumns());
       this.consistency = put.getConsistency();
       this.condition = put.getCondition().orElse(null);
+      this.attributes.putAll(put.getAttributes());
       this.implicitPreReadEnabled = put.isImplicitPreReadEnabled();
       this.insertModeEnabled = put.isInsertModeEnabled();
     }
@@ -312,6 +336,18 @@ public class PutBuilder {
     @Override
     public BuildableFromExisting consistency(com.scalar.db.api.Consistency consistency) {
       super.consistency(consistency);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
       return this;
     }
 
@@ -432,6 +468,18 @@ public class PutBuilder {
     @Override
     public BuildableFromExisting clearNamespace() {
       this.namespaceName = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttributes() {
+      attributes.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttribute(String name) {
+      attributes.remove(name);
       return this;
     }
 
