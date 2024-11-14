@@ -90,9 +90,10 @@ public class Coordinator {
     String childId = idForGroupCommit.childKey;
     Get get = createGetWith(parentId);
     Optional<State> state = get(get);
-    // The current implementation is optimized for cases where the target transaction is properly
-    // group-committed, by first checking with the parent ID. However, if the target transaction was
-    // delayed and committed individually, two read operations are required.
+    // The current implementation is optimized for cases where most transactions are
+    // group-committed. It first looks up a transaction state by the parent ID with a single read
+    // operation. If no matching transaction state is found (i.e., the transaction was delayed and
+    // committed individually), it issues an additional read operation using the full ID.
     Optional<State> stateContainingTargetTxId =
         state.flatMap(
             s -> {
