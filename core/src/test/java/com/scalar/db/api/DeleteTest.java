@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.Optional;
@@ -136,5 +137,25 @@ public class DeleteTest {
     // Assert
     assertThat(ret).isTrue();
     assertThat(delete.hashCode()).isEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void getAttribute_ShouldReturnProperValues() {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "pv"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
+
+    // Act Assert
+    assertThat(delete.getAttribute("a1")).hasValue("v1");
+    assertThat(delete.getAttribute("a2")).hasValue("v2");
+    assertThat(delete.getAttribute("a3")).hasValue("v3");
+    assertThat(delete.getAttributes())
+        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
   }
 }

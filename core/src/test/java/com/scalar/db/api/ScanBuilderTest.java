@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
@@ -99,24 +100,27 @@ public class ScanBuilderTest {
             .projection("ck2")
             .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
     assertThat(scan)
         .isEqualTo(
-            new Scan(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConsistency(Consistency.EVENTUAL)
-                .withStart(startClusteringKey1)
-                .withEnd(endClusteringKey1)
-                .withOrdering(ordering1)
-                .withOrdering(ordering2)
-                .withOrdering(ordering3)
-                .withOrdering(ordering4)
-                .withOrdering(ordering5)
-                .withLimit(10)
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4")));
+            new Scan(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(),
+                startClusteringKey1,
+                true,
+                endClusteringKey1,
+                true,
+                Arrays.asList(ordering1, ordering2, ordering3, ordering4, ordering5),
+                10));
   }
 
   @Test
@@ -198,16 +202,20 @@ public class ScanBuilderTest {
   public void buildScan_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
     Scan existingScan =
-        new Scan(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConsistency(Consistency.EVENTUAL)
-            .withStart(startClusteringKey1)
-            .withEnd(endClusteringKey1)
-            .withOrdering(ordering1)
-            .withOrdering(ordering2)
-            .withLimit(10)
-            .withProjections(Arrays.asList("pk1", "ck1", "ck2"));
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+            Arrays.asList("pk1", "ck1", "ck2"),
+            ImmutableSet.of(),
+            startClusteringKey1,
+            true,
+            endClusteringKey1,
+            true,
+            Arrays.asList(ordering1, ordering2),
+            10);
 
     // Act
     Scan newScan =
@@ -227,24 +235,29 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
     assertThat(newScan)
         .isEqualTo(
-            new Scan(partitionKey2)
-                .forNamespace(NAMESPACE_2)
-                .forTable(TABLE_2)
-                .withStart(startClusteringKey2, false)
-                .withEnd(endClusteringKey2, false)
-                .withOrdering(ordering3)
-                .withOrdering(ordering4)
-                .withOrdering(ordering5)
-                .withOrdering(ordering1)
-                .withOrdering(ordering2)
-                .withLimit(5)
-                .withProjections(Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"))
-                .withConsistency(Consistency.LINEARIZABLE));
+            new Scan(
+                NAMESPACE_2,
+                TABLE_2,
+                partitionKey2,
+                Consistency.LINEARIZABLE,
+                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"),
+                ImmutableSet.of(),
+                startClusteringKey2,
+                false,
+                endClusteringKey2,
+                false,
+                Arrays.asList(ordering3, ordering4, ordering5, ordering1, ordering2),
+                5));
   }
 
   @Test
@@ -314,6 +327,8 @@ public class ScanBuilderTest {
             .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
             .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
@@ -323,6 +338,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10))),
@@ -353,12 +369,15 @@ public class ScanBuilderTest {
       buildScanAll_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
     Scan existingScan =
-        new ScanAll()
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConsistency(Consistency.EVENTUAL)
-            .withLimit(10)
-            .withProjections(Arrays.asList("pk1", "ck1"));
+        new ScanAll(
+            NAMESPACE_1,
+            TABLE_1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+            Arrays.asList("pk1", "ck1"),
+            ImmutableSet.of(),
+            ImmutableList.of(ordering1, ordering2),
+            10);
 
     // Act
     Scan newScan =
@@ -370,18 +389,29 @@ public class ScanBuilderTest {
             .projections(Arrays.asList("pk2", "ck2"))
             .projection("ck3")
             .projections("ck4", "ck5")
+            .clearOrderings()
+            .ordering(ordering3)
+            .orderings(Arrays.asList(ordering4, ordering5))
+            .orderings(ordering1, ordering2)
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
     assertThat(newScan)
         .isEqualTo(
-            new ScanAll()
-                .forNamespace(NAMESPACE_2)
-                .forTable(TABLE_2)
-                .withLimit(5)
-                .withProjections(Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"))
-                .withConsistency(Consistency.LINEARIZABLE));
+            new ScanAll(
+                NAMESPACE_2,
+                TABLE_2,
+                Consistency.LINEARIZABLE,
+                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"),
+                ImmutableSet.of(),
+                ImmutableList.of(ordering3, ordering4, ordering5, ordering1, ordering2),
+                5));
   }
 
   @Test
@@ -443,17 +473,22 @@ public class ScanBuilderTest {
             .projection("ck2")
             .projections("ck3", "ck4")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Assert
     assertThat(scan)
         .isEqualTo(
-            new ScanWithIndex(indexKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withConsistency(Consistency.EVENTUAL)
-                .withLimit(10)
-                .withProjections(Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4")));
+            new ScanWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
+                ImmutableSet.of(),
+                10));
   }
 
   @Test
@@ -479,12 +514,15 @@ public class ScanBuilderTest {
       buildScanWithIndex_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
     Scan existingScan =
-        new ScanWithIndex(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConsistency(Consistency.EVENTUAL)
-            .withLimit(10)
-            .withProjections(Arrays.asList("pk1", "ck1"));
+        new ScanWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+            Arrays.asList("pk1", "ck1"),
+            ImmutableSet.of(),
+            10);
 
     // Act
     Scan newScan =
@@ -498,17 +536,24 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
     assertThat(newScan)
         .isEqualTo(
-            new ScanWithIndex(indexKey2)
-                .forNamespace(NAMESPACE_2)
-                .forTable(TABLE_2)
-                .withLimit(5)
-                .withProjections(Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"))
-                .withConsistency(Consistency.LINEARIZABLE));
+            new ScanWithIndex(
+                NAMESPACE_2,
+                TABLE_2,
+                indexKey2,
+                Consistency.LINEARIZABLE,
+                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"),
+                ImmutableSet.of(),
+                5));
   }
 
   @Test
@@ -668,6 +713,7 @@ public class ScanBuilderTest {
             TABLE_1,
             partitionKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -724,6 +770,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 partitionKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -859,6 +906,7 @@ public class ScanBuilderTest {
             TABLE_1,
             partitionKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -911,6 +959,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 partitionKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -958,6 +1007,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 partitionKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1008,6 +1058,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 partitionKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1058,6 +1109,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 partitionKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1222,6 +1274,7 @@ public class ScanBuilderTest {
             TABLE_1,
             indexKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -1272,6 +1325,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1369,6 +1423,7 @@ public class ScanBuilderTest {
             TABLE_1,
             indexKey1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -1415,6 +1470,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -1456,6 +1512,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1500,6 +1557,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1544,6 +1602,7 @@ public class ScanBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -1640,6 +1699,8 @@ public class ScanBuilderTest {
             .limit(10)
             .projection("pk1")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Scan expected =
         new Scan(
@@ -1647,6 +1708,7 @@ public class ScanBuilderTest {
             TABLE_2,
             partitionKey2,
             Consistency.LINEARIZABLE,
+            ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
             Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -1692,6 +1754,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan2 =
         Scan.newBuilder(scan)
@@ -1718,6 +1784,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan3 =
         Scan.newBuilder(scan)
@@ -1744,6 +1814,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan4 =
         Scan.newBuilder(scan)
@@ -1770,6 +1844,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan5 =
         Scan.newBuilder(scan)
@@ -1796,6 +1874,10 @@ public class ScanBuilderTest {
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan6 =
         Scan.newBuilder(scan)
@@ -1822,6 +1904,10 @@ public class ScanBuilderTest {
                     .or(ConditionBuilder.column("ck4").isGreaterThanInt(10))
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
@@ -1857,6 +1943,7 @@ public class ScanBuilderTest {
             TABLE_2,
             partitionKey2,
             Consistency.LINEARIZABLE,
+            ImmutableMap.of(),
             Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -1948,6 +2035,8 @@ public class ScanBuilderTest {
             .limit(10)
             .projection("pk1")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
     Scan expected =
         new ScanWithIndex(
@@ -1955,6 +2044,7 @@ public class ScanBuilderTest {
             TABLE_2,
             indexKey2,
             Consistency.LINEARIZABLE,
+            ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
             Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -1989,6 +2079,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan2 =
         Scan.newBuilder(scan)
@@ -2009,6 +2103,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan3 =
         Scan.newBuilder(scan)
@@ -2029,6 +2127,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan4 =
         Scan.newBuilder(scan)
@@ -2049,6 +2151,10 @@ public class ScanBuilderTest {
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
     Scan newScan5 =
         Scan.newBuilder(scan)
@@ -2069,6 +2175,10 @@ public class ScanBuilderTest {
                     .build())
             .and(ConditionBuilder.column("col1").isGreaterThanInt(10))
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
@@ -2194,6 +2304,7 @@ public class ScanBuilderTest {
             NAMESPACE_1,
             TABLE_1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(
@@ -2245,6 +2356,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2289,6 +2401,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2422,6 +2535,7 @@ public class ScanBuilderTest {
             NAMESPACE_1,
             TABLE_1,
             Consistency.EVENTUAL,
+            ImmutableMap.of(),
             Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
             ImmutableSet.of(
                 Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -2469,6 +2583,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -2510,6 +2625,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2554,6 +2670,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2598,6 +2715,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
+                ImmutableMap.of(),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2689,6 +2807,8 @@ public class ScanBuilderTest {
             .limit(10)
             .projection("pk1")
             .consistency(Consistency.EVENTUAL)
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
 
     // Act
@@ -2714,6 +2834,10 @@ public class ScanBuilderTest {
             .projection("ck3")
             .projections("ck4", "ck5")
             .consistency(Consistency.LINEARIZABLE)
+            .clearAttributes()
+            .attribute("a4", "v4")
+            .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
+            .clearAttribute("a7")
             .build();
 
     // Assert
@@ -2723,6 +2847,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.LINEARIZABLE,
+                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
                 Arrays.asList("ck1", "ck2", "ck3", "ck4", "ck5"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2765,6 +2890,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2807,6 +2933,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2847,6 +2974,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -2881,6 +3009,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10)),
@@ -2920,6 +3049,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -2962,6 +3092,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10))),
@@ -2998,6 +3129,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -3039,6 +3171,7 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -3088,6 +3221,7 @@ public class ScanBuilderTest {
                 NAMESPACE_2,
                 TABLE_2,
                 null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10))),
@@ -3115,7 +3249,8 @@ public class ScanBuilderTest {
             new ScanAll(
                 null,
                 TABLE_1,
-                Consistency.SEQUENTIAL,
+                null,
+                ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10))),
