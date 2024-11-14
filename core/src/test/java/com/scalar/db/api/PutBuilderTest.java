@@ -104,6 +104,7 @@ public class PutBuilderTest {
                 clusteringKey1,
                 Consistency.EVENTUAL,
                 ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                condition1,
                 ImmutableMap.<String, Column<?>>builder()
                     .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
                     .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
@@ -120,7 +121,6 @@ public class PutBuilderTest {
                     .put("text1", TextColumn.of("text1", "a_value"))
                     .put("text2", TextColumn.of("text2", "another_value"))
                     .build(),
-                condition1,
                 false,
                 false));
   }
@@ -223,6 +223,7 @@ public class PutBuilderTest {
             clusteringKey1,
             Consistency.EVENTUAL,
             ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+            condition1,
             ImmutableMap.<String, Column<?>>builder()
                 .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
                 .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
@@ -239,7 +240,6 @@ public class PutBuilderTest {
                 .put("text1", TextColumn.of("text1", "a_value"))
                 .put("text2", TextColumn.of("text2", "another_value"))
                 .build(),
-            condition1,
             false,
             false);
 
@@ -285,6 +285,7 @@ public class PutBuilderTest {
                 clusteringKey2,
                 Consistency.LINEARIZABLE,
                 ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                condition2,
                 ImmutableMap.<String, Column<?>>builder()
                     .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MIN_VALUE))
                     .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MIN_VALUE))
@@ -301,7 +302,6 @@ public class PutBuilderTest {
                     .put("text1", TextColumn.of("text1", "another_value"))
                     .put("text2", TextColumn.of("text2", "foo"))
                     .build(),
-                condition2,
                 true,
                 true));
   }

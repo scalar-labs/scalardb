@@ -225,8 +225,8 @@ public class UpdateBuilder {
           partitionKey,
           clusteringKey,
           ImmutableMap.copyOf(attributes),
-          ImmutableMap.copyOf(columns),
-          condition);
+          condition,
+          ImmutableMap.copyOf(columns));
     }
   }
 

@@ -106,8 +106,8 @@ public class Insert extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("columns", getColumns())
         .add("attributes", getAttributes())
+        .add("columns", getColumns())
         .toString();
   }
 

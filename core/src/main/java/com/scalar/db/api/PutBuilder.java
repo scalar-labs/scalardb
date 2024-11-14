@@ -278,8 +278,8 @@ public class PutBuilder {
           clusteringKey,
           consistency,
           ImmutableMap.copyOf(attributes),
-          columns,
           condition,
+          columns,
           implicitPreReadEnabled,
           insertModeEnabled);
     }

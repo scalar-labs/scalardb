@@ -209,11 +209,11 @@ public class ScanWithIndex extends Scan {
         .add("namespace", forNamespace())
         .add("table", forTable())
         .add("indexKey", getPartitionKey())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
         .add("projections", getProjections())
         .add("conjunctions", getConjunctions())
         .add("limit", getLimit())
-        .add("consistency", getConsistency())
-        .add("attributes", getAttributes())
         .toString();
   }
 }

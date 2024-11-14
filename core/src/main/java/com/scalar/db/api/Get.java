@@ -187,10 +187,10 @@ public class Get extends Selection {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("projections", getProjections())
-        .add("conjunctions", getConjunctions())
         .add("consistency", getConsistency())
         .add("attributes", getAttributes())
+        .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
         .toString();
   }
 }

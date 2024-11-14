@@ -212,12 +212,12 @@ public class ScanAll extends Scan {
     return MoreObjects.toStringHelper(this)
         .add("namespace", forNamespace())
         .add("table", forTable())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
         .add("projections", getProjections())
         .add("conjunctions", getConjunctions())
         .add("orderings", getOrderings())
         .add("limit", getLimit())
-        .add("consistency", getConsistency())
-        .add("attributes", getAttributes())
         .toString();
   }
 }

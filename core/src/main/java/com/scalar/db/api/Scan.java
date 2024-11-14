@@ -31,11 +31,11 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class Scan extends Selection {
 
-  private final List<Ordering> orderings;
   @Nullable private Key startClusteringKey;
   private boolean startInclusive;
   @Nullable private Key endClusteringKey;
   private boolean endInclusive;
+  private final List<Ordering> orderings;
   private int limit;
 
   Scan(
@@ -376,6 +376,8 @@ public class Scan extends Selection {
         .add("namespace", forNamespace())
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
         .add("projections", getProjections())
         .add("conjunctions", getConjunctions())
         .add("startClusteringKey", startClusteringKey)
@@ -384,8 +386,6 @@ public class Scan extends Selection {
         .add("endInclusive", endInclusive)
         .add("orderings", orderings)
         .add("limit", limit)
-        .add("consistency", getConsistency())
-        .add("attributes", getAttributes())
         .toString();
   }
 

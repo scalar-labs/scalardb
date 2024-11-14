@@ -122,10 +122,10 @@ public class GetWithIndex extends Get {
         .add("namespace", forNamespace())
         .add("table", forTable())
         .add("indexKey", getPartitionKey())
-        .add("projections", getProjections())
-        .add("conjunctions", getConjunctions())
         .add("consistency", getConsistency())
         .add("attributes", getAttributes())
+        .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
         .toString();
   }
 }

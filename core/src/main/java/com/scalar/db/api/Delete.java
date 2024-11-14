@@ -173,9 +173,9 @@ public class Delete extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("condition", getCondition())
         .add("consistency", getConsistency())
         .add("attributes", getAttributes())
+        .add("condition", getCondition())
         .toString();
   }
 }
