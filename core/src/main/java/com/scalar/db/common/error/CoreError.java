@@ -115,10 +115,10 @@ public enum CoreError implements ScalarDbError {
       "The clustering key is not properly specified. Operation: %s",
       "",
       ""),
-  NOT_SUPPORTED_IN_COMMUNITY_EDITION(
+  AUTH_NOT_ENABLED(
       Category.USER_ERROR,
       "0022",
-      "This feature is not supported in the ScalarDB Community edition",
+      "The authentication and authorization feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF(
