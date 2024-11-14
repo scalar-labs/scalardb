@@ -72,7 +72,7 @@ public class DeleteBuilder {
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
-    Map<String, String> attributes = new HashMap<>();
+    final Map<String, String> attributes = new HashMap<>();
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);

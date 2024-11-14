@@ -83,7 +83,7 @@ public class UpdateBuilder {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     @Nullable MutationCondition condition;
-    Map<String, String> attributes = new HashMap<>();
+    final Map<String, String> attributes = new HashMap<>();
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
