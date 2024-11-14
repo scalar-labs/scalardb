@@ -25,8 +25,7 @@ public interface AuthAdmin {
    */
   default void createUser(String username, @Nullable String password, UserOption... userOptions)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -42,8 +41,7 @@ public interface AuthAdmin {
    */
   default void alterUser(String username, @Nullable String password, UserOption... userOptions)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -54,8 +52,7 @@ public interface AuthAdmin {
    * @throws ExecutionException if the operation fails
    */
   default void dropUser(String username) throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -71,8 +68,7 @@ public interface AuthAdmin {
   default void grant(
       String username, String namespaceName, String tableName, Privilege... privileges)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -86,8 +82,7 @@ public interface AuthAdmin {
    */
   default void grant(String username, String namespaceName, Privilege... privileges)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -103,8 +98,7 @@ public interface AuthAdmin {
   default void revoke(
       String username, String namespaceName, String tableName, Privilege... privileges)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -118,8 +112,7 @@ public interface AuthAdmin {
    */
   default void revoke(String username, String namespaceName, Privilege... privileges)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -130,8 +123,7 @@ public interface AuthAdmin {
    * @throws ExecutionException if the operation fails
    */
   default Optional<User> getUser(String username) throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -141,8 +133,7 @@ public interface AuthAdmin {
    * @throws ExecutionException if the operation fails
    */
   default List<User> getUsers() throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -157,8 +148,7 @@ public interface AuthAdmin {
    */
   default Set<Privilege> getPrivileges(String username, String namespaceName, String tableName)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -172,8 +162,7 @@ public interface AuthAdmin {
    */
   default Set<Privilege> getPrivileges(String username, String namespaceName)
       throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.NOT_SUPPORTED_IN_COMMUNITY_EDITION.buildMessage());
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   interface User {
