@@ -21,8 +21,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ReplicationBulkTransactionRepository {
+  private static final Logger logger =
+      LoggerFactory.getLogger(ReplicationBulkTransactionRepository.class);
 
   private final TypeReference<List<Transaction>> typeReferenceForTransactions =
       new TypeReference<List<Transaction>>() {};
@@ -140,16 +144,25 @@ public class ReplicationBulkTransactionRepository {
   }
 
   public void delete(BulkTransaction bulkTransaction) throws ExecutionException {
-    replicationDbStorage.delete(
-        Delete.newBuilder()
-            .namespace(replicationDbNamespace)
-            .table(replicationDbBulkTransactionTable)
-            .partitionKey(Key.ofInt("partition_id", bulkTransaction.partitionId))
-            .clusteringKey(
-                Key.newBuilder()
-                    .addBigInt("created_at", bulkTransaction.createdAt.toEpochMilli())
-                    .addText("unique_id", bulkTransaction.uniqueId)
-                    .build())
-            .build());
+    try {
+      replicationDbStorage.delete(
+          Delete.newBuilder()
+              .namespace(replicationDbNamespace)
+              .table(replicationDbBulkTransactionTable)
+              .partitionKey(Key.ofInt("partition_id", bulkTransaction.partitionId))
+              .clusteringKey(
+                  Key.newBuilder()
+                      .addBigInt("created_at", bulkTransaction.createdAt.toEpochMilli())
+                      .addText("unique_id", bulkTransaction.uniqueId)
+                      .build())
+              .build());
+    } catch (ExecutionException e) {
+      // WORKAROUND: https://scalar-labs.atlassian.net/browse/DLT-16038
+      if (e.getMessage().contains("Resource Not Found")) {
+        logger.info("Skipping a known issue");
+      } else {
+        throw e;
+      }
+    }
   }
 }
