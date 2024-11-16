@@ -586,6 +586,66 @@ public class OperationBuilder {
     T clearAttribute(String name);
   }
 
+  public interface AbacReadTagAttribute<T> {
+    /**
+     * Adds a read tag attribute for the specified policy. This is a utility method for
+     * Attribute-Based Access Control.
+     *
+     * @param policyName the policy name
+     * @param readTag the read tag
+     * @return the operation builder
+     */
+    T readTag(String policyName, String readTag);
+  }
+
+  public interface AbacWriteTagAttribute<T> {
+    /**
+     * Adds a write tag attribute for the specified policy. This is a utility method for
+     * Attribute-Based Access Control.
+     *
+     * @param policyName the policy name
+     * @param writeTag the write tag
+     * @return the operation builder
+     */
+    T writeTag(String policyName, String writeTag);
+  }
+
+  public interface ClearAbacReadTagAttribute<T> {
+    /**
+     * Clear the read tag attribute for the specified policy. This is a utility method for
+     * Attribute-Based Access Control.
+     *
+     * @param policyName the policy name
+     * @return the operation builder
+     */
+    T clearReadTag(String policyName);
+
+    /**
+     * Clear all read tags. This is a utility method for Attribute-Based Access Control.
+     *
+     * @return the operation builder
+     */
+    T clearReadTags();
+  }
+
+  public interface ClearAbacWriteTagAttribute<T> {
+    /**
+     * Clear the write tag attribute for the specified policy. This is a utility method for
+     * Attribute-Based Access Control.
+     *
+     * @param policyName the policy name
+     * @return the operation builder
+     */
+    T clearWriteTag(String policyName);
+
+    /**
+     * Clear all write tags. This is a utility method for Attribute-Based Access Control.
+     *
+     * @return the operation builder
+     */
+    T clearWriteTags();
+  }
+
   public abstract static class TableBuilder<T> implements Table<T> {
     final String namespace;
 
