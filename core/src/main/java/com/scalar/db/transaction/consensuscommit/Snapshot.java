@@ -160,7 +160,16 @@ public class Snapshot {
   }
 
   public void putIntoDeleteSet(Key key, Delete delete) {
-    writeSet.remove(key);
+    Put put = writeSet.get(key);
+    if (put != null) {
+      if (put.isInsertModeEnabled()) {
+        throw new IllegalArgumentException(
+            CoreError.CONSENSUS_COMMIT_DELETING_ALREADY_INSERTED_DATA_NOT_ALLOWED.buildMessage());
+      }
+
+      writeSet.remove(key);
+    }
+
     deleteSet.put(key, delete);
   }
 

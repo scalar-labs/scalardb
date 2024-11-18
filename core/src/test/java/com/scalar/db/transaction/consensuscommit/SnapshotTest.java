@@ -475,6 +475,22 @@ public class SnapshotTest {
   }
 
   @Test
+  public void
+      putIntoDeleteSet_DeleteGivenAfterPutWithInsertModeEnabled_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Delete delete = prepareDelete();
+    Snapshot.Key key = new Snapshot.Key(delete);
+
+    Put putWithInsertModeEnabled = Put.newBuilder(preparePut()).enableInsertMode().build();
+    snapshot.putIntoWriteSet(key, putWithInsertModeEnabled);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.putIntoDeleteSet(key, delete))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void putIntoScanSet_ScanGiven_ShouldHoldWhatsGivenInScanSet() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);

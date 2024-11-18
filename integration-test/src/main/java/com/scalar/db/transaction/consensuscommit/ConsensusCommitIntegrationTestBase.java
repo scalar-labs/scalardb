@@ -10,6 +10,7 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
 import java.util.Optional;
@@ -38,8 +39,9 @@ public abstract class ConsensusCommitIntegrationTestBase
   protected abstract Properties getProps(String testName);
 
   @Test
-  public void insertAndInsert_forSameRecord_shouldThrowIllegalArgumentExceptionOnSecondInsert()
-      throws TransactionException {
+  public void
+      insertAndInsert_forSameRecord_whenRecordNotExists_shouldThrowIllegalArgumentExceptionOnSecondInsert()
+          throws TransactionException {
     // Arrange
     Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
@@ -71,7 +73,44 @@ public abstract class ConsensusCommitIntegrationTestBase
   }
 
   @Test
-  public void insertAndUpsert_forSameRecord_shouldWorkCorrectly() throws TransactionException {
+  public void
+      insertAndInsert_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnSecondInsert()
+          throws TransactionException {
+    // Arrange
+    put(preparePut(0, 0));
+
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    assertThatThrownBy(
+            () ->
+                transaction.insert(
+                    Insert.newBuilder()
+                        .namespace(namespace)
+                        .table(TABLE)
+                        .partitionKey(partitionKey)
+                        .clusteringKey(clusteringKey)
+                        .intValue(BALANCE, INITIAL_BALANCE)
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @Test
+  public void insertAndUpsert_forSameRecord_whenRecordNotExists_shouldWorkCorrectly()
+      throws TransactionException {
     // Arrange
     Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
@@ -112,7 +151,44 @@ public abstract class ConsensusCommitIntegrationTestBase
   }
 
   @Test
-  public void insertAndUpdate_forSameRecord_shouldWorkCorrectly() throws TransactionException {
+  public void
+      insertAndUpsert_forSameRecord_whenRecordExists_shouldThrowCommitConflictExceptionOnCommit()
+          throws TransactionException {
+    // Arrange
+    put(preparePut(0, 0));
+
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
+    int expectedBalance = 100;
+    int expectedSomeColumn = 200;
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    transaction.upsert(
+        Upsert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, expectedBalance)
+            .intValue(SOME_COLUMN, expectedSomeColumn)
+            .build());
+
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void insertAndUpdate_forSameRecord_whenRecordNotExists_shouldWorkCorrectly()
+      throws TransactionException {
     // Arrange
     Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
@@ -153,14 +229,20 @@ public abstract class ConsensusCommitIntegrationTestBase
   }
 
   @Test
-  public void insertAndDelete_forSameRecord_shouldWorkCorrectly() throws TransactionException {
+  public void
+      insertAndUpdate_forSameRecord_whenRecordExists_shouldThrowCommitConflictExceptionOnCommit()
+          throws TransactionException {
     // Arrange
+    put(preparePut(0, 0));
+
     Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
+    int expectedBalance = 100;
+    int expectedSomeColumn = 200;
 
     DistributedTransaction transaction = manager.start();
 
-    // Act
+    // Act Assert
     transaction.insert(
         Insert.newBuilder()
             .namespace(namespace)
@@ -169,19 +251,85 @@ public abstract class ConsensusCommitIntegrationTestBase
             .clusteringKey(clusteringKey)
             .intValue(BALANCE, INITIAL_BALANCE)
             .build());
-    transaction.delete(
-        Delete.newBuilder()
+    transaction.update(
+        Update.newBuilder()
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
+            .intValue(BALANCE, expectedBalance)
+            .intValue(SOME_COLUMN, expectedSomeColumn)
             .build());
 
-    transaction.commit();
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
 
-    // Assert
-    Optional<Result> optResult = get(prepareGet(0, 0));
-    assertThat(optResult).isNotPresent();
+  @Test
+  public void
+      insertAndDelete_forSameRecord_whenRecordNotExists_shouldThrowIllegalArgumentExceptionOnDelete()
+          throws TransactionException {
+    // Arrange
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    assertThatThrownBy(
+            () ->
+                transaction.delete(
+                    Delete.newBuilder()
+                        .namespace(namespace)
+                        .table(TABLE)
+                        .partitionKey(partitionKey)
+                        .clusteringKey(clusteringKey)
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @Test
+  public void
+      insertAndDelete_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnDelete()
+          throws TransactionException {
+    // Arrange
+    put(preparePut(0, 0));
+
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    assertThatThrownBy(
+            () ->
+                transaction.delete(
+                    Delete.newBuilder()
+                        .namespace(namespace)
+                        .table(TABLE)
+                        .partitionKey(partitionKey)
+                        .clusteringKey(clusteringKey)
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
   }
 
   @Test
