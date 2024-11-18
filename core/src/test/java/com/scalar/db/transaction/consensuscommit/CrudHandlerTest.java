@@ -3,7 +3,6 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -160,11 +159,10 @@ public class CrudHandlerTest {
     // Arrange
     Get get = prepareGet();
     Get getForStorage = toGetForStorageFrom(get);
+    Snapshot.Key key = new Snapshot.Key(get);
     Optional<TransactionResult> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(true);
-    when(snapshot.get(getForStorage)).thenReturn(expected);
-    when(snapshot.mergeResult(new Snapshot.Key(getForStorage), expected, Collections.emptySet()))
-        .thenReturn(expected);
+    when(snapshot.getResult(key, getForStorage)).thenReturn(expected);
 
     // Act
     Optional<Result> actual = handler.get(get);
@@ -188,13 +186,8 @@ public class CrudHandlerTest {
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
     Snapshot.Key key = new Snapshot.Key(getForStorage);
     when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
-    doNothing()
-        .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(storage.get(getForStorage)).thenReturn(expected);
-    when(snapshot.get(getForStorage)).thenReturn(transactionResult);
-    when(snapshot.mergeResult(key, transactionResult, Collections.emptySet()))
-        .thenReturn(transactionResult);
+    when(snapshot.getResult(key, getForStorage)).thenReturn(transactionResult);
 
     // Act
     Optional<Result> result = handler.get(get);
@@ -206,8 +199,8 @@ public class CrudHandlerTest {
                 new FilteredResult(
                     expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
     verify(storage).get(getForStorage);
-    verify(snapshot).put(key, Optional.of((TransactionResult) expected.get()));
-    verify(snapshot).put(get, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot).putIntoReadSet(key, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
   }
 
   @Test
@@ -233,8 +226,8 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
-    verify(snapshot, never())
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    verify(snapshot, never()).putIntoReadSet(any(), ArgumentMatchers.any());
+    verify(snapshot, never()).putIntoGetSet(any(), ArgumentMatchers.any());
   }
 
   @Test
@@ -277,15 +270,9 @@ public class CrudHandlerTest {
     Get get2 = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    doNothing()
-        .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     Snapshot.Key key = new Snapshot.Key(getForStorage);
     when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false).thenReturn(true);
-    when(snapshot.get(getForStorage)).thenReturn(expected).thenReturn(expected);
-    when(snapshot.mergeResult(key, expected, Collections.emptySet()))
-        .thenReturn(expected)
-        .thenReturn(expected);
+    when(snapshot.getResult(key, getForStorage)).thenReturn(expected).thenReturn(expected);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
 
     // Act
@@ -293,7 +280,7 @@ public class CrudHandlerTest {
     Optional<Result> results2 = handler.get(get2);
 
     // Assert
-    verify(snapshot).put(key, expected);
+    verify(snapshot).putIntoReadSet(key, expected);
     assertThat(results1)
         .isEqualTo(
             Optional.of(
@@ -363,18 +350,16 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     Snapshot.Key key = new Snapshot.Key(scan, result);
     TransactionResult expected = new TransactionResult(result);
-    doNothing()
-        .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-    when(snapshot.mergeResult(any(), any())).thenReturn(Optional.of(expected));
+    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
 
     // Act
     List<Result> results = handler.scan(scan);
 
     // Assert
-    verify(snapshot).put(key, Optional.of(expected));
+    verify(snapshot).putIntoReadSet(key, Optional.of(expected));
+    verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, expected));
     verify(snapshot).verify(scan);
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
@@ -403,8 +388,8 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
-    verify(snapshot, never())
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    verify(snapshot, never()).putIntoReadSet(any(), ArgumentMatchers.any());
+    verify(snapshot, never()).putIntoScanSet(any(), ArgumentMatchers.any());
   }
 
   @Test
@@ -417,23 +402,21 @@ public class CrudHandlerTest {
     Scan scan2 = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
     TransactionResult expected = new TransactionResult(result);
-    doNothing()
-        .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
     Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
-    when(snapshot.get(scanForStorage))
+    when(snapshot.getResults(scanForStorage))
         .thenReturn(Optional.empty())
-        .thenReturn(Optional.of(Collections.singletonMap(key, expected)));
-    when(snapshot.mergeResult(any(), any())).thenReturn(Optional.of(expected));
+        .thenReturn(Optional.of(ImmutableMap.of(key, expected)));
+    when(snapshot.getResult(key)).thenReturn(Optional.of(expected));
 
     // Act
     List<Result> results1 = handler.scan(scan1);
     List<Result> results2 = handler.scan(scan2);
 
     // Assert
-    verify(snapshot).put(key, Optional.of(expected));
+    verify(snapshot).putIntoReadSet(key, Optional.of(expected));
+    verify(snapshot).putIntoScanSet(scanForStorage, ImmutableMap.of(key, expected));
     assertThat(results1.size()).isEqualTo(1);
     assertThat(results1.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -478,20 +461,15 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    doNothing()
-        .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-
     Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
     Get getForStorage = toGetForStorageFrom(get);
     Optional<TransactionResult> transactionResult = Optional.of(new TransactionResult(result));
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
-    when(snapshot.get(get)).thenReturn(transactionResult);
-    when(snapshot.mergeResult(any(), any())).thenReturn(transactionResult);
-    when(snapshot.mergeResult(new Snapshot.Key(get), transactionResult, Collections.emptySet()))
-        .thenReturn(transactionResult);
+    when(snapshot.getResult(key, get)).thenReturn(transactionResult);
+    when(snapshot.getResult(key)).thenReturn(transactionResult);
 
     // Act
     List<Result> results = handler.scan(scan);
@@ -499,7 +477,10 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).scan(scanForStorage);
+
     verify(storage).get(getForStorage);
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(result).isPresent();
     assertThat(results.get(0)).isEqualTo(result.get());
   }
 
@@ -514,7 +495,7 @@ public class CrudHandlerTest {
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
-    Get get = toGetForStorageFrom(prepareGet());
+    Get get = prepareGet();
     when(storage.get(get)).thenReturn(Optional.of(result));
 
     // Act
@@ -524,6 +505,8 @@ public class CrudHandlerTest {
     // Assert
     verify(storage).scan(scan);
     verify(storage).get(get);
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(result).isPresent();
     assertThat(results.get(0)).isEqualTo(result.get());
   }
 
@@ -607,19 +590,17 @@ public class CrudHandlerTest {
     Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.COMMITTED);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    doNothing()
-        .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
     TransactionResult transactionResult = new TransactionResult(result);
-    when(snapshot.mergeResult(any(), any())).thenReturn(Optional.of(transactionResult));
+    when(snapshot.getResult(key)).thenReturn(Optional.of(transactionResult));
 
     // Act
     List<Result> results = handler.scan(scan);
 
     // Assert
-    verify(snapshot).put(key, Optional.of(transactionResult));
+    verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
+    verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, transactionResult));
     verify(snapshot).verify(scan);
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
@@ -648,8 +629,7 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
-    verify(snapshot, never())
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), ArgumentMatchers.any());
     verify(snapshot, never()).verify(any());
   }
 
@@ -666,9 +646,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(spied, never()).readUnread(any(), any());
-    verify(snapshot, never()).getFromReadSet(any());
+    verify(snapshot, never()).getResult(any());
     verify(mutationConditionsValidator, never()).checkIfConditionIsSatisfied(any(Put.class), any());
-    verify(snapshot).put(new Snapshot.Key(put), put);
+    verify(snapshot).putIntoWriteSet(new Snapshot.Key(put), put);
   }
 
   @Test
@@ -685,10 +665,10 @@ public class CrudHandlerTest {
             .enableImplicitPreRead()
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
-    when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+    when(snapshot.getResult(key)).thenReturn(Optional.of(result));
 
     Get getForKey =
         Get.newBuilder()
@@ -704,9 +684,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(spied, never()).readUnread(key, getForKey);
-    verify(snapshot).getFromReadSet(key);
+    verify(snapshot).getResult(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
-    verify(snapshot).put(key, put);
+    verify(snapshot).putIntoWriteSet(key, put);
   }
 
   @Test
@@ -723,10 +703,10 @@ public class CrudHandlerTest {
             .enableImplicitPreRead()
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
-    when(snapshot.containsKeyInReadSet(any())).thenReturn(false);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+    when(snapshot.getResult(key)).thenReturn(Optional.of(result));
 
     Get getForKey =
         toGetForStorageFrom(
@@ -744,9 +724,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(spied).read(key, getForKey);
-    verify(snapshot).getFromReadSet(key);
+    verify(snapshot).getResult(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
-    verify(snapshot).put(key, put);
+    verify(snapshot).putIntoWriteSet(key, put);
   }
 
   @Test
@@ -762,10 +742,10 @@ public class CrudHandlerTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
-    when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+    when(snapshot.getResult(key)).thenReturn(Optional.of(result));
 
     Get getForKey =
         Get.newBuilder()
@@ -781,9 +761,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(spied, never()).readUnread(key, getForKey);
-    verify(snapshot).getFromReadSet(key);
+    verify(snapshot).getResult(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result);
-    verify(snapshot).put(key, put);
+    verify(snapshot).putIntoWriteSet(key, put);
   }
 
   @Test
@@ -821,10 +801,10 @@ public class CrudHandlerTest {
 
     // Assert
     verify(spied, never()).readUnread(any(), any());
-    verify(snapshot, never()).getFromReadSet(any());
+    verify(snapshot, never()).getResult(any());
     verify(mutationConditionsValidator, never())
         .checkIfConditionIsSatisfied(any(Delete.class), any());
-    verify(snapshot).put(new Snapshot.Key(delete), delete);
+    verify(snapshot).putIntoDeleteSet(new Snapshot.Key(delete), delete);
   }
 
   @Test
@@ -839,10 +819,10 @@ public class CrudHandlerTest {
             .condition(ConditionBuilder.deleteIfExists())
             .build();
     Snapshot.Key key = new Snapshot.Key(delete);
-    when(snapshot.containsKeyInReadSet(any())).thenReturn(true);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.of(result));
+    when(snapshot.getResult(key)).thenReturn(Optional.of(result));
 
     Get getForKey =
         Get.newBuilder()
@@ -858,9 +838,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(spied, never()).readUnread(key, getForKey);
-    verify(snapshot).getFromReadSet(key);
+    verify(snapshot).getResult(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, result);
-    verify(snapshot).put(key, delete);
+    verify(snapshot).putIntoDeleteSet(key, delete);
   }
 
   @Test
@@ -875,8 +855,8 @@ public class CrudHandlerTest {
             .condition(ConditionBuilder.deleteIfExists())
             .build();
     Snapshot.Key key = new Snapshot.Key(delete);
-    when(snapshot.containsKeyInReadSet(any())).thenReturn(false);
-    when(snapshot.getFromReadSet(any())).thenReturn(Optional.empty());
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
+    when(snapshot.getResult(key)).thenReturn(Optional.empty());
 
     Get getForKey =
         toGetForStorageFrom(
@@ -894,9 +874,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(spied).read(key, getForKey);
-    verify(snapshot).getFromReadSet(key);
+    verify(snapshot).getResult(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null);
-    verify(snapshot).put(key, delete);
+    verify(snapshot).putIntoDeleteSet(key, delete);
   }
 
   @SuppressWarnings("unchecked")
@@ -921,7 +901,7 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage, never()).get(any());
-    verify(snapshot, never()).put(any(Get.class), any(Optional.class));
+    verify(snapshot, never()).putIntoGetSet(any(Get.class), any(Optional.class));
   }
 
   @Test
@@ -947,8 +927,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(any());
-    verify(snapshot).put(key, Optional.empty());
-    verify(snapshot).put(getForKey, Optional.empty());
+    verify(snapshot).putIntoReadSet(key, Optional.empty());
+    verify(snapshot).putIntoGetSet(getForKey, Optional.empty());
   }
 
   @Test
@@ -975,8 +955,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(any());
-    verify(snapshot, never()).put(key, Optional.empty());
-    verify(snapshot).put(getForKey, Optional.empty());
+    verify(snapshot, never()).putIntoReadSet(key, Optional.empty());
+    verify(snapshot).putIntoGetSet(getForKey, Optional.empty());
   }
 
   @Test
@@ -1006,7 +986,7 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(any());
-    verify(snapshot).put(key, Optional.of(new TransactionResult(result)));
+    verify(snapshot).putIntoReadSet(key, Optional.of(new TransactionResult(result)));
   }
 
   @Test
