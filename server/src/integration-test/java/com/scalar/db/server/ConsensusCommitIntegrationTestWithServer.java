@@ -181,4 +181,133 @@ public class ConsensusCommitIntegrationTestWithServer extends ConsensusCommitInt
   @Override
   @Test
   public void scan_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      insertAndInsert_forSameRecord_whenRecordNotExists_shouldThrowIllegalArgumentExceptionOnSecondInsert() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      insertAndInsert_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnSecondInsert() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void insertAndUpsert_forSameRecord_whenRecordNotExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      insertAndUpsert_forSameRecord_whenRecordExists_shouldThrowCommitConflictExceptionOnCommit() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void insertAndUpdate_forSameRecord_whenRecordNotExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      insertAndUpdate_forSameRecord_whenRecordExists_shouldThrowCommitConflictExceptionOnCommit() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      insertAndDelete_forSameRecord_whenRecordNotExists_shouldThrowIllegalArgumentExceptionOnDelete() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      insertAndDelete_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnDelete() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void upsertAndInsert_forSameRecord_shouldThrowIllegalArgumentExceptionOnInsert() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void upsertAndUpsert_forSameRecord_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void upsertAndUpdate_forSameRecord_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void upsertAndDelete_forSameRecord_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndInsert_forSameRecord_whenRecordNotExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      updateAndInsert_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnInsert() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndUpsert_forSameRecord_whenRecordNotExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndUpsert_forSameRecord_whenRecordExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndUpdate_forSameRecord_whenRecordNotExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndUpdate_forSameRecord_whenRecordExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndDelete_forSameRecord_whenRecordNotExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void updateAndDelete_forSameRecord_whenRecordExists_shouldWorkCorrectly() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      deleteAndInsert_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnInsert() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void
+      deleteAndUpsert_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnUpsert() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void deleteAndUpdate_forSameRecord_whenRecordExists_shouldDoNothing() {}
+
+  @Disabled("ScalarDB Server doesn't support insert(), upsert(), and update()")
+  @Override
+  @Test
+  public void deleteAndDelete_forSameRecord_shouldWorkCorrectly() {}
 }
