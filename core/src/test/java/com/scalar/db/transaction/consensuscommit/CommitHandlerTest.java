@@ -119,8 +119,8 @@ public class CommitHandlerTest {
     // different partition
     Put put1 = preparePut1();
     Put put2 = preparePut2();
-    snapshot.put(new Snapshot.Key(put1), put1);
-    snapshot.put(new Snapshot.Key(put2), put2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put2), put2);
 
     return snapshot;
   }
@@ -137,8 +137,8 @@ public class CommitHandlerTest {
     // same partition
     Put put1 = preparePut1();
     Put put3 = preparePut3();
-    snapshot.put(new Snapshot.Key(put1), put1);
-    snapshot.put(new Snapshot.Key(put3), put3);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put3), put3);
 
     return snapshot;
   }
