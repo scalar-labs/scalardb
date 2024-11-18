@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
+import com.azure.cosmos.implementation.NotFoundException;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Delete;
@@ -42,7 +43,11 @@ public class DeleteStatementHandler extends MutateStatementHandler {
       PartitionKey partitionKey = cosmosMutation.getCosmosPartitionKey();
       CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 
-      getContainer(mutation).deleteItem(id, partitionKey, options);
+      try {
+        getContainer(mutation).deleteItem(id, partitionKey, options);
+      } catch (NotFoundException ignored) {
+        // don't throw an exception if the item is not found
+      }
     } else {
       // clustering key is not fully specified
       executeStoredProcedure(mutation, tableMetadata);
