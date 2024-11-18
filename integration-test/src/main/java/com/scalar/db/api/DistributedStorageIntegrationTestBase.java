@@ -1500,6 +1500,17 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
+  public void delete_ForNonExistingRecord_ShouldDoNothing() throws ExecutionException {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(() -> storage.delete(prepareDeletes().get(0))).doesNotThrowAnyException();
+
+    Optional<Result> result = storage.get(prepareGet(0, 0));
+    assertThat(result).isNotPresent();
+  }
+
+  @Test
   public void mutate_MultiplePutGiven_ShouldStoreProperly() throws ExecutionException, IOException {
     // Arrange
     int pKey = 0;
