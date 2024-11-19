@@ -5,6 +5,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CachedCoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.CoordinatorStateRepository;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.repository.ReplicationBulkTransactionRepository;
@@ -98,8 +99,10 @@ public class LogApplier {
     DistributedStorage coordinatorDbStorage =
         StorageFactory.create(coordinatorStateConfigPath).getStorage();
     DistributedStorage replDbStorage = StorageFactory.create(replicationDbConfigPath).getStorage();
-    DistributedStorage backupSiteStorage =
-        StorageFactory.create(backupScalarDbConfigPath).getStorage();
+    StorageFactory backupSiteStorageFactory = StorageFactory.create(backupScalarDbConfigPath);
+    DistributedStorage backupSiteStorage = backupSiteStorageFactory.getStorage();
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(backupSiteStorageFactory.getStorageAdmin(), 60);
 
     ConsensusCommitConfig consensusCommitConfig =
         new ConsensusCommitConfig(new DatabaseConfig(Paths.get(coordinatorStateConfigPath)));
@@ -120,7 +123,8 @@ public class LogApplier {
         new ReplicationBulkTransactionRepository(replDbStorage, "replication", "bulk_transactions");
 
     RecordHandler recordHandler =
-        new RecordHandler(replicationRecordRepository, backupSiteStorage, metricsLogger);
+        new RecordHandler(
+            replicationRecordRepository, backupSiteStorage, tableMetadataManager, metricsLogger);
 
     TransactionHandler transactionHandler =
         new TransactionHandler(

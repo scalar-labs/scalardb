@@ -14,6 +14,9 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
+import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.Utils;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Column;
 import com.scalar.db.transaction.consensuscommit.replication.semisyncrepl.model.Record;
@@ -36,14 +39,17 @@ class RecordHandler {
   private static final Logger logger = LoggerFactory.getLogger(RecordHandler.class);
   private final ReplicationRecordRepository replicationRecordRepository;
   private final DistributedStorage backupScalarDbStorage;
+  private final TransactionTableMetadataManager tableMetadataManager;
   private final MetricsLogger metricsLogger;
 
   RecordHandler(
       ReplicationRecordRepository replicationRecordRepository,
       DistributedStorage backupScalarDbStorage,
+      TransactionTableMetadataManager tableMetadataManager,
       MetricsLogger metricsLogger) {
     this.replicationRecordRepository = replicationRecordRepository;
     this.backupScalarDbStorage = backupScalarDbStorage;
+    this.tableMetadataManager = tableMetadataManager;
     this.metricsLogger = metricsLogger;
   }
 
@@ -86,7 +92,7 @@ class RecordHandler {
 
   @VisibleForTesting
   @Nullable
-  NextValue findNextValue(RecordKey key, Record record) {
+  NextValue findNextValue(RecordKey key, Record record) throws ExecutionException {
     // TODO: Use ArrayDeque instead.
     // This variable is defined as a concrete class. It's needed to use as both Queue and List...
     LinkedList<Value> valuesForInsert = new LinkedList<>();
@@ -127,6 +133,7 @@ class RecordHandler {
     Map<String, Column<?>> updatedColumns = new HashMap<>();
     Set<String> insertTxIds = new HashSet<>();
     @Nullable String currentTxId = record.currentTxId;
+    TransactionTableMetadata tableMetadata = null;
     while (!suspendFollowingOperation) {
       Value value;
       if (currentTxId == null || deleted) {
@@ -143,12 +150,15 @@ class RecordHandler {
       }
 
       if (value.type.equals("insert")) {
+        /*
+        // Now all columns should be null.
         if (!updatedColumns.isEmpty()) {
           throw new IllegalStateException(
               String.format(
                   "`updatedColumns` should be empty. key:%s, value:%s, updatedColumns:%s",
                   key, value, updatedColumns));
         }
+         */
         if (record.insertTxIds.contains(value.txId)) {
           logger.warn(
               "This insert will be skipped since txId:{} is already handled. key:{}",
@@ -169,8 +179,22 @@ class RecordHandler {
         }
         deleted = false;
       } else if (value.type.equals("delete")) {
-        // TODO: Probably all columns must be set to null.
+        // Delete operations are not so common ones. Lazy instantiation would be efficient.
+        if (tableMetadata == null) {
+          tableMetadata =
+              tableMetadataManager.getTransactionTableMetadata(key.namespace, key.table);
+        }
+        // Explicit null clear is needed.
         updatedColumns.clear();
+        for (String columnName : tableMetadata.getColumnNames()) {
+          if (!tableMetadata.getTransactionMetaColumnNames().contains(columnName)
+              && !tableMetadata.getPrimaryKeyColumnNames().contains(columnName)
+              && !tableMetadata.getClusteringKeyNames().contains(columnName)
+              && !tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+            DataType dataType = tableMetadata.getColumnDataType(columnName);
+            updatedColumns.put(columnName, new Column<>(columnName, null, dataType));
+          }
+        }
         deleted = true;
       } else {
         throw new AssertionError();
