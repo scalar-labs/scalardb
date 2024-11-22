@@ -4,8 +4,8 @@ import com.scalar.db.api.Put;
 import java.util.Map;
 import java.util.Optional;
 
-/** A class to manage the operations attributes for Consensus Commit. */
-public final class ConsensusCommitOperationAttribute {
+/** A utility class to operate the operation attributes for Consensus Commit. */
+public final class ConsensusCommitOperationAttributes {
 
   private static final String OPERATION_ATTRIBUTE_PREFIX = "cc-";
   public static final String IMPLICIT_PRE_READ_ENABLED =
@@ -13,7 +13,7 @@ public final class ConsensusCommitOperationAttribute {
   public static final String INSERT_MODE_ENABLED =
       OPERATION_ATTRIBUTE_PREFIX + "insert-mode-enabled";
 
-  private ConsensusCommitOperationAttribute() {}
+  private ConsensusCommitOperationAttributes() {}
 
   public static Put enableImplicitPreRead(Put put) {
     return Put.newBuilder(put).attribute(IMPLICIT_PRE_READ_ENABLED, "true").build();

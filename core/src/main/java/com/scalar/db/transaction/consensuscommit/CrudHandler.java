@@ -1,7 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute.isImplicitPreReadEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Consistency;

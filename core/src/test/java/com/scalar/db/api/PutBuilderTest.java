@@ -12,7 +12,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
@@ -111,9 +111,9 @@ public class PutBuilderTest {
                     "v2",
                     "a3",
                     "v3",
-                    ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED,
+                    ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED,
                     "true",
-                    ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED,
+                    ConsensusCommitOperationAttributes.INSERT_MODE_ENABLED,
                     "true"),
                 condition1,
                 ImmutableMap.<String, Column<?>>builder()
@@ -302,9 +302,9 @@ public class PutBuilderTest {
                     "v5",
                     "a6",
                     "v6",
-                    ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED,
+                    ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED,
                     "true",
-                    ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED,
+                    ConsensusCommitOperationAttributes.INSERT_MODE_ENABLED,
                     "true"),
                 condition2,
                 ImmutableMap.<String, Column<?>>builder()

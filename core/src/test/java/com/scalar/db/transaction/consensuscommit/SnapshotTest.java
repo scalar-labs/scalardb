@@ -367,7 +367,7 @@ public class SnapshotTest {
                 TextColumn.of(ANY_NAME_3, ANY_TEXT_5),
                 ANY_NAME_4,
                 TextColumn.ofNull(ANY_NAME_4)));
-    assertThat(ConsensusCommitOperationAttribute.isImplicitPreReadEnabled(mergedPut)).isTrue();
+    assertThat(ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(mergedPut)).isTrue();
   }
 
   @Test
@@ -436,8 +436,8 @@ public class SnapshotTest {
                 TextColumn.of(ANY_NAME_3, ANY_TEXT_5),
                 ANY_NAME_4,
                 TextColumn.ofNull(ANY_NAME_4)));
-    assertThat(ConsensusCommitOperationAttribute.isInsertModeEnabled(mergedPut)).isTrue();
-    assertThat(ConsensusCommitOperationAttribute.isImplicitPreReadEnabled(mergedPut)).isFalse();
+    assertThat(ConsensusCommitOperationAttributes.isInsertModeEnabled(mergedPut)).isTrue();
+    assertThat(ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(mergedPut)).isFalse();
   }
 
   @Test

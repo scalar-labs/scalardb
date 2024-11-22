@@ -19,7 +19,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.Value;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -775,12 +775,12 @@ public class Put extends Mutation {
    *
    * @return whether implicit pre-read is enabled for this Put
    * @deprecated As of release 3.15.0. Will be removed in release 5.0.0. Use {@link
-   *     ConsensusCommitOperationAttribute#isImplicitPreReadEnabled(Put)} instead
+   *     ConsensusCommitOperationAttributes#isImplicitPreReadEnabled(Put)} instead
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public boolean isImplicitPreReadEnabled() {
-    return ConsensusCommitOperationAttribute.isImplicitPreReadEnabled(this);
+    return ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(this);
   }
 
   /**
@@ -789,12 +789,12 @@ public class Put extends Mutation {
    *
    * @return whether the insert mode is enabled for this Put
    * @deprecated As of release 3.15.0. Will be removed in release 5.0.0. Use {@link
-   *     ConsensusCommitOperationAttribute#isInsertModeEnabled(Put)} instead
+   *     ConsensusCommitOperationAttributes#isInsertModeEnabled(Put)} instead
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   public boolean isInsertModeEnabled() {
-    return ConsensusCommitOperationAttribute.isInsertModeEnabled(this);
+    return ConsensusCommitOperationAttributes.isInsertModeEnabled(this);
   }
 
   @Override

@@ -1,7 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute.isImplicitPreReadEnabled;
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute.isInsertModeEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;

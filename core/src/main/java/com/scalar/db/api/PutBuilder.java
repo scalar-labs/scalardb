@@ -26,7 +26,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttribute;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -234,44 +234,44 @@ public class PutBuilder {
 
     @Override
     public Buildable disableImplicitPreRead() {
-      ConsensusCommitOperationAttribute.disableImplicitPreRead(attributes);
+      ConsensusCommitOperationAttributes.disableImplicitPreRead(attributes);
       return this;
     }
 
     @Override
     public Buildable enableImplicitPreRead() {
-      ConsensusCommitOperationAttribute.enableImplicitPreRead(attributes);
+      ConsensusCommitOperationAttributes.enableImplicitPreRead(attributes);
       return this;
     }
 
     @Override
     public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
       if (implicitPreReadEnabled) {
-        ConsensusCommitOperationAttribute.enableImplicitPreRead(attributes);
+        ConsensusCommitOperationAttributes.enableImplicitPreRead(attributes);
       } else {
-        ConsensusCommitOperationAttribute.disableImplicitPreRead(attributes);
+        ConsensusCommitOperationAttributes.disableImplicitPreRead(attributes);
       }
       return this;
     }
 
     @Override
     public Buildable disableInsertMode() {
-      ConsensusCommitOperationAttribute.disableInsertMode(attributes);
+      ConsensusCommitOperationAttributes.disableInsertMode(attributes);
       return this;
     }
 
     @Override
     public Buildable enableInsertMode() {
-      ConsensusCommitOperationAttribute.enableInsertMode(attributes);
+      ConsensusCommitOperationAttributes.enableInsertMode(attributes);
       return this;
     }
 
     @Override
     public Buildable insertModeEnabled(boolean insertModeEnabled) {
       if (insertModeEnabled) {
-        ConsensusCommitOperationAttribute.enableInsertMode(attributes);
+        ConsensusCommitOperationAttributes.enableInsertMode(attributes);
       } else {
-        ConsensusCommitOperationAttribute.disableInsertMode(attributes);
+        ConsensusCommitOperationAttributes.disableInsertMode(attributes);
       }
       return this;
     }

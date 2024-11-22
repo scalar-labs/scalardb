@@ -6,7 +6,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.io.Key;
 import org.junit.jupiter.api.Test;
 
-public class ConsensusCommitOperationAttributeTest {
+public class ConsensusCommitOperationAttributesTest {
 
   @Test
   public void enableImplicitPreRead_PutGiven_ShouldReturnPutWithImplicitPreReadEnabled() {
@@ -15,10 +15,10 @@ public class ConsensusCommitOperationAttributeTest {
         Put.newBuilder().namespace("ns").table("table").partitionKey(Key.ofInt("p", 0)).build();
 
     // Act
-    Put result = ConsensusCommitOperationAttribute.enableImplicitPreRead(put);
+    Put result = ConsensusCommitOperationAttributes.enableImplicitPreRead(put);
 
     // Assert
-    assertThat(result.getAttribute(ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED))
+    assertThat(result.getAttribute(ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED))
         .hasValue("true");
   }
 
@@ -28,11 +28,11 @@ public class ConsensusCommitOperationAttributeTest {
     java.util.Map<String, String> attributes = new java.util.HashMap<>();
 
     // Act
-    ConsensusCommitOperationAttribute.enableImplicitPreRead(attributes);
+    ConsensusCommitOperationAttributes.enableImplicitPreRead(attributes);
 
     // Assert
     assertThat(attributes)
-        .containsEntry(ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED, "true");
+        .containsEntry(ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED, "true");
   }
 
   @Test
@@ -47,10 +47,10 @@ public class ConsensusCommitOperationAttributeTest {
             .build();
 
     // Act
-    Put result = ConsensusCommitOperationAttribute.disableImplicitPreRead(put);
+    Put result = ConsensusCommitOperationAttributes.disableImplicitPreRead(put);
 
     // Assert
-    assertThat(result.getAttribute(ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED))
+    assertThat(result.getAttribute(ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED))
         .isEmpty();
   }
 
@@ -58,14 +58,14 @@ public class ConsensusCommitOperationAttributeTest {
   public void disableImplicitPreRead_MapGiven_ShouldRemoveImplicitPreReadEnabledFromAttributes() {
     // Arrange
     java.util.Map<String, String> attributes = new java.util.HashMap<>();
-    attributes.put(ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED, "true");
+    attributes.put(ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED, "true");
 
     // Act
-    ConsensusCommitOperationAttribute.disableImplicitPreRead(attributes);
+    ConsensusCommitOperationAttributes.disableImplicitPreRead(attributes);
 
     // Assert
     assertThat(attributes)
-        .doesNotContainKey(ConsensusCommitOperationAttribute.IMPLICIT_PRE_READ_ENABLED);
+        .doesNotContainKey(ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED);
   }
 
   @Test
@@ -75,10 +75,10 @@ public class ConsensusCommitOperationAttributeTest {
         Put.newBuilder().namespace("ns").table("table").partitionKey(Key.ofInt("p", 0)).build();
 
     // Act
-    Put result = ConsensusCommitOperationAttribute.enableInsertMode(put);
+    Put result = ConsensusCommitOperationAttributes.enableInsertMode(put);
 
     // Assert
-    assertThat(result.getAttribute(ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED))
+    assertThat(result.getAttribute(ConsensusCommitOperationAttributes.INSERT_MODE_ENABLED))
         .hasValue("true");
   }
 
@@ -88,11 +88,11 @@ public class ConsensusCommitOperationAttributeTest {
     java.util.Map<String, String> attributes = new java.util.HashMap<>();
 
     // Act
-    ConsensusCommitOperationAttribute.enableInsertMode(attributes);
+    ConsensusCommitOperationAttributes.enableInsertMode(attributes);
 
     // Assert
     assertThat(attributes)
-        .containsEntry(ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED, "true");
+        .containsEntry(ConsensusCommitOperationAttributes.INSERT_MODE_ENABLED, "true");
   }
 
   @Test
@@ -107,10 +107,10 @@ public class ConsensusCommitOperationAttributeTest {
             .build();
 
     // Act
-    Put result = ConsensusCommitOperationAttribute.disableInsertMode(put);
+    Put result = ConsensusCommitOperationAttributes.disableInsertMode(put);
 
     // Assert
-    assertThat(result.getAttribute(ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED))
+    assertThat(result.getAttribute(ConsensusCommitOperationAttributes.INSERT_MODE_ENABLED))
         .isEmpty();
   }
 
@@ -118,13 +118,14 @@ public class ConsensusCommitOperationAttributeTest {
   public void disableInsertMode_MapGiven_ShouldRemoveInsertModeEnabledFromAttributes() {
     // Arrange
     java.util.Map<String, String> attributes = new java.util.HashMap<>();
-    attributes.put(ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED, "true");
+    attributes.put(ConsensusCommitOperationAttributes.INSERT_MODE_ENABLED, "true");
 
     // Act
-    ConsensusCommitOperationAttribute.disableInsertMode(attributes);
+    ConsensusCommitOperationAttributes.disableInsertMode(attributes);
 
     // Assert
-    assertThat(attributes).doesNotContainKey(ConsensusCommitOperationAttribute.INSERT_MODE_ENABLED);
+    assertThat(attributes)
+        .doesNotContainKey(ConsensusCommitOperationAttributes.INSERT_MODE_ENABLED);
   }
 
   @Test
@@ -139,7 +140,7 @@ public class ConsensusCommitOperationAttributeTest {
             .build();
 
     // Act
-    boolean result = ConsensusCommitOperationAttribute.isImplicitPreReadEnabled(put);
+    boolean result = ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(put);
 
     // Assert
     assertThat(result).isTrue();
@@ -152,7 +153,7 @@ public class ConsensusCommitOperationAttributeTest {
         Put.newBuilder().namespace("ns").table("table").partitionKey(Key.ofInt("p", 0)).build();
 
     // Act
-    boolean result = ConsensusCommitOperationAttribute.isImplicitPreReadEnabled(put);
+    boolean result = ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(put);
 
     // Assert
     assertThat(result).isFalse();
@@ -170,7 +171,7 @@ public class ConsensusCommitOperationAttributeTest {
             .build();
 
     // Act
-    boolean result = ConsensusCommitOperationAttribute.isInsertModeEnabled(put);
+    boolean result = ConsensusCommitOperationAttributes.isInsertModeEnabled(put);
 
     // Assert
     assertThat(result).isTrue();
@@ -183,7 +184,7 @@ public class ConsensusCommitOperationAttributeTest {
         Put.newBuilder().namespace("ns").table("table").partitionKey(Key.ofInt("p", 0)).build();
 
     // Act
-    boolean result = ConsensusCommitOperationAttribute.isInsertModeEnabled(put);
+    boolean result = ConsensusCommitOperationAttributes.isInsertModeEnabled(put);
 
     // Assert
     assertThat(result).isFalse();
