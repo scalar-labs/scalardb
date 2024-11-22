@@ -4,7 +4,7 @@ import com.scalar.db.api.Put;
 import java.util.Map;
 import java.util.Optional;
 
-/** A utility class to operate the operation attributes for Consensus Commit. */
+/** A utility class to manipulate the operation attributes for Consensus Commit. */
 public final class ConsensusCommitOperationAttributes {
 
   private static final String OPERATION_ATTRIBUTE_PREFIX = "cc-";
