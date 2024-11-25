@@ -1669,7 +1669,7 @@ public class ScanBuilder extends SelectionBuilder {
   }
 
   public static class BuildableScanFromExistingWithOngoingWhereOr
-      extends BuildableScanFromExistingWithOngoingWhere
+      extends BuildableScanFromExistingWithWhere
       implements Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
     private BuildableScanFromExistingWithOngoingWhereOr(
@@ -1705,7 +1705,7 @@ public class ScanBuilder extends SelectionBuilder {
   }
 
   public static class BuildableScanFromExistingWithOngoingWhereAnd
-      extends BuildableScanFromExistingWithOngoingWhere
+      extends BuildableScanFromExistingWithWhere
       implements And<BuildableScanFromExistingWithOngoingWhereAnd> {
 
     private BuildableScanFromExistingWithOngoingWhereAnd(

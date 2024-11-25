@@ -1078,7 +1078,7 @@ public class GetBuilder extends SelectionBuilder {
   }
 
   public static class BuildableGetFromExistingWithOngoingWhereOr
-      extends BuildableGetFromExistingWithOngoingWhere
+      extends BuildableGetFromExistingWithWhere
       implements Or<BuildableGetFromExistingWithOngoingWhereOr> {
 
     private BuildableGetFromExistingWithOngoingWhereOr(
@@ -1114,7 +1114,7 @@ public class GetBuilder extends SelectionBuilder {
   }
 
   public static class BuildableGetFromExistingWithOngoingWhereAnd
-      extends BuildableGetFromExistingWithOngoingWhere
+      extends BuildableGetFromExistingWithWhere
       implements And<BuildableGetFromExistingWithOngoingWhereAnd> {
 
     private BuildableGetFromExistingWithOngoingWhereAnd(
