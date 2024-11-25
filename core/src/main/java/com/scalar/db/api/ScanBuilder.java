@@ -1625,18 +1625,8 @@ public class ScanBuilder extends SelectionBuilder {
           Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
     private BuildableScanFromExistingWithOngoingWhere(
-        BuildableScanOrScanAllFromExisting buildable) {
-      super(buildable);
-    }
-
-    private BuildableScanFromExistingWithOngoingWhere(
         BuildableScanOrScanAllFromExisting buildable, ConditionalExpression condition) {
       super(buildable, condition);
-    }
-
-    private BuildableScanFromExistingWithOngoingWhere(
-        BuildableScanFromExistingWithOngoingWhere buildable) {
-      super(buildable);
     }
 
     @Override

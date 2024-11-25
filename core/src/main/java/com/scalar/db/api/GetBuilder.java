@@ -1034,18 +1034,8 @@ public class GetBuilder extends SelectionBuilder {
           Or<BuildableGetFromExistingWithOngoingWhereOr> {
 
     private BuildableGetFromExistingWithOngoingWhere(
-        BuildableGetOrGetWithIndexFromExisting buildable) {
-      super(buildable);
-    }
-
-    private BuildableGetFromExistingWithOngoingWhere(
         BuildableGetOrGetWithIndexFromExisting buildable, ConditionalExpression condition) {
       super(buildable, condition);
-    }
-
-    private BuildableGetFromExistingWithOngoingWhere(
-        BuildableGetFromExistingWithOngoingWhere buildable) {
-      super(buildable);
     }
 
     @Override
