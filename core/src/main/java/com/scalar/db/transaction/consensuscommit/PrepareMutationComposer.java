@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNextTxVersion;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -64,7 +65,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     putBuilder.intValue(Attribute.STATE, TransactionState.PREPARED.get());
     putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
 
-    if (!base.isInsertModeEnabled() && result != null) { // overwrite existing record
+    if (!isInsertModeEnabled(base) && result != null) { // overwrite existing record
       createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
       putBuilder.intValue(Attribute.VERSION, getNextTxVersion(version));
