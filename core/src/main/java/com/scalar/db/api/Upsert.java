@@ -17,16 +17,17 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class Upsert extends Mutation {
 
-  private final Map<String, Column<?>> columns;
+  private final ImmutableMap<String, Column<?>> columns;
 
   Upsert(
       @Nullable String namespace,
       String tableName,
       Key partitionKey,
       @Nullable Key clusteringKey,
-      Map<String, Column<?>> columns) {
-    super(namespace, tableName, partitionKey, clusteringKey, null);
-    this.columns = ImmutableMap.copyOf(columns);
+      ImmutableMap<String, String> attributes,
+      ImmutableMap<String, Column<?>> columns) {
+    super(namespace, tableName, partitionKey, clusteringKey, null, attributes, null);
+    this.columns = columns;
   }
 
   public Map<String, Column<?>> getColumns() {
@@ -105,6 +106,7 @@ public class Upsert extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
+        .add("attributes", getAttributes())
         .add("columns", getColumns())
         .toString();
   }
@@ -120,7 +122,7 @@ public class Upsert extends Mutation {
 
   /**
    * Build a {@code Upsert} operation from an existing {@code Upsert} object using a builder. The
-   * builder will be parametrized by default with all the existing {@code Upsert} object attributes.
+   * builder will be parametrized by default with all the existing {@code Upsert} parameters.
    *
    * @param upsert an existing {@code Upsert} operation
    * @return a {@code Upsert} operation builder

@@ -13,7 +13,7 @@ public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegratio
 
   @Override
   protected Properties getProperties(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

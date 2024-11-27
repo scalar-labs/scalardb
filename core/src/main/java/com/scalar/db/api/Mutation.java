@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
 import java.util.Objects;
 import java.util.Optional;
@@ -18,7 +19,19 @@ import javax.annotation.concurrent.NotThreadSafe;
 public abstract class Mutation extends Operation {
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
-  @Deprecated private Optional<MutationCondition> condition;
+  @Deprecated @Nullable private MutationCondition condition;
+
+  Mutation(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Key clusteringKey,
+      @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
+      @Nullable MutationCondition condition) {
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, attributes);
+    this.condition = condition;
+  }
 
   /**
    * @param partitionKey a partition key
@@ -28,7 +41,7 @@ public abstract class Mutation extends Operation {
   @Deprecated
   public Mutation(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
-    condition = Optional.empty();
+    condition = null;
   }
 
   /**
@@ -48,7 +61,7 @@ public abstract class Mutation extends Operation {
       @Nullable Key clusteringKey,
       @Nullable MutationCondition condition) {
     super(namespace, tableName, partitionKey, clusteringKey);
-    this.condition = Optional.ofNullable(condition);
+    this.condition = condition;
   }
 
   /**
@@ -60,7 +73,7 @@ public abstract class Mutation extends Operation {
   @Deprecated
   @Nonnull
   public Optional<MutationCondition> getCondition() {
-    return condition;
+    return Optional.ofNullable(condition);
   }
 
   /**
@@ -72,7 +85,7 @@ public abstract class Mutation extends Operation {
    */
   @Deprecated
   public Mutation withCondition(MutationCondition condition) {
-    this.condition = Optional.ofNullable(condition);
+    this.condition = condition;
     return this;
   }
 
@@ -101,7 +114,7 @@ public abstract class Mutation extends Operation {
       return false;
     }
     Mutation other = (Mutation) o;
-    return condition.equals(other.condition);
+    return Objects.equals(condition, other.condition);
   }
 
   @Override

@@ -2,13 +2,14 @@ package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,20 +17,20 @@ import org.junit.jupiter.api.Test;
 
 public class ConcatenationVisitorTest {
   private static final boolean ANY_BOOLEAN = false;
-  private static final BooleanValue ANY_BOOLEAN_VALUE =
-      new BooleanValue("any_boolean", ANY_BOOLEAN);
+  private static final BooleanColumn ANY_BOOLEAN_COLUMN =
+      BooleanColumn.of("any_boolean", ANY_BOOLEAN);
   private static final int ANY_INT = Integer.MIN_VALUE;
-  private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
+  private static final IntColumn ANY_INT_COLUMN = IntColumn.of("any_int", ANY_INT);
   private static final long ANY_BIGINT = BigIntValue.MAX_VALUE;
-  private static final BigIntValue ANY_BIGINT_VALUE = new BigIntValue("any_bigint", ANY_BIGINT);
+  private static final BigIntColumn ANY_BIGINT_COLUMN = BigIntColumn.of("any_bigint", ANY_BIGINT);
   private static final float ANY_FLOAT = Float.MIN_NORMAL;
-  private static final FloatValue ANY_FLOAT_VALUE = new FloatValue("any_float", ANY_FLOAT);
+  private static final FloatColumn ANY_FLOAT_COLUMN = FloatColumn.of("any_float", ANY_FLOAT);
   private static final double ANY_DOUBLE = Double.MIN_NORMAL;
-  private static final DoubleValue ANY_DOUBLE_VALUE = new DoubleValue("any_double", ANY_DOUBLE);
+  private static final DoubleColumn ANY_DOUBLE_COLUMN = DoubleColumn.of("any_double", ANY_DOUBLE);
   private static final String ANY_TEXT = "test";
-  private static final TextValue ANY_TEXT_VALUE = new TextValue("any_text", ANY_TEXT);
+  private static final TextColumn ANY_TEXT_COLUMN = TextColumn.of("any_text", ANY_TEXT);
   private static final byte[] ANY_BLOB = "scalar".getBytes(StandardCharsets.UTF_8);
-  private static final BlobValue ANY_BLOB_VALUE = new BlobValue("any_blob", ANY_BLOB);
+  private static final BlobColumn ANY_BLOB_COLUMN = BlobColumn.of("any_blob", ANY_BLOB);
   private ConcatenationVisitor visitor;
 
   @BeforeEach
@@ -40,13 +41,13 @@ public class ConcatenationVisitorTest {
   @Test
   public void build_AllTypesGiven_ShouldBuildString() {
     // Act
-    visitor.visit(ANY_BOOLEAN_VALUE);
-    visitor.visit(ANY_INT_VALUE);
-    visitor.visit(ANY_BIGINT_VALUE);
-    visitor.visit(ANY_FLOAT_VALUE);
-    visitor.visit(ANY_DOUBLE_VALUE);
-    visitor.visit(ANY_TEXT_VALUE);
-    visitor.visit(ANY_BLOB_VALUE);
+    visitor.visit(ANY_BOOLEAN_COLUMN);
+    visitor.visit(ANY_INT_COLUMN);
+    visitor.visit(ANY_BIGINT_COLUMN);
+    visitor.visit(ANY_FLOAT_COLUMN);
+    visitor.visit(ANY_DOUBLE_COLUMN);
+    visitor.visit(ANY_TEXT_COLUMN);
+    visitor.visit(ANY_BLOB_COLUMN);
     String actual = visitor.build();
 
     // Assert
@@ -63,63 +64,63 @@ public class ConcatenationVisitorTest {
   }
 
   @Test
-  public void visit_BooleanValueAcceptCalled_ShouldBuildBooleanAsString() {
+  public void visit_BooleanColumnAcceptCalled_ShouldBuildBooleanAsString() {
     // Act
-    ANY_BOOLEAN_VALUE.accept(visitor);
+    ANY_BOOLEAN_COLUMN.accept(visitor);
 
     // Assert
     assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_BOOLEAN));
   }
 
   @Test
-  public void visit_IntValueAcceptCalled_ShouldBuildIntAsString() {
+  public void visit_IntColumnAcceptCalled_ShouldBuildIntAsString() {
     // Act
-    ANY_INT_VALUE.accept(visitor);
+    ANY_INT_COLUMN.accept(visitor);
 
     // Assert
     assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_INT));
   }
 
   @Test
-  public void visit_BigIntValueAcceptCalled_ShouldBuildBigIntAsString() {
+  public void visit_BigIntColumnAcceptCalled_ShouldBuildBigIntAsString() {
     // Act
-    ANY_BIGINT_VALUE.accept(visitor);
+    ANY_BIGINT_COLUMN.accept(visitor);
 
     // Assert
     assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_BIGINT));
   }
 
   @Test
-  public void visit_FloatValueAcceptCalled_ShouldBuildFloatAsString() {
+  public void visit_FloatColumnAcceptCalled_ShouldBuildFloatAsString() {
     // Act
-    ANY_FLOAT_VALUE.accept(visitor);
+    ANY_FLOAT_COLUMN.accept(visitor);
 
     // Assert
     assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_FLOAT));
   }
 
   @Test
-  public void visit_DoubleValueAcceptCalled_ShouldBuildDoubleAsString() {
+  public void visit_DoubleColumnAcceptCalled_ShouldBuildDoubleAsString() {
     // Act
-    ANY_DOUBLE_VALUE.accept(visitor);
+    ANY_DOUBLE_COLUMN.accept(visitor);
 
     // Assert
     assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_DOUBLE));
   }
 
   @Test
-  public void visit_TextValueAcceptCalled_ShouldBuildText() {
+  public void visit_TextColumnAcceptCalled_ShouldBuildText() {
     // Act
-    ANY_TEXT_VALUE.accept(visitor);
+    ANY_TEXT_COLUMN.accept(visitor);
 
     // Assert
     assertThat(visitor.build()).isEqualTo(ANY_TEXT);
   }
 
   @Test
-  public void visit_BlobValueAcceptCalled_ShouldBuildBlobAsString() {
+  public void visit_BlobColumnAcceptCalled_ShouldBuildBlobAsString() {
     // Act
-    ANY_BLOB_VALUE.accept(visitor);
+    ANY_BLOB_COLUMN.accept(visitor);
 
     // Assert
     assertThat(visitor.build())

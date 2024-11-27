@@ -2,6 +2,9 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.OperationBuilder.Attribute;
+import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
 import com.scalar.db.api.OperationBuilder.ClearValues;
@@ -19,6 +22,7 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -70,9 +74,10 @@ public class InsertBuilder {
   }
 
   public static class Buildable extends OperationBuilder.Buildable<Insert>
-      implements ClusteringKey<Buildable>, Values<Buildable> {
+      implements ClusteringKey<Buildable>, Values<Buildable>, Attribute<Buildable> {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
+    final Map<String, String> attributes = new HashMap<>();
 
     private Buildable(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -82,6 +87,21 @@ public class InsertBuilder {
     public Buildable clusteringKey(Key clusteringKey) {
       checkNotNull(clusteringKey);
       this.clusteringKey = clusteringKey;
+      return this;
+    }
+
+    @Override
+    public Buildable attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public Buildable attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
       return this;
     }
 
@@ -186,7 +206,13 @@ public class InsertBuilder {
 
     @Override
     public Insert build() {
-      return new Insert(namespaceName, tableName, partitionKey, clusteringKey, columns);
+      return new Insert(
+          namespaceName,
+          tableName,
+          partitionKey,
+          clusteringKey,
+          ImmutableMap.copyOf(attributes),
+          ImmutableMap.copyOf(columns));
     }
   }
 
@@ -196,7 +222,8 @@ public class InsertBuilder {
           OperationBuilder.PartitionKey<BuildableFromExisting>,
           ClearClusteringKey<BuildableFromExisting>,
           ClearValues<BuildableFromExisting>,
-          ClearNamespace<BuildableFromExisting> {
+          ClearNamespace<BuildableFromExisting>,
+          ClearAttribute<BuildableFromExisting> {
 
     BuildableFromExisting(Insert insert) {
       super(
@@ -205,6 +232,7 @@ public class InsertBuilder {
           insert.getPartitionKey());
       this.clusteringKey = insert.getClusteringKey().orElse(null);
       this.columns.putAll(insert.getColumns());
+      this.attributes.putAll(insert.getAttributes());
     }
 
     @Override
@@ -231,6 +259,18 @@ public class InsertBuilder {
     @Override
     public BuildableFromExisting clusteringKey(Key clusteringKey) {
       super.clusteringKey(clusteringKey);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
       return this;
     }
 
@@ -339,6 +379,18 @@ public class InsertBuilder {
     @Override
     public BuildableFromExisting clearNamespace() {
       this.namespaceName = null;
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttributes() {
+      attributes.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearAttribute(String name) {
+      attributes.remove(name);
       return this;
     }
   }

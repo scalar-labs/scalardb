@@ -18,6 +18,7 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
+import com.azure.cosmos.implementation.NotFoundException;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
@@ -119,6 +120,19 @@ public class DeleteStatementHandlerTest {
     assertThatThrownBy(() -> handler.handle(delete))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
+  }
+
+  @Test
+  public void handle_DeleteWithoutConditionsNotFoundExceptionThrown_ShouldNotThrowAnyException() {
+    // Arrange
+    doThrow(NotFoundException.class)
+        .when(container)
+        .deleteItem(anyString(), any(PartitionKey.class), any(CosmosItemRequestOptions.class));
+
+    Delete delete = prepareDelete();
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
   }
 
   @Test

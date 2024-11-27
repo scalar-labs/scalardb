@@ -91,7 +91,6 @@ configurations {
 }
 
 dependencies {
-    implementation project(':rpc')
     implementation "com.google.guava:guava:${guavaVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
@@ -102,7 +101,7 @@ dependencies {
     implementation 'software.amazon.awssdk:applicationautoscaling'
     implementation 'software.amazon.awssdk:dynamodb'
     implementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
-    implementation "mysql:mysql-connector-java:${mysqlDriverVersion}"
+    implementation "com.mysql:mysql-connector-j:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
     implementation "com.oracle.database.jdbc:ojdbc8:${oracleDriverVersion}"
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"

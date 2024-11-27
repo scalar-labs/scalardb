@@ -1,5 +1,8 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
@@ -9,6 +12,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
@@ -26,9 +30,11 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -112,45 +118,62 @@ public class Snapshot {
 
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet
   // is a concurrent map
-  public void put(Key key, Optional<TransactionResult> result) {
+  public void putIntoReadSet(Key key, Optional<TransactionResult> result) {
     readSet.put(key, result);
   }
 
   // Although this class is not thread-safe, this method is actually thread-safe because the getSet
   // is a concurrent map
-  public void put(Get get, Optional<TransactionResult> result) {
+  public void putIntoGetSet(Get get, Optional<TransactionResult> result) {
     getSet.put(get, result);
   }
 
-  public void put(Scan scan, Map<Key, TransactionResult> results) {
+  public void putIntoScanSet(Scan scan, Map<Key, TransactionResult> results) {
     scanSet.put(scan, results);
   }
 
-  public void put(Key key, Put put) {
+  public void putIntoWriteSet(Key key, Put put) {
     if (deleteSet.containsKey(key)) {
       throw new IllegalArgumentException(
           CoreError.CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED.buildMessage());
     }
     if (writeSet.containsKey(key)) {
+      if (isInsertModeEnabled(put)) {
+        throw new IllegalArgumentException(
+            CoreError.CONSENSUS_COMMIT_INSERTING_ALREADY_WRITTEN_DATA_NOT_ALLOWED.buildMessage());
+      }
+
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
-      put.getColumns().values().forEach(originalPut::withValue);
+      PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(originalPut);
+      put.getColumns().values().forEach(putBuilder::value);
+
+      // If the implicit pre-read is enabled for the new put, it should also be enabled for the
+      // merged put. However, if the previous put is in insert mode, this doesn’t apply. This is
+      // because, in insert mode, the read set is not used during the preparation phase. Therefore,
+      // we only need to enable the implicit pre-read if the previous put is not in insert mode
+      if (isImplicitPreReadEnabled(put) && !isInsertModeEnabled(originalPut)) {
+        putBuilder.enableImplicitPreRead();
+      }
+
+      writeSet.put(key, putBuilder.build());
     } else {
       writeSet.put(key, put);
     }
   }
 
-  public void put(Key key, Delete delete) {
-    writeSet.remove(key);
+  public void putIntoDeleteSet(Key key, Delete delete) {
+    Put put = writeSet.get(key);
+    if (put != null) {
+      if (isInsertModeEnabled(put)) {
+        throw new IllegalArgumentException(
+            CoreError.CONSENSUS_COMMIT_DELETING_ALREADY_INSERTED_DATA_NOT_ALLOWED.buildMessage());
+      }
+
+      writeSet.remove(key);
+    }
+
     deleteSet.put(key, delete);
-  }
-
-  public boolean containsKeyInReadSet(Key key) {
-    return readSet.containsKey(key);
-  }
-
-  public Optional<TransactionResult> getFromReadSet(Key key) {
-    return readSet.getOrDefault(key, Optional.empty());
   }
 
   public List<Put> getPutsInWriteSet() {
@@ -161,7 +184,43 @@ public class Snapshot {
     return new ArrayList<>(deleteSet.values());
   }
 
-  public Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
+  public ReadWriteSets getReadWriteSets() {
+    return new ReadWriteSets(id, readSet, writeSet.entrySet(), deleteSet.entrySet());
+  }
+
+  public boolean containsKeyInReadSet(Key key) {
+    return readSet.containsKey(key);
+  }
+
+  public boolean containsKeyInGetSet(Get get) {
+    return getSet.containsKey(get);
+  }
+
+  public Optional<TransactionResult> getResult(Key key) throws CrudException {
+    Optional<TransactionResult> result = readSet.getOrDefault(key, Optional.empty());
+    return mergeResult(key, result);
+  }
+
+  public Optional<TransactionResult> getResult(Key key, Get get) throws CrudException {
+    Optional<TransactionResult> result = getSet.getOrDefault(get, Optional.empty());
+    return mergeResult(key, result, get.getConjunctions());
+  }
+
+  public Optional<Map<Snapshot.Key, TransactionResult>> getResults(Scan scan) throws CrudException {
+    if (!scanSet.containsKey(scan)) {
+      return Optional.empty();
+    }
+
+    Map<Key, TransactionResult> results = new LinkedHashMap<>();
+    for (Entry<Snapshot.Key, TransactionResult> entry : scanSet.get(scan).entrySet()) {
+      mergeResult(entry.getKey(), Optional.of(entry.getValue()))
+          .ifPresent(result -> results.put(entry.getKey(), result));
+    }
+
+    return Optional.of(results);
+  }
+
+  private Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
       throws CrudException {
     if (deleteSet.containsKey(key)) {
       return Optional.empty();
@@ -175,7 +234,7 @@ public class Snapshot {
     }
   }
 
-  public Optional<TransactionResult> mergeResult(
+  private Optional<TransactionResult> mergeResult(
       Key key, Optional<TransactionResult> result, Set<Conjunction> conjunctions)
       throws CrudException {
     return mergeResult(key, result)
@@ -202,32 +261,6 @@ public class Snapshot {
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, id);
     }
-  }
-
-  private TableMetadata getTableMetadata(Scan scan) throws ExecutionException {
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(scan);
-    if (metadata == null) {
-      throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(scan.forFullTableName().get()));
-    }
-    return metadata.getTableMetadata();
-  }
-
-  public boolean containsKeyInGetSet(Get get) {
-    return getSet.containsKey(get);
-  }
-
-  public Optional<TransactionResult> get(Get get) {
-    // We expect this method is called after putting the result of the get operation in the get set.
-    assert getSet.containsKey(get);
-    return getSet.get(get);
-  }
-
-  public Optional<Map<Key, TransactionResult>> get(Scan scan) {
-    if (scanSet.containsKey(scan)) {
-      return Optional.ofNullable(scanSet.get(scan));
-    }
-    return Optional.empty();
   }
 
   public void verify(Scan scan) {
@@ -531,6 +564,15 @@ public class Snapshot {
     parallelExecutor.validate(tasks, getId());
   }
 
+  private TableMetadata getTableMetadata(Scan scan) throws ExecutionException {
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(scan);
+    if (metadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(scan.forFullTableName().get()));
+    }
+    return metadata.getTableMetadata();
+  }
+
   private boolean isChanged(
       Optional<TransactionResult> latestResult, Optional<TransactionResult> result) {
     if (latestResult.isPresent() != result.isPresent()) {
@@ -651,6 +693,40 @@ public class Snapshot {
           .add("partitionKey", partitionKey)
           .add("clusteringKey", clusteringKey)
           .toString();
+    }
+  }
+
+  public static class ReadWriteSets {
+    public final String transactionId;
+    public final Map<Key, Optional<TransactionResult>> readSetMap;
+    public final List<Entry<Key, Put>> writeSet;
+    public final List<Entry<Key, Delete>> deleteSet;
+
+    public ReadWriteSets(
+        String transactionId,
+        Map<Key, Optional<TransactionResult>> readSetMap,
+        Collection<Entry<Key, Put>> writeSet,
+        Collection<Entry<Key, Delete>> deleteSet) {
+      this.transactionId = transactionId;
+      this.readSetMap = new HashMap<>(readSetMap);
+      this.writeSet = new ArrayList<>(writeSet);
+      this.deleteSet = new ArrayList<>(deleteSet);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof ReadWriteSets)) return false;
+      ReadWriteSets that = (ReadWriteSets) o;
+      return Objects.equals(transactionId, that.transactionId)
+          && Objects.equals(readSetMap, that.readSetMap)
+          && Objects.equals(writeSet, that.writeSet)
+          && Objects.equals(deleteSet, that.deleteSet);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(transactionId, readSetMap, writeSet, deleteSet);
     }
   }
 }

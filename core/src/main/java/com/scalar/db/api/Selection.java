@@ -1,15 +1,16 @@
 package com.scalar.db.api;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -21,7 +22,21 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public abstract class Selection extends Operation {
   private final List<String> projections;
-  private final Set<Conjunction> conjunctions;
+  private final ImmutableSet<Conjunction> conjunctions;
+
+  Selection(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Key clusteringKey,
+      @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions) {
+    super(namespace, tableName, partitionKey, clusteringKey, consistency, attributes);
+    this.projections = projections;
+    this.conjunctions = conjunctions;
+  }
 
   /**
    * @param partitionKey a partition key
@@ -32,7 +47,7 @@ public abstract class Selection extends Operation {
   public Selection(Key partitionKey, Key clusteringKey) {
     super(partitionKey, clusteringKey);
     projections = new ArrayList<>();
-    conjunctions = new HashSet<>();
+    conjunctions = ImmutableSet.of();
   }
 
   /**
@@ -43,7 +58,7 @@ public abstract class Selection extends Operation {
   public Selection(Selection selection) {
     super(selection);
     projections = new ArrayList<>(selection.projections);
-    conjunctions = new HashSet<>(selection.conjunctions);
+    conjunctions = selection.conjunctions;
   }
 
   /**
@@ -83,11 +98,6 @@ public abstract class Selection extends Operation {
     return ImmutableList.copyOf(projections);
   }
 
-  Selection withConjunctions(Collection<Conjunction> conjunctions) {
-    this.conjunctions.addAll(conjunctions);
-    return this;
-  }
-
   /**
    * Returns the set of {@code Conjunction}. We regard this set as a disjunction of conjunctions
    * (i.e., a disjunctive normal form, DNF).
@@ -99,7 +109,7 @@ public abstract class Selection extends Operation {
    */
   @Nonnull
   public Set<Conjunction> getConjunctions() {
-    return ImmutableSet.copyOf(conjunctions);
+    return conjunctions;
   }
 
   /**

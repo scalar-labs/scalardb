@@ -455,30 +455,6 @@ public class PutTest {
   }
 
   @Test
-  public void setImplicitPreReadEnabled_ProperValueGiven_ShouldReturnWhatsSet() {
-    // Arrange
-    Put put = preparePut();
-
-    // Act
-    put.setImplicitPreReadEnabled(true);
-
-    // Assert
-    assertThat(put.isImplicitPreReadEnabled()).isTrue();
-  }
-
-  @Test
-  public void setInsertModeEnabled_ProperValueGiven_ShouldReturnWhatsSet() {
-    // Arrange
-    Put put = preparePut();
-
-    // Act
-    put.setInsertModeEnabled(true);
-
-    // Assert
-    assertThat(put.isInsertModeEnabled()).isTrue();
-  }
-
-  @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
     assertThatThrownBy(() -> new Put((Key) null)).isInstanceOf(NullPointerException.class);
@@ -590,32 +566,21 @@ public class PutTest {
   }
 
   @Test
-  public void equals_PutWithDifferentImplicitPreReadGiven_ShouldReturnFalse() {
+  public void getAttribute_ShouldReturnProperValues() {
     // Arrange
-    Put put = preparePut();
-    Put another = preparePut();
-    another.setImplicitPreReadEnabled(true);
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "pv"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
 
-    // Act
-    boolean ret = put.equals(another);
-
-    // Assert
-    assertThat(ret).isFalse();
-    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
-  }
-
-  @Test
-  public void equals_PutWithDifferentInsertModeGiven_ShouldReturnFalse() {
-    // Arrange
-    Put put = preparePut();
-    Put another = preparePut();
-    another.setInsertModeEnabled(true);
-
-    // Act
-    boolean ret = put.equals(another);
-
-    // Assert
-    assertThat(ret).isFalse();
-    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
+    // Act Assert
+    assertThat(put.getAttribute("a1")).hasValue("v1");
+    assertThat(put.getAttribute("a2")).hasValue("v2");
+    assertThat(put.getAttribute("a3")).hasValue("v3");
+    assertThat(put.getAttributes()).isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
   }
 }
