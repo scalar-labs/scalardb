@@ -1,0 +1,27 @@
+subprojects {
+    group = "scalardb.dataloader"
+
+    ext {
+        apacheCommonsLangVersion = '3.14.0'
+        apacheCommonsIoVersion = '2.16.1'
+    }
+    dependencies {
+        // AssertJ
+        testImplementation("org.assertj:assertj-core:${assertjVersion}")
+
+        // JUnit 5
+        testImplementation(platform("org.junit:junit-bom:$junitVersion"))
+        testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+        testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
+        testImplementation("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
+
+        // Apache Commons
+        implementation("org.apache.commons:commons-lang3:${apacheCommonsLangVersion}")
+        implementation("commons-io:commons-io:${apacheCommonsIoVersion}")
+
+        // Mockito
+        testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+        testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
+        testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
+    }
+}
