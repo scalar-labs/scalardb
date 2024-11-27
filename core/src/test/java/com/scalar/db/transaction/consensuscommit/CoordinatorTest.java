@@ -3,10 +3,15 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -259,19 +264,9 @@ public class CoordinatorTest {
     // The IDs used to find the state are:
     // - parentId:childId1
     // - parentId:childId2
-    doReturn(
-            // For the first call,
-            // - The first get with the full ID shouldn't find a state.
-            Optional.empty(),
-            // - The second get with the parent ID should return the state.
-            Optional.of(resultForGroupCommitState),
-            // For the second call,
-            // - The first get with the full ID shouldn't find a state.
-            Optional.empty(),
-            // - The second get with the parent ID should return the state.
-            Optional.of(resultForGroupCommitState))
+    doReturn(Optional.of(resultForGroupCommitState))
         .when(storage)
-        .get(any(Get.class));
+        .get(coordinator.createGetWith(parentId));
 
     // Act
     Optional<Coordinator.State> state1 = spiedCoordinator.getState(fullId1);
@@ -286,9 +281,9 @@ public class CoordinatorTest {
     assertThat(state1.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId2);
-    verify(storage, times(4)).get(getArgumentCaptor.capture());
+    verify(storage, times(2)).get(getArgumentCaptor.capture());
     assertGetArgumentCaptorForGetState(
-        getArgumentCaptor.getAllValues(), Arrays.asList(fullId1, parentId, fullId2, parentId));
+        getArgumentCaptor.getAllValues(), Arrays.asList(parentId, parentId));
   }
 
   @ParameterizedTest
@@ -305,6 +300,20 @@ public class CoordinatorTest {
     String childId = UUID.randomUUID().toString();
     String fullId = keyManipulator.fullKey(parentId, childId);
     List<String> childIds = Collections.emptyList();
+    String dummyChildId1 = UUID.randomUUID().toString();
+    String dummyChildId2 = UUID.randomUUID().toString();
+    List<String> dummyChildIds = Arrays.asList(dummyChildId1, dummyChildId2);
+
+    Result resultForGroupCommitState = mock(Result.class);
+    when(resultForGroupCommitState.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
+    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
+        .thenReturn(
+            Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(dummyChildIds))));
+    when(resultForGroupCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getValue(Attribute.ID))
@@ -318,13 +327,18 @@ public class CoordinatorTest {
 
     // Assuming these states exist:
     //
-    //         id        | child_ids |  state
-    // ------------------+-----------+----------
-    //  parentId:childId |    []     | COMMITTED
+    //         id        |       child_ids      |  state
+    // ------------------+----------------------+----------
+    //  parentId:childId | [childId1, childId2] | COMMITTED
     //
     // The IDs used to find the state are:
     // - parentId:childId
-    doReturn(Optional.of(resultForSingleCommitState)).when(storage).get(any(Get.class));
+    doReturn(Optional.of(resultForGroupCommitState))
+        .when(storage)
+        .get(coordinator.createGetWith(parentId));
+    doReturn(Optional.of(resultForSingleCommitState))
+        .when(storage)
+        .get(coordinator.createGetWith(fullId));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
@@ -336,9 +350,9 @@ public class CoordinatorTest {
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator).getStateForGroupCommit(fullId);
-    verify(storage).get(getArgumentCaptor.capture());
+    verify(storage, times(2)).get(getArgumentCaptor.capture());
     assertGetArgumentCaptorForGetState(
-        getArgumentCaptor.getAllValues(), Collections.singletonList(fullId));
+        getArgumentCaptor.getAllValues(), Arrays.asList(parentId, fullId));
   }
 
   @ParameterizedTest
@@ -376,14 +390,11 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childIdX
-    doReturn(
-            // The first get with the full ID should return empty.
-            Optional.empty(),
-            // The second get with the parent ID should return a state, but it doesn't contain the
-            // child ID.
-            Optional.of(resultForGroupCommitState))
+    doReturn(Optional.of(resultForGroupCommitState))
         .when(storage)
-        .get(any(Get.class));
+        .get(coordinator.createGetWith(parentId));
+
+    doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(targetFullId));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
@@ -393,7 +404,7 @@ public class CoordinatorTest {
     verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
     verify(storage, times(2)).get(getArgumentCaptor.capture());
     assertGetArgumentCaptorForGetState(
-        getArgumentCaptor.getAllValues(), Arrays.asList(targetFullId, parentId));
+        getArgumentCaptor.getAllValues(), Arrays.asList(parentId, targetFullId));
   }
 
   @ParameterizedTest
@@ -408,10 +419,22 @@ public class CoordinatorTest {
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
+    List<String> childIds =
+        Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     // Look up with the same parent ID and a wrong child ID.
     // But the full ID matches the single committed state.
     String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
+
+    Result resultForGroupCommitState = mock(Result.class);
+    when(resultForGroupCommitState.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
+    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
+    when(resultForGroupCommitState.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
+    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getValue(Attribute.ID))
@@ -432,7 +455,12 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childIdX
-    doReturn(Optional.of(resultForSingleCommitState)).when(storage).get(any(Get.class));
+    doReturn(Optional.of(resultForGroupCommitState))
+        .when(storage)
+        .get(coordinator.createGetWith(parentId));
+    doReturn(Optional.of(resultForSingleCommitState))
+        .when(storage)
+        .get(coordinator.createGetWith(targetFullId));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
@@ -444,9 +472,9 @@ public class CoordinatorTest {
     Assertions.assertThat(state.get().getState()).isEqualTo(transactionState);
     assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
     verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
-    verify(storage).get(getArgumentCaptor.capture());
+    verify(storage, times(2)).get(getArgumentCaptor.capture());
     assertGetArgumentCaptorForGetState(
-        getArgumentCaptor.getAllValues(), Collections.singletonList(targetFullId));
+        getArgumentCaptor.getAllValues(), Arrays.asList(parentId, targetFullId));
   }
 
   @ParameterizedTest
@@ -486,7 +514,10 @@ public class CoordinatorTest {
     //
     // The IDs used to find the state are:
     // - parentId:childIdY
-    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+    doReturn(Optional.of(resultForGroupCommitState))
+        .when(storage)
+        .get(coordinator.createGetWith(parentId));
+    doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(targetFullId));
 
     // Act
     Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
@@ -496,7 +527,7 @@ public class CoordinatorTest {
     verify(spiedCoordinator).getStateForGroupCommit(targetFullId);
     verify(storage, times(2)).get(getArgumentCaptor.capture());
     assertGetArgumentCaptorForGetState(
-        getArgumentCaptor.getAllValues(), Arrays.asList(targetFullId, parentId));
+        getArgumentCaptor.getAllValues(), Arrays.asList(parentId, targetFullId));
   }
 
   @Test
@@ -671,5 +702,186 @@ public class CoordinatorTest {
                 spiedCoordinator.putStateForGroupCommit(
                     parentId, fullIds, transactionState, current))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void putStateForLazyRecoveryRollback_NormalIdGiven_ShouldCallPutState()
+      throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(ANY_ID_1);
+
+    // Assert
+    verify(spiedCoordinator).putState(new State(ANY_ID_1, TransactionState.ABORTED));
+  }
+
+  @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsNotCommitted_ShouldInsertTwoRecordsWithParentIdAndFullId()
+          throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsCommitted_ShouldThrowCoordinatorConflictException()
+          throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList(ANY_ID_1),
+                    TransactionState.COMMITTED,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+
+    // Act
+    assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
+        .isInstanceOf(CoordinatorConflictException.class);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsAbort_ShouldDoNothing()
+          throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList(ANY_ID_1),
+                    TransactionState.ABORTED,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitFinished_ShouldInsertRecordWithFullId(
+          TransactionState transactionState) throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList("other-id"),
+                    transactionState,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"COMMITTED", "ABORTED"})
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitAndDelayedGroupCommitFinished_ShouldCoordinatorConflictException(
+          TransactionState transactionState) throws CoordinatorException {
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(
+            Optional.of(
+                new State(
+                    parentId,
+                    Collections.singletonList("other-id"),
+                    transactionState,
+                    System.currentTimeMillis())))
+        .when(spiedCoordinator)
+        .getState(parentId);
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putState(new State(fullId, TransactionState.ABORTED));
+
+    // Act
+    assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
+        .isInstanceOf(CoordinatorConflictException.class);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
   }
 }

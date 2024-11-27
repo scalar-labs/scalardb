@@ -207,21 +207,26 @@ public abstract class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBa
   }
 
   protected Get prepareGet(int id, int type) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
-        .withConsistency(Consistency.LINEARIZABLE);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
+    return Get.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   protected Scan prepareScan(int id, int fromType, int toType) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    return new Scan(partitionKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(new Key(ACCOUNT_TYPE, fromType))
-        .withEnd(new Key(ACCOUNT_TYPE, toType));
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .start(Key.ofInt(ACCOUNT_TYPE, fromType))
+        .end(Key.ofInt(ACCOUNT_TYPE, toType))
+        .build();
   }
 }

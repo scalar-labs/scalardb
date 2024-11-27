@@ -2,8 +2,8 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageSinglePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.Value;
 import java.util.Properties;
 import java.util.Random;
 
@@ -21,27 +21,28 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
   }
 
   @Override
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
     }
-    return super.getRandomValue(random, columnName, dataType);
+    return super.getColumnWithRandomValue(random, columnName, dataType);
   }
 
   @Override
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
     }
-    return super.getMinValue(columnName, dataType);
+    return super.getColumnWithMinValue(columnName, dataType);
   }
 
   @Override
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
@@ -52,7 +53,7 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
         return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }
     }
-    return super.getMaxValue(columnName, dataType);
+    return super.getColumnWithMaxValue(columnName, dataType);
   }
 
   @Override

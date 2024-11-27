@@ -38,7 +38,7 @@ public class CoordinatorGroupCommitter
   public static class CoordinatorGroupCommitKeyManipulator
       implements KeyManipulator<String, String, String, String, String> {
     private static final int PRIMARY_KEY_SIZE = 24;
-    private static final char DELIMITER = ':';
+    private static final char DELIMITER = '$';
     private static final int MAX_FULL_KEY_SIZE = 64;
     private static final int MAX_CHILD_KEY_SIZE =
         MAX_FULL_KEY_SIZE - PRIMARY_KEY_SIZE - 1 /* delimiter */;

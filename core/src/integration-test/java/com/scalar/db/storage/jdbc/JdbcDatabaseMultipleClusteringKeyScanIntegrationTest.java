@@ -3,8 +3,8 @@ package com.scalar.db.storage.jdbc;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.Value;
 import java.util.Properties;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -47,27 +47,28 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+  protected Column<?> getColumnWithRandomValue(
+      Random random, String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
     }
-    return super.getRandomValue(random, columnName, dataType);
+    return super.getColumnWithRandomValue(random, columnName, dataType);
   }
 
   @Override
-  protected Value<?> getMinValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
     }
-    return super.getMinValue(columnName, dataType);
+    return super.getColumnWithMinValue(columnName, dataType);
   }
 
   @Override
-  protected Value<?> getMaxValue(String columnName, DataType dataType) {
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
@@ -78,7 +79,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
         return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }
     }
-    return super.getMaxValue(columnName, dataType);
+    return super.getColumnWithMaxValue(columnName, dataType);
   }
 
   // TODO: Remove this once https://github.com/yugabyte/yugabyte-db/issues/22140 is fixed and the

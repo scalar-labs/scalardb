@@ -1,7 +1,5 @@
 rootProject.name = 'scalardb'
 include 'core'
-include 'rpc'
-include 'server'
 include 'schema-loader'
 include 'integration-test'
 include 'data-loader:core'

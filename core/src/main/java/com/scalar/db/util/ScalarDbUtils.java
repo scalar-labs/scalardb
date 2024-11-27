@@ -12,8 +12,8 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
@@ -36,18 +36,18 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -66,21 +66,14 @@ public final class ScalarDbUtils {
 
   public static Get copyAndSetTargetToIfNot(
       Get get, Optional<String> namespace, Optional<String> tableName) {
-    Get ret = new Get(get); // copy
+    Get ret = Get.newBuilder(get).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }
 
   public static Scan copyAndSetTargetToIfNot(
       Scan scan, Optional<String> namespace, Optional<String> tableName) {
-    Scan ret;
-    if (scan instanceof ScanAll) {
-      ret = new ScanAll((ScanAll) scan); // copy
-    } else if (scan instanceof ScanWithIndex) {
-      ret = new ScanWithIndex((ScanWithIndex) scan); // copy
-    } else {
-      ret = new Scan(scan); // copy
-    }
+    Scan ret = Scan.newBuilder(scan).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }
@@ -103,14 +96,14 @@ public final class ScalarDbUtils {
 
   public static Put copyAndSetTargetToIfNot(
       Put put, Optional<String> namespace, Optional<String> tableName) {
-    Put ret = new Put(put); // copy
+    Put ret = Put.newBuilder(put).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }
 
   public static Delete copyAndSetTargetToIfNot(
       Delete delete, Optional<String> namespace, Optional<String> tableName) {
-    Delete ret = new Delete(delete); // copy
+    Delete ret = Delete.newBuilder(delete).build(); // copy
     setTargetToIfNot(ret, namespace, tableName);
     return ret;
   }
@@ -156,9 +149,9 @@ public final class ScalarDbUtils {
     }
 
     // We need to keep this for backward compatibility. We will remove it in release 5.0.0.
-    List<Value<?>> keyValues = selection.getPartitionKey().get();
-    if (keyValues.size() == 1) {
-      String name = keyValues.get(0).getName();
+    List<Column<?>> columns = selection.getPartitionKey().getColumns();
+    if (columns.size() == 1) {
+      String name = columns.get(0).getName();
       return metadata.getSecondaryIndexNames().contains(name);
     }
 
@@ -166,34 +159,14 @@ public final class ScalarDbUtils {
   }
 
   public static void addProjectionsForKeys(Selection selection, TableMetadata metadata) {
-    if (selection.getProjections().isEmpty()) { // meaning projecting all
+    List<String> projections = selection.getProjections();
+    if (projections.isEmpty()) { // meaning projecting all
       return;
     }
     Streams.concat(
             metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
-        .filter(n -> !selection.getProjections().contains(n))
+        .filter(n -> !projections.contains(n))
         .forEach(selection::withProjection);
-  }
-
-  public static <E> E pollUninterruptibly(BlockingQueue<E> queue, long timeout, TimeUnit unit) {
-    boolean interrupted = false;
-    try {
-      long remainingNanos = unit.toNanos(timeout);
-      long end = System.nanoTime() + remainingNanos;
-
-      while (true) {
-        try {
-          return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-          interrupted = true;
-          remainingNanos = end - System.nanoTime();
-        }
-      }
-    } finally {
-      if (interrupted) {
-        Thread.currentThread().interrupt();
-      }
-    }
   }
 
   public static <T> Future<T> takeUninterruptibly(CompletionService<T> completionService) {
@@ -297,10 +270,11 @@ public final class ScalarDbUtils {
 
   public static Get copyAndPrepareForDynamicFiltering(Get get) {
     Get ret = Get.newBuilder(get).build(); // copy
-    if (!ret.getProjections().isEmpty()) {
+    List<String> projections = ret.getProjections();
+    if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
       ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
-          .filter(columnName -> !ret.getProjections().contains(columnName))
+          .filter(columnName -> !projections.contains(columnName))
           .forEach(ret::withProjection);
     }
     return ret;
@@ -309,10 +283,11 @@ public final class ScalarDbUtils {
   public static Scan copyAndPrepareForDynamicFiltering(Scan scan) {
     // Ignore limit to control it during dynamic filtering
     Scan ret = Scan.newBuilder(scan).limit(0).build(); // copy
-    if (!ret.getProjections().isEmpty()) {
+    List<String> projections = ret.getProjections();
+    if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
       ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
-          .filter(columnName -> !ret.getProjections().contains(columnName))
+          .filter(columnName -> !projections.contains(columnName))
           .forEach(ret::withProjection);
     }
     return ret;
@@ -427,5 +402,30 @@ public final class ScalarDbUtils {
     }
 
     return "(?s)" + out; // (?s) enables dotall mode, causing "." to match new lines
+  }
+
+  public static Key getPartitionKey(Result result, TableMetadata metadata) {
+    Optional<Key> key = getKey(result.getColumns(), metadata.getPartitionKeyNames());
+    assert key.isPresent();
+    return key.get();
+  }
+
+  public static Optional<Key> getClusteringKey(Result result, TableMetadata metadata) {
+    return getKey(result.getColumns(), metadata.getClusteringKeyNames());
+  }
+
+  private static Optional<Key> getKey(Map<String, Column<?>> columns, LinkedHashSet<String> names) {
+    if (names.isEmpty()) {
+      return Optional.empty();
+    }
+    Key.Builder builder = Key.newBuilder();
+    for (String name : names) {
+      Column<?> column = columns.get(name);
+      if (column == null) {
+        throw new IllegalStateException(CoreError.COLUMN_NOT_FOUND.buildMessage(name));
+      }
+      builder.add(column);
+    }
+    return Optional.of(builder.build());
   }
 }

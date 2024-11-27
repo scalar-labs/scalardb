@@ -17,17 +17,18 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class Update extends Mutation {
 
-  private final Map<String, Column<?>> columns;
+  private final ImmutableMap<String, Column<?>> columns;
 
   Update(
       @Nullable String namespace,
       String tableName,
       Key partitionKey,
       @Nullable Key clusteringKey,
-      Map<String, Column<?>> columns,
-      @Nullable MutationCondition condition) {
-    super(namespace, tableName, partitionKey, clusteringKey, condition);
-    this.columns = ImmutableMap.copyOf(columns);
+      ImmutableMap<String, String> attributes,
+      @Nullable MutationCondition condition,
+      ImmutableMap<String, Column<?>> columns) {
+    super(namespace, tableName, partitionKey, clusteringKey, null, attributes, condition);
+    this.columns = columns;
   }
 
   public Map<String, Column<?>> getColumns() {
@@ -97,8 +98,9 @@ public class Update extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("columns", getColumns())
+        .add("attributes", getAttributes())
         .add("condition", getCondition())
+        .add("columns", getColumns())
         .toString();
   }
 
@@ -113,7 +115,7 @@ public class Update extends Mutation {
 
   /**
    * Build a {@code Update} operation from an existing {@code Update} object using a builder. The
-   * builder will be parametrized by default with all the existing {@code Update} object attributes.
+   * builder will be parametrized by default with all the existing {@code Update} parameters.
    *
    * @param update an existing {@code Update} operation
    * @return a {@code Update} operation builder

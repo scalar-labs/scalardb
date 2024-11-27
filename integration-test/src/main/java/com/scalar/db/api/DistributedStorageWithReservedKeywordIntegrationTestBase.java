@@ -109,7 +109,6 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     truncateTable();
-    storage.with(namespace, tableName);
   }
 
   private void truncateTable() throws ExecutionException {
@@ -200,10 +199,14 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(columnName1, pKey))
-            .withProjection(columnName1)
-            .withProjection(columnName2)
-            .withProjection(columnName3);
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(tableName)
+            .partitionKey(Key.ofInt(columnName1, pKey))
+            .projection(columnName1)
+            .projection(columnName2)
+            .projection(columnName3)
+            .build();
     List<Result> actual = scanAll(scan);
 
     // Assert
@@ -229,7 +232,12 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(columnName1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(tableName)
+            .partitionKey(Key.ofInt(columnName1, pKey))
+            .build();
     Scanner scanner = storage.scan(scan);
 
     // Assert
@@ -274,9 +282,15 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Key partitionKey = new Key(columnName1, pKey);
-    Key clusteringKey = new Key(columnName4, cKey);
-    Get get = new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(columnName1, pKey);
+    Key clusteringKey = Key.ofInt(columnName4, cKey);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(tableName)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     storage.put(puts.get(pKey * 2 + cKey));
@@ -334,7 +348,12 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Scan scan = new Scan(new Key(columnName1, pKey));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(tableName)
+            .partitionKey(Key.ofInt(columnName1, pKey))
+            .build();
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -376,7 +395,13 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(columnName1, 0)));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(tableName)
+                .partitionKey(Key.ofInt(columnName1, 0))
+                .build());
     assertThat(results.size()).isEqualTo(2);
     assertThat(results.get(0).getValue(columnName1).isPresent()).isTrue();
     assertThat(results.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
@@ -396,14 +421,19 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(columnName1, pKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(partitionKey));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(tableName)
+                .partitionKey(Key.ofInt(columnName1, pKey))
+                .build());
     assertThat(results.size()).isEqualTo(2);
     assertThat(results.get(0).getValue(columnName1).isPresent()).isTrue();
     assertThat(results.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
@@ -437,7 +467,13 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(columnName1, 0)));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(tableName)
+                .partitionKey(Key.ofInt(columnName1, 0))
+                .build());
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -449,8 +485,8 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(columnName1, pKey);
-    Key clusteringKey = new Key(columnName4, cKey);
+    Key partitionKey = Key.ofInt(columnName1, pKey);
+    Key clusteringKey = Key.ofInt(columnName4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -463,7 +499,14 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
 
     // Assert
-    Optional<Result> actual = storage.get(new Get(partitionKey, clusteringKey));
+    Optional<Result> actual =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(tableName)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey)
+                .build());
     assertThat(actual.isPresent()).isFalse();
   }
 
@@ -473,7 +516,12 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     // Arrange
     storage.put(preparePuts().get(0)); // (0,0)
     int c3 = 0;
-    Get get = new Get(new Key(columnName3, c3));
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(tableName)
+            .indexKey(Key.ofInt(columnName3, c3))
+            .build();
 
     // Act
     Optional<Result> actual = storage.get(get);
@@ -492,7 +540,12 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     // Arrange
     populateRecords();
     int c3 = 3;
-    Scan scan = new Scan(new Key(columnName3, c3));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(tableName)
+            .indexKey(Key.ofInt(columnName3, c3))
+            .build();
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -522,9 +575,9 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
     // Arrange
     populateRecords();
     Scan scan =
-        new Scan(new Key(columnName1, 1))
-            .withStart(new Key(columnName4, 1), false)
-            .withEnd(new Key(columnName4, 3), false)
+        new Scan(Key.ofInt(columnName1, 1))
+            .withStart(Key.ofInt(columnName4, 1), false)
+            .withEnd(Key.ofInt(columnName4, 3), false)
             .withOrdering(new Ordering(columnName4, Order.DESC))
             .forNamespace(namespace)
             .forTable(tableName);
@@ -546,9 +599,14 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
   }
 
   private Get prepareGet(int pKey, int cKey) {
-    Key partitionKey = new Key(columnName1, pKey);
-    Key clusteringKey = new Key(columnName4, cKey);
-    return new Get(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(columnName1, pKey);
+    Key clusteringKey = Key.ofInt(columnName4, cKey);
+    return Get.newBuilder()
+        .namespace(namespace)
+        .table(tableName)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private List<Put> preparePuts() {
@@ -560,13 +618,18 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(columnName1, i);
-                          Key clusteringKey = new Key(columnName4, j);
+                          Key partitionKey = Key.ofInt(columnName1, i);
+                          Key clusteringKey = Key.ofInt(columnName4, j);
                           Put put =
-                              new Put(partitionKey, clusteringKey)
-                                  .withValue(columnName2, Integer.toString(i + j))
-                                  .withValue(columnName3, i + j)
-                                  .withValue(columnName5, j % 2 == 0);
+                              Put.newBuilder()
+                                  .namespace(namespace)
+                                  .table(tableName)
+                                  .partitionKey(partitionKey)
+                                  .clusteringKey(clusteringKey)
+                                  .textValue(columnName2, Integer.toString(i + j))
+                                  .intValue(columnName3, i + j)
+                                  .booleanValue(columnName5, j % 2 == 0)
+                                  .build();
                           puts.add(put);
                         }));
 
@@ -574,9 +637,14 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
   }
 
   private Delete prepareDelete(int pKey, int cKey) {
-    Key partitionKey = new Key(columnName1, pKey);
-    Key clusteringKey = new Key(columnName4, cKey);
-    return new Delete(partitionKey, clusteringKey);
+    Key partitionKey = Key.ofInt(columnName1, pKey);
+    Key clusteringKey = Key.ofInt(columnName4, cKey);
+    return Delete.newBuilder()
+        .namespace(namespace)
+        .table(tableName)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private List<Delete> prepareDeletes() {
@@ -588,9 +656,15 @@ public abstract class DistributedStorageWithReservedKeywordIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(columnName1, i);
-                          Key clusteringKey = new Key(columnName4, j);
-                          Delete delete = new Delete(partitionKey, clusteringKey);
+                          Key partitionKey = Key.ofInt(columnName1, i);
+                          Key clusteringKey = Key.ofInt(columnName4, j);
+                          Delete delete =
+                              Delete.newBuilder()
+                                  .namespace(namespace)
+                                  .table(tableName)
+                                  .partitionKey(partitionKey)
+                                  .clusteringKey(clusteringKey)
+                                  .build();
                           deletes.add(delete);
                         }));
 

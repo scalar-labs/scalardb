@@ -1,7 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.io.DoubleColumn;
-import com.scalar.db.io.DoubleValue;
 import java.util.Random;
 
 public final class DynamoTestUtils {
@@ -11,8 +10,8 @@ public final class DynamoTestUtils {
 
   private DynamoTestUtils() {}
 
-  public static DoubleValue getRandomDynamoDoubleValue(Random random, String columnName) {
-    return new DoubleValue(columnName, nextDynamoDouble(random));
+  public static DoubleColumn getRandomDynamoDoubleValue(Random random, String columnName) {
+    return DoubleColumn.of(columnName, nextDynamoDouble(random));
   }
 
   public static DoubleColumn getRandomDynamoDoubleColumn(Random random, String columnName) {
@@ -27,11 +26,11 @@ public final class DynamoTestUtils {
         .orElse(0.0d);
   }
 
-  public static DoubleValue getMinDynamoDoubleValue(String columnName) {
-    return new DoubleValue(columnName, MIN_DYNAMO_DOUBLE_VALUE);
+  public static DoubleColumn getMinDynamoDoubleValue(String columnName) {
+    return DoubleColumn.of(columnName, MIN_DYNAMO_DOUBLE_VALUE);
   }
 
-  public static DoubleValue getMaxDynamoDoubleValue(String columnName) {
-    return new DoubleValue(columnName, MAX_DYNAMO_DOUBLE_VALUE);
+  public static DoubleColumn getMaxDynamoDoubleValue(String columnName) {
+    return DoubleColumn.of(columnName, MAX_DYNAMO_DOUBLE_VALUE);
   }
 }

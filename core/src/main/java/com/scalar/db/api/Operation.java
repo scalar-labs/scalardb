@@ -1,10 +1,8 @@
 package com.scalar.db.api;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
-import java.util.Comparator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -23,34 +21,78 @@ public abstract class Operation {
   private static final Logger logger = LoggerFactory.getLogger(Operation.class);
 
   private final Key partitionKey;
-  private final Optional<Key> clusteringKey;
-  private Optional<String> namespace;
-  private Optional<String> tableName;
+  @Nullable private final Key clusteringKey;
+  @Nullable private String namespace;
+  private String tableName;
   private Consistency consistency;
+  private final ImmutableMap<String, String> attributes;
 
-  public Operation(Key partitionKey, Key clusteringKey) {
-    this.partitionKey = checkNotNull(partitionKey);
-    this.clusteringKey = Optional.ofNullable(clusteringKey);
-    namespace = Optional.empty();
-    tableName = Optional.empty();
-    consistency = Consistency.SEQUENTIAL;
+  Operation(
+      @Nullable String namespace,
+      String tableName,
+      Key partitionKey,
+      @Nullable Key clusteringKey,
+      @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes) {
+    this.partitionKey = Objects.requireNonNull(partitionKey);
+    this.clusteringKey = clusteringKey;
+    this.namespace = namespace;
+    this.tableName = Objects.requireNonNull(tableName);
+    this.consistency = consistency != null ? consistency : Consistency.SEQUENTIAL;
+    this.attributes = attributes;
   }
 
+  /**
+   * Constructs an {@code Operation}.
+   *
+   * @param partitionKey the partition key
+   * @param clusteringKey the clustering key
+   * @deprecated As of release 3.15.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
+  public Operation(Key partitionKey, @Nullable Key clusteringKey) {
+    this.partitionKey = Objects.requireNonNull(partitionKey);
+    this.clusteringKey = clusteringKey;
+    namespace = null;
+    tableName = null;
+    consistency = Consistency.SEQUENTIAL;
+    attributes = ImmutableMap.of();
+  }
+
+  /**
+   * Constructs an {@code Operation}.
+   *
+   * @param namespace the namespace
+   * @param tableName the table name
+   * @param partitionKey the partition key
+   * @param clusteringKey the clustering key
+   * @deprecated As of release 3.15.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
   public Operation(
       @Nullable String namespace, String tableName, Key partitionKey, @Nullable Key clusteringKey) {
-    this.partitionKey = checkNotNull(partitionKey);
-    this.clusteringKey = Optional.ofNullable(clusteringKey);
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.of(tableName);
+    this.partitionKey = Objects.requireNonNull(partitionKey);
+    this.clusteringKey = clusteringKey;
+    this.namespace = namespace;
+    this.tableName = tableName;
     consistency = Consistency.SEQUENTIAL;
+    attributes = ImmutableMap.of();
   }
 
+  /**
+   * Constructs an {@code Operation}.
+   *
+   * @param operation the operation
+   * @deprecated As of release 3.15.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
   public Operation(Operation operation) {
     this.partitionKey = operation.partitionKey;
     this.clusteringKey = operation.clusteringKey;
     namespace = operation.namespace;
     tableName = operation.tableName;
     consistency = operation.consistency;
+    attributes = operation.attributes;
   }
 
   /**
@@ -60,7 +102,7 @@ public abstract class Operation {
    */
   @Nonnull
   public Optional<String> forNamespace() {
-    return namespace;
+    return Optional.ofNullable(namespace);
   }
 
   /**
@@ -70,7 +112,7 @@ public abstract class Operation {
    */
   @Nonnull
   public Optional<String> forTable() {
-    return tableName;
+    return Optional.ofNullable(tableName);
   }
 
   /**
@@ -80,11 +122,11 @@ public abstract class Operation {
    */
   @Nonnull
   public Optional<String> forFullTableName() {
-    if (!namespace.isPresent() || !tableName.isPresent()) {
+    if (namespace == null || tableName == null) {
       logger.warn("Namespace or table name isn't specified");
       return Optional.empty();
     }
-    return Optional.of(namespace.get() + "." + tableName.get());
+    return Optional.of(namespace + "." + tableName);
   }
 
   /**
@@ -96,7 +138,7 @@ public abstract class Operation {
    */
   @Deprecated
   public Operation forNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
+    this.namespace = namespace;
     return this;
   }
 
@@ -109,7 +151,7 @@ public abstract class Operation {
    */
   @Deprecated
   public Operation forTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
+    this.tableName = tableName;
     return this;
   }
 
@@ -130,7 +172,7 @@ public abstract class Operation {
    */
   @Nonnull
   public Optional<Key> getClusteringKey() {
-    return clusteringKey;
+    return Optional.ofNullable(clusteringKey);
   }
 
   /**
@@ -156,6 +198,25 @@ public abstract class Operation {
   }
 
   /**
+   * Returns the attributes for this operation.
+   *
+   * @return the attributes
+   */
+  public Map<String, String> getAttributes() {
+    return attributes;
+  }
+
+  /**
+   * Returns the value of the specified attribute.
+   *
+   * @param name the name of the attribute
+   * @return the value of the specified attribute
+   */
+  public Optional<String> getAttribute(String name) {
+    return Optional.ofNullable(attributes.get(name));
+  }
+
+  /**
    * Indicates whether some other object is "equal to" this object. The other object is considered
    * equal if:
    *
@@ -177,28 +238,17 @@ public abstract class Operation {
       return false;
     }
     Operation other = (Operation) o;
-    return ComparisonChain.start()
-            .compare(partitionKey, other.partitionKey)
-            .compare(
-                clusteringKey.orElse(null),
-                other.clusteringKey.orElse(null),
-                Comparator.nullsFirst(Comparator.naturalOrder()))
-            .compare(
-                namespace.orElse(null),
-                other.namespace.orElse(null),
-                Comparator.nullsFirst(Comparator.naturalOrder()))
-            .compare(
-                tableName.orElse(null),
-                other.tableName.orElse(null),
-                Comparator.nullsFirst(Comparator.naturalOrder()))
-            .compare(consistency, other.consistency)
-            .result()
-        == 0;
+    return Objects.equals(partitionKey, other.partitionKey)
+        && Objects.equals(clusteringKey, other.clusteringKey)
+        && Objects.equals(namespace, other.namespace)
+        && Objects.equals(tableName, other.tableName)
+        && Objects.equals(consistency, other.consistency)
+        && Objects.equals(attributes, other.attributes);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(partitionKey, clusteringKey, namespace, tableName, consistency);
+    return Objects.hash(partitionKey, clusteringKey, namespace, tableName, consistency, attributes);
   }
 
   /**

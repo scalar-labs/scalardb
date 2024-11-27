@@ -16,16 +16,4 @@ public final class SingleCrudOperationTransactionUtils {
     }
     return transactionManager instanceof SingleCrudOperationTransactionManager;
   }
-
-  public static SingleCrudOperationTransactionManager getSingleCrudOperationTransactionManager(
-      DistributedTransactionManager transactionManager) {
-    assert isSingleCrudOperationTransactionManager(transactionManager);
-
-    if (transactionManager instanceof DecoratedDistributedTransactionManager) {
-      return (SingleCrudOperationTransactionManager)
-          ((DecoratedDistributedTransactionManager) transactionManager)
-              .getOriginalTransactionManager();
-    }
-    return (SingleCrudOperationTransactionManager) transactionManager;
-  }
 }

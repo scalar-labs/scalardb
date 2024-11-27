@@ -4,6 +4,7 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -13,7 +14,7 @@ import javax.annotation.Nullable;
  * ScanBuilder}
  */
 public class OperationBuilder {
-  interface Namespace<T> {
+  public interface Namespace<T> {
     /**
      * Sets the specified target namespace for this operation
      *
@@ -23,7 +24,7 @@ public class OperationBuilder {
     T namespace(String namespaceName);
   }
 
-  interface ClearNamespace<T> {
+  public interface ClearNamespace<T> {
     /**
      * Removes the namespace
      *
@@ -32,7 +33,7 @@ public class OperationBuilder {
     T clearNamespace();
   }
 
-  interface Table<T> {
+  public interface Table<T> {
     /**
      * Sets the specified target table for this operation
      *
@@ -42,7 +43,7 @@ public class OperationBuilder {
     T table(String tableName);
   }
 
-  interface PartitionKey<T> {
+  public interface PartitionKey<T> {
     /**
      * Constructs the operation with the specified partition {@link Key}.
      *
@@ -52,7 +53,7 @@ public class OperationBuilder {
     T partitionKey(Key partitionKey);
   }
 
-  interface ClusteringKey<T> {
+  public interface ClusteringKey<T> {
     /**
      * Constructs the operation with the specified clustering {@link Key}.
      *
@@ -62,16 +63,16 @@ public class OperationBuilder {
     T clusteringKey(Key clusteringKey);
   }
 
-  interface ClearClusteringKey<T> {
+  public interface ClearClusteringKey<T> {
     /**
-     * Remove the clustering key
+     * Removes the clustering key
      *
      * @return the operation builder
      */
     T clearClusteringKey();
   }
 
-  interface Consistency<E> {
+  public interface Consistency<E> {
     /**
      * Sets the specified consistency level for this operation
      *
@@ -81,7 +82,7 @@ public class OperationBuilder {
     E consistency(com.scalar.db.api.Consistency consistency);
   }
 
-  interface Projection<T> {
+  public interface Projection<T> {
     /**
      * Appends the specified column name to the list of projections.
      *
@@ -107,7 +108,7 @@ public class OperationBuilder {
     T projections(String... projections);
   }
 
-  interface ClearProjections<T> {
+  public interface ClearProjections<T> {
     /**
      * Clears the list of projections.
      *
@@ -116,7 +117,7 @@ public class OperationBuilder {
     T clearProjections();
   }
 
-  interface Condition<T> {
+  public interface Condition<T> {
     /**
      * Sets the specified {@link MutationCondition}
      *
@@ -126,7 +127,7 @@ public class OperationBuilder {
     T condition(MutationCondition condition);
   }
 
-  interface ClearCondition<T> {
+  public interface ClearCondition<T> {
     /**
      * Removes the condition.
      *
@@ -135,7 +136,7 @@ public class OperationBuilder {
     T clearCondition();
   }
 
-  interface Values<T> {
+  public interface Values<T> {
     /**
      * Adds the specified BOOLEAN value to the list of put values.
      *
@@ -265,7 +266,7 @@ public class OperationBuilder {
     T value(Column<?> column);
   }
 
-  interface ClearValues<T> {
+  public interface ClearValues<T> {
     /**
      * Clears the list of values.
      *
@@ -282,23 +283,26 @@ public class OperationBuilder {
     T clearValue(String columnName);
   }
 
-  interface ImplicitPreReadEnabled<T> {
+  public interface ImplicitPreReadEnabled<T> {
     /**
-     * Disables implicit pre-read for this put operation.
+     * Disables implicit pre-read for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T disableImplicitPreRead();
 
     /**
-     * Enables implicit pre-read for this put operation.
+     * Enables implicit pre-read for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T enableImplicitPreRead();
 
     /**
-     * Sets whether implicit pre-read is enabled or not for this put operation.
+     * Sets whether implicit pre-read is enabled or not for this put operation. This is a utility
+     * method for Consensus Commit.
      *
      * @param implicitPreReadEnabled whether implicit pre-read is enabled or not
      * @return the operation builder
@@ -306,23 +310,26 @@ public class OperationBuilder {
     T implicitPreReadEnabled(boolean implicitPreReadEnabled);
   }
 
-  interface InsertModeEnabled<T> {
+  public interface InsertModeEnabled<T> {
     /**
-     * Disables the insert mode for this put operation.
+     * Disables the insert mode for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T disableInsertMode();
 
     /**
-     * Enables the insert mode for this put operation.
+     * Enables the insert mode for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T enableInsertMode();
 
     /**
-     * Sets whether the insert mode is enabled or not for this put operation.
+     * Sets whether the insert mode is enabled or not for this put operation. This is a utility
+     * method for Consensus Commit.
      *
      * @param insertModeEnabled whether the insert mode is enabled or not
      * @return the operation builder
@@ -330,7 +337,7 @@ public class OperationBuilder {
     T insertModeEnabled(boolean insertModeEnabled);
   }
 
-  interface Limit<T> {
+  public interface Limit<T> {
     /**
      * Sets the specified number of results to be returned
      *
@@ -340,7 +347,7 @@ public class OperationBuilder {
     T limit(int limit);
   }
 
-  interface Ordering<T> {
+  public interface Ordering<T> {
     /**
      * Sets the specified scan ordering. Ordering can only be specified with clustering keys. To
      * sort results by multiple clustering keys, call this method multiple times in the order of
@@ -368,7 +375,7 @@ public class OperationBuilder {
     T orderings(Scan.Ordering... orderings);
   }
 
-  interface ClearOrderings<T> {
+  public interface ClearOrderings<T> {
     /**
      * Clears the list of orderings.
      *
@@ -377,7 +384,7 @@ public class OperationBuilder {
     T clearOrderings();
   }
 
-  interface ClusteringKeyFiltering<T> {
+  public interface ClusteringKeyFiltering<T> {
     /**
      * Sets the specified clustering key as a starting point for scan. The boundary is inclusive.
      *
@@ -417,7 +424,7 @@ public class OperationBuilder {
     T end(Key clusteringKey, boolean inclusive);
   }
 
-  interface ClearBoundaries<T> {
+  public interface ClearBoundaries<T> {
     /**
      * Removes the scan starting boundary.
      *
@@ -433,7 +440,7 @@ public class OperationBuilder {
     T clearEnd();
   }
 
-  interface All<T> {
+  public interface All<T> {
     /**
      * Specifies the Scan operation will retrieve all the entries of the database.
      *
@@ -442,7 +449,7 @@ public class OperationBuilder {
     T all();
   }
 
-  interface IndexKey<T> {
+  public interface IndexKey<T> {
     /**
      * Constructs the operation with the specified index {@link Key}.
      *
@@ -452,7 +459,7 @@ public class OperationBuilder {
     T indexKey(Key indexKey);
   }
 
-  interface Where<T> {
+  public interface Where<T> {
     /**
      * Appends the specified condition.
      *
@@ -462,7 +469,7 @@ public class OperationBuilder {
     T where(ConditionalExpression condition);
   }
 
-  interface WhereAnd<T> {
+  public interface WhereAnd<T> {
     /**
      * Appends the specified set of or-wise conditions.
      *
@@ -480,7 +487,7 @@ public class OperationBuilder {
     T whereAnd(Set<OrConditionSet> orConditionSets);
   }
 
-  interface WhereOr<T> {
+  public interface WhereOr<T> {
     /**
      * Appends the specified set of and-wise conditions.
      *
@@ -498,7 +505,7 @@ public class OperationBuilder {
     T whereOr(Set<AndConditionSet> andConditionSets);
   }
 
-  interface And<T> {
+  public interface And<T> {
     /**
      * Appends the specified condition.
      *
@@ -516,7 +523,7 @@ public class OperationBuilder {
     T and(OrConditionSet conditions);
   }
 
-  interface Or<T> {
+  public interface Or<T> {
     /**
      * Appends the specified condition.
      *
@@ -534,7 +541,7 @@ public class OperationBuilder {
     T or(AndConditionSet conditions);
   }
 
-  interface ClearConditions<T> {
+  public interface ClearConditions<T> {
     /**
      * Clears all conditions.
      *
@@ -543,7 +550,43 @@ public class OperationBuilder {
     T clearConditions();
   }
 
-  abstract static class TableBuilder<T> implements Table<T> {
+  public interface Attribute<T> {
+    /**
+     * Adds the specified attribute.
+     *
+     * @param name the name of the attribute
+     * @param value the value of the attribute
+     * @return the operation builder
+     */
+    T attribute(String name, String value);
+
+    /**
+     * Adds the specified attributes.
+     *
+     * @param attributes the attributes to add
+     * @return the operation builder
+     */
+    T attributes(Map<String, String> attributes);
+  }
+
+  public interface ClearAttribute<T> {
+    /**
+     * Clears all attributes.
+     *
+     * @return the operation builder
+     */
+    T clearAttributes();
+
+    /**
+     * Clears the attribute with the specified name.
+     *
+     * @param name the name of the attribute
+     * @return the operation builder
+     */
+    T clearAttribute(String name);
+  }
+
+  public abstract static class TableBuilder<T> implements Table<T> {
     final String namespace;
 
     public TableBuilder(String namespace) {
@@ -551,7 +594,7 @@ public class OperationBuilder {
     }
   }
 
-  abstract static class PartitionKeyBuilder<T> implements PartitionKey<T> {
+  public abstract static class PartitionKeyBuilder<T> implements PartitionKey<T> {
     @Nullable final String namespaceName;
     final String tableName;
 
@@ -561,7 +604,7 @@ public class OperationBuilder {
     }
   }
 
-  abstract static class Buildable<T> {
+  public abstract static class Buildable<T> {
     @Nullable String namespaceName;
     String tableName;
     Key partitionKey;

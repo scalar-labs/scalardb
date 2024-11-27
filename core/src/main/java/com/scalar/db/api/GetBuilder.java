@@ -2,8 +2,12 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.OperationBuilder.And;
+import com.scalar.db.api.OperationBuilder.Attribute;
 import com.scalar.db.api.OperationBuilder.Buildable;
+import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearConditions;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -24,8 +28,10 @@ import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -84,10 +90,14 @@ public class GetBuilder extends SelectionBuilder {
   }
 
   public static class BuildableGet extends Buildable<Get>
-      implements ClusteringKey<BuildableGet>, Consistency<BuildableGet>, Projection<BuildableGet> {
+      implements ClusteringKey<BuildableGet>,
+          Consistency<BuildableGet>,
+          Projection<BuildableGet>,
+          Attribute<BuildableGet> {
     final List<String> projections = new ArrayList<>();
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
+    final Map<String, String> attributes = new HashMap<>();
 
     private BuildableGet(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -134,16 +144,35 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableGet attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableGet attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
     public Get build() {
-      Get get = new Get(partitionKey, clusteringKey);
-      get.forNamespace(namespaceName).forTable(tableName);
-      if (!projections.isEmpty()) {
-        get.withProjections(projections);
-      }
-      if (consistency != null) {
-        get.withConsistency(consistency);
-      }
-      return get;
+      return build(ImmutableSet.of());
+    }
+
+    private Get build(ImmutableSet<Conjunction> conjunctions) {
+      return new Get(
+          namespaceName,
+          tableName,
+          partitionKey,
+          clusteringKey,
+          consistency,
+          ImmutableMap.copyOf(attributes),
+          projections,
+          conjunctions);
     }
   }
 
@@ -183,6 +212,18 @@ public class GetBuilder extends SelectionBuilder {
     @Override
     public BuildableGetWithPartitionKey consistency(com.scalar.db.api.Consistency consistency) {
       super.consistency(consistency);
+      return this;
+    }
+
+    @Override
+    public BuildableGetWithPartitionKey attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableGetWithPartitionKey attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
       return this;
     }
 
@@ -341,13 +382,14 @@ public class GetBuilder extends SelectionBuilder {
 
     @Override
     public Get build() {
-      return (Get) addConjunctionsTo(super.build(), where);
+      return super.build(getConjunctions(where));
     }
   }
 
   public static class BuildableGetWithIndex
       implements Consistency<BuildableGetWithIndex>,
           Projection<BuildableGetWithIndex>,
+          Attribute<BuildableGetWithIndex>,
           OperationBuilder.Where<BuildableGetWithIndexOngoingWhere>,
           WhereAnd<BuildableGetWithIndexOngoingWhereAnd>,
           WhereOr<BuildableGetWithIndexOngoingWhereOr> {
@@ -356,6 +398,7 @@ public class GetBuilder extends SelectionBuilder {
     private final Key indexKey;
     private final List<String> projections = new ArrayList<>();
     @Nullable private com.scalar.db.api.Consistency consistency;
+    private final Map<String, String> attributes = new HashMap<>();
 
     private BuildableGetWithIndex(@Nullable String namespace, String table, Key indexKey) {
       namespaceName = namespace;
@@ -390,6 +433,21 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableGetWithIndex attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableGetWithIndex attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
     public BuildableGetWithIndexOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableGetWithIndexOngoingWhere(this, condition);
@@ -420,15 +478,18 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     public Get build() {
-      GetWithIndex getWithIndex = new GetWithIndex(indexKey);
-      getWithIndex.forNamespace(namespaceName).forTable(tableName);
-      if (!projections.isEmpty()) {
-        getWithIndex.withProjections(projections);
-      }
-      if (consistency != null) {
-        getWithIndex.withConsistency(consistency);
-      }
-      return getWithIndex;
+      return build(ImmutableSet.of());
+    }
+
+    private Get build(ImmutableSet<Conjunction> conjunctions) {
+      return new GetWithIndex(
+          namespaceName,
+          tableName,
+          indexKey,
+          consistency,
+          ImmutableMap.copyOf(attributes),
+          projections,
+          conjunctions);
     }
   }
 
@@ -539,7 +600,9 @@ public class GetBuilder extends SelectionBuilder {
   }
 
   public static class BuildableGetWithIndexWhere
-      implements Consistency<BuildableGetWithIndexWhere>, Projection<BuildableGetWithIndexWhere> {
+      implements Consistency<BuildableGetWithIndexWhere>,
+          Projection<BuildableGetWithIndexWhere>,
+          Attribute<BuildableGetWithIndexWhere> {
 
     BuildableGetWithIndex buildableGetWithIndex;
     final SelectionBuilder.Where where;
@@ -582,8 +645,20 @@ public class GetBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableGetWithIndexWhere attribute(String name, String value) {
+      buildableGetWithIndex = buildableGetWithIndex.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableGetWithIndexWhere attributes(Map<String, String> attributes) {
+      buildableGetWithIndex = buildableGetWithIndex.attributes(attributes);
+      return this;
+    }
+
     public Get build() {
-      return (Get) addConjunctionsTo(buildableGetWithIndex.build(), where);
+      return buildableGetWithIndex.build(getConjunctions(where));
     }
   }
 
@@ -598,7 +673,8 @@ public class GetBuilder extends SelectionBuilder {
           ClearConditions<BuildableGetOrGetWithIndexFromExisting>,
           ClearProjections<BuildableGetOrGetWithIndexFromExisting>,
           ClearClusteringKey<BuildableGetOrGetWithIndexFromExisting>,
-          ClearNamespace<BuildableGetOrGetWithIndexFromExisting> {
+          ClearNamespace<BuildableGetOrGetWithIndexFromExisting>,
+          ClearAttribute<BuildableGetOrGetWithIndexFromExisting> {
 
     private Key indexKey;
     private final boolean isGetWithIndex;
@@ -609,6 +685,7 @@ public class GetBuilder extends SelectionBuilder {
       clusteringKey = get.getClusteringKey().orElse(null);
       projections.addAll(get.getProjections());
       consistency = get.getConsistency();
+      attributes.putAll(get.getAttributes());
       isGetWithIndex = get instanceof GetWithIndex;
       if (isGetWithIndex) {
         indexKey = get.getPartitionKey();
@@ -682,6 +759,18 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableGetOrGetWithIndexFromExisting attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableGetOrGetWithIndexFromExisting attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
+      return this;
+    }
+
+    @Override
     public BuildableGetFromExistingWithOngoingWhere where(ConditionalExpression condition) {
       checkConditionsEmpty();
       checkNotNull(condition);
@@ -743,6 +832,19 @@ public class GetBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableGetOrGetWithIndexFromExisting clearAttributes() {
+      this.attributes.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableGetOrGetWithIndexFromExisting clearAttribute(String name) {
+      checkNotNull(name);
+      this.attributes.remove(name);
+      return this;
+    }
+
     private void checkNotGet() {
       if (!isGetWithIndex) {
         throw new UnsupportedOperationException(
@@ -771,28 +873,31 @@ public class GetBuilder extends SelectionBuilder {
 
     @Override
     public Get build() {
-      Get get;
+      return build(
+          conjunctions.stream().map(Conjunction::of).collect(ImmutableSet.toImmutableSet()));
+    }
 
+    private Get build(ImmutableSet<Conjunction> conjunctions) {
       if (isGetWithIndex) {
-        get = new GetWithIndex(indexKey);
+        return new GetWithIndex(
+            namespaceName,
+            tableName,
+            indexKey,
+            consistency,
+            ImmutableMap.copyOf(attributes),
+            projections,
+            conjunctions);
       } else {
-        get = new Get(partitionKey, clusteringKey);
+        return new Get(
+            namespaceName,
+            tableName,
+            partitionKey,
+            clusteringKey,
+            consistency,
+            ImmutableMap.copyOf(attributes),
+            projections,
+            conjunctions);
       }
-
-      if (!conjunctions.isEmpty()) {
-        get.withConjunctions(
-            conjunctions.stream().map(Conjunction::of).collect(Collectors.toSet()));
-      }
-
-      get.forNamespace(namespaceName).forTable(tableName);
-      if (!projections.isEmpty()) {
-        get.withProjections(projections);
-      }
-      if (consistency != null) {
-        get.withConsistency(consistency);
-      }
-
-      return get;
     }
   }
 
@@ -804,8 +909,10 @@ public class GetBuilder extends SelectionBuilder {
           IndexKey<BuildableGetFromExistingWithWhere>,
           Consistency<BuildableGetFromExistingWithWhere>,
           Projection<BuildableGetFromExistingWithWhere>,
+          Attribute<BuildableGetFromExistingWithWhere>,
           ClearProjections<BuildableGetFromExistingWithWhere>,
-          ClearNamespace<BuildableGetFromExistingWithWhere> {
+          ClearNamespace<BuildableGetFromExistingWithWhere>,
+          ClearAttribute<BuildableGetFromExistingWithWhere> {
 
     private final BuildableGetOrGetWithIndexFromExisting BuildableGetFromExisting;
     final SelectionBuilder.Where where;
@@ -881,6 +988,18 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableGetFromExistingWithWhere attribute(String name, String value) {
+      BuildableGetFromExisting.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableGetFromExistingWithWhere attributes(Map<String, String> attributes) {
+      BuildableGetFromExisting.attributes(attributes);
+      return this;
+    }
+
+    @Override
     public BuildableGetFromExistingWithWhere clearProjections() {
       BuildableGetFromExisting.clearProjections();
       return this;
@@ -892,8 +1011,20 @@ public class GetBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableGetFromExistingWithWhere clearAttributes() {
+      BuildableGetFromExisting.clearAttributes();
+      return this;
+    }
+
+    @Override
+    public BuildableGetFromExistingWithWhere clearAttribute(String name) {
+      BuildableGetFromExisting.clearAttribute(name);
+      return this;
+    }
+
     public Get build() {
-      return (Get) addConjunctionsTo(BuildableGetFromExisting.build(), where);
+      return BuildableGetFromExisting.build(getConjunctions(where));
     }
   }
 
@@ -903,18 +1034,8 @@ public class GetBuilder extends SelectionBuilder {
           Or<BuildableGetFromExistingWithOngoingWhereOr> {
 
     private BuildableGetFromExistingWithOngoingWhere(
-        BuildableGetOrGetWithIndexFromExisting buildable) {
-      super(buildable);
-    }
-
-    private BuildableGetFromExistingWithOngoingWhere(
         BuildableGetOrGetWithIndexFromExisting buildable, ConditionalExpression condition) {
       super(buildable, condition);
-    }
-
-    private BuildableGetFromExistingWithOngoingWhere(
-        BuildableGetFromExistingWithOngoingWhere buildable) {
-      super(buildable);
     }
 
     @Override
@@ -947,7 +1068,7 @@ public class GetBuilder extends SelectionBuilder {
   }
 
   public static class BuildableGetFromExistingWithOngoingWhereOr
-      extends BuildableGetFromExistingWithOngoingWhere
+      extends BuildableGetFromExistingWithWhere
       implements Or<BuildableGetFromExistingWithOngoingWhereOr> {
 
     private BuildableGetFromExistingWithOngoingWhereOr(
@@ -983,7 +1104,7 @@ public class GetBuilder extends SelectionBuilder {
   }
 
   public static class BuildableGetFromExistingWithOngoingWhereAnd
-      extends BuildableGetFromExistingWithOngoingWhere
+      extends BuildableGetFromExistingWithWhere
       implements And<BuildableGetFromExistingWithOngoingWhereAnd> {
 
     private BuildableGetFromExistingWithOngoingWhereAnd(

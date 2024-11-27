@@ -1,8 +1,13 @@
 package com.scalar.db.api;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -14,6 +19,31 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class ScanAll extends Scan {
 
   private static final Key DUMMY_PARTITION_KEY = Key.of();
+
+  ScanAll(
+      String namespace,
+      String tableName,
+      @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions,
+      List<Scan.Ordering> orderings,
+      int limit) {
+    super(
+        namespace,
+        tableName,
+        DUMMY_PARTITION_KEY,
+        consistency,
+        attributes,
+        projections,
+        conjunctions,
+        null,
+        false,
+        null,
+        false,
+        orderings,
+        limit);
+  }
 
   /**
    * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
@@ -162,11 +192,6 @@ public class ScanAll extends Scan {
   }
 
   @Override
-  ScanAll withConjunctions(Collection<Conjunction> conjunctions) {
-    return (ScanAll) super.withConjunctions(conjunctions);
-  }
-
-  @Override
   public boolean equals(Object o) {
     if (!super.equals(o)) {
       return false;
@@ -180,5 +205,19 @@ public class ScanAll extends Scan {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode());
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", forNamespace())
+        .add("table", forTable())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
+        .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
+        .add("orderings", getOrderings())
+        .add("limit", getLimit())
+        .toString();
   }
 }

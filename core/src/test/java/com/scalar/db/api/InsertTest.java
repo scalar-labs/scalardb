@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
@@ -150,5 +151,25 @@ public class InsertTest {
     // Assert
     assertThat(ret).isFalse();
     assertThat(insert.hashCode()).isNotEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void getAttribute_ShouldReturnProperValues() {
+    // Arrange
+    Insert insert =
+        Insert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "pv"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
+
+    // Act Assert
+    assertThat(insert.getAttribute("a1")).hasValue("v1");
+    assertThat(insert.getAttribute("a2")).hasValue("v2");
+    assertThat(insert.getAttribute("a3")).hasValue("v3");
+    assertThat(insert.getAttributes())
+        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
   }
 }
