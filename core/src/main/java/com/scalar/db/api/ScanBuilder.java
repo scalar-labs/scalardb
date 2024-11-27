@@ -1466,18 +1466,8 @@ public class ScanBuilder extends SelectionBuilder {
           Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
     private BuildableScanFromExistingWithOngoingWhere(
-        BuildableScanOrScanAllFromExisting buildable) {
-      super(buildable);
-    }
-
-    private BuildableScanFromExistingWithOngoingWhere(
         BuildableScanOrScanAllFromExisting buildable, ConditionalExpression condition) {
       super(buildable, condition);
-    }
-
-    private BuildableScanFromExistingWithOngoingWhere(
-        BuildableScanFromExistingWithOngoingWhere buildable) {
-      super(buildable);
     }
 
     @Override
@@ -1510,7 +1500,7 @@ public class ScanBuilder extends SelectionBuilder {
   }
 
   public static class BuildableScanFromExistingWithOngoingWhereOr
-      extends BuildableScanFromExistingWithOngoingWhere
+      extends BuildableScanFromExistingWithWhere
       implements Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
     private BuildableScanFromExistingWithOngoingWhereOr(
@@ -1546,7 +1536,7 @@ public class ScanBuilder extends SelectionBuilder {
   }
 
   public static class BuildableScanFromExistingWithOngoingWhereAnd
-      extends BuildableScanFromExistingWithOngoingWhere
+      extends BuildableScanFromExistingWithWhere
       implements And<BuildableScanFromExistingWithOngoingWhereAnd> {
 
     private BuildableScanFromExistingWithOngoingWhereAnd(
