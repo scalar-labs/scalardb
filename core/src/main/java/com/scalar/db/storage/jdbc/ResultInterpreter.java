@@ -8,10 +8,14 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -26,11 +30,14 @@ public class ResultInterpreter {
 
   private final List<String> projections;
   private final TableMetadata metadata;
+  private final RdbEngineStrategy rdbEngine;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public ResultInterpreter(List<String> projections, TableMetadata metadata) {
+  public ResultInterpreter(
+      List<String> projections, TableMetadata metadata, RdbEngineStrategy rdbEngine) {
     this.projections = Objects.requireNonNull(projections);
     this.metadata = Objects.requireNonNull(metadata);
+    this.rdbEngine = rdbEngine;
   }
 
   public Result interpret(ResultSet resultSet) throws SQLException {
@@ -94,6 +101,30 @@ public class ResultInterpreter {
         ret = BlobColumn.of(name, resultSet.getBytes(name));
         if (resultSet.wasNull()) {
           ret = BlobColumn.ofNull(name);
+        }
+        break;
+      case DATE:
+        ret = rdbEngine.parseDateColumn(resultSet, name);
+        if (resultSet.wasNull()) {
+          ret = DateColumn.ofNull(name);
+        }
+        break;
+      case TIME:
+        ret = rdbEngine.parseTimeColumn(resultSet, name);
+        if (resultSet.wasNull()) {
+          ret = TimeColumn.ofNull(name);
+        }
+        break;
+      case TIMESTAMP:
+        ret = rdbEngine.parseTimestampColumn(resultSet, name);
+        if (resultSet.wasNull()) {
+          ret = TimestampColumn.ofNull(name);
+        }
+        break;
+      case TIMESTAMPTZ:
+        ret = rdbEngine.parseTimestampTZColumn(resultSet, name);
+        if (resultSet.wasNull()) {
+          ret = TimestampTZColumn.ofNull(name);
         }
         break;
       default:

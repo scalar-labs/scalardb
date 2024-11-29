@@ -304,6 +304,14 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.VARBINARY;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+        return Types.TIMESTAMP;
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP_WITH_TIMEZONE;
       default:
         throw new AssertionError();
     }

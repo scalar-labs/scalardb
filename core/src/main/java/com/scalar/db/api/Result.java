@@ -4,6 +4,10 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -167,6 +171,44 @@ public interface Result {
    */
   @Nullable
   byte[] getBlobAsBytes(String columnName);
+  /**
+   * Returns the DATE value of the specified column as a Java LocalDate type.
+   *
+   * @param columnName a column name of the value
+   * @return the DATE value of the specified column as a Java LocalDate type. If the value is NULL,
+   *     null
+   */
+  @Nullable
+  LocalDate getDate(String columnName);
+
+  /**
+   * Returns the TIME value of the specified column as a Java LocalTime type.
+   *
+   * @param columnName a column name of the value
+   * @return the TIME value of the specified column as a Java LocalTime type. If the value is NULL,
+   *     null
+   */
+  @Nullable
+  LocalTime getTime(String columnName);
+
+  /**
+   * Returns the TIMESTAMP value of the specified column as a Java LocalDateTime type.
+   *
+   * @param columnName a column name of the value
+   * @return the TIMESTAMP value of the specified column as a Java LocalDateTime type. If the value
+   *     is NULL, null
+   */
+  @Nullable
+  LocalDateTime getTimestamp(String columnName);
+  /**
+   * Returns the TIMESTAMPTZ value of the specified column as a Java Instant type.
+   *
+   * @param columnName a column name of the value
+   * @return the TIMESTAMPTZ value of the specified column as a Java Instant type. If the value is
+   *     NULL, null
+   */
+  @Nullable
+  Instant getTimestampTZ(String columnName);
 
   /**
    * Returns the value of the specified column as a Java Object type.

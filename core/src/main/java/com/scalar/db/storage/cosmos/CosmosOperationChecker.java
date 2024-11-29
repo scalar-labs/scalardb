@@ -18,10 +18,14 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.ColumnVisitor;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 
 public class CosmosOperationChecker extends OperationChecker {
 
@@ -71,6 +75,18 @@ public class CosmosOperationChecker extends OperationChecker {
 
         @Override
         public void visit(BlobColumn column) {}
+
+        @Override
+        public void visit(DateColumn column) {}
+
+        @Override
+        public void visit(TimeColumn column) {}
+
+        @Override
+        public void visit(TimestampColumn column) {}
+
+        @Override
+        public void visit(TimestampTZColumn column) {}
       };
 
   public CosmosOperationChecker(

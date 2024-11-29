@@ -6,11 +6,19 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -226,6 +234,46 @@ public class ConditionBuilder {
     }
 
     /**
+     * Creates an 'equal' conditional expression for a DATE value.
+     *
+     * @param value a DATE value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isEqualToDate(LocalDate value) {
+      return new ConditionalExpression(DateColumn.of(columnName, value), Operator.EQ);
+    }
+
+    /**
+     * Creates an 'equal' conditional expression for a TIME value.
+     *
+     * @param value a TIME value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isEqualToTime(LocalTime value) {
+      return new ConditionalExpression(TimeColumn.of(columnName, value), Operator.EQ);
+    }
+
+    /**
+     * Creates an 'equal' conditional expression for a TIMESTAMP value.
+     *
+     * @param value a TIMESTAMP value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isEqualToTimestamp(LocalDateTime value) {
+      return new ConditionalExpression(TimestampColumn.of(columnName, value), Operator.EQ);
+    }
+
+    /**
+     * Creates an 'equal' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @param value a TIMESTAMPTZ value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isEqualToTimestampTZ(Instant value) {
+      return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.EQ);
+    }
+
+    /**
      * Creates a 'not equal' conditional expression for a BOOLEAN value.
      *
      * @param value a BOOLEAN value used to compare with the target column
@@ -304,7 +352,45 @@ public class ConditionBuilder {
     public ConditionalExpression isNotEqualToBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.NE);
     }
+    /**
+     * Creates a 'not equal' conditional expression for a DATE value.
+     *
+     * @param value a DATE value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotEqualToDate(LocalDate value) {
+      return new ConditionalExpression(DateColumn.of(columnName, value), Operator.NE);
+    }
 
+    /**
+     * Creates a 'not equal' conditional expression for a TIME value.
+     *
+     * @param value a TIME value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotEqualToTime(LocalTime value) {
+      return new ConditionalExpression(TimeColumn.of(columnName, value), Operator.NE);
+    }
+
+    /**
+     * Creates a 'not equal' conditional expression for a TIMESTAMP value.
+     *
+     * @param value a TIMESTAMP value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotEqualToTimestamp(LocalDateTime value) {
+      return new ConditionalExpression(TimestampColumn.of(columnName, value), Operator.NE);
+    }
+
+    /**
+     * Creates a 'not equal' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @param value a TIMESTAMPTZ value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotEqualToTimestampTZ(Instant value) {
+      return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.NE);
+    }
     /**
      * Creates a 'greater than' conditional expression for a BOOLEAN value.
      *
@@ -383,6 +469,47 @@ public class ConditionBuilder {
      */
     public ConditionalExpression isGreaterThanBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.GT);
+    }
+
+    // Greater than condition methods
+    /**
+     * Creates a 'greater than' conditional expression for a DATE value.
+     *
+     * @param value a DATE value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanDate(LocalDate value) {
+      return new ConditionalExpression(DateColumn.of(columnName, value), Operator.GT);
+    }
+
+    /**
+     * Creates a 'greater than' conditional expression for a TIME value.
+     *
+     * @param value a TIME value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanTime(LocalTime value) {
+      return new ConditionalExpression(TimeColumn.of(columnName, value), Operator.GT);
+    }
+
+    /**
+     * Creates a 'greater than' conditional expression for a TIMESTAMP value.
+     *
+     * @param value a TIMESTAMP value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanTimestamp(LocalDateTime value) {
+      return new ConditionalExpression(TimestampColumn.of(columnName, value), Operator.GT);
+    }
+
+    /**
+     * Creates a 'greater than' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @param value a TIMESTAMPTZ value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanTimestampTZ(Instant value) {
+      return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.GT);
     }
 
     /**
@@ -464,6 +591,45 @@ public class ConditionBuilder {
     public ConditionalExpression isGreaterThanOrEqualToBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.GTE);
     }
+    /**
+     * Creates a 'greater than or equal' conditional expression for a DATE value.
+     *
+     * @param value a DATE value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanOrEqualToDate(LocalDate value) {
+      return new ConditionalExpression(DateColumn.of(columnName, value), Operator.GTE);
+    }
+
+    /**
+     * Creates a 'greater than or equal' conditional expression for a TIME value.
+     *
+     * @param value a TIME value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanOrEqualToTime(LocalTime value) {
+      return new ConditionalExpression(TimeColumn.of(columnName, value), Operator.GTE);
+    }
+
+    /**
+     * Creates a 'greater than or equal' conditional expression for a TIMESTAMP value.
+     *
+     * @param value a TIMESTAMP value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanOrEqualToTimestamp(LocalDateTime value) {
+      return new ConditionalExpression(TimestampColumn.of(columnName, value), Operator.GTE);
+    }
+
+    /**
+     * Creates a 'greater than or equal' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @param value a TIMESTAMPTZ value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isGreaterThanOrEqualToTimestampTZ(Instant value) {
+      return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.GTE);
+    }
 
     /**
      * Creates a 'less than' conditional expression for a BOOLEAN value.
@@ -544,7 +710,45 @@ public class ConditionBuilder {
     public ConditionalExpression isLessThanBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.LT);
     }
+    /**
+     * Creates a 'less than' conditional expression for a DATE value.
+     *
+     * @param value a DATE value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanDate(LocalDate value) {
+      return new ConditionalExpression(DateColumn.of(columnName, value), Operator.LT);
+    }
 
+    /**
+     * Creates a 'less than' conditional expression for a TIME value.
+     *
+     * @param value a TIME value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanTime(LocalTime value) {
+      return new ConditionalExpression(TimeColumn.of(columnName, value), Operator.LT);
+    }
+
+    /**
+     * Creates a 'less than' conditional expression for a TIMESTAMP value.
+     *
+     * @param value a TIMESTAMP value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanTimestamp(LocalDateTime value) {
+      return new ConditionalExpression(TimestampColumn.of(columnName, value), Operator.LT);
+    }
+
+    /**
+     * Creates a 'less than' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @param value a TIMESTAMPTZ value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanTimestampTZ(Instant value) {
+      return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.LT);
+    }
     /**
      * Creates a 'less than or equal' conditional expression for a BOOLEAN value.
      *
@@ -626,6 +830,46 @@ public class ConditionBuilder {
     }
 
     /**
+     * Creates a 'less than or equal' conditional expression for a DATE value.
+     *
+     * @param value a DATE value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanOrEqualToDate(LocalDate value) {
+      return new ConditionalExpression(DateColumn.of(columnName, value), Operator.LTE);
+    }
+
+    /**
+     * Creates a 'less than or equal' conditional expression for a TIME value.
+     *
+     * @param value a TIME value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanOrEqualToTime(LocalTime value) {
+      return new ConditionalExpression(TimeColumn.of(columnName, value), Operator.LTE);
+    }
+
+    /**
+     * Creates a 'less than or equal' conditional expression for a TIMESTAMP value.
+     *
+     * @param value a TIMESTAMP value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanOrEqualToTimestamp(LocalDateTime value) {
+      return new ConditionalExpression(TimestampColumn.of(columnName, value), Operator.LTE);
+    }
+
+    /**
+     * Creates a 'less than or equal' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @param value a TIMESTAMPTZ value used to compare with the target column
+     * @return a conditional expression
+     */
+    public ConditionalExpression isLessThanOrEqualToTimestampTZ(Instant value) {
+      return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.LTE);
+    }
+
+    /**
      * Creates a 'is null' conditional expression for a BOOLEAN value.
      *
      * @return a conditional expression
@@ -689,6 +933,42 @@ public class ConditionBuilder {
     }
 
     /**
+     * Creates an 'is null' conditional expression for a DATE value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullDate() {
+      return new ConditionalExpression(DateColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates an 'is null' conditional expression for a TIME value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullTime() {
+      return new ConditionalExpression(TimeColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates an 'is null' conditional expression for a TIMESTAMP value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullTimestamp() {
+      return new ConditionalExpression(TimestampColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
+     * Creates an 'is null' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNullTimestampTZ() {
+      return new ConditionalExpression(TimestampTZColumn.ofNull(columnName), Operator.IS_NULL);
+    }
+
+    /**
      * Creates a 'is not null' conditional expression for a BOOLEAN value.
      *
      * @return a conditional expression
@@ -749,6 +1029,41 @@ public class ConditionBuilder {
      */
     public ConditionalExpression isNotNullBlob() {
       return new ConditionalExpression(BlobColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+    /**
+     * Creates an 'is not null' conditional expression for a DATE value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullDate() {
+      return new ConditionalExpression(DateColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates an 'is not null' conditional expression for a TIME value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullTime() {
+      return new ConditionalExpression(TimeColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates an 'is not null' conditional expression for a TIMESTAMP value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullTimestamp() {
+      return new ConditionalExpression(TimestampColumn.ofNull(columnName), Operator.IS_NOT_NULL);
+    }
+
+    /**
+     * Creates an 'is not null' conditional expression for a TIMESTAMPTZ value.
+     *
+     * @return a conditional expression
+     */
+    public ConditionalExpression isNotNullTimestampTZ() {
+      return new ConditionalExpression(TimestampTZColumn.ofNull(columnName), Operator.IS_NOT_NULL);
     }
 
     /**

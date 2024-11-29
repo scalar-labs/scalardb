@@ -8,6 +8,9 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.storage.ColumnSerializationUtils;
 import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
@@ -25,14 +28,17 @@ import org.slf4j.LoggerFactory;
 class RdbEngineOracle implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private final String keyColumnSize;
+  private final JdbcConfig config;
 
   RdbEngineOracle(JdbcConfig config) {
     keyColumnSize = String.valueOf(config.getOracleVariableKeyColumnSize());
+    this.config = config;
   }
 
   @VisibleForTesting
   RdbEngineOracle() {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+    config = null;
   }
 
   @Override
@@ -324,6 +330,15 @@ class RdbEngineOracle implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
+        // TODO check utility
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+        return Types.TIMESTAMP;
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP_WITH_TIMEZONE;
       default:
         throw new AssertionError();
     }
@@ -353,5 +368,19 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
+  }
+
+  @Override
+  public String encodeDate(DateColumn column) {
+    return ColumnSerializationUtils.toJDBCFormat(column)
+        + " "
+        + config.getOracleDateColumnDefaultTimeComponent();
+  }
+
+  @Override
+  public String encodeTime(TimeColumn column) {
+    return config.getOracleTimeColumnDefaultDateComponent()
+        + " "
+        + ColumnSerializationUtils.toJDBCFormat(column);
   }
 }

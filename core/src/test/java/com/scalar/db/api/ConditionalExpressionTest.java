@@ -9,6 +9,7 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatColumn;
@@ -17,8 +18,15 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
 public class ConditionalExpressionTest {
@@ -132,6 +140,14 @@ public class ConditionalExpressionTest {
     ConditionalExpression expression7 =
         new ConditionalExpression(
             BlobColumn.of("col7", "blob".getBytes(StandardCharsets.UTF_8)), Operator.EQ);
+    ConditionalExpression expression8 =
+        new ConditionalExpression(DateColumn.of("col8", LocalDate.MAX), Operator.NE);
+    ConditionalExpression expression9 =
+        new ConditionalExpression(TimeColumn.of("col9", LocalTime.NOON), Operator.GT);
+    ConditionalExpression expression10 =
+        new ConditionalExpression(TimestampColumn.of("col10", LocalDateTime.MAX), Operator.LT);
+    ConditionalExpression expression11 =
+        new ConditionalExpression(TimestampTZColumn.of("col10", Instant.MAX), Operator.GTE);
 
     // Assert
     assertThat(expression1.getColumn()).isEqualTo(BooleanColumn.of("col1", true));
@@ -155,5 +171,13 @@ public class ConditionalExpressionTest {
     assertThat(expression7.getColumn())
         .isEqualTo(BlobColumn.of("col7", "blob".getBytes(StandardCharsets.UTF_8)));
     assertThat(expression7.getOperator()).isEqualTo(Operator.EQ);
+    assertThat(expression8.getColumn()).isEqualTo(DateColumn.of("col8", LocalDate.MAX));
+    assertThat(expression8.getOperator()).isEqualTo(Operator.NE);
+    assertThat(expression9.getColumn()).isEqualTo(TimeColumn.of("col9", LocalTime.NOON));
+    assertThat(expression9.getOperator()).isEqualTo(Operator.GT);
+    assertThat(expression10.getColumn()).isEqualTo(TimestampColumn.of("col10", LocalDateTime.MAX));
+    assertThat(expression10.getOperator()).isEqualTo(Operator.LT);
+    assertThat(expression11.getColumn()).isEqualTo(TimestampTZColumn.of("col10", Instant.MAX));
+    assertThat(expression11.getOperator()).isEqualTo(Operator.GTE);
   }
 }

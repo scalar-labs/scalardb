@@ -32,7 +32,7 @@ subprojects {
         mysqlDriverVersion = '8.4.0'
         postgresqlDriverVersion = '42.7.4'
         oracleDriverVersion = '21.15.0.0'
-        sqlserverDriverVersion = '11.2.3.jre8'
+        sqlserverDriverVersion = '12.8.1.jre8'
         sqliteDriverVersion = '3.47.0.0'
         yugabyteDriverVersion = '42.7.3-yb-1'
         picocliVersion = '4.7.6'

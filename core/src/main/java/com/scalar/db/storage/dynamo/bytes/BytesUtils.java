@@ -6,6 +6,7 @@ import java.util.Optional;
 
 public final class BytesUtils {
   private static final byte MASK = (byte) 0xff;
+  private static final byte TERM = 0x00;
 
   private BytesUtils() {}
 
@@ -109,5 +110,24 @@ public final class BytesUtils {
     byte[] bytes = new byte[src.remaining()];
     src.get(bytes);
     return bytes;
+  }
+
+  public static void encodeLong(long value, Order order, ByteBuffer dst) {
+    dst.put(
+        mask((byte) ((value >> 56) ^ 0x80), order)); // Flip a sign bit to make it binary comparable
+    dst.put(mask((byte) (value >> 48), order));
+    dst.put(mask((byte) (value >> 40), order));
+    dst.put(mask((byte) (value >> 32), order));
+    dst.put(mask((byte) (value >> 24), order));
+    dst.put(mask((byte) (value >> 16), order));
+    dst.put(mask((byte) (value >> 8), order));
+    dst.put(mask((byte) value, order));
+  }
+
+  public static void encodeString(byte[] bytes, Order order, ByteBuffer dst) {
+    for (byte b : bytes) {
+      dst.put(mask(b, order));
+    }
+    dst.put(mask(TERM, order));
   }
 }

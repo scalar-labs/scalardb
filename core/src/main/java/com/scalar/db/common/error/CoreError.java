@@ -666,6 +666,42 @@ public enum CoreError implements ScalarDbError {
           + "Primary-key columns must not contain any of the following characters in Cosmos DB: ':', '/', '\\', '#', '?'. Value: %s",
       "",
       ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE(
+      Category.USER_ERROR,
+      "0146",
+      "This Date column value is out of the valid range. It must from 1000-01-01 through 9999-12-12. Value: %s",
+      "",
+      ""),
+  SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME(
+      Category.USER_ERROR,
+      "0147",
+      "This Time column value precision cannot be smaller than a microsecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0148",
+      "This Timestamp column value is out of the valid range. It must from 1000-01-01T00:00:00.000 through 9999-12-31T23:59:59.999. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0149",
+      "This Timestamp column value precision cannot be smaller than a millisecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0150",
+      "This TimestampTZ column value is out of the valid range. It must from 1000-01-01T00:00:00.000Z through 9999-12-31T23:59:59.999Z. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0151",
+      "This TimestampTZ column value precision cannot be smaller than a millisecond. Value: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

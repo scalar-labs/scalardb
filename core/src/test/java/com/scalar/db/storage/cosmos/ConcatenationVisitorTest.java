@@ -3,13 +3,17 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.io.BigIntColumn;
-import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.storage.ColumnSerializationUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +25,7 @@ public class ConcatenationVisitorTest {
       BooleanColumn.of("any_boolean", ANY_BOOLEAN);
   private static final int ANY_INT = Integer.MIN_VALUE;
   private static final IntColumn ANY_INT_COLUMN = IntColumn.of("any_int", ANY_INT);
-  private static final long ANY_BIGINT = BigIntValue.MAX_VALUE;
+  private static final long ANY_BIGINT = BigIntColumn.MAX_VALUE;
   private static final BigIntColumn ANY_BIGINT_COLUMN = BigIntColumn.of("any_bigint", ANY_BIGINT);
   private static final float ANY_FLOAT = Float.MIN_NORMAL;
   private static final FloatColumn ANY_FLOAT_COLUMN = FloatColumn.of("any_float", ANY_FLOAT);
@@ -31,6 +35,12 @@ public class ConcatenationVisitorTest {
   private static final TextColumn ANY_TEXT_COLUMN = TextColumn.of("any_text", ANY_TEXT);
   private static final byte[] ANY_BLOB = "scalar".getBytes(StandardCharsets.UTF_8);
   private static final BlobColumn ANY_BLOB_COLUMN = BlobColumn.of("any_blob", ANY_BLOB);
+  private static final DateColumn ANY_DATE_COLUMN = DateColumn.of("any_date", DateColumn.MAX_VALUE);
+  private static final TimeColumn ANY_TIME_COLUMN = TimeColumn.of("any_time", TimeColumn.MAX_VALUE);
+  private static final TimestampColumn ANY_TIMESTAMP_COLUMN =
+      TimestampColumn.of("any_timestamp", TimestampColumn.MAX_VALUE);
+  private static final TimestampTZColumn ANY_TIMESTAMPTZ_COLUMN =
+      TimestampTZColumn.of("any_timestamp_tz", TimestampTZColumn.MAX_VALUE);
   private ConcatenationVisitor visitor;
 
   @BeforeEach
@@ -48,11 +58,15 @@ public class ConcatenationVisitorTest {
     visitor.visit(ANY_DOUBLE_COLUMN);
     visitor.visit(ANY_TEXT_COLUMN);
     visitor.visit(ANY_BLOB_COLUMN);
+    visitor.visit(ANY_DATE_COLUMN);
+    visitor.visit(ANY_TIME_COLUMN);
+    visitor.visit(ANY_TIMESTAMP_COLUMN);
+    visitor.visit(ANY_TIMESTAMPTZ_COLUMN);
     String actual = visitor.build();
 
     // Assert
     String[] values = actual.split(":", -1);
-    assertThat(values.length).isEqualTo(7);
+    assertThat(values.length).isEqualTo(11);
     assertThat(values[0]).isEqualTo(String.valueOf(ANY_BOOLEAN));
     assertThat(values[1]).isEqualTo(String.valueOf(ANY_INT));
     assertThat(values[2]).isEqualTo(String.valueOf(ANY_BIGINT));
@@ -61,6 +75,13 @@ public class ConcatenationVisitorTest {
     assertThat(values[5]).isEqualTo(ANY_TEXT);
     assertThat(values[6])
         .isEqualTo(Base64.getUrlEncoder().withoutPadding().encodeToString(ANY_BLOB));
+    assertThat(values[7])
+        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_DATE_COLUMN)));
+    assertThat(values[8])
+        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_TIME_COLUMN)));
+    assertThat(values[9]).isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMP_COLUMN));
+    assertThat(values[10])
+        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMPTZ_COLUMN));
   }
 
   @Test
@@ -125,5 +146,45 @@ public class ConcatenationVisitorTest {
     // Assert
     assertThat(visitor.build())
         .isEqualTo(Base64.getUrlEncoder().withoutPadding().encodeToString(ANY_BLOB));
+  }
+
+  @Test
+  public void visit_DateColumnAcceptCalled_ShouldBuildDateAsString() {
+    // Act
+    ANY_DATE_COLUMN.accept(visitor);
+
+    // Assert
+    assertThat(visitor.build())
+        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_DATE_COLUMN)));
+  }
+
+  @Test
+  public void visit_TimeColumnAcceptCalled_ShouldBuildTimeAsString() {
+    // Act
+    ANY_TIME_COLUMN.accept(visitor);
+
+    // Assert
+    assertThat(visitor.build())
+        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_TIME_COLUMN)));
+  }
+
+  @Test
+  public void visit_TimestampColumnAcceptCalled_ShouldBuildTimestampAsString() {
+    // Act
+    ANY_TIMESTAMP_COLUMN.accept(visitor);
+
+    // Assert
+    assertThat(visitor.build())
+        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMP_COLUMN));
+  }
+
+  @Test
+  public void visit_TimestampTZColumnAcceptCalled_ShouldBuildTimestampTZAsString() {
+    // Act
+    ANY_TIMESTAMPTZ_COLUMN.accept(visitor);
+
+    // Assert
+    assertThat(visitor.build())
+        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMPTZ_COLUMN));
   }
 }
