@@ -1129,20 +1129,22 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       DataType firstDataType,
       @Nullable Operator secondOperator,
       @Nullable DataType secondDataType) {
-    return new Put(
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(
             Key.ofText(
                 PARTITION_KEY,
                 getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .withValue(getColumnWithRandomValue(random.get(), COL_NAME1, DataType.BOOLEAN))
-        .withValue(getColumnWithRandomValue(random.get(), COL_NAME2, DataType.INT))
-        .withValue(getColumnWithRandomValue(random.get(), COL_NAME3, DataType.BIGINT))
-        .withValue(getColumnWithRandomValue(random.get(), COL_NAME4, DataType.FLOAT))
-        .withValue(getColumnWithRandomValue(random.get(), COL_NAME5, DataType.DOUBLE))
-        .withValue(getColumnWithRandomValue(random.get(), COL_NAME6, DataType.TEXT))
-        .withValue(getColumnWithRandomValue(random.get(), COL_NAME7, DataType.BLOB))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(namespace)
-        .forTable(TABLE);
+        .value(getColumnWithRandomValue(random.get(), COL_NAME1, DataType.BOOLEAN))
+        .value(getColumnWithRandomValue(random.get(), COL_NAME2, DataType.INT))
+        .value(getColumnWithRandomValue(random.get(), COL_NAME3, DataType.BIGINT))
+        .value(getColumnWithRandomValue(random.get(), COL_NAME4, DataType.FLOAT))
+        .value(getColumnWithRandomValue(random.get(), COL_NAME5, DataType.DOUBLE))
+        .value(getColumnWithRandomValue(random.get(), COL_NAME6, DataType.TEXT))
+        .value(getColumnWithRandomValue(random.get(), COL_NAME7, DataType.BLOB))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Delete prepareDelete() {

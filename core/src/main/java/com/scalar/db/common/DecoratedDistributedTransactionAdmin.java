@@ -311,6 +311,11 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public User getCurrentUser() throws ExecutionException {
+    return distributedTransactionAdmin.getCurrentUser();
+  }
+
+  @Override
   public Set<Privilege> getPrivileges(String username, String namespaceName)
       throws ExecutionException {
     return distributedTransactionAdmin.getPrivileges(username, namespaceName);

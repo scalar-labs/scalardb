@@ -67,7 +67,7 @@ public class RecoveryHandler {
       RollbackMutationComposer composer =
           new RollbackMutationComposer(result.getId(), storage, tableMetadataManager);
       composer.add(selection, result);
-      mutate(composer.get(), result.getId());
+      mutate(composer.get());
     } catch (Exception e) {
       logger.warn("Rolling back a record failed. Transaction ID: {}", result.getId(), e);
       // ignore since the record is recovered lazily
@@ -81,9 +81,15 @@ public class RecoveryHandler {
         selection.getPartitionKey(),
         selection.getClusteringKey(),
         result.getId());
-    CommitMutationComposer composer = new CommitMutationComposer(result.getId());
-    composer.add(selection, result);
-    mutate(composer.get(), result.getId());
+    try {
+      CommitMutationComposer composer =
+          new CommitMutationComposer(result.getId(), tableMetadataManager);
+      composer.add(selection, result);
+      mutate(composer.get());
+    } catch (Exception e) {
+      logger.warn("Rolling forward a record failed. Transaction ID: {}", result.getId(), e);
+      // ignore since the record is recovered lazily
+    }
   }
 
   private void abortIfExpired(Selection selection, TransactionResult result) {
@@ -93,24 +99,17 @@ public class RecoveryHandler {
     }
 
     try {
-      coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
+      coordinator.putStateForLazyRecoveryRollback(result.getId());
       rollbackRecord(selection, result);
     } catch (CoordinatorException e) {
       logger.warn("Coordinator tries to abort {}, but failed", result.getId(), e);
     }
   }
 
-  private void mutate(List<Mutation> mutations, String transactionId) {
+  private void mutate(List<Mutation> mutations) throws ExecutionException {
     if (mutations.isEmpty()) {
       return;
     }
-    try {
-      storage.mutate(mutations);
-    } catch (ExecutionException e) {
-      logger.warn(
-          "Mutation in recovery failed. the record will be eventually recovered. Transaction ID: {}",
-          transactionId,
-          e);
-    }
+    storage.mutate(mutations);
   }
 }

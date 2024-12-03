@@ -115,10 +115,10 @@ public enum CoreError implements ScalarDbError {
       "The clustering key is not properly specified. Operation: %s",
       "",
       ""),
-  NOT_SUPPORTED_IN_COMMUNITY_EDITION(
+  AUTH_NOT_ENABLED(
       Category.USER_ERROR,
       "0022",
-      "This feature is not supported in the ScalarDB Community edition",
+      "The authentication and authorization feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF(
@@ -647,30 +647,47 @@ public enum CoreError implements ScalarDbError {
           + "If you want to modify a condition, please use clearConditions() to remove all existing conditions first",
       "",
       ""),
-  ENCRYPTED_COLUMNS_NOT_SUPPORTED(
+  ENCRYPTION_NOT_ENABLED(
       Category.USER_ERROR,
       "0143",
-      "Encrypted columns are not supported in the ScalarDB Community edition",
+      "The encryption feature is not enabled. To encrypt data at rest, you must enable this feature. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
-  DATA_LOADER_INVALID_COLUMN_NON_EXISTENT(
+  INVALID_VARIABLE_KEY_COLUMN_SIZE(
       Category.USER_ERROR,
       "0144",
-      "Invalid key: Column %s does not exist in the table %s in namespace %s.",
+      "The variable key column size must be greater than or equal to 64",
       "",
       ""),
-  DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
+  COSMOS_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
       Category.USER_ERROR,
       "0145",
-      "Invalid base64 encoding for blob value for column %s in table %s in namespace %s",
+      "The value of the column %s in the primary key contains an illegal character. "
+          + "Primary-key columns must not contain any of the following characters in Cosmos DB: ':', '/', '\\', '#', '?'. Value: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_INSERTING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
+      Category.USER_ERROR, "0146", "Inserting already-written data is not allowed", "", ""),
+  CONSENSUS_COMMIT_DELETING_ALREADY_INSERTED_DATA_NOT_ALLOWED(
+      Category.USER_ERROR, "0147", "Deleting already-inserted data is not allowed", "", ""),
+  DATA_LOADER_INVALID_COLUMN_NON_EXISTENT(
+          Category.USER_ERROR,
+          "0148",
+          "Invalid key: Column %s does not exist in the table %s in namespace %s.",
+          "",
+          ""),
+  DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
+          Category.USER_ERROR,
+          "0149",
+          "Invalid base64 encoding for blob value for column %s in table %s in namespace %s",
+          "",
+          ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
-      Category.USER_ERROR,
-      "0146",
-      "Invalid number specified for column %s in table %s in namespace %s",
-      "",
-      ""),
+          Category.USER_ERROR,
+          "0150",
+          "Invalid number specified for column %s in table %s in namespace %s",
+          "",
+          ""),
 
   //
   // Errors for the concurrency error category
@@ -916,6 +933,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
+  HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
+      Category.INTERNAL_ERROR,
+      "0046",
+      "Handling the before-preparation snapshot hook failed. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category

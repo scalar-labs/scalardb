@@ -2,9 +2,13 @@ package com.scalar.db.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.OperationBuilder.All;
 import com.scalar.db.api.OperationBuilder.And;
+import com.scalar.db.api.OperationBuilder.Attribute;
 import com.scalar.db.api.OperationBuilder.Buildable;
+import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearBoundaries;
 import com.scalar.db.api.OperationBuilder.ClearConditions;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -28,8 +32,10 @@ import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -99,7 +105,8 @@ public class ScanBuilder extends SelectionBuilder {
           Ordering<BuildableScan>,
           Consistency<BuildableScan>,
           Projection<BuildableScan>,
-          Limit<BuildableScan> {
+          Limit<BuildableScan>,
+          Attribute<BuildableScan> {
     final List<Scan.Ordering> orderings = new ArrayList<>();
     final List<String> projections = new ArrayList<>();
     @Nullable Key startClusteringKey;
@@ -108,6 +115,7 @@ public class ScanBuilder extends SelectionBuilder {
     boolean endInclusive;
     int limit = 0;
     @Nullable com.scalar.db.api.Consistency consistency;
+    final Map<String, String> attributes = new HashMap<>();
 
     private BuildableScan(@Nullable String namespace, String table, Key partitionKey) {
       super(namespace, table, partitionKey);
@@ -193,26 +201,40 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableScan attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScan attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
     public Scan build() {
-      Scan scan = new Scan(partitionKey);
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
-      orderings.forEach(scan::withOrdering);
-      if (startClusteringKey != null) {
-        scan.withStart(startClusteringKey, startInclusive);
-      }
-      if (endClusteringKey != null) {
-        scan.withEnd(endClusteringKey, endInclusive);
-      }
+      return build(ImmutableSet.of());
+    }
 
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      if (consistency != null) {
-        scan.withConsistency(consistency);
-      }
-
-      return scan;
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
+      return new Scan(
+          namespaceName,
+          tableName,
+          partitionKey,
+          consistency,
+          ImmutableMap.copyOf(attributes),
+          projections,
+          conjunctions,
+          startClusteringKey,
+          startInclusive,
+          endClusteringKey,
+          endInclusive,
+          orderings,
+          limit);
     }
   }
 
@@ -293,6 +315,18 @@ public class ScanBuilder extends SelectionBuilder {
     @Override
     public BuildableScanWithPartitionKey consistency(com.scalar.db.api.Consistency consistency) {
       super.consistency(consistency);
+      return this;
+    }
+
+    @Override
+    public BuildableScanWithPartitionKey attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScanWithPartitionKey attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
       return this;
     }
 
@@ -453,7 +487,7 @@ public class ScanBuilder extends SelectionBuilder {
 
     @Override
     public Scan build() {
-      return (Scan) addConjunctionsTo(super.build(), where);
+      return super.build(getConjunctions(where));
     }
   }
 
@@ -463,13 +497,15 @@ public class ScanBuilder extends SelectionBuilder {
           OperationBuilder.Where<BuildableScanWithIndexOngoingWhere>,
           WhereAnd<BuildableScanWithIndexOngoingWhereAnd>,
           WhereOr<BuildableScanWithIndexOngoingWhereOr>,
-          Limit<BuildableScanWithIndex> {
+          Limit<BuildableScanWithIndex>,
+          Attribute<BuildableScanWithIndex> {
     @Nullable private final String namespaceName;
     private final String tableName;
     private final Key indexKey;
     private final List<String> projections = new ArrayList<>();
     private int limit = 0;
     @Nullable private com.scalar.db.api.Consistency consistency;
+    private final Map<String, String> attributes = new HashMap<>();
 
     private BuildableScanWithIndex(@Nullable String namespaceName, String tableName, Key indexKey) {
       this.namespaceName = namespaceName;
@@ -510,6 +546,21 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableScanWithIndex attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScanWithIndex attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
     public BuildableScanWithIndexOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableScanWithIndexOngoingWhere(this, condition);
@@ -540,18 +591,19 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     public Scan build() {
-      Scan scan = new ScanWithIndex(indexKey);
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
+      return build(ImmutableSet.of());
+    }
 
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      if (consistency != null) {
-        scan.withConsistency(consistency);
-      }
-
-      return scan;
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
+      return new ScanWithIndex(
+          namespaceName,
+          tableName,
+          indexKey,
+          consistency,
+          ImmutableMap.copyOf(attributes),
+          projections,
+          conjunctions,
+          limit);
     }
   }
 
@@ -664,7 +716,8 @@ public class ScanBuilder extends SelectionBuilder {
   public static class BuildableScanWithIndexWhere
       implements Consistency<BuildableScanWithIndexWhere>,
           Projection<BuildableScanWithIndexWhere>,
-          Limit<BuildableScanWithIndexWhere> {
+          Limit<BuildableScanWithIndexWhere>,
+          Attribute<BuildableScanWithIndexWhere> {
 
     BuildableScanWithIndex buildableScanWithIndex;
     final Where where;
@@ -713,8 +766,20 @@ public class ScanBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableScanWithIndexWhere attribute(String name, String value) {
+      buildableScanWithIndex = buildableScanWithIndex.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScanWithIndexWhere attributes(Map<String, String> attributes) {
+      buildableScanWithIndex = buildableScanWithIndex.attributes(attributes);
+      return this;
+    }
+
     public Scan build() {
-      return (Scan) addConjunctionsTo(buildableScanWithIndex.build(), where);
+      return buildableScanWithIndex.build(getConjunctions(where));
     }
   }
 
@@ -725,13 +790,15 @@ public class ScanBuilder extends SelectionBuilder {
           OperationBuilder.Where<BuildableScanAllWithOngoingWhere>,
           WhereAnd<BuildableScanAllWithOngoingWhereAnd>,
           WhereOr<BuildableScanAllWithOngoingWhereOr>,
-          Limit<BuildableScanAll> {
+          Limit<BuildableScanAll>,
+          Attribute<BuildableScanAll> {
     private final String namespaceName;
     private final String tableName;
     private final List<Scan.Ordering> orderings = new ArrayList<>();
     private final List<String> projections = new ArrayList<>();
     private int limit = 0;
     @Nullable private com.scalar.db.api.Consistency consistency;
+    private final Map<String, String> attributes = new HashMap<>();
 
     private BuildableScanAll(String namespaceName, String tableName) {
       this.namespaceName = namespaceName;
@@ -790,6 +857,21 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableScanAll attribute(String name, String value) {
+      checkNotNull(name);
+      checkNotNull(value);
+      attributes.put(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScanAll attributes(Map<String, String> attributes) {
+      checkNotNull(attributes);
+      this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
     public BuildableScanAllWithOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableScanAllWithOngoingWhere(this, condition);
@@ -820,19 +902,19 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     public Scan build() {
-      Scan scan = new ScanAll();
-      scan.forNamespace(namespaceName).forTable(tableName).withLimit(limit);
-      orderings.forEach(scan::withOrdering);
+      return build(ImmutableSet.of());
+    }
 
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      if (consistency != null) {
-        scan.withConsistency(consistency);
-      }
-
-      return scan;
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
+      return new ScanAll(
+          namespaceName,
+          tableName,
+          consistency,
+          ImmutableMap.copyOf(attributes),
+          projections,
+          conjunctions,
+          orderings,
+          limit);
     }
   }
 
@@ -945,7 +1027,8 @@ public class ScanBuilder extends SelectionBuilder {
       implements Consistency<BuildableScanAllWithWhere>,
           Projection<BuildableScanAllWithWhere>,
           Ordering<BuildableScanAllWithWhere>,
-          Limit<BuildableScanAllWithWhere> {
+          Limit<BuildableScanAllWithWhere>,
+          Attribute<BuildableScanAllWithWhere> {
 
     final BuildableScanAll buildableScanAll;
     final Where where;
@@ -1011,8 +1094,20 @@ public class ScanBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableScanAllWithWhere attribute(String name, String value) {
+      buildableScanAll.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScanAllWithWhere attributes(Map<String, String> attributes) {
+      buildableScanAll.attributes(attributes);
+      return this;
+    }
+
     public Scan build() {
-      return (Scan) addConjunctionsTo(buildableScanAll.build(), where);
+      return buildableScanAll.build(getConjunctions(where));
     }
   }
 
@@ -1028,7 +1123,8 @@ public class ScanBuilder extends SelectionBuilder {
           ClearProjections<BuildableScanOrScanAllFromExisting>,
           ClearOrderings<BuildableScanOrScanAllFromExisting>,
           ClearBoundaries<BuildableScanOrScanAllFromExisting>,
-          ClearNamespace<BuildableScanOrScanAllFromExisting> {
+          ClearNamespace<BuildableScanOrScanAllFromExisting>,
+          ClearAttribute<BuildableScanOrScanAllFromExisting> {
 
     private final boolean isScanWithIndex;
     private final boolean isScanAll;
@@ -1058,6 +1154,7 @@ public class ScanBuilder extends SelectionBuilder {
       orderings.addAll(scan.getOrderings());
       projections.addAll(scan.getProjections());
       consistency = scan.getConsistency();
+      attributes.putAll(scan.getAttributes());
       conjunctions.addAll(
           scan.getConjunctions().stream()
               .map(Conjunction::getConditions)
@@ -1098,6 +1195,18 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScanOrScanAllFromExisting consistency(
         com.scalar.db.api.Consistency consistency) {
       super.consistency(consistency);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting attribute(String name, String value) {
+      super.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting attributes(Map<String, String> attributes) {
+      super.attributes(attributes);
       return this;
     }
 
@@ -1221,6 +1330,7 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScanOrScanAllFromExisting clearStart() {
       checkNotScanWithIndexOrScanAll();
       this.startClusteringKey = null;
+      this.startInclusive = false;
       return this;
     }
 
@@ -1228,6 +1338,7 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScanOrScanAllFromExisting clearEnd() {
       checkNotScanWithIndexOrScanAll();
       this.endClusteringKey = null;
+      this.endInclusive = false;
       return this;
     }
 
@@ -1247,6 +1358,19 @@ public class ScanBuilder extends SelectionBuilder {
     @Override
     public BuildableScanOrScanAllFromExisting clearNamespace() {
       this.namespaceName = null;
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting clearAttributes() {
+      this.attributes.clear();
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting clearAttribute(String name) {
+      checkNotNull(name);
+      attributes.remove(name);
       return this;
     }
 
@@ -1287,38 +1411,47 @@ public class ScanBuilder extends SelectionBuilder {
 
     @Override
     public Scan build() {
-      Scan scan;
+      return build(
+          conjunctions.stream().map(Conjunction::of).collect(ImmutableSet.toImmutableSet()));
+    }
 
+    private Scan build(ImmutableSet<Conjunction> conjunctions) {
       if (isScanWithIndex) {
-        scan = new ScanWithIndex(indexKey);
+        return new ScanWithIndex(
+            namespaceName,
+            tableName,
+            indexKey,
+            consistency,
+            ImmutableMap.copyOf(attributes),
+            projections,
+            conjunctions,
+            limit);
       } else if (isScanAll) {
-        scan = new ScanAll();
-        orderings.forEach(scan::withOrdering);
+        return new ScanAll(
+            namespaceName,
+            tableName,
+            consistency,
+            ImmutableMap.copyOf(attributes),
+            projections,
+            conjunctions,
+            orderings,
+            limit);
       } else {
-        scan = new Scan(partitionKey);
-        orderings.forEach(scan::withOrdering);
-        if (startClusteringKey != null) {
-          scan.withStart(startClusteringKey, startInclusive);
-        }
-        if (endClusteringKey != null) {
-          scan.withEnd(endClusteringKey, endInclusive);
-        }
+        return new Scan(
+            namespaceName,
+            tableName,
+            partitionKey,
+            consistency,
+            ImmutableMap.copyOf(attributes),
+            projections,
+            conjunctions,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            orderings,
+            limit);
       }
-
-      if (!conjunctions.isEmpty()) {
-        scan.withConjunctions(
-            conjunctions.stream().map(Conjunction::of).collect(Collectors.toSet()));
-      }
-
-      scan.forNamespace(namespaceName)
-          .forTable(tableName)
-          .withLimit(limit)
-          .withConsistency(consistency);
-      if (!projections.isEmpty()) {
-        scan.withProjections(projections);
-      }
-
-      return scan;
     }
   }
 
@@ -1332,9 +1465,11 @@ public class ScanBuilder extends SelectionBuilder {
           Projection<BuildableScanFromExistingWithWhere>,
           Ordering<BuildableScanFromExistingWithWhere>,
           Limit<BuildableScanFromExistingWithWhere>,
+          Attribute<BuildableScanFromExistingWithWhere>,
           ClearProjections<BuildableScanFromExistingWithWhere>,
           ClearOrderings<BuildableScanFromExistingWithWhere>,
-          ClearNamespace<BuildableScanFromExistingWithWhere> {
+          ClearNamespace<BuildableScanFromExistingWithWhere>,
+          ClearAttribute<BuildableScanFromExistingWithWhere> {
 
     private final BuildableScanOrScanAllFromExisting buildableScanFromExisting;
     final Where where;
@@ -1438,6 +1573,18 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableScanFromExistingWithWhere attribute(String name, String value) {
+      buildableScanFromExisting.attribute(name, value);
+      return this;
+    }
+
+    @Override
+    public BuildableScanFromExistingWithWhere attributes(Map<String, String> attributes) {
+      buildableScanFromExisting.attributes(attributes);
+      return this;
+    }
+
+    @Override
     public BuildableScanFromExistingWithWhere clearProjections() {
       buildableScanFromExisting.clearProjections();
       return this;
@@ -1455,8 +1602,20 @@ public class ScanBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableScanFromExistingWithWhere clearAttributes() {
+      buildableScanFromExisting.clearAttributes();
+      return this;
+    }
+
+    @Override
+    public BuildableScanFromExistingWithWhere clearAttribute(String name) {
+      buildableScanFromExisting.clearAttribute(name);
+      return this;
+    }
+
     public Scan build() {
-      return (Scan) addConjunctionsTo(buildableScanFromExisting.build(), where);
+      return buildableScanFromExisting.build(getConjunctions(where));
     }
   }
 
@@ -1466,18 +1625,8 @@ public class ScanBuilder extends SelectionBuilder {
           Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
     private BuildableScanFromExistingWithOngoingWhere(
-        BuildableScanOrScanAllFromExisting buildable) {
-      super(buildable);
-    }
-
-    private BuildableScanFromExistingWithOngoingWhere(
         BuildableScanOrScanAllFromExisting buildable, ConditionalExpression condition) {
       super(buildable, condition);
-    }
-
-    private BuildableScanFromExistingWithOngoingWhere(
-        BuildableScanFromExistingWithOngoingWhere buildable) {
-      super(buildable);
     }
 
     @Override
@@ -1510,7 +1659,7 @@ public class ScanBuilder extends SelectionBuilder {
   }
 
   public static class BuildableScanFromExistingWithOngoingWhereOr
-      extends BuildableScanFromExistingWithOngoingWhere
+      extends BuildableScanFromExistingWithWhere
       implements Or<BuildableScanFromExistingWithOngoingWhereOr> {
 
     private BuildableScanFromExistingWithOngoingWhereOr(
@@ -1546,7 +1695,7 @@ public class ScanBuilder extends SelectionBuilder {
   }
 
   public static class BuildableScanFromExistingWithOngoingWhereAnd
-      extends BuildableScanFromExistingWithOngoingWhere
+      extends BuildableScanFromExistingWithWhere
       implements And<BuildableScanFromExistingWithOngoingWhereAnd> {
 
     private BuildableScanFromExistingWithOngoingWhereAnd(

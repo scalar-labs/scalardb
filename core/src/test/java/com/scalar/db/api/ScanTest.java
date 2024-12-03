@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
@@ -264,5 +265,52 @@ public class ScanTest {
 
     // Assert
     assertThat(ret).isTrue();
+  }
+
+  @Test
+  public void getAttribute_ShouldReturnProperValues() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "pv"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
+    Scan scanWithIndex =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .indexKey(Key.ofText("pk", "pv"))
+            .attribute("a1", "v1")
+            .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .build();
+
+    // Act Assert
+    assertThat(scan.getAttribute("a1")).hasValue("v1");
+    assertThat(scan.getAttribute("a2")).hasValue("v2");
+    assertThat(scan.getAttribute("a3")).hasValue("v3");
+    assertThat(scan.getAttributes()).isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
+
+    assertThat(scanAll.getAttribute("a1")).hasValue("v1");
+    assertThat(scanAll.getAttribute("a2")).hasValue("v2");
+    assertThat(scanAll.getAttribute("a3")).hasValue("v3");
+    assertThat(scanAll.getAttributes())
+        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
+
+    assertThat(scanWithIndex.getAttribute("a1")).hasValue("v1");
+    assertThat(scanWithIndex.getAttribute("a2")).hasValue("v2");
+    assertThat(scanWithIndex.getAttribute("a3")).hasValue("v3");
+    assertThat(scanWithIndex.getAttributes())
+        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
   }
 }

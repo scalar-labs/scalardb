@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
@@ -41,15 +42,26 @@ public class JdbcService {
 
   private final TableMetadataManager tableMetadataManager;
   private final OperationChecker operationChecker;
+  private final RdbEngineStrategy rdbEngine;
   private final QueryBuilder queryBuilder;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
+      RdbEngineStrategy rdbEngine) {
+    this(tableMetadataManager, operationChecker, rdbEngine, new QueryBuilder(rdbEngine));
+  }
+
+  @VisibleForTesting
+  JdbcService(
+      TableMetadataManager tableMetadataManager,
+      OperationChecker operationChecker,
+      RdbEngineStrategy rdbEngine,
       QueryBuilder queryBuilder) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.operationChecker = Objects.requireNonNull(operationChecker);
+    this.rdbEngine = Objects.requireNonNull(rdbEngine);
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
   }
 
@@ -173,7 +185,8 @@ public class JdbcService {
         return true;
       }
     } else {
-      return new ConditionalMutator(put, tableMetadata, connection, queryBuilder).mutate();
+      return new ConditionalMutator(put, tableMetadata, connection, rdbEngine, queryBuilder)
+          .mutate();
     }
   }
 
@@ -199,7 +212,8 @@ public class JdbcService {
         return true;
       }
     } else {
-      return new ConditionalMutator(delete, tableMetadata, connection, queryBuilder).mutate();
+      return new ConditionalMutator(delete, tableMetadata, connection, rdbEngine, queryBuilder)
+          .mutate();
     }
   }
 

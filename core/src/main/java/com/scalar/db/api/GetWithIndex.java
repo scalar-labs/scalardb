@@ -1,13 +1,29 @@
 package com.scalar.db.api;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.Key;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /** A command to retrieve an entry from the underlying storage by using an index. */
 @NotThreadSafe
 public class GetWithIndex extends Get {
+
+  GetWithIndex(
+      @Nullable String namespace,
+      String tableName,
+      Key indexKey,
+      @Nullable Consistency consistency,
+      ImmutableMap<String, String> attributes,
+      List<String> projections,
+      ImmutableSet<Conjunction> conjunctions) {
+    super(namespace, tableName, indexKey, null, consistency, attributes, projections, conjunctions);
+  }
 
   /**
    * Constructs an {@code GetWithIndex} with the specified index {@code Key}.
@@ -98,5 +114,18 @@ public class GetWithIndex extends Get {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode());
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("namespace", forNamespace())
+        .add("table", forTable())
+        .add("indexKey", getPartitionKey())
+        .add("consistency", getConsistency())
+        .add("attributes", getAttributes())
+        .add("projections", getProjections())
+        .add("conjunctions", getConjunctions())
+        .toString();
   }
 }

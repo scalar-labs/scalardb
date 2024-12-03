@@ -57,6 +57,7 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
   public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
 
+  public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
@@ -101,11 +102,10 @@ public class DatabaseConfig {
     checkArgument(contactPort >= 0, CoreError.INVALID_CONTACT_PORT.buildMessage());
     username = getString(getProperties(), USERNAME, null);
     password = getString(getProperties(), PASSWORD, null);
-    transactionManager = getString(getProperties(), TRANSACTION_MANAGER, "consensus-commit");
-    metadataCacheExpirationTimeSecs =
-        getLong(getProperties(), METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
+    transactionManager = getTransactionManager(getProperties());
+    metadataCacheExpirationTimeSecs = getMetadataCacheExpirationTimeSecs(getProperties());
     activeTransactionManagementExpirationTimeMillis =
-        getLong(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, -1);
+        getActiveTransactionManagementExpirationTimeMillis(getProperties());
     defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
     crossPartitionScanEnabled = getBoolean(getProperties(), CROSS_PARTITION_SCAN, false);
     crossPartitionScanFilteringEnabled =
@@ -121,8 +121,7 @@ public class DatabaseConfig {
               .buildMessage());
     }
 
-    systemNamespaceName =
-        getString(getProperties(), SYSTEM_NAMESPACE_NAME, DEFAULT_SYSTEM_NAMESPACE_NAME);
+    systemNamespaceName = getSystemNamespaceName(getProperties());
   }
 
   public List<String> getContactPoints() {
@@ -175,5 +174,24 @@ public class DatabaseConfig {
 
   public String getSystemNamespaceName() {
     return systemNamespaceName;
+  }
+
+  public static String getTransactionManager(Properties properties) {
+    return getString(properties, TRANSACTION_MANAGER, "consensus-commit");
+  }
+
+  public static long getMetadataCacheExpirationTimeSecs(Properties properties) {
+    return getLong(
+        properties,
+        METADATA_CACHE_EXPIRATION_TIME_SECS,
+        DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
+  }
+
+  public static long getActiveTransactionManagementExpirationTimeMillis(Properties properties) {
+    return getLong(properties, ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, -1);
+  }
+
+  public static String getSystemNamespaceName(Properties properties) {
+    return getString(properties, SYSTEM_NAMESPACE_NAME, DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 }

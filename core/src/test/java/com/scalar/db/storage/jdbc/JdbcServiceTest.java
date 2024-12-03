@@ -53,6 +53,7 @@ public class JdbcServiceTest {
   @Mock private QueryBuilder queryBuilder;
   @Mock private OperationChecker operationChecker;
   @Mock private TableMetadataManager tableMetadataManager;
+  @Mock private RdbEngineStrategy rdbEngine;
 
   @Mock private SelectQuery.Builder selectQueryBuilder;
   @Mock private SelectQuery selectQuery;
@@ -77,7 +78,7 @@ public class JdbcServiceTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
+    jdbcService = new JdbcService(tableMetadataManager, operationChecker, rdbEngine, queryBuilder);
 
     // Arrange
     when(tableMetadataManager.getTableMetadata(any(Operation.class)))
@@ -443,7 +444,7 @@ public class JdbcServiceTest {
     when(insertQueryBuilder.build()).thenReturn(insertQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenThrow(sqlException);
-    when(sqlException.getSQLState()).thenReturn("23000");
+    when(rdbEngine.isDuplicateKeyError(sqlException)).thenReturn(true);
 
     // Act
     Put put =

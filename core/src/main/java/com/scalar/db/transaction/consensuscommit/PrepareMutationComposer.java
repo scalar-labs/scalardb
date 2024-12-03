@@ -2,6 +2,8 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNextTxVersion;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
@@ -26,18 +28,14 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
 
-  private final TransactionTableMetadataManager tableMetadataManager;
-
   public PrepareMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
-    super(id);
-    this.tableMetadataManager = tableMetadataManager;
+    super(id, tableMetadataManager);
   }
 
   @VisibleForTesting
   PrepareMutationComposer(
       String id, long current, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, current);
-    this.tableMetadataManager = tableMetadataManager;
+    super(id, current, tableMetadataManager);
   }
 
   @Override
@@ -67,10 +65,10 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     putBuilder.intValue(Attribute.STATE, TransactionState.PREPARED.get());
     putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
 
-    if (!base.isInsertModeEnabled() && result != null) { // overwrite existing record
+    if (!isInsertModeEnabled(base) && result != null) { // overwrite existing record
       createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
-      putBuilder.intValue(Attribute.VERSION, version + 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(version));
 
       // check if the record is not interrupted by other conflicting transactions
       if (result.isDeemedAsCommitted()) {
@@ -86,7 +84,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
                 .build());
       }
     } else { // initial record or insert mode enabled
-      putBuilder.intValue(Attribute.VERSION, 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(null));
 
       // check if the record is not created by other conflicting transactions
       putBuilder.condition(ConditionBuilder.putIfNotExists());
@@ -111,7 +109,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     if (result != null) {
       createBeforeColumns(base, result).forEach(putBuilder::value);
       int version = result.getVersion();
-      putBuilder.intValue(Attribute.VERSION, version + 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(version));
 
       // check if the record is not interrupted by other conflicting transactions
       if (result.isDeemedAsCommitted()) {
@@ -126,7 +124,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
                 .build());
       }
     } else {
-      putBuilder.intValue(Attribute.VERSION, 1);
+      putBuilder.intValue(Attribute.VERSION, getNextTxVersion(null));
 
       // check if the record is not created by other conflicting transactions
       putBuilder.condition(ConditionBuilder.putIfNotExists());

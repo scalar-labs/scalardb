@@ -13,7 +13,7 @@ public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTest
 
   @Override
   protected Properties getProperties(String testName) {
-    return JdbcEnv.getProperties(testName);
+    return ConsensusCommitJdbcEnv.getProperties(testName);
   }
 
   @Override

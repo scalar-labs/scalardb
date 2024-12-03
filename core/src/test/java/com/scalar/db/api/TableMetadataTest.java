@@ -36,8 +36,8 @@ public class TableMetadataTest {
             .addColumn(COL_NAME7, DataType.BIGINT)
             .addColumn(COL_NAME8, DataType.FLOAT)
             .addColumn(COL_NAME9, DataType.DOUBLE)
-            .addColumn(COL_NAME10, DataType.BOOLEAN)
-            .addColumn(COL_NAME11, DataType.BLOB)
+            .addColumn(COL_NAME10, DataType.BOOLEAN, true)
+            .addColumn(COL_NAME11, DataType.BLOB, true)
             .addPartitionKey(COL_NAME2)
             .addPartitionKey(COL_NAME1)
             .addClusteringKey(COL_NAME4, Order.ASC)
@@ -99,6 +99,8 @@ public class TableMetadataTest {
     assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
     assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isTrue();
     assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME6)).isTrue();
+
+    assertThat(tableMetadata.getEncryptedColumnNames()).containsOnly(COL_NAME10, COL_NAME11);
   }
 
   @Test
@@ -191,8 +193,8 @@ public class TableMetadataTest {
             .addColumn(COL_NAME7, DataType.BIGINT)
             .addColumn(COL_NAME8, DataType.FLOAT)
             .addColumn(COL_NAME9, DataType.DOUBLE)
-            .addColumn(COL_NAME10, DataType.BOOLEAN)
-            .addColumn(COL_NAME11, DataType.BLOB)
+            .addColumn(COL_NAME10, DataType.BOOLEAN, true)
+            .addColumn(COL_NAME11, DataType.BLOB, true)
             .addPartitionKey(COL_NAME2)
             .addPartitionKey(COL_NAME1)
             .addClusteringKey(COL_NAME4, Order.ASC)
@@ -258,5 +260,7 @@ public class TableMetadataTest {
 
     assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(1);
     assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isTrue();
+
+    assertThat(tableMetadata.getEncryptedColumnNames()).containsOnly(COL_NAME10);
   }
 }

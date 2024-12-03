@@ -142,16 +142,16 @@ public class SelectStatementHandler {
 
     builder.expressionAttributeNames(expressionAttributeNames);
 
+    int limit = 0;
     if (selection instanceof Scan) {
       Scan scan = (Scan) selection;
-      if (scan.getLimit() > 0) {
-        builder.limit(scan.getLimit());
-      }
+      limit = scan.getLimit();
     }
+
     com.scalar.db.storage.dynamo.request.QueryRequest request =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        request, new ResultInterpreter(selection.getProjections(), tableMetadata));
+        request, limit, new ResultInterpreter(selection.getProjections(), tableMetadata));
   }
 
   private Scanner executeScan(Scan scan, TableMetadata tableMetadata) {
@@ -171,10 +171,6 @@ public class SelectStatementHandler {
       }
     }
 
-    if (scan.getLimit() > 0) {
-      builder.limit(scan.getLimit());
-    }
-
     if (!scan.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
       projectionExpression(builder, scan, expressionAttributeNames);
@@ -184,20 +180,17 @@ public class SelectStatementHandler {
     if (scan.getConsistency() != Consistency.EVENTUAL) {
       builder.consistentRead(true);
     }
+
     com.scalar.db.storage.dynamo.request.QueryRequest queryRequest =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        queryRequest, new ResultInterpreter(scan.getProjections(), tableMetadata));
+        queryRequest, scan.getLimit(), new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private Scanner executeFullScan(ScanAll scan, TableMetadata tableMetadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     ScanRequest.Builder builder = ScanRequest.builder().tableName(dynamoOperation.getTableName());
 
-    if (scan.getLimit() > 0) {
-      builder.limit(scan.getLimit());
-    }
-
     if (!scan.getProjections().isEmpty()) {
       Map<String, String> expressionAttributeNames = new HashMap<>();
       projectionExpression(builder, scan, expressionAttributeNames);
@@ -207,10 +200,13 @@ public class SelectStatementHandler {
     if (scan.getConsistency() != Consistency.EVENTUAL) {
       builder.consistentRead(true);
     }
+
     com.scalar.db.storage.dynamo.request.ScanRequest requestWrapper =
         new com.scalar.db.storage.dynamo.request.ScanRequest(client, builder.build());
     return new QueryScanner(
-        requestWrapper, new ResultInterpreter(scan.getProjections(), tableMetadata));
+        requestWrapper,
+        scan.getLimit(),
+        new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private void projectionExpression(
@@ -319,8 +315,8 @@ public class SelectStatementHandler {
 
   private Key getKeyWithoutLastValue(Key originalKey) {
     Key.Builder keyBuilder = Key.newBuilder();
-    for (int i = 0; i < originalKey.get().size() - 1; i++) {
-      keyBuilder.add(originalKey.get().get(i));
+    for (int i = 0; i < originalKey.getColumns().size() - 1; i++) {
+      keyBuilder.add(originalKey.getColumns().get(i));
     }
     return keyBuilder.build();
   }
@@ -510,12 +506,14 @@ public class SelectStatementHandler {
   private boolean isScanForDescClusteringOrder(Scan scan, TableMetadata tableMetadata) {
     if (scan.getStartClusteringKey().isPresent()) {
       Key startClusteringKey = scan.getStartClusteringKey().get();
-      String lastValueName = startClusteringKey.get().get(startClusteringKey.size() - 1).getName();
+      String lastValueName =
+          startClusteringKey.getColumns().get(startClusteringKey.size() - 1).getName();
       return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
     }
     if (scan.getEndClusteringKey().isPresent()) {
       Key endClusteringKey = scan.getEndClusteringKey().get();
-      String lastValueName = endClusteringKey.get().get(endClusteringKey.size() - 1).getName();
+      String lastValueName =
+          endClusteringKey.getColumns().get(endClusteringKey.size() - 1).getName();
       return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
     }
     return false;

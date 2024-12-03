@@ -435,8 +435,7 @@ public interface Admin {
       String namespace, String table, String columnName, DataType columnType, boolean encrypted)
       throws ExecutionException {
     if (encrypted) {
-      throw new UnsupportedOperationException(
-          CoreError.ENCRYPTED_COLUMNS_NOT_SUPPORTED.buildMessage());
+      throw new UnsupportedOperationException(CoreError.ENCRYPTION_NOT_ENABLED.buildMessage());
     } else {
       addNewColumnToTable(namespace, table, columnName, columnType);
     }
