@@ -1,11 +1,11 @@
 package com.scalar.db.dataloader.core.exception;
 
 /**
- * An exception that is thrown when an error occurs while trying to create a ScalarDB key from a value.
- * <p>
- * This exception is typically used to indicate a problem with parsing or converting data
- * into a format that can be used to create a key in ScalarDB.
- * </p>
+ * An exception that is thrown when an error occurs while trying to create a ScalarDB key from a
+ * value.
+ *
+ * <p>This exception is typically used to indicate a problem with parsing or converting data into a
+ * format that can be used to create a key in ScalarDB.
  */
 public class KeyParsingException extends Exception {
 
