@@ -25,11 +25,6 @@ public final class TransactionExecutor {
   private static final int DEFAULT_RETRY_MULTIPLIER = 2;
   private static final int DEFAULT_RETRY_MAX_RETRIES = 5;
 
-  private static int retryInitialIntervalMillis = DEFAULT_RETRY_INITIAL_INTERVAL_MILLIS;
-  private static int retryMaxIntervalMillis = DEFAULT_RETRY_MAX_INTERVAL_MILLIS;
-  private static int retryMultiplier = DEFAULT_RETRY_MULTIPLIER;
-  private static int retryMaxRetries = DEFAULT_RETRY_MAX_RETRIES;
-
   private TransactionExecutor() {}
 
   public static <T> T execute(
@@ -86,10 +81,10 @@ public final class TransactionExecutor {
     return executeWithRetries(
         transactionManager,
         throwableFunction,
-        retryInitialIntervalMillis,
-        retryMaxIntervalMillis,
-        retryMultiplier,
-        retryMaxRetries);
+        DEFAULT_RETRY_INITIAL_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MAX_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MULTIPLIER,
+        DEFAULT_RETRY_MAX_RETRIES);
   }
 
   public static <T> T executeWithRetries(
@@ -140,10 +135,10 @@ public final class TransactionExecutor {
     executeWithRetries(
         transactionManager,
         throwableConsumer,
-        retryInitialIntervalMillis,
-        retryMaxIntervalMillis,
-        retryMultiplier,
-        retryMaxRetries);
+        DEFAULT_RETRY_INITIAL_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MAX_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MULTIPLIER,
+        DEFAULT_RETRY_MAX_RETRIES);
   }
 
   public static void executeWithRetries(
@@ -164,21 +159,5 @@ public final class TransactionExecutor {
         retryMaxIntervalMillis,
         retryMultiplier,
         retryMaxRetries);
-  }
-
-  public static void setRetryInitialIntervalMillis(int retryInitialIntervalMillis) {
-    TransactionExecutor.retryInitialIntervalMillis = retryInitialIntervalMillis;
-  }
-
-  public static void setRetryMaxIntervalMillis(int retryMaxIntervalMillis) {
-    TransactionExecutor.retryMaxIntervalMillis = retryMaxIntervalMillis;
-  }
-
-  public static void setRetryMultiplier(int retryMultiplier) {
-    TransactionExecutor.retryMultiplier = retryMultiplier;
-  }
-
-  public static void setRetryMaxRetries(int retryMaxRetries) {
-    TransactionExecutor.retryMaxRetries = retryMaxRetries;
   }
 }
