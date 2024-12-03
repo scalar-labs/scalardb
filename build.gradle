@@ -51,6 +51,8 @@ subprojects {
         shadowPluginVersion = '7.1.2'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
+        commonsIoVersion = '2.16.1'
+        lombokVersion = '1.18.34'
     }
 
     repositories {
