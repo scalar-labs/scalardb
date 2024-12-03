@@ -11,30 +11,41 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import javax.annotation.Nullable;
 
-/** Utility class for creating and dealing with ScalarDB keys. */
+/**
+ * Utility class for creating and managing ScalarDB keys.
+ * <p>
+ * This class provides methods to parse key-value pairs and create ScalarDB key instances.
+ * It also includes utility methods for handling data types, columns, and potential parsing exceptions.
+ * </p>
+ */
 public final class KeyUtils {
 
   /** Restrict instantiation via private constructor */
   private KeyUtils() {}
 
   /**
-   * Convert a keyValue, in the format of <key>=<value>, to a ScalarDB Key instance for a specific
-   * ScalarDB table.
+   * Converts a key-value pair, in the format of <key>=<value>, into a ScalarDB Key instance for a
+   * specific ScalarDB table.
+   * <p>
+   * This method uses the provided table metadata to determine the data type for the key and
+   * creates a corresponding ScalarDB Key. If the key does not match any column in the table
+   * metadata, a {@link KeyParsingException} is thrown.
+   * </p>
    *
-   * @param columnKeyValue A key value in the format of <key>=<value>
-   * @param namespace Name of the ScalarDB namespace
-   * @param tableName Name of the ScalarDB table
-   * @param tableMetadata Metadata for one ScalarDB table
-   * @return A new ScalarDB Key instance formatted by data type
-   * @throws KeyParsingException if there is an error parsing the key value
+   * @param columnKeyValue a key-value pair in the format of <key>=<value>
+   * @param namespace the name of the ScalarDB namespace
+   * @param tableName the name of the ScalarDB table
+   * @param tableMetadata metadata for the ScalarDB table
+   * @return a new ScalarDB Key instance formatted according to the data type
+   * @throws KeyParsingException if there is an error parsing the key value or if the column does not exist
    */
   @Nullable
   public static Key parseKeyValue(
-      @Nullable ColumnKeyValue columnKeyValue,
-      String namespace,
-      String tableName,
-      TableMetadata tableMetadata)
-      throws KeyParsingException {
+          @Nullable ColumnKeyValue columnKeyValue,
+          String namespace,
+          String tableName,
+          TableMetadata tableMetadata)
+          throws KeyParsingException {
     if (columnKeyValue == null) {
       return null;
     }
@@ -42,29 +53,33 @@ public final class KeyUtils {
     DataType columnDataType = tableMetadata.getColumnDataType(columnName);
     if (columnDataType == null) {
       throw new KeyParsingException(
-          CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(
-              columnName, tableName, namespace));
+              CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(
+                      columnName, tableName, namespace));
     }
     ColumnInfo columnInfo =
-        ColumnInfo.builder()
-            .namespace(namespace)
-            .tableName(tableName)
-            .columnName(columnName)
-            .build();
+            ColumnInfo.builder()
+                    .namespace(namespace)
+                    .tableName(tableName)
+                    .columnName(columnName)
+                    .build();
     return createKey(columnDataType, columnInfo, columnKeyValue.getColumnValue());
   }
 
   /**
-   * Create a ScalarDB key based on the provided data type, column name, and value.
+   * Creates a ScalarDB key based on the provided data type, column information, and value.
+   * <p>
+   * This method creates a ScalarDB Key instance by converting the column value to the appropriate
+   * data type and constructing the key using that value.
+   * </p>
    *
-   * @param dataType Data type of the specified column
-   * @param columnInfo ScalarDB table column information
-   * @param value Value for ScalarDB key
-   * @return ScalarDB Key instance
-   * @throws KeyParsingException if there is an error while creating a ScalarDB key
+   * @param dataType the data type of the specified column
+   * @param columnInfo the ScalarDB table column information
+   * @param value the value for the ScalarDB key
+   * @return a ScalarDB Key instance
+   * @throws KeyParsingException if there is an error while creating the ScalarDB key
    */
   public static Key createKey(DataType dataType, ColumnInfo columnInfo, String value)
-      throws KeyParsingException {
+          throws KeyParsingException {
     try {
       Column<?> keyValue = ColumnUtils.createColumnFromValue(dataType, columnInfo, value);
       return Key.newBuilder().add(keyValue).build();
