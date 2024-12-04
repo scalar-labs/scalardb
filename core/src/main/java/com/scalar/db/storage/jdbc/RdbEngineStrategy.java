@@ -181,4 +181,8 @@ public interface RdbEngineStrategy {
     return TimestampTZColumn.of(
         columnName, offsetDateTime == null ? null : offsetDateTime.toInstant());
   }
+
+  default String getConnectionProperties() {
+    return "";
+  }
 }

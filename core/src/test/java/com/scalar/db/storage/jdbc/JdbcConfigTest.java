@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -66,8 +69,10 @@ public class JdbcConfigTest {
     assertThat(config.getAdminConnectionPoolMaxTotal()).isEqualTo(200);
     assertThat(config.getMysqlVariableKeyColumnSize()).isEqualTo(64);
     assertThat(config.getOracleVariableKeyColumnSize()).isEqualTo(64);
-    assertThat(config.getOracleDateColumnDefaultTimeComponent()).isEqualTo("01:01:01");
-    assertThat(config.getOracleTimeColumnDefaultDateComponent()).isEqualTo("2020-01-01");
+    assertThat(config.getOracleDateColumnDefaultTimeComponent())
+        .isEqualTo(LocalTime.parse("01:01:01", DateTimeFormatter.ISO_LOCAL_TIME));
+    assertThat(config.getOracleTimeColumnDefaultDateComponent())
+        .isEqualTo(LocalDate.parse("2020-01-01", DateTimeFormatter.ISO_LOCAL_DATE));
   }
 
   @Test

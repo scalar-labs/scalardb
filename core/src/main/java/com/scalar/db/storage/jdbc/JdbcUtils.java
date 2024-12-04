@@ -61,13 +61,7 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
-    // For MySQL: ensure the connection timezone is set to UTC, otherwise the server timezone will
-    // be used
-    dataSource.setConnectionProperties(
-        "connectionTimeZone=+00:00;forceConnectionTimeZoneToSession=true");
-    // For SQLServer: needed to keep the microsecond precision when sending the value of ScalarDB
-    // TIME type.
-    //    dataSource.setConnectionProperties("sendTimeAsDatetime=false");
+    dataSource.setConnectionProperties(rdbEngine.getConnectionProperties());
 
     return dataSource;
   }

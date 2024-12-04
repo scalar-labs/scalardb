@@ -10,7 +10,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
 import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
@@ -19,6 +18,7 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -219,10 +219,11 @@ class RdbEngineOracle implements RdbEngineStrategy {
       case DATE:
         return "DATE";
       case TIME:
+        return "TIMESTAMP(6)";
       case TIMESTAMP:
-        return "TIMESTAMP";
+        return "TIMESTAMP(3)";
       case TIMESTAMPTZ:
-        return "TIMESTAMP WITH TIME ZONE";
+        return "TIMESTAMP(3) WITH TIME ZONE";
       default:
         throw new AssertionError();
     }
@@ -371,16 +372,16 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public String encodeDate(DateColumn column) {
-    return ColumnSerializationUtils.toJDBCFormat(column)
-        + " "
-        + config.getOracleDateColumnDefaultTimeComponent();
+  public Object encodeDate(DateColumn column) {
+    assert column.getDateValue() != null;
+    return LocalDateTime.of(
+        column.getDateValue(), config.getOracleDateColumnDefaultTimeComponent());
   }
 
   @Override
-  public String encodeTime(TimeColumn column) {
-    return config.getOracleTimeColumnDefaultDateComponent()
-        + " "
-        + ColumnSerializationUtils.toJDBCFormat(column);
+  public Object encodeTime(TimeColumn column) {
+    assert column.getTimeValue() != null;
+    return LocalDateTime.of(
+        config.getOracleTimeColumnDefaultDateComponent(), column.getTimeValue());
   }
 }

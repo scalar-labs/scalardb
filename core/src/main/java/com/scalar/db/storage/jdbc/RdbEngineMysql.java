@@ -333,7 +333,6 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case TIME:
         return Types.TIME;
       case TIMESTAMP:
-        return Types.TIMESTAMP;
       case TIMESTAMPTZ:
         return Types.TIMESTAMP;
 
@@ -411,5 +410,12 @@ class RdbEngineMysql implements RdbEngineStrategy {
   public Object encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC).toLocalDateTime();
+  }
+
+  @Override
+  public String getConnectionProperties() {
+    // Ensure the connection timezone is set to UTC, otherwise the server timezone will
+    // be used when retrieving ScalarDB TIMESTAMP and TIMESTAMPTZ data which can alter the data
+    return "connectionTimeZone=+00:00;forceConnectionTimeZoneToSession=true";
   }
 }

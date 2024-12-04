@@ -366,8 +366,13 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public Object encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
-    //    return DateTimeOffset.valueOf(column.getTimestampTZValue().atOffset(ZoneOffset.UTC));
-    //    return DateTimeFormatter.ISO_INSTANT.format(column.getTimestampTZValue());
     return DateTimeOffset.valueOf(Timestamp.from(column.getTimestampTZValue()), 0);
+  }
+
+  @Override
+  public String getConnectionProperties() {
+    // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
+    // In a future release, this property may be set to false by default.
+    return "sendTimeAsDatetime=false";
   }
 }

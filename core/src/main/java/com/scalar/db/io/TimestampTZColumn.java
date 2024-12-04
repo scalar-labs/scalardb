@@ -29,7 +29,7 @@ public class TimestampTZColumn implements Column<Instant> {
   private final String name;
   @Nullable private final Instant value;
 
-  @SuppressWarnings("JavaLocalTimeGetNano")
+  @SuppressWarnings("JavaInstantGetSecondsGetNano")
   private TimestampTZColumn(String name, @Nullable Instant value) {
     this.name = Objects.requireNonNull(name);
     this.value = value;

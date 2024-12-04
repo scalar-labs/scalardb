@@ -6,6 +6,9 @@ import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -116,8 +119,8 @@ public class JdbcConfig {
   private final int mysqlVariableKeyColumnSize;
   private final int oracleVariableKeyColumnSize;
 
-  private final String oracleTimeColumnDefaultDateComponent;
-  private final String oracleDateColumnDefaultTimeComponent;
+  private final LocalDate oracleTimeColumnDefaultDateComponent;
+  private final LocalTime oracleDateColumnDefaultTimeComponent;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -221,16 +224,25 @@ public class JdbcConfig {
       throw new IllegalArgumentException(CoreError.INVALID_VARIABLE_KEY_COLUMN_SIZE.buildMessage());
     }
 
-    oracleDateColumnDefaultTimeComponent =
+    String oracleDateColumnDefaultTimeComponentString =
         getString(
             databaseConfig.getProperties(),
             ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT,
             DEFAULT_ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT);
-    oracleTimeColumnDefaultDateComponent =
+    assert oracleDateColumnDefaultTimeComponentString != null;
+    oracleDateColumnDefaultTimeComponent =
+        LocalTime.parse(
+            oracleDateColumnDefaultTimeComponentString, DateTimeFormatter.ISO_LOCAL_TIME);
+
+    String oracleTimeColumnDefaultDateComponentString =
         getString(
             databaseConfig.getProperties(),
             ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT,
             DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
+    assert oracleTimeColumnDefaultDateComponentString != null;
+    oracleTimeColumnDefaultDateComponent =
+        LocalDate.parse(
+            oracleTimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
 
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
@@ -324,11 +336,11 @@ public class JdbcConfig {
     return oracleVariableKeyColumnSize;
   }
 
-  public String getOracleDateColumnDefaultTimeComponent() {
+  public LocalTime getOracleDateColumnDefaultTimeComponent() {
     return oracleDateColumnDefaultTimeComponent;
   }
 
-  public String getOracleTimeColumnDefaultDateComponent() {
+  public LocalDate getOracleTimeColumnDefaultDateComponent() {
     return oracleTimeColumnDefaultDateComponent;
   }
 }
