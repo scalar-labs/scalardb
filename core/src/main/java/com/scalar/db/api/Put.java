@@ -21,6 +21,10 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -686,6 +690,58 @@ public class Put extends Mutation {
   public byte[] getBlobValueAsBytes(String columnName) {
     checkIfExists(columnName);
     return columns.get(columnName).getBlobValueAsBytes();
+  }
+
+  /**
+   * Returns the DATE value of the specified column added to the list of put values as a LocalDate
+   * type.
+   *
+   * @param columnName a column name of the value
+   * @return the DATE value of the specified column. If the value is NULL, null
+   */
+  @Nullable
+  public LocalDate getDateValue(String columnName) {
+    checkIfExists(columnName);
+    return columns.get(columnName).getDateValue();
+  }
+
+  /**
+   * Returns the TIME value of the specified column added to the list of put values as a LocalTime
+   * type.
+   *
+   * @param columnName a column name of the value
+   * @return the TIME value of the specified column. If the value is NULL, null
+   */
+  @Nullable
+  public LocalTime getTimeValue(String columnName) {
+    checkIfExists(columnName);
+    return columns.get(columnName).getTimeValue();
+  }
+
+  /**
+   * Returns the TIMESTAMP value of the specified column added to the list of put values as a
+   * LocalDateTime type.
+   *
+   * @param columnName a column name of the value
+   * @return the TIMESTAMP value of the specified column. If the value is NULL, null
+   */
+  @Nullable
+  public LocalDateTime getTimestampValue(String columnName) {
+    checkIfExists(columnName);
+    return columns.get(columnName).getTimestampValue();
+  }
+
+  /**
+   * Returns the TIMESTAMPTZ value of the specified column added to the list of put values as an
+   * Instant type.
+   *
+   * @param columnName a column name of the value
+   * @return the TIMESTAMPTZ value of the specified column. If the value is NULL, null
+   */
+  @Nullable
+  public Instant getTimestampTZValue(String columnName) {
+    checkIfExists(columnName);
+    return columns.get(columnName).getTimestampTZValue();
   }
 
   /**

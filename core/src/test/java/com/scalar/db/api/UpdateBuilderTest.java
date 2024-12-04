@@ -277,10 +277,10 @@ public class UpdateBuilderTest {
             .intValue("int1", Integer.MAX_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .textValue("text", "a_value")
-            .dateValue("date1", ANY_DATE)
-            .timeValue("time1", ANY_TIME)
-            .timestampValue("timestamp1", ANY_TIMESTAMP)
-            .timestampTZValue("timestampTZ1", ANY_TIMESTAMPTZ)
+            .dateValue("date1", DateColumn.MAX_VALUE)
+            .timeValue("time1", TimeColumn.MAX_VALUE)
+            .timestampValue("timestamp1", TimestampColumn.MAX_VALUE)
+            .timestampTZValue("timestampTZ1", TimestampTZColumn.MAX_VALUE)
             .value(TextColumn.of("text2", "another_value"))
             .condition(condition1)
             .attribute("a1", "v1")
@@ -308,10 +308,11 @@ public class UpdateBuilderTest {
             .intValue("int1", Integer.MIN_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MIN_VALUE))
             .textValue("text", "another_value")
-            .dateValue("date1", LocalDate.MAX)
-            .timeValue("time1", LocalTime.NOON)
-            .timestampValue("timestamp1", LocalDateTime.MIN)
-            .timestampTZValue("timestampTZ1", Instant.EPOCH)
+            .dateValue("date1", LocalDate.ofEpochDay(123))
+            .timeValue("time1", LocalTime.ofSecondOfDay(456))
+            .timestampValue(
+                "timestamp1", LocalDateTime.of(LocalDate.ofEpochDay(12354), LocalTime.NOON))
+            .timestampTZValue("timestampTZ1", Instant.ofEpochSecond(-12))
             .value(TextColumn.of("text2", "foo"))
             .condition(condition2)
             .clearAttributes()
@@ -346,12 +347,14 @@ public class UpdateBuilderTest {
     assertThat(newUpdate.getColumns().get("int2").getIntValue())
         .isEqualTo(Integer.valueOf(Integer.MIN_VALUE));
     assertThat(newUpdate.getColumns().get("text").getTextValue()).isEqualTo("another_value");
-    assertThat(newUpdate.getColumns().get("date1").getDateValue()).isEqualTo(LocalDate.MAX);
-    assertThat(newUpdate.getColumns().get("time1").getTimeValue()).isEqualTo(LocalTime.NOON);
+    assertThat(newUpdate.getColumns().get("date1").getDateValue())
+        .isEqualTo(LocalDate.ofEpochDay(123));
+    assertThat(newUpdate.getColumns().get("time1").getTimeValue())
+        .isEqualTo(LocalTime.ofSecondOfDay(456));
     assertThat(newUpdate.getColumns().get("timestamp1").getTimestampValue())
-        .isEqualTo(LocalDateTime.MIN);
+        .isEqualTo(LocalDateTime.of(LocalDate.ofEpochDay(12354), LocalTime.NOON));
     assertThat(newUpdate.getColumns().get("timestampTZ1").getTimestampTZValue())
-        .isEqualTo(Instant.EPOCH);
+        .isEqualTo(Instant.ofEpochSecond(-12));
     assertThat(newUpdate.getColumns().get("text2").getTextValue()).isEqualTo("foo");
     assertThat(newUpdate.getCondition()).hasValue(condition2);
     assertThat(newUpdate.getAttributes())

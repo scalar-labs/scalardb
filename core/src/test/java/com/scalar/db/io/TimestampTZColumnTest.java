@@ -9,8 +9,7 @@ import java.time.temporal.ChronoField;
 import org.junit.jupiter.api.Test;
 
 class TimestampTZColumnTest {
-  private static final Instant ANY_TIMESTAMPTZ =
-      TimestampTZColumn.MAX_VALUE.with(ChronoField.NANO_OF_SECOND, 123_000_000);
+  private static final Instant ANY_TIMESTAMPTZ = Instant.ofEpochSecond(12354);
 
   @Test
   public void of_ProperValueGiven_ShouldReturnWhatsSet() {
@@ -107,12 +106,12 @@ class TimestampTZColumnTest {
     TimestampTZColumn column = TimestampTZColumn.of("col", ANY_TIMESTAMPTZ);
 
     // Act Assert
-    assertThat(column.compareTo(TimestampTZColumn.of("col", ANY_TIMESTAMPTZ))).isEqualTo(0);
+    assertThat(column.compareTo(TimestampTZColumn.of("col", ANY_TIMESTAMPTZ))).isZero();
     assertThat(column.compareTo(TimestampTZColumn.of("col", ANY_TIMESTAMPTZ.minusSeconds(1))))
-        .isGreaterThan(0);
-    assertThat(column.compareTo(TimestampTZColumn.of("col", ANY_TIMESTAMPTZ.plusNanos(1))))
-        .isLessThan(0);
-    assertThat(column.compareTo(TimestampTZColumn.ofNull("col"))).isGreaterThan(0);
+        .isPositive();
+    assertThat(column.compareTo(TimestampTZColumn.of("col", ANY_TIMESTAMPTZ.plusSeconds(1))))
+        .isNegative();
+    assertThat(column.compareTo(TimestampTZColumn.ofNull("col"))).isPositive();
   }
 
   @Test

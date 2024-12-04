@@ -12,6 +12,7 @@ import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatColumn;
@@ -21,10 +22,17 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
@@ -636,5 +644,134 @@ public class PutTest {
     assertThat(put.getAttribute("a2")).hasValue("v2");
     assertThat(put.getAttribute("a3")).hasValue("v3");
     assertThat(put.getAttributes()).isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
+  }
+
+  @Test
+  public void getDateValue_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    LocalDate anyDate = LocalDate.of(1234, 5, 6);
+    DateColumn dateCol = DateColumn.of("date_col", anyDate);
+    TextColumn key = TextColumn.of("foo_col", "foo");
+    Put put =
+        new Put(
+            "ns",
+            "tbl",
+            Key.of(),
+            null,
+            null,
+            ImmutableMap.of(),
+            null,
+            ImmutableMap.of(
+                "foo_col",
+                key,
+                "date_col",
+                dateCol,
+                "bool_col",
+                BooleanColumn.of("bool_col", true)),
+            false,
+            false);
+
+    // Act
+    LocalDate actualDate = put.getDateValue("date_col");
+
+    // Assert
+    assertThat(actualDate).isEqualTo(anyDate);
+  }
+
+  @Test
+  public void getTimeValue_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    LocalTime anyTime = LocalTime.ofSecondOfDay(12345);
+    TimeColumn timeCol = TimeColumn.of("date_col", anyTime);
+
+    Put put =
+        new Put(
+            "ns",
+            "tbl",
+            Key.of(),
+            null,
+            null,
+            ImmutableMap.of(),
+            null,
+            ImmutableMap.of(
+                "foo_col",
+                TextColumn.of("foo_col", "foo"),
+                "time_col",
+                timeCol,
+                "bool_col",
+                BooleanColumn.of("bool_col", true)),
+            false,
+            false);
+
+    // Act
+    LocalTime actualTime = put.getTimeValue("time_col");
+
+    // Assert
+    assertThat(actualTime).isEqualTo(anyTime);
+  }
+
+  @Test
+  public void getTimestampValue_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    LocalDateTime anyTimestamp =
+        LocalDateTime.of(LocalDate.of(1234, 5, 6), LocalTime.ofSecondOfDay(12345));
+    TimestampColumn timestampColumn = TimestampColumn.of("timestamp_col", anyTimestamp);
+    TextColumn key = TextColumn.of("foo_col", "foo");
+    Put put =
+        new Put(
+            "ns",
+            "tbl",
+            Key.of(),
+            null,
+            null,
+            ImmutableMap.of(),
+            null,
+            ImmutableMap.of(
+                "foo_col",
+                key,
+                "timestamp_col",
+                timestampColumn,
+                "bool_col",
+                BooleanColumn.of("bool_col", true)),
+            false,
+            false);
+
+    // Act
+    LocalDateTime actualTimestamp = put.getTimestampValue("timestamp_col");
+
+    // Assert
+    assertThat(actualTimestamp).isEqualTo(anyTimestamp);
+  }
+
+  @Test
+  public void getTimestampTZValue_ProperValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    Instant anyInstant = Instant.ofEpochSecond(12355);
+    TimestampTZColumn timestampTZColumn = TimestampTZColumn.of("timestamp_col", anyInstant);
+    TextColumn key = TextColumn.of("foo_col", "foo");
+    Put put =
+        new Put(
+            "ns",
+            "tbl",
+            Key.of(),
+            null,
+            null,
+            ImmutableMap.of(),
+            null,
+            ImmutableMap.of(
+                "foo_col",
+                key,
+                "timestampTZ_col",
+                timestampTZColumn,
+                "bool_col",
+                BooleanColumn.of("bool_col", true)),
+            false,
+            false);
+
+    // Act
+    Instant actualTimestampTZ = put.getTimestampTZValue("timestampTZ_col");
+
+    // Assert
+    assertThat(actualTimestampTZ).isEqualTo(anyInstant);
   }
 }

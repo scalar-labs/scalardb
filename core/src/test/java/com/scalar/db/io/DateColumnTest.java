@@ -109,10 +109,10 @@ class DateColumnTest {
     DateColumn column = DateColumn.of("col", ANY_DATE);
 
     // Act Assert
-    assertThat(column.compareTo(DateColumn.of("col", ANY_DATE))).isEqualTo(0);
-    assertThat(column.compareTo(DateColumn.of("col", ANY_DATE.minusDays(1)))).isGreaterThan(0);
-    assertThat(column.compareTo(DateColumn.of("col", ANY_DATE.plusDays(1)))).isLessThan(0);
-    assertThat(column.compareTo(DateColumn.ofNull("col"))).isGreaterThan(0);
+    assertThat(column.compareTo(DateColumn.of("col", ANY_DATE))).isZero();
+    assertThat(column.compareTo(DateColumn.of("col", ANY_DATE.minusDays(1)))).isPositive();
+    assertThat(column.compareTo(DateColumn.of("col", ANY_DATE.plusDays(1)))).isNegative();
+    assertThat(column.compareTo(DateColumn.ofNull("col"))).isPositive();
   }
 
   @Test

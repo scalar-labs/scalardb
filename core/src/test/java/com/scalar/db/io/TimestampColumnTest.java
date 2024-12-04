@@ -110,12 +110,11 @@ class TimestampColumnTest {
     TimestampColumn column = TimestampColumn.of("col", ANY_TIMESTAMP);
 
     // Act Assert
-    assertThat(column.compareTo(TimestampColumn.of("col", ANY_TIMESTAMP))).isEqualTo(0);
+    assertThat(column.compareTo(TimestampColumn.of("col", ANY_TIMESTAMP))).isZero();
     assertThat(column.compareTo(TimestampColumn.of("col", ANY_TIMESTAMP.minusHours(1))))
-        .isGreaterThan(0);
-    assertThat(column.compareTo(TimestampColumn.of("col", ANY_TIMESTAMP.plusDays(1))))
-        .isLessThan(0);
-    assertThat(column.compareTo(TimestampColumn.ofNull("col"))).isGreaterThan(0);
+        .isPositive();
+    assertThat(column.compareTo(TimestampColumn.of("col", ANY_TIMESTAMP.plusDays(1)))).isNegative();
+    assertThat(column.compareTo(TimestampColumn.ofNull("col"))).isPositive();
   }
 
   @Test

@@ -9,13 +9,13 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneOffset;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,8 +32,7 @@ public class InsertBuilderTest {
   private static final LocalDate ANY_DATE = DateColumn.MAX_VALUE;
   private static final LocalTime ANY_TIME = TimeColumn.MAX_VALUE;
   private static final LocalDateTime ANY_TIMESTAMP = TimestampColumn.MAX_VALUE;
-  private static final Instant ANY_TIMESTAMPTZ =
-      ANY_TIMESTAMP.plusHours(1).toInstant(ZoneOffset.UTC);
+  private static final Instant ANY_TIMESTAMPTZ = TimestampTZColumn.MAX_VALUE;
 
   @Mock private Key partitionKey1;
   @Mock private Key partitionKey2;
@@ -265,10 +264,10 @@ public class InsertBuilderTest {
             .intValue("int1", Integer.MAX_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .textValue("text", "a_value")
-            .dateValue("date", ANY_DATE)
-            .timeValue("time", ANY_TIME)
-            .timestampValue("timestamp", ANY_TIMESTAMP)
-            .timestampTZValue("timestamptz", ANY_TIMESTAMPTZ)
+            .dateValue("date", DateColumn.MAX_VALUE)
+            .timeValue("time", TimeColumn.MAX_VALUE)
+            .timestampValue("timestamp", TimestampColumn.MAX_VALUE)
+            .timestampTZValue("timestamptz", TimestampTZColumn.MAX_VALUE)
             .value(TextColumn.of("text2", "another_value"))
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
@@ -295,9 +294,9 @@ public class InsertBuilderTest {
             .intValue("int1", Integer.MIN_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MIN_VALUE))
             .textValue("text", "another_value")
-            .dateValue("date", LocalDate.MAX)
+            .dateValue("date", LocalDate.ofEpochDay(0))
             .timeValue("time", LocalTime.NOON)
-            .timestampValue("timestamp", LocalDateTime.MAX)
+            .timestampValue("timestamp", LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.NOON))
             .timestampTZValue("timestamptz", Instant.EPOCH)
             .value(TextColumn.of("text2", "foo"))
             .clearAttributes()
@@ -332,10 +331,11 @@ public class InsertBuilderTest {
     assertThat(newInsert.getColumns().get("int2").getIntValue())
         .isEqualTo(Integer.valueOf(Integer.MIN_VALUE));
     assertThat(newInsert.getColumns().get("text").getTextValue()).isEqualTo("another_value");
-    assertThat(newInsert.getColumns().get("date").getDateValue()).isEqualTo(LocalDate.MAX);
+    assertThat(newInsert.getColumns().get("date").getDateValue())
+        .isEqualTo(LocalDate.ofEpochDay(0));
     assertThat(newInsert.getColumns().get("time").getTimeValue()).isEqualTo(LocalTime.NOON);
     assertThat(newInsert.getColumns().get("timestamp").getTimestampValue())
-        .isEqualTo(LocalDateTime.MAX);
+        .isEqualTo(LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.NOON));
     assertThat(newInsert.getColumns().get("timestamptz").getTimestampTZValue())
         .isEqualTo(Instant.EPOCH);
     assertThat(newInsert.getColumns().get("text2").getTextValue()).isEqualTo("foo");

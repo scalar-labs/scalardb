@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -38,8 +37,7 @@ public class PutBuilderTest {
   private static final LocalDate ANY_DATE = DateColumn.MAX_VALUE;
   private static final LocalTime ANY_TIME = TimeColumn.MAX_VALUE;
   private static final LocalDateTime ANY_TIMESTAMP = TimestampColumn.MAX_VALUE;
-  private static final Instant ANY_TIMESTAMPTZ =
-      ANY_TIMESTAMP.plusHours(1).toInstant(ZoneOffset.UTC);
+  private static final Instant ANY_TIMESTAMPTZ = TimestampTZColumn.MAX_VALUE;
 
   @Mock private Key partitionKey1;
   @Mock private Key partitionKey2;
@@ -287,10 +285,11 @@ public class PutBuilderTest {
                 .put("int2", IntColumn.of("int2", Integer.MAX_VALUE))
                 .put("text1", TextColumn.of("text1", "a_value"))
                 .put("text2", TextColumn.of("text2", "another_value"))
-                .put("date", DateColumn.of("date", ANY_DATE))
-                .put("time", TimeColumn.of("time", ANY_TIME))
-                .put("timestamp", TimestampColumn.of("timestamp", ANY_TIMESTAMP))
-                .put("timestamptz", TimestampTZColumn.of("timestamptz", ANY_TIMESTAMPTZ))
+                .put("date", DateColumn.of("date", DateColumn.MAX_VALUE))
+                .put("time", TimeColumn.of("time", TimeColumn.MAX_VALUE))
+                .put("timestamp", TimestampColumn.of("timestamp", TimestampColumn.MAX_VALUE))
+                .put(
+                    "timestamptz", TimestampTZColumn.of("timestamptz", TimestampTZColumn.MAX_VALUE))
                 .build(),
             false,
             false);
@@ -317,9 +316,9 @@ public class PutBuilderTest {
             .intValue("int1", Integer.MIN_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MIN_VALUE))
             .textValue("text1", "another_value")
-            .dateValue("date", LocalDate.MIN)
+            .dateValue("date", LocalDate.ofEpochDay(0))
             .timeValue("time", LocalTime.NOON)
-            .timestampValue("timestamp", LocalDateTime.MIN)
+            .timestampValue("timestamp", LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.NOON))
             .timestampTZValue("timestamptz", Instant.EPOCH)
             .value(TextColumn.of("text2", "foo"))
             .condition(condition2)
@@ -357,9 +356,12 @@ public class PutBuilderTest {
                     .put("int2", IntColumn.of("int2", Integer.MIN_VALUE))
                     .put("text1", TextColumn.of("text1", "another_value"))
                     .put("text2", TextColumn.of("text2", "foo"))
-                    .put("date", DateColumn.of("date", LocalDate.MIN))
+                    .put("date", DateColumn.of("date", LocalDate.ofEpochDay(0)))
                     .put("time", TimeColumn.of("time", LocalTime.NOON))
-                    .put("timestamp", TimestampColumn.of("timestamp", LocalDateTime.MIN))
+                    .put(
+                        "timestamp",
+                        TimestampColumn.of(
+                            "timestamp", LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.NOON)))
                     .put("timestamptz", TimestampTZColumn.of("timestamptz", Instant.EPOCH))
                     .build(),
                 true,

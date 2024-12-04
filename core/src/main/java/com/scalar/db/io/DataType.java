@@ -14,8 +14,7 @@ public enum DataType {
   TIME,
   TIMESTAMP,
   TIMESTAMPTZ;
-
-  // Temporary added until the CRUD operations for time-related types is completed
+  // TODO remove this
   public static DataType[] valuesWithoutTimesRelatedTypes() {
     return Arrays.stream(values())
         .filter(type -> type != DATE && type != TIME && type != TIMESTAMP && type != TIMESTAMPTZ)

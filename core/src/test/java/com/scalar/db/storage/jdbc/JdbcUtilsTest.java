@@ -41,6 +41,7 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new com.mysql.cj.jdbc.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getConnectionProperties()).thenReturn("");
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
@@ -83,6 +84,7 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new org.postgresql.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getConnectionProperties()).thenReturn("");
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);

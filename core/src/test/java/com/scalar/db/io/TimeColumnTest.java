@@ -10,7 +10,7 @@ import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
 class TimeColumnTest {
-  private static final LocalTime ANY_TIME = TimeColumn.MAX_VALUE.withNano(123456000);
+  private static final LocalTime ANY_TIME = LocalTime.NOON;
 
   @Test
   public void of_ProperValueGiven_ShouldReturnWhatsSet() {
@@ -110,10 +110,10 @@ class TimeColumnTest {
     TimeColumn column = TimeColumn.of("col", ANY_TIME);
 
     // Act Assert
-    assertThat(column.compareTo(TimeColumn.of("col", ANY_TIME))).isEqualTo(0);
-    assertThat(column.compareTo(TimeColumn.of("col", ANY_TIME.minusHours(1)))).isGreaterThan(0);
-    assertThat(column.compareTo(TimeColumn.of("col", ANY_TIME.plusMinutes(1)))).isLessThan(0);
-    assertThat(column.compareTo(TimeColumn.ofNull("col"))).isGreaterThan(0);
+    assertThat(column.compareTo(TimeColumn.of("col", ANY_TIME))).isZero();
+    assertThat(column.compareTo(TimeColumn.of("col", ANY_TIME.minusHours(1)))).isPositive();
+    assertThat(column.compareTo(TimeColumn.of("col", ANY_TIME.plusMinutes(1)))).isNegative();
+    assertThat(column.compareTo(TimeColumn.ofNull("col"))).isPositive();
   }
 
   @Test

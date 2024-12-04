@@ -14,9 +14,9 @@ import javax.annotation.Nullable;
  * calendar system, such as 2007-12-03
  */
 public class DateColumn implements Column<LocalDate> {
-  /** The minimum date value is 1000-01-01 */
+  /** The minimum DATE value is 1000-01-01 */
   public static final LocalDate MIN_VALUE = LocalDate.of(1000, 1, 1);
-  /** The maximum date value is 9999-12-31 */
+  /** The maximum DATE value is 9999-12-31 */
   public static final LocalDate MAX_VALUE = LocalDate.of(9999, 12, 31);
 
   private final String name;

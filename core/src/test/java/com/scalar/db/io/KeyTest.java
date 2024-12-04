@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -28,8 +27,7 @@ public class KeyTest {
   private static final LocalDate ANY_DATE = DateColumn.MAX_VALUE;
   private static final LocalTime ANY_TIME = TimeColumn.MAX_VALUE;
   private static final LocalDateTime ANY_TIMESTAMP = TimestampColumn.MAX_VALUE;
-  private static final Instant ANY_TIMESTAMPTZ =
-      ANY_TIMESTAMP.plusHours(1).toInstant(ZoneOffset.UTC);
+  private static final Instant ANY_TIMESTAMPTZ = TimestampTZColumn.MAX_VALUE;
 
   @Test
   public void constructor_WithSingleBooleanValue_ShouldReturnWhatsSet() {
