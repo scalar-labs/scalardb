@@ -28,12 +28,12 @@ subprojects {
         azureCosmosVersion = '4.65.0'
         jooqVersion = '3.14.16'
         awssdkVersion = '2.29.1'
-        commonsDbcp2Version = '2.12.0'
+        commonsDbcp2Version = '2.13.0'
         mysqlDriverVersion = '8.4.0'
         postgresqlDriverVersion = '42.7.4'
-        oracleDriverVersion = '21.15.0.0'
+        oracleDriverVersion = '21.16.0.0'
         sqlserverDriverVersion = '11.2.3.jre8'
-        sqliteDriverVersion = '3.47.0.0'
+        sqliteDriverVersion = '3.47.1.0'
         yugabyteDriverVersion = '42.7.3-yb-1'
         picocliVersion = '4.7.6'
         commonsTextVersion = '1.12.0'
@@ -51,6 +51,8 @@ subprojects {
         shadowPluginVersion = '7.1.2'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
+        commonsIoVersion = '2.16.1'
+        lombokVersion = '1.18.34'
     }
 
     repositories {
