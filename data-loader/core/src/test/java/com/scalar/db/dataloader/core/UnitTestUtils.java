@@ -17,6 +17,7 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /** Utils for the service unit tests */
@@ -34,9 +35,9 @@ public class UnitTestUtils {
   public static final String TEST_VALUE_TEXT = "test value";
 
   public static final String TEST_VALUE_BLOB_STRING = "blob test value";
-  public static final byte[] TEST_VALUE_BLOB = TEST_VALUE_BLOB_STRING.getBytes();
+  static final byte[] TEST_VALUE_BLOB = TEST_VALUE_BLOB_STRING.getBytes(StandardCharsets.UTF_8);
   public static final String TEST_VALUE_BLOB_BASE64 =
-      new String(Base64.getEncoder().encode(TEST_VALUE_BLOB));
+      new String(Base64.getEncoder().encode(TEST_VALUE_BLOB), StandardCharsets.UTF_8);
   public static final String TEST_VALUE_TX_ID = "txt value 464654654";
   public static final Float TEST_VALUE_FLOAT = Float.MIN_VALUE;
   public static final int TEST_VALUE_INT = Integer.MAX_VALUE;
