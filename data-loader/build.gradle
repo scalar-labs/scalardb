@@ -1,4 +1,8 @@
 subprojects {
+
+    ext {
+        jacksonVersion = '2.17.0'
+    }
     group = "scalardb.dataloader"
     dependencies {
         // AssertJ
@@ -13,6 +17,7 @@ subprojects {
         // Apache Commons
         implementation("org.apache.commons:commons-lang3:${commonsLangVersion}")
         implementation("commons-io:commons-io:${commonsIoVersion}")
+        implementation("org.slf4j:slf4j-simple:${slf4jVersion}")
 
         // Mockito
         testImplementation "org.mockito:mockito-core:${mockitoVersion}"
@@ -24,5 +29,11 @@ subprojects {
         annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
         testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
         testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+        // Jackson
+        implementation("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}")
+        implementation("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}")
+        implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}")
+
     }
 }
