@@ -38,12 +38,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  protected void onPrepareFailure(Snapshot snapshot) {
-    cancelGroupCommitIfNeeded(snapshot.getId());
-  }
-
-  @Override
-  protected void onValidateFailure(Snapshot snapshot) {
+  protected void onFailureBeforeCommit(Snapshot snapshot) {
     cancelGroupCommitIfNeeded(snapshot.getId());
   }
 

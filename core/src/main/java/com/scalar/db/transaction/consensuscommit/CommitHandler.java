@@ -51,9 +51,7 @@ public class CommitHandler {
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
-  protected void onPrepareFailure(Snapshot snapshot) {}
-
-  protected void onValidateFailure(Snapshot snapshot) {}
+  protected void onFailureBeforeCommit(Snapshot snapshot) {}
 
   private Optional<Future<Void>> invokeBeforePreparationSnapshotHook(Snapshot snapshot)
       throws UnknownTransactionStatusException, CommitException {
@@ -67,9 +65,7 @@ public class CommitHandler {
     } catch (Exception e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
-      // TODO: This method is actually a part of preparation phase. But the callback method name
-      //       `onPrepareFailure()` should be renamed to more reasonable one.
-      onPrepareFailure(snapshot);
+      onFailureBeforeCommit(snapshot);
       throw new CommitException(
           CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
           e,
@@ -89,9 +85,7 @@ public class CommitHandler {
     } catch (Exception e) {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
-      // TODO: This method is actually a part of validation phase. But the callback method name
-      //       `onValidateFailure()` should be renamed to more reasonable one.
-      onValidateFailure(snapshot);
+      onFailureBeforeCommit(snapshot);
       throw new CommitException(
           CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
           e,
@@ -111,7 +105,7 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      onPrepareFailure(snapshot);
+      onFailureBeforeCommit(snapshot);
       throw e;
     }
 
@@ -125,7 +119,7 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      onValidateFailure(snapshot);
+      onFailureBeforeCommit(snapshot);
       throw e;
     }
 
