@@ -63,9 +63,9 @@ public class CommitHandler {
       return Optional.of(
           beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot.getReadWriteSets()));
     } catch (Exception e) {
+      onFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
-      onFailureBeforeCommit(snapshot);
       throw new CommitException(
           CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
           e,
@@ -83,9 +83,9 @@ public class CommitHandler {
     try {
       snapshotHookFuture.get();
     } catch (Exception e) {
+      onFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
-      onFailureBeforeCommit(snapshot);
       throw new CommitException(
           CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
           e,
@@ -98,6 +98,7 @@ public class CommitHandler {
     try {
       prepare(snapshot);
     } catch (PreparationException e) {
+      onFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
@@ -112,6 +113,7 @@ public class CommitHandler {
     try {
       validate(snapshot);
     } catch (ValidationException e) {
+      onFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof ValidationConflictException) {

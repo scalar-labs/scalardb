@@ -228,6 +228,8 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(any());
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -250,6 +252,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -272,6 +275,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -301,6 +305,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -328,6 +333,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -355,6 +361,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -380,6 +387,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -403,6 +411,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -426,6 +435,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -456,6 +466,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
     verify(handler).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -484,6 +495,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -512,6 +524,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -538,6 +551,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler).onFailureBeforeCommit(snapshot);
   }
 
   @Test
@@ -562,6 +576,7 @@ public class CommitHandlerTest {
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler, never()).onFailureBeforeCommit(any());
   }
 
   @Test
@@ -585,6 +600,7 @@ public class CommitHandlerTest {
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(coordinator).getState(anyId());
     verify(handler).rollbackRecords(snapshot);
+    verify(handler, never()).onFailureBeforeCommit(any());
   }
 
   @Test
@@ -607,6 +623,7 @@ public class CommitHandlerTest {
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler, never()).onFailureBeforeCommit(any());
   }
 
   @Test
@@ -629,6 +646,7 @@ public class CommitHandlerTest {
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(coordinator).getState(anyId());
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler, never()).onFailureBeforeCommit(any());
   }
 
   @Test
@@ -647,6 +665,7 @@ public class CommitHandlerTest {
     verify(storage, times(2)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(handler, never()).rollbackRecords(snapshot);
+    verify(handler, never()).onFailureBeforeCommit(any());
   }
 
   @Test
