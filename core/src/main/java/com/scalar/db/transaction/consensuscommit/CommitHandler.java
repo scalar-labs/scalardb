@@ -51,6 +51,12 @@ public class CommitHandler {
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
+  /**
+   * A callback invoked when any exception occurs before committing transactions. This method must
+   * not throw any exception.
+   *
+   * @param snapshot the failed snapshot.
+   */
   protected void onFailureBeforeCommit(Snapshot snapshot) {}
 
   private Optional<Future<Void>> invokeBeforePreparationSnapshotHook(Snapshot snapshot)
