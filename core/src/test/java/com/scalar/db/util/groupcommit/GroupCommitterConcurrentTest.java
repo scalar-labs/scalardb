@@ -30,7 +30,7 @@ class GroupCommitterConcurrentTest {
   }
 
   private static class MyKeyManipulator
-      implements KeyManipulator<String, String, String, String, String> {
+      implements GroupCommitKeyManipulator<String, String, String, String, String> {
     @Override
     public String generateParentKey() {
       return UUID.randomUUID().toString();

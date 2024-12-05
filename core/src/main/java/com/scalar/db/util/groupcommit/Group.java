@@ -14,7 +14,8 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
   private static final Logger logger = LoggerFactory.getLogger(Group.class);
 
   protected final Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter;
-  protected final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+  protected final GroupCommitKeyManipulator<
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
       keyManipulator;
   private final int capacity;
   private final AtomicReference<Integer> size = new AtomicReference<>();
@@ -61,7 +62,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
 
   Group(
       Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+      GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
           keyManipulator,
       int capacity,
       long oldGroupAbortTimeoutMillis) {
