@@ -228,7 +228,6 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
-    verify(handler).onFailureBeforeCommit(any());
     verify(handler).onFailureBeforeCommit(snapshot);
   }
 
