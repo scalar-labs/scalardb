@@ -72,7 +72,12 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   private void cancelGroupCommitIfNeeded(String id) {
-    groupCommitter.remove(id);
+    try {
+      groupCommitter.remove(id);
+    } catch (Exception e) {
+      logger.warn(
+          "Unexpectedly failed to remove the snapshot ID from the group committer. ID: {}", id);
+    }
   }
 
   @Override
