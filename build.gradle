@@ -35,6 +35,7 @@ subprojects {
         sqlserverDriverVersion = '11.2.3.jre8'
         sqliteDriverVersion = '3.47.1.0'
         yugabyteDriverVersion = '42.7.3-yb-1'
+        mariadDbDriverVersion = '3.5.1'
         picocliVersion = '4.7.6'
         commonsTextVersion = '1.12.0'
         junitVersion = '5.11.3'

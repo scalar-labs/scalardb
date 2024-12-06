@@ -23,6 +23,8 @@ public final class RdbEngineFactory {
       return new RdbEngineSqlite();
     } else if (jdbcUrl.startsWith("jdbc:yugabytedb:")) {
       return new RdbEngineYugabyte();
+    } else if (jdbcUrl.startsWith("jdbc:mariadb:")) {
+      return new RdbEngineMariaDB();
     } else {
       throw new IllegalArgumentException(
           CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(jdbcUrl));
