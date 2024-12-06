@@ -688,6 +688,8 @@ public enum CoreError implements ScalarDbError {
       "Invalid number specified for column %s in table %s in namespace %s",
       "",
       ""),
+  DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
+      Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
 
   //
   // Errors for the concurrency error category
