@@ -335,11 +335,11 @@ class RdbEngineMysql implements RdbEngineStrategy {
 
   @Override
   public Driver getDriver() {
-    //    try {
-    return new org.mariadb.jdbc.Driver();
-    //    } catch (SQLException e) {
-    //      throw new RuntimeException(e);
-    //    }
+    try {
+      return new com.mysql.cj.jdbc.Driver();
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

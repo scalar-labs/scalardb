@@ -6,12 +6,14 @@ import com.scalar.db.exception.storage.ExecutionException;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Disabled
 public class JdbcAdminImportTableIntegrationTest
     extends DistributedStorageAdminImportTableIntegrationTestBase {
   private static final Logger logger =

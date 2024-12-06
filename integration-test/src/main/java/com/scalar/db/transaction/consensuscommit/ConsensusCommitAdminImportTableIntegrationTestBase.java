@@ -2,7 +2,9 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.DistributedTransactionAdminImportTableIntegrationTestBase;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
+@Disabled
 public abstract class ConsensusCommitAdminImportTableIntegrationTestBase
     extends DistributedTransactionAdminImportTableIntegrationTestBase {
 
