@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.util.concurrent.Uninterruptibles;
-import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
+import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class GroupManagerTest {
   private static final int TIMEOUT_CHECK_INTERVAL_MILLIS = 10;
-  private TestableKeyManipulator keyManipulator;
+  private TestableGroupCommitKeyManipulator keyManipulator;
   @Mock private Emittable<String, String, Integer> emittable;
 
   @Mock
@@ -31,7 +31,7 @@ class GroupManagerTest {
 
   @BeforeEach
   void setUp() {
-    keyManipulator = new TestableKeyManipulator();
+    keyManipulator = new TestableGroupCommitKeyManipulator();
   }
 
   @AfterEach

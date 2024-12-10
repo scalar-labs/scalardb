@@ -61,14 +61,14 @@ class GroupCommitterTest {
 
     TestableGroupCommitter(
         GroupCommitConfig config,
-        KeyManipulator<String, String, String, String, String> keyManipulator) {
+        GroupCommitKeyManipulator<String, String, String, String, String> keyManipulator) {
       super("test", config, keyManipulator);
     }
 
     @Override
     GroupManager<String, String, String, String, String, Integer> createGroupManager(
         GroupCommitConfig config,
-        KeyManipulator<String, String, String, String, String> keyManipulator) {
+        GroupCommitKeyManipulator<String, String, String, String, String> keyManipulator) {
       testableGroupCommitterGroupManagerCreated.set(true);
       return groupManager;
     }
@@ -137,7 +137,7 @@ class GroupCommitterTest {
             delayedSlotMoveTimeoutMillis,
             OLD_GROUP_ABORT_TIMEOUT_MILLIS,
             TIMEOUT_CHECK_INTERVAL_MILLIS),
-        new TestableKeyManipulator());
+        new TestableGroupCommitKeyManipulator());
   }
 
   @Test
@@ -146,7 +146,8 @@ class GroupCommitterTest {
     // Act
     try (TestableGroupCommitter ignored =
         new TestableGroupCommitter(
-            new GroupCommitConfig(20, 100, 400, 60, 10, true), new TestableKeyManipulator())) {
+            new GroupCommitConfig(20, 100, 400, 60, 10, true),
+            new TestableGroupCommitKeyManipulator())) {
       // Assert
       assertThat(testableGroupCommitterGroupManagerCreated.get()).isTrue();
       assertThat(testableGroupCommitterGroupSizeFixWorkerCreated.get()).isTrue();
@@ -162,7 +163,8 @@ class GroupCommitterTest {
     // Act
     try (TestableGroupCommitter ignored =
         new TestableGroupCommitter(
-            new GroupCommitConfig(20, 100, 400, 60, 10, false), new TestableKeyManipulator())) {
+            new GroupCommitConfig(20, 100, 400, 60, 10, false),
+            new TestableGroupCommitKeyManipulator())) {
       // Assert
       assertThat(testableGroupCommitterGroupManagerCreated.get()).isTrue();
       assertThat(testableGroupCommitterGroupSizeFixWorkerCreated.get()).isTrue();
@@ -578,7 +580,8 @@ class GroupCommitterTest {
     doReturn(false).when(groupCommitMetrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
         new TestableGroupCommitter(
-            new GroupCommitConfig(20, 100, 400, 60, 10, true), new TestableKeyManipulator());
+            new GroupCommitConfig(20, 100, 400, 60, 10, true),
+            new TestableGroupCommitKeyManipulator());
     // Act
     groupCommitter.close();
     TimeUnit.SECONDS.sleep(4);
@@ -597,7 +600,8 @@ class GroupCommitterTest {
     doReturn(false).when(groupCommitMetrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
         new TestableGroupCommitter(
-            new GroupCommitConfig(20, 100, 400, 60, 10, false), new TestableKeyManipulator());
+            new GroupCommitConfig(20, 100, 400, 60, 10, false),
+            new TestableGroupCommitKeyManipulator());
     // Act
     groupCommitter.close();
     TimeUnit.SECONDS.sleep(4);
@@ -616,7 +620,8 @@ class GroupCommitterTest {
     doReturn(true).when(groupCommitMetrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
         new TestableGroupCommitter(
-            new GroupCommitConfig(20, 100, 400, 60000, 10), new TestableKeyManipulator());
+            new GroupCommitConfig(20, 100, 400, 60000, 10),
+            new TestableGroupCommitKeyManipulator());
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     // Act

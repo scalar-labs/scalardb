@@ -2,7 +2,7 @@ package com.scalar.db.util.groupcommit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Uninterruptibles;
-import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
+import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.io.Closeable;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +46,8 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
   @Nullable private final GroupCommitMonitor groupCommitMonitor;
 
   // This contains logics of how to treat keys.
-  private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+  private final GroupCommitKeyManipulator<
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
       keyManipulator;
 
   private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
@@ -62,7 +63,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
   public GroupCommitter(
       String label,
       GroupCommitConfig config,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+      GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
           keyManipulator) {
     logger.info("Starting GroupCommitter. Label: {}, Config: {}", label, config);
     this.keyManipulator = keyManipulator;
@@ -209,7 +210,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
   GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
       createGroupManager(
           GroupCommitConfig config,
-          KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+          GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
               keyManipulator) {
     return new GroupManager<>(config, keyManipulator);
   }

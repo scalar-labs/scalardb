@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.LazyInit;
-import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
+import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,8 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
       groupCleanupWorker;
 
   // Custom operations injected by the client
-  private final KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+  private final GroupCommitKeyManipulator<
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
       keyManipulator;
   @LazyInit private Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter;
 
@@ -57,7 +58,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
 
   GroupManager(
       GroupCommitConfig config,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+      GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
           keyManipulator) {
     this.keyManipulator = keyManipulator;
     this.config = config;

@@ -26,13 +26,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DelayedGroupTest {
   @Mock private Emittable<String, String, Integer> emitter;
-  private TestableKeyManipulator keyManipulator;
+  private TestableGroupCommitKeyManipulator keyManipulator;
 
   @BeforeEach
   void setUp() {
     // This generates parent keys which start with "0000" and increment by one for each subsequent
     // key ("0001", "0002"...).
-    keyManipulator = new TestableKeyManipulator();
+    keyManipulator = new TestableGroupCommitKeyManipulator();
   }
 
   @Test

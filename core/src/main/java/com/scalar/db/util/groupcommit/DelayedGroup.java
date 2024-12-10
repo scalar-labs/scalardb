@@ -15,7 +15,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
       GroupCommitConfig config,
       FULL_KEY fullKey,
       Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+      GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
           keyManipulator) {
     super(emitter, keyManipulator, 1, config.oldGroupAbortTimeoutMillis());
     this.fullKey = fullKey;
