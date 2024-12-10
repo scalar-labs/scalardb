@@ -9,7 +9,7 @@ archivesBaseName = "scalardb-data-loader-core"
 dependencies {
     // ScalarDB core
     implementation project(':core')
-    
+
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
