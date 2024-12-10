@@ -51,9 +51,20 @@ public class CommitHandler {
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
-  protected void onPrepareFailure(Snapshot snapshot) {}
+  /**
+   * A callback invoked when any exception occurs before committing transactions.
+   *
+   * @param snapshot the failed snapshot.
+   */
+  protected void onFailureBeforeCommit(Snapshot snapshot) {}
 
-  protected void onValidateFailure(Snapshot snapshot) {}
+  private void safelyCallOnFailureBeforeCommit(Snapshot snapshot) {
+    try {
+      onFailureBeforeCommit(snapshot);
+    } catch (Exception e) {
+      logger.warn("Failed to call the callback. Transaction ID: {}", snapshot.getId(), e);
+    }
+  }
 
   private Optional<Future<Void>> invokeBeforePreparationSnapshotHook(Snapshot snapshot)
       throws UnknownTransactionStatusException, CommitException {
@@ -65,11 +76,9 @@ public class CommitHandler {
       return Optional.of(
           beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot.getReadWriteSets()));
     } catch (Exception e) {
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
-      // TODO: This method is actually a part of preparation phase. But the callback method name
-      //       `onPrepareFailure()` should be renamed to more reasonable one.
-      onPrepareFailure(snapshot);
       throw new CommitException(
           CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
           e,
@@ -87,11 +96,9 @@ public class CommitHandler {
     try {
       snapshotHookFuture.get();
     } catch (Exception e) {
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
-      // TODO: This method is actually a part of validation phase. But the callback method name
-      //       `onValidateFailure()` should be renamed to more reasonable one.
-      onValidateFailure(snapshot);
       throw new CommitException(
           CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
           e,
@@ -104,6 +111,7 @@ public class CommitHandler {
     try {
       prepare(snapshot);
     } catch (PreparationException e) {
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
@@ -111,13 +119,14 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      onPrepareFailure(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       throw e;
     }
 
     try {
       validate(snapshot);
     } catch (ValidationException e) {
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof ValidationConflictException) {
@@ -125,7 +134,7 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      onValidateFailure(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       throw e;
     }
 
