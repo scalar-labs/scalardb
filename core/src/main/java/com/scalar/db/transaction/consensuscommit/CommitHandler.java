@@ -52,12 +52,19 @@ public class CommitHandler {
   }
 
   /**
-   * A callback invoked when any exception occurs before committing transactions. This method must
-   * not throw any exception.
+   * A callback invoked when any exception occurs before committing transactions.
    *
    * @param snapshot the failed snapshot.
    */
   protected void onFailureBeforeCommit(Snapshot snapshot) {}
+
+  private void safelyCallOnFailureBeforeCommit(Snapshot snapshot) {
+    try {
+      onFailureBeforeCommit(snapshot);
+    } catch (Exception e) {
+      logger.warn("Failed to call the callback. Transaction ID: {}", snapshot.getId(), e);
+    }
+  }
 
   private Optional<Future<Void>> invokeBeforePreparationSnapshotHook(Snapshot snapshot)
       throws UnknownTransactionStatusException, CommitException {
@@ -69,7 +76,7 @@ public class CommitHandler {
       return Optional.of(
           beforePreparationSnapshotHook.handle(tableMetadataManager, snapshot.getReadWriteSets()));
     } catch (Exception e) {
-      onFailureBeforeCommit(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       throw new CommitException(
@@ -89,7 +96,7 @@ public class CommitHandler {
     try {
       snapshotHookFuture.get();
     } catch (Exception e) {
-      onFailureBeforeCommit(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       throw new CommitException(
@@ -104,7 +111,7 @@ public class CommitHandler {
     try {
       prepare(snapshot);
     } catch (PreparationException e) {
-      onFailureBeforeCommit(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof PreparationConflictException) {
@@ -112,14 +119,14 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      onFailureBeforeCommit(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       throw e;
     }
 
     try {
       validate(snapshot);
     } catch (ValidationException e) {
-      onFailureBeforeCommit(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       if (e instanceof ValidationConflictException) {
@@ -127,7 +134,7 @@ public class CommitHandler {
       }
       throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (Exception e) {
-      onFailureBeforeCommit(snapshot);
+      safelyCallOnFailureBeforeCommit(snapshot);
       throw e;
     }
 
