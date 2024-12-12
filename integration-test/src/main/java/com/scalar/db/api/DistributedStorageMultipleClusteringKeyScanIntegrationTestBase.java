@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanBuilder.BuildableScanWithPartitionKey;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -101,9 +102,14 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
+    List<DataType> dataTypes = Lists.newArrayList(DataType.values());
+    if (!isTimestampTypeSupported()) {
+      dataTypes.remove(DataType.TIMESTAMP);
+    }
+
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
-    for (DataType firstClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
-      for (DataType secondClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
+    for (DataType firstClusteringKeyType : dataTypes) {
+      for (DataType secondClusteringKeyType : dataTypes) {
         clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
       }
     }
@@ -2161,5 +2167,9 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     public String toString() {
       return "ClusteringKey{" + "first=" + first + ", second=" + second + '}';
     }
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

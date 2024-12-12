@@ -1,5 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
+import static java.time.temporal.ChronoField.DAY_OF_MONTH;
+import static java.time.temporal.ChronoField.HOUR_OF_DAY;
+import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
+import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
+import static java.time.temporal.ChronoField.NANO_OF_SECOND;
+import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
+import static java.time.temporal.ChronoField.YEAR;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
@@ -14,9 +22,15 @@ import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.chrono.IsoChronology;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -24,6 +38,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RdbEngineMysql implements RdbEngineStrategy {
+  public static final DateTimeFormatter TIMESTAMP_FORMATTER =
+      new DateTimeFormatterBuilder()
+          .parseCaseInsensitive()
+          .appendValue(YEAR, 4)
+          .appendLiteral('-')
+          .appendValue(MONTH_OF_YEAR, 2)
+          .appendLiteral('-')
+          .appendValue(DAY_OF_MONTH, 2)
+          .appendLiteral(" ")
+          .appendValue(HOUR_OF_DAY, 2)
+          .appendLiteral(':')
+          .appendValue(MINUTE_OF_HOUR, 2)
+          .appendLiteral(':')
+          .appendValue(SECOND_OF_MINUTE, 2)
+          .optionalStart()
+          .appendFraction(NANO_OF_SECOND, 0, 6, true)
+          .toFormatter()
+          .withChronology(IsoChronology.INSTANCE)
+          .withResolverStyle(ResolverStyle.STRICT);
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
 
@@ -409,13 +442,19 @@ class RdbEngineMysql implements RdbEngineStrategy {
   @Override
   public Object encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
+    // Encoding as an OffsetDateTime result in the time being offset arbitrarily depending on the
+    // client, session and server time zone.
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC).toLocalDateTime();
   }
 
   @Override
-  public String getConnectionProperties() {
-    // Ensure the connection timezone is set to UTC, otherwise the server timezone will
-    // be used when retrieving ScalarDB TIMESTAMP and TIMESTAMPTZ data which can alter the data
-    return "connectionTimeZone=+00:00;forceConnectionTimeZoneToSession=true";
+  public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    LocalDateTime localDateTime = resultSet.getObject(columnName, LocalDateTime.class);
+    if (localDateTime == null) {
+      return TimestampTZColumn.ofNull(columnName);
+    } else {
+      return TimestampTZColumn.of(columnName, localDateTime.toInstant(ZoneOffset.UTC));
+    }
   }
 }

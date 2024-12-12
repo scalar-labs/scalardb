@@ -177,9 +177,11 @@ public interface RdbEngineStrategy {
   default TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
       throws SQLException {
     OffsetDateTime offsetDateTime = resultSet.getObject(columnName, OffsetDateTime.class);
-
-    return TimestampTZColumn.of(
-        columnName, offsetDateTime == null ? null : offsetDateTime.toInstant());
+    if (offsetDateTime == null) {
+      return TimestampTZColumn.ofNull(columnName);
+    } else {
+      return TimestampTZColumn.of(columnName, offsetDateTime.toInstant());
+    }
   }
 
   default String getConnectionProperties() {

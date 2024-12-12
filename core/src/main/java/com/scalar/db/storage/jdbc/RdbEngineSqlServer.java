@@ -372,7 +372,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String getConnectionProperties() {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
-    // In a future release, this property may be set to false by default.
+    // It is being considered setting to false by default in a future driver release.
     return "sendTimeAsDatetime=false";
   }
 }

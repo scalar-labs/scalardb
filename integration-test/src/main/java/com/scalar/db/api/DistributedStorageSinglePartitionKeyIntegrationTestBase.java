@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.Sets;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -70,7 +71,12 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   protected Set<DataType> getPartitionKeyTypes() {
-    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
+    Set<DataType> dataTypes = Sets.newHashSet(DataType.values());
+    if (!isTimestampTypeSupported()) {
+      dataTypes.remove(DataType.TIMESTAMP);
+    }
+
+    return dataTypes;
   }
 
   protected boolean isFloatTypeKeySupported() {
@@ -315,5 +321,9 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     return TestUtils.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

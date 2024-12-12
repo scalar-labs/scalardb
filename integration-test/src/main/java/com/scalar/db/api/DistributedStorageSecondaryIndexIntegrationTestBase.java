@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.Sets;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -9,7 +10,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +69,12 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   }
 
   protected Set<DataType> getSecondaryIndexTypes() {
-    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
+    Set<DataType> dataTypes = Sets.newHashSet(DataType.values());
+    if (!isTimestampTypeSupported()) {
+      dataTypes.remove(DataType.TIMESTAMP);
+    }
+
+    return dataTypes;
   }
 
   private void createTables() throws ExecutionException {
@@ -305,5 +310,9 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
 
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     return TestUtils.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

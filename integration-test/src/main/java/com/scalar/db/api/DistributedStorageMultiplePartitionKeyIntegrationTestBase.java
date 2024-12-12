@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -83,14 +84,19 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   }
 
   protected ListMultimap<DataType, DataType> getPartitionKeyTypes() {
+    List<DataType> dataTypes = Lists.newArrayList(DataType.values());
+    if (!isTimestampTypeSupported()) {
+      dataTypes.remove(DataType.TIMESTAMP);
+    }
+
     ListMultimap<DataType, DataType> partitionKeyTypes = ArrayListMultimap.create();
-    for (DataType firstPartitionKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
+    for (DataType firstPartitionKeyType : dataTypes) {
       if (!isFloatTypeKeySupported()
           && (firstPartitionKeyType == DataType.FLOAT
               || firstPartitionKeyType == DataType.DOUBLE)) {
         continue;
       }
-      for (DataType secondPartitionKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
+      for (DataType secondPartitionKeyType : dataTypes) {
         if (!isFloatTypeKeySupported()
             && (secondPartitionKeyType == DataType.FLOAT
                 || secondPartitionKeyType == DataType.DOUBLE)) {
@@ -505,5 +511,9 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       this.first = first;
       this.second = second;
     }
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

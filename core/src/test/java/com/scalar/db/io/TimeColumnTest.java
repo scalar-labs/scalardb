@@ -132,7 +132,7 @@ class TimeColumnTest {
 
     // Act Assert
     assertThatThrownBy(() -> DateColumn.of("col", dateBeforeRangeMin))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> DateColumn.of("col", dateAfterRangeMax))
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -146,10 +146,10 @@ class TimeColumnTest {
 
     // Act Assert
     assertThatThrownBy(() -> TimeColumn.of("col", timeWithThreeDigitNano))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimeColumn.of("col", timeWithTwoDigitNano))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimeColumn.of("col", timeWithOneDigitNano))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

@@ -130,7 +130,7 @@ class DateColumnTest {
 
     // Act Assert
     assertThatThrownBy(() -> DateColumn.of("col", dateBeforeRangeMin))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> DateColumn.of("col", dateAfterRangeMax))
         .isInstanceOf(IllegalArgumentException.class);
   }

@@ -132,7 +132,7 @@ class TimestampColumnTest {
 
     // Act Assert
     assertThatThrownBy(() -> TimestampColumn.of("col", dateBeforeRangeMin))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimestampColumn.of("col", dateAfterRangeMax))
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -155,16 +155,16 @@ class TimestampColumnTest {
 
     // Act Assert
     assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithThreeDigitNano))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithTwoDigitNano))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithOneDigitNano))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithThreeDigitMicro))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithTwoDigitMicro))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithOneDigitMicro))
-        .isInstanceOf((IllegalArgumentException.class));
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

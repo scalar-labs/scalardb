@@ -8,11 +8,13 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A {@code Column} for a DATE type. It represents a date without a time-zone in the ISO-8601
  * calendar system, such as 2007-12-03
  */
+@Immutable
 public class DateColumn implements Column<LocalDate> {
   /** The minimum DATE value is 1000-01-01 */
   public static final LocalDate MIN_VALUE = LocalDate.of(1000, 1, 1);
@@ -23,13 +25,20 @@ public class DateColumn implements Column<LocalDate> {
   @Nullable private final LocalDate value;
 
   private DateColumn(String name, @Nullable LocalDate value) {
-    this.name = Objects.requireNonNull(name);
-    this.value = value;
-
     if (value != null && (value.isBefore(MIN_VALUE) || value.isAfter(MAX_VALUE))) {
       throw new IllegalArgumentException(
           CoreError.OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE.buildMessage(value));
     }
+
+    this.name = Objects.requireNonNull(name);
+    this.value = value;
+  }
+
+  @Override
+  protected final void finalize() throws Throwable {
+    // Override the finalize method to prevent a finalizer attack in case an
+    // IllegalArgumentException is thrown in the constructor
+    // cf. Spotbug CT_CONSTRUCTOR_THROW alert
   }
 
   @Override

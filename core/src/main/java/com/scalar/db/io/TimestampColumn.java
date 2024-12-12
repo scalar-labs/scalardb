@@ -8,12 +8,14 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A {@code Column} for a TIMESTAMP type. It represents a date-time without a time-zone in the
  * ISO-8601 calendar system, such as 2017-06-19T16:15:30, and can be expressed with millisecond
  * precision.
  */
+@Immutable
 public class TimestampColumn implements Column<LocalDateTime> {
   /** The minimum TIMESTAMP value is 1000-01-01T00:00:00.000 */
   public static final LocalDateTime MIN_VALUE = LocalDateTime.of(1000, 1, 1, 0, 0);
@@ -26,22 +28,26 @@ public class TimestampColumn implements Column<LocalDateTime> {
   private final String name;
   @Nullable private final LocalDateTime value;
 
-  @SuppressWarnings("JavaLocalTimeGetNano")
+  @SuppressWarnings("JavaLocalDateTimeGetNano")
   private TimestampColumn(String name, @Nullable LocalDateTime value) {
-    this.name = Objects.requireNonNull(name);
-    this.value = value;
-
-    if (value == null) {
-      return;
-    }
-    if (value.isBefore(MIN_VALUE) || value.isAfter(MAX_VALUE)) {
+    if (value != null && (value.isBefore(MIN_VALUE) || value.isAfter(MAX_VALUE))) {
       throw new IllegalArgumentException(
           CoreError.OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP.buildMessage(value));
     }
-    if (value.getNano() % FRACTIONAL_SECONDS_PRECISION_IN_NANOSECONDS != 0) {
+    if (value != null && value.getNano() % FRACTIONAL_SECONDS_PRECISION_IN_NANOSECONDS != 0) {
       throw new IllegalArgumentException(
           CoreError.SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP.buildMessage(value));
     }
+
+    this.name = Objects.requireNonNull(name);
+    this.value = value;
+  }
+
+  @Override
+  protected final void finalize() throws Throwable {
+    // Override the finalize method to prevent a finalizer attack in case an
+    // IllegalArgumentException is thrown in the constructor
+    // cf. Spotbug CT_CONSTRUCTOR_THROW alert
   }
 
   @Override

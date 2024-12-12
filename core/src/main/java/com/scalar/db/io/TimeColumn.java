@@ -8,11 +8,13 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A {@code Column} for a TIME type. It represents a time without a time-zone in the ISO-8601
  * calendar system, such as 16:15:30, and can be expressed with microsecond precision.
  */
+@Immutable
 public class TimeColumn implements Column<LocalTime> {
 
   /** The minimum TIME value is 00:00:00.000000 */
@@ -27,13 +29,20 @@ public class TimeColumn implements Column<LocalTime> {
 
   @SuppressWarnings("JavaLocalTimeGetNano")
   private TimeColumn(String name, @Nullable LocalTime value) {
-    this.name = Objects.requireNonNull(name);
-    this.value = value;
-
     if (value != null && value.getNano() % FRACTIONAL_SECONDS_PRECISION_IN_NANOSECONDS != 0) {
       throw new IllegalArgumentException(
           CoreError.SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME.buildMessage(value));
     }
+
+    this.name = Objects.requireNonNull(name);
+    this.value = value;
+  }
+
+  @Override
+  protected final void finalize() throws Throwable {
+    // Override the finalize method to prevent a finalizer attack in case an
+    // IllegalArgumentException is thrown in the constructor
+    // cf. Spotbug CT_CONSTRUCTOR_THROW alert
   }
 
   @Override

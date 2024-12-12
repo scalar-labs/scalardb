@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.Sets;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -80,7 +81,12 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   protected Set<DataType> getClusteringKeyTypes() {
-    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
+    Set<DataType> dataTypes = Sets.newHashSet(DataType.values());
+    if (!isTimestampTypeSupported()) {
+      dataTypes.remove(DataType.TIMESTAMP);
+    }
+
+    return dataTypes;
   }
 
   private void createTables() throws ExecutionException {
@@ -962,5 +968,9 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       actual.add(actualResult.getColumns().get(CLUSTERING_KEY));
     }
     assertThat(actual).describedAs(description).isEqualTo(expected);
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

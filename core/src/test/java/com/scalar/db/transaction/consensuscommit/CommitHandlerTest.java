@@ -25,7 +25,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.transaction.consensuscommit.Snapshot.ReadWriteSets;
 import java.time.Duration;
 import java.time.Instant;
@@ -675,10 +674,10 @@ public class CommitHandlerTest {
     handler.setBeforePreparationSnapshotHook(delayedBeforePreparationSnapshotHook);
 
     // Act
-    Instant start = TimestampTZColumn.MAX_VALUE;
+    Instant start = Instant.now();
     assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
-    Instant end = TimestampTZColumn.MAX_VALUE;
+    Instant end = Instant.now();
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
