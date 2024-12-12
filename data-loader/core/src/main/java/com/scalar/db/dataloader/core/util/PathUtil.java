@@ -1,22 +1,22 @@
 package com.scalar.db.dataloader.core.util;
 
+import java.io.File;
+
 public class PathUtil {
 
   /**
-   * Ensures the specified path has a trailing slash.
-   *
-   * <p>java.nio.file.Path is not used because this is also used for virtual paths.
+   * Ensures the specified path has a trailing path separator.
    *
    * @param path the path
-   * @return the path with a trailing slash
+   * @return the path with a trailing path separator.
    */
-  public static String ensureTrailingSlash(String path) {
+  public static String ensureTrailingSeparator(String path) {
     if (path == null || path.isEmpty()) {
       return "";
     }
 
-    if (!path.endsWith("/")) {
-      return path + "/";
+    if (!path.endsWith(File.separator)) {
+      return path + File.separator;
     }
 
     return path;

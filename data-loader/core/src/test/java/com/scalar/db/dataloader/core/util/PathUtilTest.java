@@ -6,40 +6,30 @@ import org.junit.jupiter.api.Test;
 class PathUtilTest {
 
   @Test
-  void ensureTrailingSlash_nullPath_returnsEmptyString() {
-    String path = null;
-    String result = PathUtil.ensureTrailingSlash(path);
+  void ensureTrailingSeparator_nullPath_returnsEmptyString() {
+    String result = PathUtil.ensureTrailingSeparator(null);
     Assertions.assertEquals("", result);
   }
 
   @Test
-  void ensureTrailingSlash_emptyPath_returnsEmptyString() {
-    String path = "";
-    String result = PathUtil.ensureTrailingSlash(path);
+  void ensureTrailingSeparator_emptyPath_returnsEmptyString() {
+    String result = PathUtil.ensureTrailingSeparator("");
     Assertions.assertEquals("", result);
   }
 
   @Test
-  void ensureTrailingSlash_pathWithoutTrailingSlash_addsTrailingSlash() {
+  void ensureTrailingSlash_pathWithoutTrailingSlash_addsTrailingSeparator() {
     String path = "/path/to/directory";
     String expectedResult = "/path/to/directory/";
-    String result = PathUtil.ensureTrailingSlash(path);
+    String result = PathUtil.ensureTrailingSeparator(path);
     Assertions.assertEquals(expectedResult, result);
   }
 
   @Test
-  void ensureTrailingSlash_pathWithTrailingSlash_returnsOriginalPath() {
+  void ensureTrailingSlash_pathWithTrailingSeparator_returnsOriginalPath() {
     String path = "/path/to/directory/";
     String expectedResult = "/path/to/directory/";
-    String result = PathUtil.ensureTrailingSlash(path);
-    Assertions.assertEquals(expectedResult, result);
-  }
-
-  @Test
-  void ensureTrailingSlash_virtualPath_addsTrailingSlash() {
-    String path = "s3://bucket/path";
-    String expectedResult = "s3://bucket/path/";
-    String result = PathUtil.ensureTrailingSlash(path);
+    String result = PathUtil.ensureTrailingSeparator(path);
     Assertions.assertEquals(expectedResult, result);
   }
 }
