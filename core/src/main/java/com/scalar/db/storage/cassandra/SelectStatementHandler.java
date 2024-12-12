@@ -171,7 +171,9 @@ public class SelectStatementHandler extends StatementHandler {
 
   private void setKey(Select.Where statement, Optional<Key> key) {
     key.ifPresent(
-        k -> k.forEach(v -> statement.and(eq(quoteIfNecessary(v.getName()), bindMarker()))));
+        k ->
+            k.getColumns()
+                .forEach(v -> statement.and(eq(quoteIfNecessary(v.getName()), bindMarker()))));
   }
 
   private void setStart(Select.Where statement, Scan scan, Set<String> traveledEqualKeySet) {
