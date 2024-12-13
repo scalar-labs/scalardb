@@ -63,4 +63,10 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
     }
     return super.isFloatTypeKeySupported();
   }
+
+  @Override
+  protected boolean isTimestampTZTypeKeySupported() {
+    // TIMESTAMP WITH TIME ZONE type cannot be a primary key in Oracle.
+    return !JdbcTestUtils.isOracle(rdbEngine);
+  }
 }

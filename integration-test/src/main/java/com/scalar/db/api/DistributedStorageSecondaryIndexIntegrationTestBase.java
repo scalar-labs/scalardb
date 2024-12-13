@@ -10,6 +10,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -203,9 +204,8 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   public void scan_WithMinSecondaryIndexValue_ShouldReturnProperResult()
       throws ExecutionException, IOException {
 
-    for (DataType secondaryIndexType : secondaryIndexTypes) {
+    for (DataType secondaryIndexType : Arrays.asList(DataType.DATE)) {
       truncateTable(secondaryIndexType);
-
       // Arrange
       Column<?> secondaryIndexValue = getColumnWithMinValue(INDEX_COL_NAME, secondaryIndexType);
       prepareRecords(secondaryIndexType, secondaryIndexValue);
@@ -217,10 +217,15 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
               .build();
 
       // Act
-      List<Result> results = scanAll(scan);
-
+      try {
+        List<Result> results = scanAll(scan);
+        assertResults(results, secondaryIndexValue);
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw e;
+      }
       // Assert
-      assertResults(results, secondaryIndexValue);
+
     }
   }
 

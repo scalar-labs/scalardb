@@ -53,7 +53,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     NOTHING
   }
 
-  private static final String TEST_NAME = "storage_mul_ckey";
+  private static final String TEST_NAME = "storage_mul_ck";
   private static final String NAMESPACE_BASE_NAME = "int_test_" + TEST_NAME + "_";
   private static final String PARTITION_KEY = "pkey";
   private static final String FIRST_CLUSTERING_KEY = "ckey1";
@@ -105,6 +105,9 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     List<DataType> dataTypes = Lists.newArrayList(DataType.values());
     if (!isTimestampTypeSupported()) {
       dataTypes.remove(DataType.TIMESTAMP);
+    }
+    if (!isTimestampTZTypeKeySupported()) {
+      dataTypes.remove(DataType.TIMESTAMPTZ);
     }
 
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
@@ -2170,6 +2173,10 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isTimestampTZTypeKeySupported() {
     return true;
   }
 }

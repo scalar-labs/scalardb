@@ -99,4 +99,10 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
       throws java.util.concurrent.ExecutionException, InterruptedException {
     super.scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult();
   }
+
+  @Override
+  protected boolean isTimestampTZTypeKeySupported() {
+    // TIMESTAMP WITH TIME ZONE type cannot be a primary key in Oracle.
+    return !JdbcTestUtils.isOracle(rdbEngine);
+  }
 }

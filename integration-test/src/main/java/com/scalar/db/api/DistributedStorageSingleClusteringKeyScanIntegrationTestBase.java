@@ -85,6 +85,9 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     if (!isTimestampTypeSupported()) {
       dataTypes.remove(DataType.TIMESTAMP);
     }
+    if (!isTimestampTZTypeKeySupported()) {
+      dataTypes.remove(DataType.TIMESTAMPTZ);
+    }
 
     return dataTypes;
   }
@@ -971,6 +974,10 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isTimestampTZTypeKeySupported() {
     return true;
   }
 }

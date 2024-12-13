@@ -75,6 +75,9 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
     if (!isTimestampTypeSupported()) {
       dataTypes.remove(DataType.TIMESTAMP);
     }
+    if (!isTimestampTZTypeKeySupported()) {
+      dataTypes.remove(DataType.TIMESTAMPTZ);
+    }
 
     return dataTypes;
   }
@@ -324,6 +327,10 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isTimestampTZTypeKeySupported() {
     return true;
   }
 }

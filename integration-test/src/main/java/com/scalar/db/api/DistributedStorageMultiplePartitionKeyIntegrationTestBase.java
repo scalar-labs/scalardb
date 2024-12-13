@@ -88,6 +88,9 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     if (!isTimestampTypeSupported()) {
       dataTypes.remove(DataType.TIMESTAMP);
     }
+    if (!isTimestampTZTypeKeySupported()) {
+      dataTypes.remove(DataType.TIMESTAMPTZ);
+    }
 
     ListMultimap<DataType, DataType> partitionKeyTypes = ArrayListMultimap.create();
     for (DataType firstPartitionKeyType : dataTypes) {
@@ -514,6 +517,10 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isTimestampTZTypeKeySupported() {
     return true;
   }
 }

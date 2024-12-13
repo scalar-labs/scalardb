@@ -80,4 +80,10 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     }
     return super.getColumnWithMaxValue(columnName, dataType);
   }
+
+  @Override
+  protected boolean isTimestampTZTypeKeySupported() {
+    // TIMESTAMP WITH TIME ZONE type cannot be a primary key in Oracle.
+    return !JdbcTestUtils.isOracle(rdbEngine);
+  }
 }
