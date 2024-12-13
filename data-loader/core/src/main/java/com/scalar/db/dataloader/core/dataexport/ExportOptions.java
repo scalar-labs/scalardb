@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 
 /** Options for a ScalarDB export data operation */
+@SuppressWarnings("SameNameButDifferent")
 @Builder(builderMethodName = "hiddenBuilder")
 @Data
 public class ExportOptions {
