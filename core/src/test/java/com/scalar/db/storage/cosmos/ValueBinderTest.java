@@ -13,7 +13,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -146,7 +146,7 @@ public class ValueBinderTest {
     column.accept(binder);
 
     // Assert
-    verify(consumer).accept(ColumnSerializationUtils.toCompactFormat(column));
+    verify(consumer).accept(ColumnEncodingUtils.encode(column));
   }
 
   @Test
@@ -158,7 +158,7 @@ public class ValueBinderTest {
     column.accept(binder);
 
     // Assert
-    verify(consumer).accept(ColumnSerializationUtils.toCompactFormat(column));
+    verify(consumer).accept(ColumnEncodingUtils.encode(column));
   }
 
   @Test
@@ -170,7 +170,7 @@ public class ValueBinderTest {
     column.accept(binder);
 
     // Assert
-    verify(consumer).accept(ColumnSerializationUtils.toCompactFormat(column));
+    verify(consumer).accept(ColumnEncodingUtils.encode(column));
   }
 
   @Test
@@ -182,7 +182,7 @@ public class ValueBinderTest {
     column.accept(binder);
 
     // Assert
-    verify(consumer).accept(ColumnSerializationUtils.toCompactFormat(column));
+    verify(consumer).accept(ColumnEncodingUtils.encode(column));
   }
 
   @Test

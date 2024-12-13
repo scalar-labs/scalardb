@@ -12,7 +12,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.util.Base64;
 import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -76,7 +76,7 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       consumer.accept(null);
     } else {
-      consumer.accept(ColumnSerializationUtils.toCompactFormat(column));
+      consumer.accept(ColumnEncodingUtils.encode(column));
     }
   }
 
@@ -85,7 +85,7 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       consumer.accept(null);
     } else {
-      consumer.accept(ColumnSerializationUtils.toCompactFormat(column));
+      consumer.accept(ColumnEncodingUtils.encode(column));
     }
   }
 
@@ -94,7 +94,7 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       consumer.accept(null);
     } else {
-      consumer.accept(ColumnSerializationUtils.toCompactFormat(column));
+      consumer.accept(ColumnEncodingUtils.encode(column));
     }
   }
 
@@ -103,7 +103,7 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       consumer.accept(null);
     } else {
-      consumer.accept(ColumnSerializationUtils.toCompactFormat(column));
+      consumer.accept(ColumnEncodingUtils.encode(column));
     }
   }
 }

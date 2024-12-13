@@ -352,19 +352,19 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public Object encodeDate(DateColumn column) {
+  public String encodeDate(DateColumn column) {
     assert column.getDateValue() != null;
     return column.getDateValue().format(DateTimeFormatter.BASIC_ISO_DATE);
   }
 
   @Override
-  public Object encodeTimestamp(TimestampColumn column) {
+  public String encodeTimestamp(TimestampColumn column) {
     assert column.getTimestampValue() != null;
     return column.getTimestampValue().format(DateTimeFormatter.ISO_DATE_TIME);
   }
 
   @Override
-  public Object encodeTimestampTZ(TimestampTZColumn column) {
+  public DateTimeOffset encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
     return DateTimeOffset.valueOf(Timestamp.from(column.getTimestampTZValue()), 0);
   }

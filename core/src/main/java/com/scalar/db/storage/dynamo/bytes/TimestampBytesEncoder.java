@@ -2,7 +2,7 @@ package com.scalar.db.storage.dynamo.bytes;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.TimestampColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import javax.annotation.concurrent.ThreadSafe;
@@ -24,6 +24,6 @@ public class TimestampBytesEncoder implements BytesEncoder<TimestampColumn> {
   private byte[] getBytes(TimestampColumn column) {
     assert !column.hasNullValue();
 
-    return ColumnSerializationUtils.toCompactFormat(column).getBytes(StandardCharsets.UTF_8);
+    return ColumnEncodingUtils.encode(column).getBytes(StandardCharsets.UTF_8);
   }
 }

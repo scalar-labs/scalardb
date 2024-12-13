@@ -372,14 +372,14 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public Object encodeDate(DateColumn column) {
+  public LocalDateTime encodeDate(DateColumn column) {
     assert column.getDateValue() != null;
     return LocalDateTime.of(
         column.getDateValue(), config.getOracleDateColumnDefaultTimeComponent());
   }
 
   @Override
-  public Object encodeTime(TimeColumn column) {
+  public LocalDateTime encodeTime(TimeColumn column) {
     assert column.getTimeValue() != null;
     return LocalDateTime.of(
         config.getOracleTimeColumnDefaultDateComponent(), column.getTimeValue());

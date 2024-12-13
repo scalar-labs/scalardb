@@ -4,7 +4,7 @@ import static com.scalar.db.storage.dynamo.bytes.BytesUtils.encodeLong;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.TimeColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -24,7 +24,7 @@ public class TimeBytesEncoder implements BytesEncoder<TimeColumn> {
   public void encode(TimeColumn column, Order order, ByteBuffer dst) {
     assert !column.hasNullValue();
 
-    long value = ColumnSerializationUtils.toCompactFormat(column);
+    long value = ColumnEncodingUtils.encode(column);
     encodeLong(value, order, dst);
   }
 }

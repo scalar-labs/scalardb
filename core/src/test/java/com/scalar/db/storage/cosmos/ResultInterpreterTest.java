@@ -12,7 +12,7 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -85,19 +85,16 @@ public class ResultInterpreterTest {
                 Base64.getEncoder().encodeToString("bytes".getBytes(StandardCharsets.UTF_8)))
             .put(
                 ANY_COLUMN_NAME_8,
-                ColumnSerializationUtils.toCompactFormat(
-                    DateColumn.of(ANY_COLUMN_NAME_8, ANY_DATE)))
+                ColumnEncodingUtils.encode(DateColumn.of(ANY_COLUMN_NAME_8, ANY_DATE)))
             .put(
                 ANY_COLUMN_NAME_9,
-                ColumnSerializationUtils.toCompactFormat(
-                    TimeColumn.of(ANY_COLUMN_NAME_9, ANY_TIME)))
+                ColumnEncodingUtils.encode(TimeColumn.of(ANY_COLUMN_NAME_9, ANY_TIME)))
             .put(
                 ANY_COLUMN_NAME_10,
-                ColumnSerializationUtils.toCompactFormat(
-                    TimestampColumn.of(ANY_COLUMN_NAME_10, ANY_TIMESTAMP)))
+                ColumnEncodingUtils.encode(TimestampColumn.of(ANY_COLUMN_NAME_10, ANY_TIMESTAMP)))
             .put(
                 ANY_COLUMN_NAME_11,
-                ColumnSerializationUtils.toCompactFormat(
+                ColumnEncodingUtils.encode(
                     TimestampTZColumn.of(ANY_COLUMN_NAME_11, ANY_TIMESTAMPTZ)))
             .build();
     Record record =

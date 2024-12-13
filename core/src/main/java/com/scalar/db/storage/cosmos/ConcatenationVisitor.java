@@ -12,7 +12,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -118,24 +118,24 @@ public class ConcatenationVisitor implements ColumnVisitor {
   @Override
   public void visit(DateColumn column) {
     assert !column.hasNullValue();
-    columns.add(String.valueOf(ColumnSerializationUtils.toCompactFormat(column)));
+    columns.add(String.valueOf(ColumnEncodingUtils.encode(column)));
   }
 
   @Override
   public void visit(TimeColumn column) {
     assert !column.hasNullValue();
-    columns.add(String.valueOf(ColumnSerializationUtils.toCompactFormat(column)));
+    columns.add(String.valueOf(ColumnEncodingUtils.encode(column)));
   }
 
   @Override
   public void visit(TimestampColumn column) {
     assert !column.hasNullValue();
-    columns.add(ColumnSerializationUtils.toCompactFormat(column));
+    columns.add(ColumnEncodingUtils.encode(column));
   }
 
   @Override
   public void visit(TimestampTZColumn column) {
     assert !column.hasNullValue();
-    columns.add(ColumnSerializationUtils.toCompactFormat(column));
+    columns.add(ColumnEncodingUtils.encode(column));
   }
 }

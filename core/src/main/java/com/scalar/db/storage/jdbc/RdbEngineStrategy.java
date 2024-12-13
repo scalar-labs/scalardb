@@ -143,10 +143,12 @@ public interface RdbEngineStrategy {
   }
 
   default Object encodeDate(DateColumn column) {
+    assert column.getDateValue() != null;
     return column.getDateValue();
   }
 
   default Object encodeTime(TimeColumn column) {
+    assert column.getTimeValue() != null;
     return column.getTimeValue();
   }
 

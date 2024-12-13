@@ -13,7 +13,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,13 +75,10 @@ public class ConcatenationVisitorTest {
     assertThat(values[5]).isEqualTo(ANY_TEXT);
     assertThat(values[6])
         .isEqualTo(Base64.getUrlEncoder().withoutPadding().encodeToString(ANY_BLOB));
-    assertThat(values[7])
-        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_DATE_COLUMN)));
-    assertThat(values[8])
-        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_TIME_COLUMN)));
-    assertThat(values[9]).isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMP_COLUMN));
-    assertThat(values[10])
-        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMPTZ_COLUMN));
+    assertThat(values[7]).isEqualTo(String.valueOf(ColumnEncodingUtils.encode(ANY_DATE_COLUMN)));
+    assertThat(values[8]).isEqualTo(String.valueOf(ColumnEncodingUtils.encode(ANY_TIME_COLUMN)));
+    assertThat(values[9]).isEqualTo(ColumnEncodingUtils.encode(ANY_TIMESTAMP_COLUMN));
+    assertThat(values[10]).isEqualTo(ColumnEncodingUtils.encode(ANY_TIMESTAMPTZ_COLUMN));
   }
 
   @Test
@@ -155,7 +152,7 @@ public class ConcatenationVisitorTest {
 
     // Assert
     assertThat(visitor.build())
-        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_DATE_COLUMN)));
+        .isEqualTo(String.valueOf(ColumnEncodingUtils.encode(ANY_DATE_COLUMN)));
   }
 
   @Test
@@ -165,7 +162,7 @@ public class ConcatenationVisitorTest {
 
     // Assert
     assertThat(visitor.build())
-        .isEqualTo(String.valueOf(ColumnSerializationUtils.toCompactFormat(ANY_TIME_COLUMN)));
+        .isEqualTo(String.valueOf(ColumnEncodingUtils.encode(ANY_TIME_COLUMN)));
   }
 
   @Test
@@ -174,8 +171,7 @@ public class ConcatenationVisitorTest {
     ANY_TIMESTAMP_COLUMN.accept(visitor);
 
     // Assert
-    assertThat(visitor.build())
-        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMP_COLUMN));
+    assertThat(visitor.build()).isEqualTo(ColumnEncodingUtils.encode(ANY_TIMESTAMP_COLUMN));
   }
 
   @Test
@@ -184,7 +180,6 @@ public class ConcatenationVisitorTest {
     ANY_TIMESTAMPTZ_COLUMN.accept(visitor);
 
     // Assert
-    assertThat(visitor.build())
-        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMPTZ_COLUMN));
+    assertThat(visitor.build()).isEqualTo(ColumnEncodingUtils.encode(ANY_TIMESTAMPTZ_COLUMN));
   }
 }

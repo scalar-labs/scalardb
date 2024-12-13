@@ -127,8 +127,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(DataType.DOUBLE, ScalarAttributeType.N)
           .put(DataType.TEXT, ScalarAttributeType.S)
           .put(DataType.BLOB, ScalarAttributeType.B)
-          .put(DataType.DATE, ScalarAttributeType.S)
-          .put(DataType.TIME, ScalarAttributeType.S)
+          .put(DataType.DATE, ScalarAttributeType.N)
+          .put(DataType.TIME, ScalarAttributeType.N)
           .put(DataType.TIMESTAMP, ScalarAttributeType.S)
           .put(DataType.TIMESTAMPTZ, ScalarAttributeType.S)
           .build();

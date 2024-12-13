@@ -16,7 +16,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Base64;
 import java.util.HashMap;
@@ -98,24 +98,21 @@ public class ResultInterpreter {
         return recordValue == null
             ? DateColumn.ofNull(name)
             : DateColumn.of(
-                name,
-                ColumnSerializationUtils.parseCompactDate(((Number) recordValue).longValue()));
+                name, ColumnEncodingUtils.decodeDate(((Number) recordValue).longValue()));
       case TIME:
         return recordValue == null
             ? TimeColumn.ofNull(name)
             : TimeColumn.of(
-                name,
-                ColumnSerializationUtils.parseCompactTime(((Number) recordValue).longValue()));
+                name, ColumnEncodingUtils.decodeTime(((Number) recordValue).longValue()));
       case TIMESTAMP:
         return recordValue == null
             ? TimestampColumn.ofNull(name)
-            : TimestampColumn.of(
-                name, ColumnSerializationUtils.parseCompactTimestamp((String) recordValue));
+            : TimestampColumn.of(name, ColumnEncodingUtils.decodeTimestamp((String) recordValue));
       case TIMESTAMPTZ:
         return recordValue == null
             ? TimestampTZColumn.ofNull(name)
             : TimestampTZColumn.of(
-                name, ColumnSerializationUtils.parseCompactTimestampTZ((String) recordValue));
+                name, ColumnEncodingUtils.decodeTimestampTZ((String) recordValue));
       default:
         throw new AssertionError();
     }

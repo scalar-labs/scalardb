@@ -13,7 +13,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -202,7 +202,7 @@ public class MapVisitorTest {
 
     // Assert
     assertThat(visitor.get().get(ANY_DATE_COLUMN.getName()))
-        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_DATE_COLUMN));
+        .isEqualTo(ColumnEncodingUtils.encode(ANY_DATE_COLUMN));
   }
 
   @Test
@@ -222,7 +222,7 @@ public class MapVisitorTest {
 
     // Assert
     assertThat(visitor.get().get(ANY_TIME_COLUMN.getName()))
-        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIME_COLUMN));
+        .isEqualTo(ColumnEncodingUtils.encode(ANY_TIME_COLUMN));
   }
 
   @Test
@@ -242,7 +242,7 @@ public class MapVisitorTest {
 
     // Assert
     assertThat(visitor.get().get(ANY_TIMESTAMP_COLUMN.getName()))
-        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMP_COLUMN));
+        .isEqualTo(ColumnEncodingUtils.encode(ANY_TIMESTAMP_COLUMN));
   }
 
   @Test
@@ -262,7 +262,7 @@ public class MapVisitorTest {
 
     // Assert
     assertThat(visitor.get().get(ANY_TIMESTAMPTZ_COLUMN.getName()))
-        .isEqualTo(ColumnSerializationUtils.toCompactFormat(ANY_TIMESTAMPTZ_COLUMN));
+        .isEqualTo(ColumnEncodingUtils.encode(ANY_TIMESTAMPTZ_COLUMN));
   }
 
   @Test

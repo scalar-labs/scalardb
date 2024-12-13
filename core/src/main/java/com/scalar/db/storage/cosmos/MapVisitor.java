@@ -12,7 +12,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,29 +69,21 @@ public class MapVisitor implements ColumnVisitor {
 
   @Override
   public void visit(DateColumn column) {
-    values.put(
-        column.getName(),
-        column.hasNullValue() ? null : ColumnSerializationUtils.toCompactFormat(column));
+    values.put(column.getName(), column.hasNullValue() ? null : ColumnEncodingUtils.encode(column));
   }
 
   @Override
   public void visit(TimeColumn column) {
-    values.put(
-        column.getName(),
-        column.hasNullValue() ? null : ColumnSerializationUtils.toCompactFormat(column));
+    values.put(column.getName(), column.hasNullValue() ? null : ColumnEncodingUtils.encode(column));
   }
 
   @Override
   public void visit(TimestampColumn column) {
-    values.put(
-        column.getName(),
-        column.hasNullValue() ? null : ColumnSerializationUtils.toCompactFormat(column));
+    values.put(column.getName(), column.hasNullValue() ? null : ColumnEncodingUtils.encode(column));
   }
 
   @Override
   public void visit(TimestampTZColumn column) {
-    values.put(
-        column.getName(),
-        column.hasNullValue() ? null : ColumnSerializationUtils.toCompactFormat(column));
+    values.put(column.getName(), column.hasNullValue() ? null : ColumnEncodingUtils.encode(column));
   }
 }

@@ -12,7 +12,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.Map;
@@ -123,12 +123,9 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      assert column.getDateValue() != null;
       values.put(
           alias + i,
-          AttributeValue.builder()
-              .n(String.valueOf(ColumnSerializationUtils.toCompactFormat(column)))
-              .build());
+          AttributeValue.builder().n(String.valueOf(ColumnEncodingUtils.encode(column))).build());
     }
     i++;
   }
@@ -138,12 +135,9 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      assert column.getTimeValue() != null;
       values.put(
           alias + i,
-          AttributeValue.builder()
-              .n(String.valueOf(ColumnSerializationUtils.toCompactFormat(column)))
-              .build());
+          AttributeValue.builder().n(String.valueOf(ColumnEncodingUtils.encode(column))).build());
     }
     i++;
   }
@@ -153,10 +147,7 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      assert column.getTimestampValue() != null;
-      values.put(
-          alias + i,
-          AttributeValue.builder().s(ColumnSerializationUtils.toCompactFormat(column)).build());
+      values.put(alias + i, AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build());
     }
     i++;
   }
@@ -166,10 +157,7 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      assert column.getTimestampTZValue() != null;
-      values.put(
-          alias + i,
-          AttributeValue.builder().s(ColumnSerializationUtils.toCompactFormat(column)).build());
+      values.put(alias + i, AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build());
     }
     i++;
   }

@@ -7,7 +7,7 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
@@ -92,14 +92,14 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       case INT:
         return "INT";
       case BIGINT:
+      case DATE:
+      case TIME:
         return "BIGINT";
       case FLOAT:
         return "FLOAT";
       case DOUBLE:
         return "DOUBLE";
       case TEXT:
-      case DATE:
-      case TIME:
       case TIMESTAMP:
       case TIMESTAMPTZ:
         return "TEXT";
@@ -296,49 +296,45 @@ class RdbEngineSqlite implements RdbEngineStrategy {
 
   @Override
   public Long encodeDate(DateColumn column) {
-    return ColumnSerializationUtils.toCompactFormat(column);
+    return ColumnEncodingUtils.encode(column);
   }
 
   @Override
   public Long encodeTime(TimeColumn column) {
-    return ColumnSerializationUtils.toCompactFormat(column);
+    return ColumnEncodingUtils.encode(column);
   }
 
   @Override
-  public Object encodeTimestamp(TimestampColumn column) {
-    return ColumnSerializationUtils.toCompactFormat(column);
+  public String encodeTimestamp(TimestampColumn column) {
+    return ColumnEncodingUtils.encode(column);
   }
 
   @Override
-  public Object encodeTimestampTZ(TimestampTZColumn column) {
-    return ColumnSerializationUtils.toCompactFormat(column);
+  public String encodeTimestampTZ(TimestampTZColumn column) {
+    return ColumnEncodingUtils.encode(column);
   }
 
   @Override
   public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
-    return DateColumn.of(
-        columnName, ColumnSerializationUtils.parseCompactDate(resultSet.getLong(columnName)));
+    return DateColumn.of(columnName, ColumnEncodingUtils.decodeDate(resultSet.getLong(columnName)));
   }
 
   @Override
   public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
-    return TimeColumn.of(
-        columnName, ColumnSerializationUtils.parseCompactTime(resultSet.getLong(columnName)));
+    return TimeColumn.of(columnName, ColumnEncodingUtils.decodeTime(resultSet.getLong(columnName)));
   }
 
   @Override
   public TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
       throws SQLException {
     return TimestampColumn.of(
-        columnName,
-        ColumnSerializationUtils.parseCompactTimestamp(resultSet.getString(columnName)));
+        columnName, ColumnEncodingUtils.decodeTimestamp(resultSet.getString(columnName)));
   }
 
   @Override
   public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
       throws SQLException {
     return TimestampTZColumn.of(
-        columnName,
-        ColumnSerializationUtils.parseCompactTimestampTZ(resultSet.getString(columnName)));
+        columnName, ColumnEncodingUtils.decodeTimestampTZ(resultSet.getString(columnName)));
   }
 }

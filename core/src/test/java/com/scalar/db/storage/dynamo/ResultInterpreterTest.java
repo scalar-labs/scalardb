@@ -11,7 +11,7 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -95,29 +95,25 @@ public class ResultInterpreterTest {
         AttributeValue.builder()
             .n(
                 String.valueOf(
-                    ColumnSerializationUtils.toCompactFormat(
-                        DateColumn.of(ANY_COLUMN_NAME_8, ANY_DATE))))
+                    ColumnEncodingUtils.encode(DateColumn.of(ANY_COLUMN_NAME_8, ANY_DATE))))
             .build());
     item.put(
         ANY_COLUMN_NAME_9,
         AttributeValue.builder()
             .n(
                 String.valueOf(
-                    ColumnSerializationUtils.toCompactFormat(
-                        TimeColumn.of(ANY_COLUMN_NAME_9, ANY_TIME))))
+                    ColumnEncodingUtils.encode(TimeColumn.of(ANY_COLUMN_NAME_9, ANY_TIME))))
             .build());
     item.put(
         ANY_COLUMN_NAME_10,
         AttributeValue.builder()
-            .s(
-                ColumnSerializationUtils.toCompactFormat(
-                    TimestampColumn.of(ANY_COLUMN_NAME_10, ANY_TIMESTAMP)))
+            .s(ColumnEncodingUtils.encode(TimestampColumn.of(ANY_COLUMN_NAME_10, ANY_TIMESTAMP)))
             .build());
     item.put(
         ANY_COLUMN_NAME_11,
         AttributeValue.builder()
             .s(
-                ColumnSerializationUtils.toCompactFormat(
+                ColumnEncodingUtils.encode(
                     TimestampTZColumn.of(ANY_COLUMN_NAME_11, ANY_TIMESTAMPTZ)))
             .build());
 

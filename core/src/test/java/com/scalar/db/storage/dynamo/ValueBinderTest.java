@@ -14,7 +14,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -260,7 +260,7 @@ public class ValueBinderTest {
             entry(
                 ":foo0",
                 AttributeValue.builder()
-                    .n(String.valueOf(ColumnSerializationUtils.toCompactFormat(column)))
+                    .n(String.valueOf(ColumnEncodingUtils.encode(column)))
                     .build()));
   }
 
@@ -292,7 +292,7 @@ public class ValueBinderTest {
             entry(
                 ":foo0",
                 AttributeValue.builder()
-                    .n(String.valueOf(ColumnSerializationUtils.toCompactFormat(column)))
+                    .n(String.valueOf(ColumnEncodingUtils.encode(column)))
                     .build()));
   }
 
@@ -321,11 +321,7 @@ public class ValueBinderTest {
     Map<String, AttributeValue> values = binder.build();
     assertThat(values)
         .containsOnly(
-            entry(
-                ":foo0",
-                AttributeValue.builder()
-                    .s(ColumnSerializationUtils.toCompactFormat(column))
-                    .build()));
+            entry(":foo0", AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build()));
   }
 
   @Test
@@ -353,11 +349,7 @@ public class ValueBinderTest {
     Map<String, AttributeValue> values = binder.build();
     assertThat(values)
         .containsOnly(
-            entry(
-                ":foo0",
-                AttributeValue.builder()
-                    .s(ColumnSerializationUtils.toCompactFormat(column))
-                    .build()));
+            entry(":foo0", AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build()));
   }
 
   @Test
@@ -393,9 +385,7 @@ public class ValueBinderTest {
         .containsOnly(
             entry(
                 ":foo0",
-                AttributeValue.builder()
-                    .s(ColumnSerializationUtils.toCompactFormat(timestampTZColumn))
-                    .build()),
+                AttributeValue.builder().s(ColumnEncodingUtils.encode(timestampTZColumn)).build()),
             entry(":foo1", AttributeValue.builder().bool(ANY_BOOL).build()),
             entry(":foo2", AttributeValue.builder().nul(true).build()),
             entry(":foo3", AttributeValue.builder().n(String.valueOf(ANY_LONG)).build()));

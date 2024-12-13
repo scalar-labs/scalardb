@@ -4,7 +4,7 @@ import static com.scalar.db.storage.dynamo.bytes.BytesUtils.encodeLong;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.DateColumn;
-import com.scalar.db.storage.ColumnSerializationUtils;
+import com.scalar.db.storage.ColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -24,7 +24,7 @@ public class DateBytesEncoder implements BytesEncoder<DateColumn> {
   public void encode(DateColumn column, Order order, ByteBuffer dst) {
     assert column.getValue().isPresent();
 
-    long value = ColumnSerializationUtils.toCompactFormat(column);
+    long value = ColumnEncodingUtils.encode(column);
     encodeLong(value, order, dst);
   }
 }
