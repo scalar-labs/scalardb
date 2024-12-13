@@ -12,7 +12,7 @@ public class RuntimeUtilTest {
   public void checkNotNull_HasNullValues_ShouldThrowException() {
     assertThatThrownBy(() -> RuntimeUtil.checkNotNull(null, null))
         .isExactlyInstanceOf(NullPointerException.class)
-        .hasMessage(DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT.getMessage());
+        .hasMessage(DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT.buildMessage());
   }
 
   @Test

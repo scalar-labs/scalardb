@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 public class DebugUtil {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DebugUtil.class);
+  private static final Logger logger = LoggerFactory.getLogger(DebugUtil.class);
 
   /**
    * log memory usage
@@ -17,7 +17,7 @@ public class DebugUtil {
     long usedMemory = runtime.totalMemory() - runtime.freeMemory();
     long maxMemory = runtime.maxMemory();
 
-    LOGGER.info(
+    logger.info(
         "Memory usage at {}: Used Memory = {} MB, Max Memory = {} MB",
         stage,
         formatMemorySize(usedMemory),

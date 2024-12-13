@@ -7,8 +7,6 @@ import java.util.Locale;
 /** Utils for decimal handling */
 public class DecimalUtil {
 
-  private static final DecimalFormat DECIMAL_FORMAT = createFormatter();
-
   /**
    * Convert a Double to a non-scientific formatted string
    *
@@ -16,7 +14,7 @@ public class DecimalUtil {
    * @return formatted double as a string
    */
   public static String convertToNonScientific(Double doubleValue) {
-    return DECIMAL_FORMAT.format(doubleValue);
+    return createFormatter().format(doubleValue);
   }
 
   /**
@@ -26,7 +24,7 @@ public class DecimalUtil {
    * @return formatted float as a string
    */
   public static String convertToNonScientific(Float floatValue) {
-    return DECIMAL_FORMAT.format(floatValue);
+    return createFormatter().format(floatValue);
   }
 
   /**

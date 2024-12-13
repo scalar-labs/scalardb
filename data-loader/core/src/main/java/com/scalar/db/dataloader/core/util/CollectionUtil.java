@@ -12,8 +12,12 @@ public class CollectionUtil {
    * @return collections are same length or not
    */
   public static boolean areSameLength(Collection<?>... collections) {
-    int N = collections[0].size();
-    for (Collection<?> a : collections) if (a.size() != N) return false;
+    int n = collections[0].size();
+    for (Collection<?> c : collections) {
+      if (c.size() != n) {
+        return false;
+      }
+    }
     return true;
   }
 }
