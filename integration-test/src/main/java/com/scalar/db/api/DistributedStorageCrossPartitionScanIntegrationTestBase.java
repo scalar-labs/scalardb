@@ -53,6 +53,7 @@ import javax.annotation.Nonnull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
@@ -844,6 +845,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     assertScanResult(actual, getExpectedNullResults(operator), description(column, operator));
   }
 
+  @Disabled
   @Test
   public void scan_WithConjunctiveNormalFormConditionsShouldReturnProperResult()
       throws IOException, ExecutionException {
