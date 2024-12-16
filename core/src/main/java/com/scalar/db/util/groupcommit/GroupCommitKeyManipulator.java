@@ -15,7 +15,8 @@ import javax.annotation.concurrent.Immutable;
  * @param <EMIT_FULL_KEY> A full-key type that Emitter can interpret.
  */
 @Immutable
-public interface KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY> {
+public interface GroupCommitKeyManipulator<
+    PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY> {
   class Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> {
     public final PARENT_KEY parentKey;
     public final CHILD_KEY childKey;
