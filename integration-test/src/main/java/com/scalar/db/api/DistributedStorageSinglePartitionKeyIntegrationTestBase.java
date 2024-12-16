@@ -71,19 +71,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   protected Set<DataType> getPartitionKeyTypes() {
-    Set<DataType> dataTypes = Sets.newHashSet(DataType.values());
-    if (!isTimestampTypeSupported()) {
-      dataTypes.remove(DataType.TIMESTAMP);
-    }
-    if (!isTimestampTZTypeKeySupported()) {
-      dataTypes.remove(DataType.TIMESTAMPTZ);
-    }
-
-    return dataTypes;
-  }
-
-  protected boolean isFloatTypeKeySupported() {
-    return true;
+    return Sets.newHashSet(DataType.values());
   }
 
   private void createTables() throws ExecutionException {
@@ -156,10 +144,6 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   @Test
   public void getAndScanAndDelete_ShouldBehaveCorrectly() throws ExecutionException, IOException {
     for (DataType partitionKeyType : partitionKeyTypes) {
-      if (!isFloatTypeKeySupported()
-          && (partitionKeyType == DataType.FLOAT || partitionKeyType == DataType.DOUBLE)) {
-        continue;
-      }
       random.setSeed(seed);
 
       truncateTable(partitionKeyType);
@@ -324,13 +308,5 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     return TestUtils.getColumnWithMaxValue(columnName, dataType);
-  }
-
-  protected boolean isTimestampTypeSupported() {
-    return true;
-  }
-
-  protected boolean isTimestampTZTypeKeySupported() {
-    return true;
   }
 }

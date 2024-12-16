@@ -69,12 +69,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   }
 
   protected Set<DataType> getSecondaryIndexTypes() {
-    Set<DataType> dataTypes = Sets.newHashSet(DataType.values());
-    if (!isTimestampTypeSupported()) {
-      dataTypes.remove(DataType.TIMESTAMP);
-    }
-
-    return dataTypes;
+    return Sets.newHashSet(DataType.values());
   }
 
   private void createTables() throws ExecutionException {

@@ -5,8 +5,10 @@ import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationT
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
@@ -101,8 +103,10 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected boolean isTimestampTZTypeKeySupported() {
-    // TIMESTAMP WITH TIME ZONE type cannot be a primary key in Oracle.
-    return !JdbcTestUtils.isOracle(rdbEngine);
+  protected List<DataType> getDataTypes() {
+    // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
+    return super.getDataTypes().stream()
+        .filter(type -> !(JdbcTestUtils.isOracle(rdbEngine) && type == DataType.TIMESTAMPTZ))
+        .collect(Collectors.toList());
   }
 }

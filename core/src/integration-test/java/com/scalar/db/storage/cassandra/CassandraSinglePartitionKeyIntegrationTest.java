@@ -1,9 +1,12 @@
 package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.api.DistributedStorageSinglePartitionKeyIntegrationTestBase;
+import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CassandraSinglePartitionKeyIntegrationTest
     extends DistributedStorageSinglePartitionKeyIntegrationTestBase {
@@ -18,7 +21,9 @@ public class CassandraSinglePartitionKeyIntegrationTest
   }
 
   @Override
-  protected boolean isTimestampTypeSupported() {
-    return false;
+  protected Set<DataType> getPartitionKeyTypes() {
+    return super.getPartitionKeyTypes().stream()
+        .filter(type -> type != DataType.TIMESTAMP)
+        .collect(Collectors.toSet());
   }
 }

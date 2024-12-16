@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -84,27 +83,9 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   }
 
   protected ListMultimap<DataType, DataType> getPartitionKeyTypes() {
-    List<DataType> dataTypes = Lists.newArrayList(DataType.values());
-    if (!isTimestampTypeSupported()) {
-      dataTypes.remove(DataType.TIMESTAMP);
-    }
-    if (!isTimestampTZTypeKeySupported()) {
-      dataTypes.remove(DataType.TIMESTAMPTZ);
-    }
-
     ListMultimap<DataType, DataType> partitionKeyTypes = ArrayListMultimap.create();
-    for (DataType firstPartitionKeyType : dataTypes) {
-      if (!isFloatTypeKeySupported()
-          && (firstPartitionKeyType == DataType.FLOAT
-              || firstPartitionKeyType == DataType.DOUBLE)) {
-        continue;
-      }
-      for (DataType secondPartitionKeyType : dataTypes) {
-        if (!isFloatTypeKeySupported()
-            && (secondPartitionKeyType == DataType.FLOAT
-                || secondPartitionKeyType == DataType.DOUBLE)) {
-          continue;
-        }
+    for (DataType firstPartitionKeyType : getDataTypes()) {
+      for (DataType secondPartitionKeyType : getDataTypes()) {
         partitionKeyTypes.put(firstPartitionKeyType, secondPartitionKeyType);
       }
     }
@@ -116,10 +97,6 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   }
 
   protected boolean isParallelDdlSupported() {
-    return true;
-  }
-
-  protected boolean isFloatTypeKeySupported() {
     return true;
   }
 
@@ -516,11 +493,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     }
   }
 
-  protected boolean isTimestampTypeSupported() {
-    return true;
-  }
-
-  protected boolean isTimestampTZTypeKeySupported() {
-    return true;
+  protected List<DataType> getDataTypes() {
+    return Arrays.asList(DataType.values());
   }
 }

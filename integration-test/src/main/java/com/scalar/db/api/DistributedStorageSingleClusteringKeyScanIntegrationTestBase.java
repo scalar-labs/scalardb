@@ -81,15 +81,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   protected Set<DataType> getClusteringKeyTypes() {
-    Set<DataType> dataTypes = Sets.newHashSet(DataType.values());
-    if (!isTimestampTypeSupported()) {
-      dataTypes.remove(DataType.TIMESTAMP);
-    }
-    if (!isTimestampTZTypeKeySupported()) {
-      dataTypes.remove(DataType.TIMESTAMPTZ);
-    }
-
-    return dataTypes;
+    return Sets.newHashSet(DataType.values());
   }
 
   private void createTables() throws ExecutionException {
@@ -971,13 +963,5 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       actual.add(actualResult.getColumns().get(CLUSTERING_KEY));
     }
     assertThat(actual).describedAs(description).isEqualTo(expected);
-  }
-
-  protected boolean isTimestampTypeSupported() {
-    return true;
-  }
-
-  protected boolean isTimestampTZTypeKeySupported() {
-    return true;
   }
 }

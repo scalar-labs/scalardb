@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanBuilder.BuildableScanWithPartitionKey;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -102,17 +101,9 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
-    List<DataType> dataTypes = Lists.newArrayList(Arrays.asList(DataType.BIGINT, DataType.BOOLEAN));
-    if (!isTimestampTypeSupported()) {
-      dataTypes.remove(DataType.TIMESTAMP);
-    }
-    if (!isTimestampTZTypeKeySupported()) {
-      dataTypes.remove(DataType.TIMESTAMPTZ);
-    }
-
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
-    for (DataType firstClusteringKeyType : dataTypes) {
-      for (DataType secondClusteringKeyType : dataTypes) {
+    for (DataType firstClusteringKeyType : getDataTypes()) {
+      for (DataType secondClusteringKeyType : getDataTypes()) {
         clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
       }
     }
@@ -2173,11 +2164,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     }
   }
 
-  protected boolean isTimestampTypeSupported() {
-    return true;
-  }
-
-  protected boolean isTimestampTZTypeKeySupported() {
-    return true;
+  protected List<DataType> getDataTypes() {
+    return Arrays.asList(DataType.values());
   }
 }
