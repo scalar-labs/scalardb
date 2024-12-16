@@ -24,7 +24,9 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
 
 public final class ColumnEncodingUtils {
-
+  // A formatter similar to the ISO date time format (DateTimeFormatter.ISO_DATE_TIME)
+  // '2011-12-03T10:15:30.1234' where all
+  // non-numerical characters are removed to reduce the memory footprint.
   public static final DateTimeFormatter TIMESTAMP_FORMATTER =
       new DateTimeFormatterBuilder()
           .appendValue(YEAR, 4)

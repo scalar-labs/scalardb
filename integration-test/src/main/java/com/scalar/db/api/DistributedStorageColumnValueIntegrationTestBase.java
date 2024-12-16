@@ -600,14 +600,15 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
   @CsvSource({"-2,11", "11,11"})
   public void put_forTimeRelatedTypesWithVariousJvmTimezone_ShouldPutCorrectly(
       int insertTimeZone, int readTimeZone) throws ExecutionException {
-    // Different time zones between the insert client, read client and server timezone can
+    // Different time zones between the insert client, read client and server can
     // cause issue where the time can be offset. Such issues were observed for MySQL and MariaDB.
     //
     // Ideally we would run this test by setting the server time zone in additions to the insert
-    // and read client timezone. Since setting the server time zone is complicated and the server is
-    // likely running on the Japan timezone (UTC+9), UTC or a US mainland timezone(UTC-8 to UTC-5). We use UTC-2
-    // or UTC+11 timezones for the client, that corresponds respectively to timezone in the middle of the
-    // Atlantic Ocean and the Pacific Ocean, which should never align on the server timezone.
+    // and read client timezone. But setting the server time zone is complicated and the server is
+    // likely running on the Japan timezone (UTC+9), UTC or a US mainland timezone(UTC-8 to UTC-5).
+    // So we use UTC-2 or UTC+11 timezones for the client, that corresponds respectively to timezone
+    // in the middle of the Atlantic Ocean and the Pacific Ocean, which should never align on the
+    // server timezone.
 
     // Arrange
     // Set JVM default time zone for inserting
