@@ -1,5 +1,4 @@
 subprojects {
-
     ext {
         jacksonVersion = '2.17.0'
     }
