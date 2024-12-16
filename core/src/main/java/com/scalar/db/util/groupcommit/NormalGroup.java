@@ -27,7 +27,7 @@ class NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KE
   NormalGroup(
       GroupCommitConfig config,
       Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter,
-      KeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
+      GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
           keyManipulator) {
     super(emitter, keyManipulator, config.slotCapacity(), config.oldGroupAbortTimeoutMillis());
     this.delayedSlotMoveTimeoutMillis = config.delayedSlotMoveTimeoutMillis();
