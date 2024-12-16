@@ -4,7 +4,8 @@ import com.google.common.base.Splitter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-class TestableKeyManipulator implements KeyManipulator<String, String, String, String, String> {
+class TestableGroupCommitKeyManipulator
+    implements GroupCommitKeyManipulator<String, String, String, String, String> {
   private final AtomicInteger counter = new AtomicInteger();
 
   @Override

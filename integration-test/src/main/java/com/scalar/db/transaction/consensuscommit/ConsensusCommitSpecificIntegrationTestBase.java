@@ -44,7 +44,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
-import com.scalar.db.util.groupcommit.KeyManipulator.Keys;
+import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
