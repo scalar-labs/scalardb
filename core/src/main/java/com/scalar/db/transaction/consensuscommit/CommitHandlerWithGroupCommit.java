@@ -38,12 +38,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  protected void onPrepareFailure(Snapshot snapshot) {
-    cancelGroupCommitIfNeeded(snapshot.getId());
-  }
-
-  @Override
-  protected void onValidateFailure(Snapshot snapshot) {
+  protected void onFailureBeforeCommit(Snapshot snapshot) {
     cancelGroupCommitIfNeeded(snapshot.getId());
   }
 
@@ -77,7 +72,12 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   private void cancelGroupCommitIfNeeded(String id) {
-    groupCommitter.remove(id);
+    try {
+      groupCommitter.remove(id);
+    } catch (Exception e) {
+      logger.warn(
+          "Unexpectedly failed to remove the snapshot ID from the group committer. ID: {}", id);
+    }
   }
 
   @Override
