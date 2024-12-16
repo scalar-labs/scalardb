@@ -52,7 +52,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     NOTHING
   }
 
-  private static final String TEST_NAME = "storage_mul_ck";
+  private static final String TEST_NAME = "st_mul_ck";
   private static final String NAMESPACE_BASE_NAME = "int_test_" + TEST_NAME + "_";
   private static final String PARTITION_KEY = "pkey";
   private static final String FIRST_CLUSTERING_KEY = "ckey1";
