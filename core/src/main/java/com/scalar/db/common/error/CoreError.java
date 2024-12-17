@@ -669,7 +669,7 @@ public enum CoreError implements ScalarDbError {
   OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE(
       Category.USER_ERROR,
       "0146",
-      "This Date column value is out of the valid range. It must from 1000-01-01 through 9999-12-12. Value: %s",
+      "This Date column value is out of the valid range. It must be from 1000-01-01 through 9999-12-12. Value: %s",
       "",
       ""),
   SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME(
@@ -681,7 +681,7 @@ public enum CoreError implements ScalarDbError {
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
       Category.USER_ERROR,
       "0148",
-      "This Timestamp column value is out of the valid range. It must from 1000-01-01T00:00:00.000 through 9999-12-31T23:59:59.999. Value: %s",
+      "This Timestamp column value is out of the valid range. It must be from 1000-01-01T00:00:00.000 through 9999-12-31T23:59:59.999. Value: %s",
       "",
       ""),
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
