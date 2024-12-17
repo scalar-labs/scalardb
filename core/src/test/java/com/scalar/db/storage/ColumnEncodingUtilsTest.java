@@ -180,4 +180,30 @@ class ColumnEncodingUtilsTest {
         .isEqualTo(LocalDateTime.of(1234, 10, 1, 12, 34, 56, 0).toInstant(ZoneOffset.UTC));
     assertThat(epoch).isEqualTo(Instant.EPOCH);
   }
+
+  @Test
+  public void encodeThenDecodeTimestamp_WithMinAndMaxValues_ShouldWorkProperly() {
+    // Arrange
+    TimestampColumn min = TimestampColumn.of("timestamp", TimestampColumn.MIN_VALUE);
+    TimestampColumn max = TimestampColumn.of("timestamp", TimestampColumn.MAX_VALUE);
+
+    // Act Assert
+    assertThat(ColumnEncodingUtils.decodeTimestamp(ColumnEncodingUtils.encode(min)))
+        .isEqualTo(TimestampColumn.MIN_VALUE);
+    assertThat(ColumnEncodingUtils.decodeTimestamp(ColumnEncodingUtils.encode(max)))
+        .isEqualTo(TimestampColumn.MAX_VALUE);
+  }
+
+  @Test
+  public void encodeThenDecodeTimestampTZ_WithMinAndMaxValues_ShouldWorkProperly() {
+    // Arrange
+    TimestampTZColumn min = TimestampTZColumn.of("timestampTZ", TimestampTZColumn.MIN_VALUE);
+    TimestampTZColumn max = TimestampTZColumn.of("timestampTZ", TimestampTZColumn.MAX_VALUE);
+
+    // Act Assert
+    assertThat(ColumnEncodingUtils.decodeTimestampTZ(ColumnEncodingUtils.encode(min)))
+        .isEqualTo(TimestampTZColumn.MIN_VALUE);
+    assertThat(ColumnEncodingUtils.decodeTimestampTZ(ColumnEncodingUtils.encode(max)))
+        .isEqualTo(TimestampTZColumn.MAX_VALUE);
+  }
 }
