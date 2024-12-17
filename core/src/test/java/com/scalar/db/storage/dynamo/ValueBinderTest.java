@@ -321,7 +321,11 @@ public class ValueBinderTest {
     Map<String, AttributeValue> values = binder.build();
     assertThat(values)
         .containsOnly(
-            entry(":foo0", AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build()));
+            entry(
+                ":foo0",
+                AttributeValue.builder()
+                    .n(String.valueOf(ColumnEncodingUtils.encode(column)))
+                    .build()));
   }
 
   @Test
@@ -349,7 +353,11 @@ public class ValueBinderTest {
     Map<String, AttributeValue> values = binder.build();
     assertThat(values)
         .containsOnly(
-            entry(":foo0", AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build()));
+            entry(
+                ":foo0",
+                AttributeValue.builder()
+                    .n(String.valueOf(ColumnEncodingUtils.encode(column)))
+                    .build()));
   }
 
   @Test
@@ -385,7 +393,9 @@ public class ValueBinderTest {
         .containsOnly(
             entry(
                 ":foo0",
-                AttributeValue.builder().s(ColumnEncodingUtils.encode(timestampTZColumn)).build()),
+                AttributeValue.builder()
+                    .n(String.valueOf(ColumnEncodingUtils.encode(timestampTZColumn)))
+                    .build()),
             entry(":foo1", AttributeValue.builder().bool(ANY_BOOL).build()),
             entry(":foo2", AttributeValue.builder().nul(true).build()),
             entry(":foo3", AttributeValue.builder().n(String.valueOf(ANY_LONG)).build()));

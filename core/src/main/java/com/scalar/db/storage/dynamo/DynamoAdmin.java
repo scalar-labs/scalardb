@@ -129,8 +129,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(DataType.BLOB, ScalarAttributeType.B)
           .put(DataType.DATE, ScalarAttributeType.N)
           .put(DataType.TIME, ScalarAttributeType.N)
-          .put(DataType.TIMESTAMP, ScalarAttributeType.S)
-          .put(DataType.TIMESTAMPTZ, ScalarAttributeType.S)
+          .put(DataType.TIMESTAMP, ScalarAttributeType.N)
+          .put(DataType.TIMESTAMPTZ, ScalarAttributeType.N)
           .build();
   private static final ImmutableSet<String> TABLE_SCALING_TYPE_SET =
       ImmutableSet.<String>builder().add(SCALING_TYPE_READ).add(SCALING_TYPE_WRITE).build();

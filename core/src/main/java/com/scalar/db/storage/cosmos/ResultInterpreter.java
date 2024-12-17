@@ -107,12 +107,13 @@ public class ResultInterpreter {
       case TIMESTAMP:
         return recordValue == null
             ? TimestampColumn.ofNull(name)
-            : TimestampColumn.of(name, ColumnEncodingUtils.decodeTimestamp((String) recordValue));
+            : TimestampColumn.of(
+                name, ColumnEncodingUtils.decodeTimestamp(((Number) recordValue).longValue()));
       case TIMESTAMPTZ:
         return recordValue == null
             ? TimestampTZColumn.ofNull(name)
             : TimestampTZColumn.of(
-                name, ColumnEncodingUtils.decodeTimestampTZ((String) recordValue));
+                name, ColumnEncodingUtils.decodeTimestampTZ(((Number) recordValue).longValue()));
       default:
         throw new AssertionError();
     }

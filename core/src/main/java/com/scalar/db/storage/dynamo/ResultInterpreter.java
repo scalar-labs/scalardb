@@ -88,11 +88,13 @@ public class ResultInterpreter {
       case TIMESTAMP:
         return isNull
             ? TimestampColumn.ofNull(name)
-            : TimestampColumn.of(name, ColumnEncodingUtils.decodeTimestamp(itemValue.s()));
+            : TimestampColumn.of(
+                name, ColumnEncodingUtils.decodeTimestamp(Long.parseLong(itemValue.n())));
       case TIMESTAMPTZ:
         return isNull
             ? TimestampTZColumn.ofNull(name)
-            : TimestampTZColumn.of(name, ColumnEncodingUtils.decodeTimestampTZ(itemValue.s()));
+            : TimestampTZColumn.of(
+                name, ColumnEncodingUtils.decodeTimestampTZ(Long.parseLong(itemValue.n())));
       default:
         throw new AssertionError();
     }

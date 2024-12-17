@@ -41,29 +41,77 @@ class ColumnEncodingUtilsTest {
   @Test
   public void encodeTimestamp_ShouldWorkProperly() {
     // Arrange
-    TimestampColumn column =
-        TimestampColumn.of("timestamp", LocalDateTime.of(2023, 10, 1, 12, 34, 56, 789000000));
+    TimestampColumn positiveEpochSecondWithNano =
+        TimestampColumn.of("timestamp", LocalDateTime.of(2023, 10, 1, 12, 34, 56, 789_000_000));
+    TimestampColumn positiveEpochSecondWithZeroNano =
+        TimestampColumn.of("timestamp", LocalDateTime.of(2023, 10, 1, 12, 34, 56, 0));
+    TimestampColumn negativeEpochSecondWithNano =
+        TimestampColumn.of("timestamp", LocalDateTime.of(1234, 10, 1, 12, 34, 56, 456_000_000));
+    TimestampColumn negativeEpochSecondWithZeroNano =
+        TimestampColumn.of("timestamp", LocalDateTime.of(1234, 10, 1, 12, 34, 56, 0));
+    TimestampColumn epoch =
+        TimestampColumn.of(
+            "timestamp", LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.of(0, 0)));
 
     // Act
-    String encoded = ColumnEncodingUtils.encode(column);
+    long actualPositiveEpochSecondWithNano =
+        ColumnEncodingUtils.encode(positiveEpochSecondWithNano);
+    long actualPositiveEpochSecondWithZeroNano =
+        ColumnEncodingUtils.encode(positiveEpochSecondWithZeroNano);
+    long actualNegativeEpochSecondWithNano =
+        ColumnEncodingUtils.encode(negativeEpochSecondWithNano);
+    long actualNegativeEpochSecondWithZeroNano =
+        ColumnEncodingUtils.encode(negativeEpochSecondWithZeroNano);
+    long actualEpoch = ColumnEncodingUtils.encode(epoch);
 
     // Assert
-    assertThat(encoded).isEqualTo("20231001123456789");
+    assertThat(actualPositiveEpochSecondWithNano).isEqualTo(1696163696789L);
+    assertThat(actualPositiveEpochSecondWithZeroNano).isEqualTo(1696163696000L);
+    assertThat(actualNegativeEpochSecondWithNano).isEqualTo(-23202242704456L);
+    assertThat(actualNegativeEpochSecondWithZeroNano).isEqualTo(-23202242704000L);
+    assertThat(actualEpoch).isEqualTo(0L);
   }
 
   @Test
   public void encodeTimestampTZ_ShouldWorkProperly() {
     // Arrange
-    TimestampTZColumn column =
+    TimestampTZColumn positiveEpochSecondWithNano =
         TimestampTZColumn.of(
             "timestamptz",
-            LocalDateTime.of(2023, 10, 1, 12, 34, 56, 789000000).toInstant(ZoneOffset.UTC));
+            LocalDateTime.of(2023, 10, 1, 12, 34, 56, 789_000_000).toInstant(ZoneOffset.UTC));
+    TimestampTZColumn positiveEpochSecondWithZeroNano =
+        TimestampTZColumn.of(
+            "timestamptz", LocalDateTime.of(2023, 10, 1, 12, 34, 56, 0).toInstant(ZoneOffset.UTC));
+    TimestampTZColumn negativeEpochSecondWithNano =
+        TimestampTZColumn.of(
+            "timestamptz",
+            LocalDateTime.of(1234, 10, 1, 12, 34, 56, 456_000_000).toInstant(ZoneOffset.UTC));
+    TimestampTZColumn negativeEpochSecondWithZeroNano =
+        TimestampTZColumn.of(
+            "timestamptz", LocalDateTime.of(1234, 10, 1, 12, 34, 56, 0).toInstant(ZoneOffset.UTC));
+    TimestampTZColumn epoch =
+        TimestampTZColumn.of(
+            "timestamptz",
+            LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.of(0, 0))
+                .toInstant(ZoneOffset.UTC));
 
     // Act
-    String encoded = ColumnEncodingUtils.encode(column);
+    long actualPositiveEpochSecondWithNano =
+        ColumnEncodingUtils.encode(positiveEpochSecondWithNano);
+    long actualPositiveEpochSecondWithZeroNano =
+        ColumnEncodingUtils.encode(positiveEpochSecondWithZeroNano);
+    long actualNegativeEpochSecondWithNano =
+        ColumnEncodingUtils.encode(negativeEpochSecondWithNano);
+    long actualNegativeEpochSecondWithZeroNano =
+        ColumnEncodingUtils.encode(negativeEpochSecondWithZeroNano);
+    long actualEpoch = ColumnEncodingUtils.encode(epoch);
 
     // Assert
-    assertThat(encoded).isEqualTo("20231001123456789");
+    assertThat(actualPositiveEpochSecondWithNano).isEqualTo(1696163696789L);
+    assertThat(actualPositiveEpochSecondWithZeroNano).isEqualTo(1696163696000L);
+    assertThat(actualNegativeEpochSecondWithNano).isEqualTo(-23202242704456L);
+    assertThat(actualNegativeEpochSecondWithZeroNano).isEqualTo(-23202242704000L);
+    assertThat(actualEpoch).isEqualTo(0L);
   }
 
   @Test
@@ -87,21 +135,49 @@ class ColumnEncodingUtilsTest {
 
   @Test
   public void decodeTimestamp_ShouldWorkProperly() {
-    // Arrange
-    LocalDateTime timestamp = ColumnEncodingUtils.decodeTimestamp("20231001123456789");
+    // Act
+    LocalDateTime positiveEpochSecondWithNano = ColumnEncodingUtils.decodeTimestamp(1696163696789L);
+    LocalDateTime positiveEpochSecondWithZeroNano =
+        ColumnEncodingUtils.decodeTimestamp(1696163696000L);
+    LocalDateTime negativeEpochSecondWithNano =
+        ColumnEncodingUtils.decodeTimestamp(-23202242704456L);
+    LocalDateTime negativeEpochSecondWithZeroNano =
+        ColumnEncodingUtils.decodeTimestamp(-23202242704000L);
+    LocalDateTime epoch = ColumnEncodingUtils.decodeTimestamp(0L);
 
     // Act assert
-    assertThat(timestamp).isEqualTo(LocalDateTime.of(2023, 10, 1, 12, 34, 56, 789_000_000));
+    assertThat(positiveEpochSecondWithNano)
+        .isEqualTo(LocalDateTime.of(2023, 10, 1, 12, 34, 56, 789_000_000));
+    assertThat(positiveEpochSecondWithZeroNano)
+        .isEqualTo(LocalDateTime.of(2023, 10, 1, 12, 34, 56, 0));
+    assertThat(negativeEpochSecondWithNano)
+        .isEqualTo(LocalDateTime.of(1234, 10, 1, 12, 34, 56, 456_000_000));
+    assertThat(negativeEpochSecondWithZeroNano)
+        .isEqualTo(LocalDateTime.of(1234, 10, 1, 12, 34, 56, 0));
+    assertThat(epoch).isEqualTo(LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.of(0, 0)));
   }
 
   @Test
   public void decodeTimestampTZ_ShouldWorkProperly() {
     // Arrange
-    Instant timestampTZ = ColumnEncodingUtils.decodeTimestampTZ("20231001123456789");
+    Instant positiveEpochSecondWithNano = ColumnEncodingUtils.decodeTimestampTZ(1696163696789L);
+    Instant positiveEpochSecondWithZeroNano = ColumnEncodingUtils.decodeTimestampTZ(1696163696000L);
+    Instant negativeEpochSecondWithNano = ColumnEncodingUtils.decodeTimestampTZ(-23202242704456L);
+    Instant negativeEpochSecondWithZeroNano =
+        ColumnEncodingUtils.decodeTimestampTZ(-23202242704000L);
+    Instant epoch = ColumnEncodingUtils.decodeTimestampTZ(0);
 
     // Act assert
-    assertThat(timestampTZ)
+    assertThat(positiveEpochSecondWithNano)
         .isEqualTo(
             LocalDateTime.of(2023, 10, 1, 12, 34, 56, 789_000_000).toInstant(ZoneOffset.UTC));
+    assertThat(positiveEpochSecondWithZeroNano)
+        .isEqualTo(LocalDateTime.of(2023, 10, 1, 12, 34, 56, 0).toInstant(ZoneOffset.UTC));
+    assertThat(negativeEpochSecondWithNano)
+        .isEqualTo(
+            LocalDateTime.of(1234, 10, 1, 12, 34, 56, 456_000_000).toInstant(ZoneOffset.UTC));
+    assertThat(negativeEpochSecondWithZeroNano)
+        .isEqualTo(LocalDateTime.of(1234, 10, 1, 12, 34, 56, 0).toInstant(ZoneOffset.UTC));
+    assertThat(epoch).isEqualTo(Instant.EPOCH);
   }
 }

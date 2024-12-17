@@ -147,7 +147,9 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      values.put(alias + i, AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build());
+      values.put(
+          alias + i,
+          AttributeValue.builder().n(String.valueOf(ColumnEncodingUtils.encode(column))).build());
     }
     i++;
   }
@@ -157,7 +159,9 @@ public final class ValueBinder implements ColumnVisitor {
     if (column.hasNullValue()) {
       values.put(alias + i, AttributeValue.builder().nul(true).build());
     } else {
-      values.put(alias + i, AttributeValue.builder().s(ColumnEncodingUtils.encode(column)).build());
+      values.put(
+          alias + i,
+          AttributeValue.builder().n(String.valueOf(ColumnEncodingUtils.encode(column))).build());
     }
     i++;
   }

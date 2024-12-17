@@ -94,14 +94,14 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       case BIGINT:
       case DATE:
       case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
         return "BIGINT";
       case FLOAT:
         return "FLOAT";
       case DOUBLE:
         return "DOUBLE";
       case TEXT:
-      case TIMESTAMP:
-      case TIMESTAMPTZ:
         return "TEXT";
       case BLOB:
         return "BLOB";
@@ -124,6 +124,8 @@ class RdbEngineSqlite implements RdbEngineStrategy {
         return Types.INTEGER;
       case DATE:
       case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
       case BIGINT:
         return Types.BIGINT;
       case FLOAT:
@@ -131,8 +133,6 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       case DOUBLE:
         return Types.DOUBLE;
       case TEXT:
-      case TIMESTAMP:
-      case TIMESTAMPTZ:
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
@@ -305,12 +305,12 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public String encodeTimestamp(TimestampColumn column) {
+  public Long encodeTimestamp(TimestampColumn column) {
     return ColumnEncodingUtils.encode(column);
   }
 
   @Override
-  public String encodeTimestampTZ(TimestampTZColumn column) {
+  public Long encodeTimestampTZ(TimestampTZColumn column) {
     return ColumnEncodingUtils.encode(column);
   }
 
@@ -328,13 +328,13 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   public TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
       throws SQLException {
     return TimestampColumn.of(
-        columnName, ColumnEncodingUtils.decodeTimestamp(resultSet.getString(columnName)));
+        columnName, ColumnEncodingUtils.decodeTimestamp(resultSet.getLong(columnName)));
   }
 
   @Override
   public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
       throws SQLException {
     return TimestampTZColumn.of(
-        columnName, ColumnEncodingUtils.decodeTimestampTZ(resultSet.getString(columnName)));
+        columnName, ColumnEncodingUtils.decodeTimestampTZ(resultSet.getLong(columnName)));
   }
 }

@@ -107,14 +107,18 @@ public class ResultInterpreterTest {
     item.put(
         ANY_COLUMN_NAME_10,
         AttributeValue.builder()
-            .s(ColumnEncodingUtils.encode(TimestampColumn.of(ANY_COLUMN_NAME_10, ANY_TIMESTAMP)))
+            .n(
+                String.valueOf(
+                    ColumnEncodingUtils.encode(
+                        TimestampColumn.of(ANY_COLUMN_NAME_10, ANY_TIMESTAMP))))
             .build());
     item.put(
         ANY_COLUMN_NAME_11,
         AttributeValue.builder()
-            .s(
-                ColumnEncodingUtils.encode(
-                    TimestampTZColumn.of(ANY_COLUMN_NAME_11, ANY_TIMESTAMPTZ)))
+            .n(
+                String.valueOf(
+                    ColumnEncodingUtils.encode(
+                        TimestampTZColumn.of(ANY_COLUMN_NAME_11, ANY_TIMESTAMPTZ))))
             .build());
 
     List<String> projections = Collections.emptyList();

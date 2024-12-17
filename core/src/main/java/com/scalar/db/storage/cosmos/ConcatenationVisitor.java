@@ -130,12 +130,12 @@ public class ConcatenationVisitor implements ColumnVisitor {
   @Override
   public void visit(TimestampColumn column) {
     assert !column.hasNullValue();
-    columns.add(ColumnEncodingUtils.encode(column));
+    columns.add(String.valueOf(ColumnEncodingUtils.encode(column)));
   }
 
   @Override
   public void visit(TimestampTZColumn column) {
     assert !column.hasNullValue();
-    columns.add(ColumnEncodingUtils.encode(column));
+    columns.add(String.valueOf(ColumnEncodingUtils.encode(column)));
   }
 }
