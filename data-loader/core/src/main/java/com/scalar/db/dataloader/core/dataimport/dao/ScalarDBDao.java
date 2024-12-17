@@ -27,7 +27,11 @@ import org.slf4j.LoggerFactory;
 public class ScalarDBDao {
 
   /* Class logger */
-  private static final Logger LOGGER = LoggerFactory.getLogger(ScalarDBDao.class);
+  private static final Logger logger = LoggerFactory.getLogger(ScalarDBDao.class);
+  private static final String GET_COMPLETED_MSG = "GET completed for %s";
+  private static final String PUT_COMPLETED_MSG = "PUT completed for %s";
+  private static final String SCAN_START_MSG = "SCAN started...";
+  private static final String SCAN_END_MSG = "SCAN completed";
 
   /**
    * Retrieve record from ScalarDB instance in storage mode
@@ -53,7 +57,7 @@ public class ScalarDBDao {
     try {
       Get get = createGetWith(namespace, tableName, partitionKey, clusteringKey);
       Optional<Result> result = storage.get(get);
-      LOGGER.info("GET completed for " + printKey);
+      logger.info(String.format(GET_COMPLETED_MSG, printKey));
       return result;
     } catch (ExecutionException e) {
       throw new ScalarDBDaoException("error GET " + printKey, e);
@@ -83,7 +87,7 @@ public class ScalarDBDao {
     String printKey = keysToString(partitionKey, clusteringKey);
     try {
       Optional<Result> result = transaction.get(get);
-      LOGGER.info("GET completed for " + printKey);
+      logger.info(String.format(GET_COMPLETED_MSG, printKey));
       return result;
     } catch (CrudException e) {
       throw new ScalarDBDaoException("error GET " + printKey, e.getCause());
@@ -116,7 +120,7 @@ public class ScalarDBDao {
     } catch (CrudException e) {
       throw new ScalarDBDaoException(CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(), e);
     }
-    LOGGER.info("PUT completed for " + keysToString(partitionKey, clusteringKey));
+    logger.info(String.format(PUT_COMPLETED_MSG, keysToString(partitionKey, clusteringKey)));
   }
 
   /**
@@ -144,7 +148,7 @@ public class ScalarDBDao {
     } catch (ExecutionException e) {
       throw new ScalarDBDaoException(CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(), e);
     }
-    LOGGER.info("PUT completed for " + keysToString(partitionKey, clusteringKey));
+    logger.info(String.format(PUT_COMPLETED_MSG, keysToString(partitionKey, clusteringKey)));
   }
 
   /**
@@ -176,11 +180,11 @@ public class ScalarDBDao {
 
     // scan data
     try {
-      LOGGER.info("SCAN started...");
+      logger.info(SCAN_START_MSG);
       Scanner scanner = storage.scan(scan);
       List<Result> allResults = scanner.all();
       scanner.close();
-      LOGGER.info("SCAN completed");
+      logger.info(SCAN_END_MSG);
       return allResults;
     } catch (ExecutionException | IOException e) {
       throw new ScalarDBDaoException(CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(), e);
@@ -218,9 +222,9 @@ public class ScalarDBDao {
 
     // scan data
     try {
-      LOGGER.info("SCAN started...");
+      logger.info(SCAN_START_MSG);
       List<Result> results = transaction.scan(scan);
-      LOGGER.info("SCAN completed");
+      logger.info(SCAN_END_MSG);
       return results;
     } catch (CrudException | NoSuchElementException e) {
       // No such element Exception is thrown when the scan is done in transaction mode but
