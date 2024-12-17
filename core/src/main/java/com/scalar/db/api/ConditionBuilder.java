@@ -471,7 +471,6 @@ public class ConditionBuilder {
       return new ConditionalExpression(columnName, value, Operator.GT);
     }
 
-    // Greater than condition methods
     /**
      * Creates a 'greater than' conditional expression for a DATE value.
      *
