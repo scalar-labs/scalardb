@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
@@ -18,6 +19,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import microsoft.sql.DateTimeOffset;
@@ -270,6 +272,14 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.BLOB;
       case LONGVARBINARY:
         return DataType.BLOB;
+      case DATE:
+        return DataType.DATE;
+      case TIME:
+        return DataType.TIME;
+      case TIMESTAMP:
+        return DataType.TIMESTAMP;
+      case TIMESTAMP_WITH_TIMEZONE:
+        return DataType.TIMESTAMPTZ;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -370,9 +380,9 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public String getConnectionProperties() {
+  public Map<String, String> getConnectionProperties() {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
     // It is being considered setting to false by default in a future driver release.
-    return "sendTimeAsDatetime=false";
+    return ImmutableMap.of("sendTimeAsDatetime", "false");
   }
 }

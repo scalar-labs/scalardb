@@ -7,7 +7,6 @@ import static com.scalar.db.config.ConfigUtils.getString;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
@@ -54,8 +53,6 @@ public class JdbcConfig {
       PREFIX + "mysql.variable_key_column_size";
   public static final String ORACLE_VARIABLE_KEY_COLUMN_SIZE =
       PREFIX + "oracle.variable_key_column_size";
-  public static final String ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT =
-      PREFIX + "oracle.date_column.default_time_component";
   public static final String ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "oracle.time_column.default_date_component";
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
@@ -92,7 +89,6 @@ public class JdbcConfig {
   public static final int MINIMUM_VARIABLE_KEY_COLUMN_SIZE = 64;
 
   // TODO add comment
-  public static final String DEFAULT_ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT = "00:00:00";
   public static final String DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
 
   private final String jdbcUrl;
@@ -120,7 +116,6 @@ public class JdbcConfig {
   private final int oracleVariableKeyColumnSize;
 
   private final LocalDate oracleTimeColumnDefaultDateComponent;
-  private final LocalTime oracleDateColumnDefaultTimeComponent;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -224,16 +219,6 @@ public class JdbcConfig {
       throw new IllegalArgumentException(CoreError.INVALID_VARIABLE_KEY_COLUMN_SIZE.buildMessage());
     }
 
-    String oracleDateColumnDefaultTimeComponentString =
-        getString(
-            databaseConfig.getProperties(),
-            ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT,
-            DEFAULT_ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT);
-    assert oracleDateColumnDefaultTimeComponentString != null;
-    oracleDateColumnDefaultTimeComponent =
-        LocalTime.parse(
-            oracleDateColumnDefaultTimeComponentString, DateTimeFormatter.ISO_LOCAL_TIME);
-
     String oracleTimeColumnDefaultDateComponentString =
         getString(
             databaseConfig.getProperties(),
@@ -334,10 +319,6 @@ public class JdbcConfig {
 
   public int getOracleVariableKeyColumnSize() {
     return oracleVariableKeyColumnSize;
-  }
-
-  public LocalTime getOracleDateColumnDefaultTimeComponent() {
-    return oracleDateColumnDefaultTimeComponent;
   }
 
   public LocalDate getOracleTimeColumnDefaultDateComponent() {

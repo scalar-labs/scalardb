@@ -19,6 +19,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
@@ -186,7 +188,12 @@ public interface RdbEngineStrategy {
     }
   }
 
-  default String getConnectionProperties() {
-    return "";
+  /**
+   * Return the connection properties for the underlying database.
+   *
+   * @return a map where key= property name and value= property value
+   */
+  default Map<String, String> getConnectionProperties() {
+    return Collections.emptyMap();
   }
 }

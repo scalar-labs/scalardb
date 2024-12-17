@@ -360,7 +360,6 @@ class RdbEngineMysql implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
-        // TODO check utility
       case DATE:
         return Types.DATE;
       case TIME:
@@ -443,7 +442,7 @@ class RdbEngineMysql implements RdbEngineStrategy {
   public Object encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
     // Encoding as an OffsetDateTime result in the time being offset arbitrarily depending on the
-    // client, session and server time zone.
+    // client, session or server time zone.
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC).toLocalDateTime();
   }
 

@@ -8,7 +8,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -331,7 +330,6 @@ class RdbEngineOracle implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
-        // TODO check utility
       case DATE:
         return Types.DATE;
       case TIME:
@@ -369,13 +367,6 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
-  }
-
-  @Override
-  public LocalDateTime encodeDate(DateColumn column) {
-    assert column.getDateValue() != null;
-    return LocalDateTime.of(
-        column.getDateValue(), config.getOracleDateColumnDefaultTimeComponent());
   }
 
   @Override

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
@@ -41,7 +40,6 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "200");
     props.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "64");
     props.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "64");
-    props.setProperty(JdbcConfig.ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT, "01:01:01");
     props.setProperty(JdbcConfig.ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT, "2020-01-01");
 
     // Act
@@ -69,8 +67,6 @@ public class JdbcConfigTest {
     assertThat(config.getAdminConnectionPoolMaxTotal()).isEqualTo(200);
     assertThat(config.getMysqlVariableKeyColumnSize()).isEqualTo(64);
     assertThat(config.getOracleVariableKeyColumnSize()).isEqualTo(64);
-    assertThat(config.getOracleDateColumnDefaultTimeComponent())
-        .isEqualTo(LocalTime.parse("01:01:01", DateTimeFormatter.ISO_LOCAL_TIME));
     assertThat(config.getOracleTimeColumnDefaultDateComponent())
         .isEqualTo(LocalDate.parse("2020-01-01", DateTimeFormatter.ISO_LOCAL_DATE));
   }
@@ -116,8 +112,6 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     assertThat(config.getOracleVariableKeyColumnSize())
         .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
-    assertThat(config.getOracleDateColumnDefaultTimeComponent())
-        .isEqualTo(JdbcConfig.DEFAULT_ORACLE_DATE_COLUMN_DEFAULT_TIME_COMPONENT);
     assertThat(config.getOracleTimeColumnDefaultDateComponent())
         .isEqualTo(JdbcConfig.DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
   }
