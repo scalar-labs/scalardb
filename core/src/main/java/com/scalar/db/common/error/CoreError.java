@@ -693,7 +693,7 @@ public enum CoreError implements ScalarDbError {
   ABAC_NOT_ENABLED(
       Category.USER_ERROR,
       "0152",
-      "The Attribute-Based Access Control feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "The attribute-based access control feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
 
