@@ -11,6 +11,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ColumnEncodingUtilsTest {
@@ -67,8 +71,8 @@ class ColumnEncodingUtilsTest {
     // Assert
     assertThat(actualPositiveEpochSecondWithNano).isEqualTo(1696163696789L);
     assertThat(actualPositiveEpochSecondWithZeroNano).isEqualTo(1696163696000L);
-    assertThat(actualNegativeEpochSecondWithNano).isEqualTo(-23202242704456L);
-    assertThat(actualNegativeEpochSecondWithZeroNano).isEqualTo(-23202242704000L);
+    assertThat(actualNegativeEpochSecondWithNano).isEqualTo(-23202242704543L);
+    assertThat(actualNegativeEpochSecondWithZeroNano).isEqualTo(-23202242704999L);
     assertThat(actualEpoch).isEqualTo(0L);
   }
 
@@ -109,8 +113,8 @@ class ColumnEncodingUtilsTest {
     // Assert
     assertThat(actualPositiveEpochSecondWithNano).isEqualTo(1696163696789L);
     assertThat(actualPositiveEpochSecondWithZeroNano).isEqualTo(1696163696000L);
-    assertThat(actualNegativeEpochSecondWithNano).isEqualTo(-23202242704456L);
-    assertThat(actualNegativeEpochSecondWithZeroNano).isEqualTo(-23202242704000L);
+    assertThat(actualNegativeEpochSecondWithNano).isEqualTo(-23202242704543L);
+    assertThat(actualNegativeEpochSecondWithZeroNano).isEqualTo(-23202242704999L);
     assertThat(actualEpoch).isEqualTo(0L);
   }
 
@@ -140,9 +144,9 @@ class ColumnEncodingUtilsTest {
     LocalDateTime positiveEpochSecondWithZeroNano =
         ColumnEncodingUtils.decodeTimestamp(1696163696000L);
     LocalDateTime negativeEpochSecondWithNano =
-        ColumnEncodingUtils.decodeTimestamp(-23202242704456L);
+        ColumnEncodingUtils.decodeTimestamp(-23202242704543L);
     LocalDateTime negativeEpochSecondWithZeroNano =
-        ColumnEncodingUtils.decodeTimestamp(-23202242704000L);
+        ColumnEncodingUtils.decodeTimestamp(-23202242704999L);
     LocalDateTime epoch = ColumnEncodingUtils.decodeTimestamp(0L);
 
     // Act assert
@@ -162,9 +166,9 @@ class ColumnEncodingUtilsTest {
     // Arrange
     Instant positiveEpochSecondWithNano = ColumnEncodingUtils.decodeTimestampTZ(1696163696789L);
     Instant positiveEpochSecondWithZeroNano = ColumnEncodingUtils.decodeTimestampTZ(1696163696000L);
-    Instant negativeEpochSecondWithNano = ColumnEncodingUtils.decodeTimestampTZ(-23202242704456L);
+    Instant negativeEpochSecondWithNano = ColumnEncodingUtils.decodeTimestampTZ(-23202242704543L);
     Instant negativeEpochSecondWithZeroNano =
-        ColumnEncodingUtils.decodeTimestampTZ(-23202242704000L);
+        ColumnEncodingUtils.decodeTimestampTZ(-23202242704999L);
     Instant epoch = ColumnEncodingUtils.decodeTimestampTZ(0);
 
     // Act assert
@@ -182,7 +186,7 @@ class ColumnEncodingUtilsTest {
   }
 
   @Test
-  public void encodeThenDecodeTimestamp_WithMinAndMaxValues_ShouldWorkProperly() {
+  public void encodeThenDecodeTimestamp_ShouldPreserverDataIntegrity() {
     // Arrange
     TimestampColumn min = TimestampColumn.of("timestamp", TimestampColumn.MIN_VALUE);
     TimestampColumn max = TimestampColumn.of("timestamp", TimestampColumn.MAX_VALUE);
@@ -192,10 +196,18 @@ class ColumnEncodingUtilsTest {
         .isEqualTo(TimestampColumn.MIN_VALUE);
     assertThat(ColumnEncodingUtils.decodeTimestamp(ColumnEncodingUtils.encode(max)))
         .isEqualTo(TimestampColumn.MAX_VALUE);
+    LocalDateTime start = LocalDateTime.ofEpochSecond(-2, 0, ZoneOffset.UTC);
+    LocalDateTime end = LocalDateTime.ofEpochSecond(3, 0, ZoneOffset.UTC);
+    for (LocalDateTime dt = start; dt.isBefore(end); dt = dt.plusNanos(1_000_000)) {
+      assertThat(
+              ColumnEncodingUtils.decodeTimestamp(
+                  ColumnEncodingUtils.encode(TimestampColumn.of("ts", dt))))
+          .isEqualTo(dt);
+    }
   }
 
   @Test
-  public void encodeThenDecodeTimestampTZ_WithMinAndMaxValues_ShouldWorkProperly() {
+  public void encodeThenDecodeTimestampTZ_ShouldPreserverDataIntegrity() {
     // Arrange
     TimestampTZColumn min = TimestampTZColumn.of("timestampTZ", TimestampTZColumn.MIN_VALUE);
     TimestampTZColumn max = TimestampTZColumn.of("timestampTZ", TimestampTZColumn.MAX_VALUE);
@@ -205,5 +217,51 @@ class ColumnEncodingUtilsTest {
         .isEqualTo(TimestampTZColumn.MIN_VALUE);
     assertThat(ColumnEncodingUtils.decodeTimestampTZ(ColumnEncodingUtils.encode(max)))
         .isEqualTo(TimestampTZColumn.MAX_VALUE);
+    Instant start = Instant.ofEpochSecond(-2, 0);
+    Instant end = Instant.ofEpochSecond(3, 0);
+    for (Instant instant = start; instant.isBefore(end); instant = instant.plusNanos(1_000_000)) {
+      assertThat(
+              ColumnEncodingUtils.decodeTimestampTZ(
+                  ColumnEncodingUtils.encode(TimestampTZColumn.of("ts", instant))))
+          .isEqualTo(instant);
+    }
+  }
+
+  @Test
+  public void encodeTimestamp_ShouldPreserveOrder() {
+    // Arrange
+    List<Long> expectedTimestamps = new ArrayList<>();
+    LocalDateTime start = LocalDateTime.ofEpochSecond(-2, 0, ZoneOffset.UTC);
+    LocalDateTime end = LocalDateTime.ofEpochSecond(3, 0, ZoneOffset.UTC);
+    for (LocalDateTime dt = start; dt.isBefore(end); dt = dt.plusNanos(1_000_000)) {
+      expectedTimestamps.add(ColumnEncodingUtils.encode(TimestampColumn.of("ts", dt)));
+    }
+
+    // Act
+    List<Long> shuffleThenSorted = new ArrayList<>(expectedTimestamps);
+    Collections.shuffle(shuffleThenSorted);
+    shuffleThenSorted.sort(Comparator.naturalOrder());
+
+    // Assert
+    assertThat(shuffleThenSorted).containsExactlyElementsOf(expectedTimestamps);
+  }
+
+  @Test
+  public void encodeTimestampTZ_ShouldPreserveOrder() {
+    // Arrange
+    List<Long> expectedTimestamps = new ArrayList<>();
+    Instant start = Instant.ofEpochSecond(-2, 0);
+    Instant end = Instant.ofEpochSecond(3, 0);
+    for (Instant instant = start; instant.isBefore(end); instant = instant.plusNanos(1_000_000)) {
+      expectedTimestamps.add(ColumnEncodingUtils.encode(TimestampTZColumn.of("ts", instant)));
+    }
+
+    // Act
+    List<Long> shuffleThenSorted = new ArrayList<>(expectedTimestamps);
+    Collections.shuffle(shuffleThenSorted);
+    shuffleThenSorted.sort(Comparator.naturalOrder());
+
+    // Assert
+    assertThat(shuffleThenSorted).containsExactlyElementsOf(expectedTimestamps);
   }
 }

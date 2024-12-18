@@ -10,6 +10,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 
+/**
+ * This class provides utility methods for encoding and decoding time related column values for
+ * DynamoDB, CosmosDB and SQLite
+ */
 public final class ColumnEncodingUtils {
   private ColumnEncodingUtils() {}
 
@@ -37,13 +41,13 @@ public final class ColumnEncodingUtils {
   }
 
   public static LocalDateTime decodeTimestamp(long longTimestamp) {
-    long nanoOfSeconds = longTimestamp % 1000 * 1_000_000;
-    // Invert the nanoOfSeconds when the encoded instant is negative, that is for a date before 1970
+    long milliOfSecond = longTimestamp % 1000;
     if (longTimestamp < 0) {
-      nanoOfSeconds *= -1;
+      // Convert the complement of the millisecondOfSecond to the actual millisecondOfSecond
+      milliOfSecond += 1000 - 1;
     }
     return LocalDateTime.ofEpochSecond(
-        longTimestamp / 1000, Math.toIntExact(nanoOfSeconds), ZoneOffset.UTC);
+        longTimestamp / 1000, Math.toIntExact(milliOfSecond * 1_000_000), ZoneOffset.UTC);
   }
 
   public static long encode(TimestampTZColumn column) {
@@ -51,32 +55,40 @@ public final class ColumnEncodingUtils {
     return encodeInstant(column.getTimestampTZValue());
   }
 
+  public static Instant decodeTimestampTZ(long longTimestampTZ) {
+    long milliOfSecond = longTimestampTZ % 1000;
+
+    if (longTimestampTZ < 0) {
+      // Convert the complement of the millisecondOfSecond to the actual millisecondOfSecond
+      milliOfSecond += 1000 - 1;
+    }
+    return Instant.ofEpochSecond(longTimestampTZ / 1000, milliOfSecond * 1_000_000);
+  }
+
   @SuppressWarnings("JavaInstantGetSecondsGetNano")
   private static long encodeInstant(Instant instant) {
-    // Encoding format : <epochSecond><millisecondOfSecond>
+    // Encoding format on a long : <epochSecond><millisecondOfSecond>
     // The rightmost three digits are the number of milliseconds from the start of the
-    // second, the other digits on the left are the epochSecond
+    // second, the other digits on the left are the epochSecond.
+    // If the epochSecond is negative (for a date before 1970), to preserve the timestamp ordering
+    // the
+    // millisecondOfSecond is converted to its complement
+    // with the formula "complementOfN = 1000 - 1 - N", where N is the millisecondOfSecond.
+    //
     // For example:
     // - if epochSecond=12345 and millisecondOfSecond=789, then the encoded value will be 12345789
-    // - if epochSecond=-12345 and millisecondOfSecond=789, then the encoded value will be -12345789
+    // - if epochSecond=-12345 and millisecondOfSecond=789, then
+    //   millisecondOfSecondComplement = 1000 - 1 - 789 = 210. So the encoded value will be
+    //   -12345210.
 
     long encoded = instant.getEpochSecond() * 1000;
-    // Subtract the millisecondOfSeconds when the epochSecond is negative, that is for a date before
-    // 1970
     if (encoded < 0) {
-      encoded -= instant.getNano() / 1_000_000;
+      // Convert the nanosecondOfSecond to millisecondOfSecond, compute its complement and subtract
+      // it
+      encoded -= 1000 - 1 - instant.getNano() / 1_000_000;
     } else {
       encoded += instant.getNano() / 1_000_000;
     }
     return encoded;
-  }
-
-  public static Instant decodeTimestampTZ(long longTimestampTZ) {
-    long nanoOfSeconds = longTimestampTZ % 1000 * 1_000_000;
-    // Invert the nanoOfSeconds when the encoded instant is negative, that is for a date before 1970
-    if (longTimestampTZ < 0) {
-      nanoOfSeconds *= -1;
-    }
-    return Instant.ofEpochSecond(longTimestampTZ / 1000, nanoOfSeconds);
   }
 }
