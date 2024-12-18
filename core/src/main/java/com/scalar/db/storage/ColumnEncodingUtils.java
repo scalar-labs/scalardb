@@ -67,13 +67,19 @@ public final class ColumnEncodingUtils {
 
   @SuppressWarnings("JavaInstantGetSecondsGetNano")
   private static long encodeInstant(Instant instant) {
-    // Encoding format on a long : <epochSecond><millisecondOfSecond>
-    // The rightmost three digits are the number of milliseconds from the start of the
-    // second, the other digits on the left are the epochSecond.
-    // If the epochSecond is negative (for a date before 1970), to preserve the timestamp ordering
-    // the
-    // millisecondOfSecond is converted to its complement
-    // with the formula "complementOfN = 1000 - 1 - N", where N is the millisecondOfSecond.
+    // A Java Instant is internally represented with two components:
+    // - the epoch second: the number of seconds since the epoch date 1970-01-01
+    // - the nano of second: the number of nanoseconds since the start of the second.
+    //
+    // The range and precision of a ScalarDB timestamp and timestampTZ is from January 1st of 1999
+    // to December 31st of 9999, and its precision is up to 1 millisecond. Since the range is
+    // smaller and precision bigger, both components can be encoded into a single long value.
+    // The long value format is "<epochSecond><millisecondOfSecond>", where the rightmost 3 digits
+    // are the millisecondOfSecond with a value from 000 to 999, the other digits on the left are
+    // the epochSecond.
+    // To preserve the timestamp ordering if the epochSecond is negative (in case an instant is
+    // before 1970), the millisecondOfSecond is converted to its complement with the
+    // formula "complementOfN = 1000 - 1 - N", where N is the millisecondOfSecond.
     //
     // For example:
     // - if epochSecond=12345 and millisecondOfSecond=789, then the encoded value will be 12345789
