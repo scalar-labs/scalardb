@@ -8,7 +8,7 @@ public final class AbacOperationAttributes {
 
   private static final String OPERATION_ATTRIBUTE_PREFIX = "abac-";
   public static final String READ_TAG_PREFIX = OPERATION_ATTRIBUTE_PREFIX + "read-tag-";
-  public static final String WRITE_TAG_PREFIX = OPERATION_ATTRIBUTE_PREFIX + "write-tag";
+  public static final String WRITE_TAG_PREFIX = OPERATION_ATTRIBUTE_PREFIX + "write-tag-";
 
   private AbacOperationAttributes() {}
 
