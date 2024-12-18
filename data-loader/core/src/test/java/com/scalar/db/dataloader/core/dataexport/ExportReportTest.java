@@ -8,7 +8,7 @@ public class ExportReportTest {
   @Test
   void getExportedRowCount_afterInitialisation_ShouldBeZero() {
     ExportReport exportReport = new ExportReport();
-    Assertions.assertEquals(0, exportReport.getExportedRowCount().get());
+    Assertions.assertEquals(0, exportReport.getExportedRowCount());
   }
 
   @Test
@@ -16,6 +16,6 @@ public class ExportReportTest {
     ExportReport exportReport = new ExportReport();
     exportReport.increaseExportedRowCount();
     exportReport.increaseExportedRowCount();
-    Assertions.assertEquals(2, exportReport.getExportedRowCount().get());
+    Assertions.assertEquals(2, exportReport.getExportedRowCount());
   }
 }

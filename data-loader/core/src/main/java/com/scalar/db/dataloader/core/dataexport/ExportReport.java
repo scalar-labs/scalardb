@@ -1,6 +1,6 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Represents the report of exported data from a table
@@ -11,20 +11,16 @@ public class ExportReport {
 
   /**
    * The field is used to get the total number of rows exported from the table and written to the
-   * exported file. AtomicInteger is used because it is thread safe and this parameter is a counter
-   * which is updated inside threads
+   * exported file. LongAdder is used because it is thread-safe and optimized for high contention
+   * scenarios where multiple threads are incrementing the counter.
    */
-  private final AtomicInteger exportedRowCount;
+  private final LongAdder exportedRowCount = new LongAdder();
 
-  public ExportReport() {
-    this.exportedRowCount = new AtomicInteger(0);
-  }
-
-  public AtomicInteger getExportedRowCount() {
-    return exportedRowCount;
+  public long getExportedRowCount() {
+    return exportedRowCount.sum();
   }
 
   public void increaseExportedRowCount() {
-    this.exportedRowCount.incrementAndGet();
+    this.exportedRowCount.increment();
   }
 }
