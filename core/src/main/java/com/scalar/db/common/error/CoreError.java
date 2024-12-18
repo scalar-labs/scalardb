@@ -942,11 +942,17 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   DATA_LOADER_ERROR_CRUD_EXCEPTION(
-          Category.INTERNAL_ERROR, "0047", "something went wrong while trying to save the data", "", ""
-  ),
+      Category.INTERNAL_ERROR,
+      "0047",
+      "something went wrong while trying to save the data",
+      "",
+      ""),
   DATA_LOADER_ERROR_SCAN(
-          Category.INTERNAL_ERROR, "0048", "Something went wrong while scanning. Are you sure you are running in the correct transaction mode?", "", ""
-  ),
+      Category.INTERNAL_ERROR,
+      "0048",
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode?",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category

@@ -41,7 +41,6 @@ public class ScalarDBManager {
    * @param transactionFactory Factory to create all the necessary ScalarDB data managers
    */
   public ScalarDBManager(TransactionFactory transactionFactory) throws IOException {
-
     transactionManager = transactionFactory.getTransactionManager();
     transactionAdmin = transactionFactory.getTransactionAdmin();
     storageAdmin = null;

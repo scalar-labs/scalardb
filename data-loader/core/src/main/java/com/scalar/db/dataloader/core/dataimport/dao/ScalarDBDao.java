@@ -52,15 +52,16 @@ public class ScalarDBDao {
       DistributedStorage storage)
       throws ScalarDBDaoException {
 
-    String printKey = keysToString(partitionKey, clusteringKey);
+    // Retrieving the key data for logging
+    String loggingKey = keysToString(partitionKey, clusteringKey);
 
     try {
       Get get = createGetWith(namespace, tableName, partitionKey, clusteringKey);
       Optional<Result> result = storage.get(get);
-      logger.info(String.format(GET_COMPLETED_MSG, printKey));
+      logger.info(String.format(GET_COMPLETED_MSG, loggingKey));
       return result;
     } catch (ExecutionException e) {
-      throw new ScalarDBDaoException("error GET " + printKey, e);
+      throw new ScalarDBDaoException("error GET " + loggingKey, e);
     }
   }
 
@@ -84,13 +85,14 @@ public class ScalarDBDao {
       throws ScalarDBDaoException {
 
     Get get = createGetWith(namespace, tableName, partitionKey, clusteringKey);
-    String printKey = keysToString(partitionKey, clusteringKey);
+    // Retrieving the key data for logging
+    String loggingKey = keysToString(partitionKey, clusteringKey);
     try {
       Optional<Result> result = transaction.get(get);
-      logger.info(String.format(GET_COMPLETED_MSG, printKey));
+      logger.info(String.format(GET_COMPLETED_MSG, loggingKey));
       return result;
     } catch (CrudException e) {
-      throw new ScalarDBDaoException("error GET " + printKey, e.getCause());
+      throw new ScalarDBDaoException("error GET " + loggingKey, e.getCause());
     }
   }
 
@@ -332,7 +334,6 @@ public class ScalarDBDao {
     }
 
     // Create a scan with partition key (not a scan all)
-
     ScanBuilder.BuildableScan buildableScan =
         Scan.newBuilder().namespace(namespace).table(tableName).partitionKey(partitionKey);
 
