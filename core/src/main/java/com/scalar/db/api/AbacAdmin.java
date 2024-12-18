@@ -67,8 +67,8 @@ public interface AbacAdmin {
    * Creates a level with the given short name, long name and level number for the given policy.
    *
    * @param policyName the policy name
-   * @param levelShortName the level short name
-   * @param levelLongName the level long name
+   * @param levelShortName the short name of the level
+   * @param levelLongName the long name of the level
    * @param levelNumber the level number
    * @throws ExecutionException if the operation fails
    */
@@ -82,7 +82,7 @@ public interface AbacAdmin {
    * Drops a level with the given short name for the given policy.
    *
    * @param policyName the policy name
-   * @param levelShortName the level short name
+   * @param levelShortName the short name of the level
    * @throws ExecutionException if the operation fails
    */
   default void dropLevel(String policyName, String levelShortName) throws ExecutionException {
@@ -93,7 +93,7 @@ public interface AbacAdmin {
    * Retrieves a level with the given short name for the given policy.
    *
    * @param policyName the policy name
-   * @param levelShortName the level short name
+   * @param levelShortName the short name of the level
    * @return the level
    * @throws ExecutionException if the operation fails
    */
@@ -117,8 +117,8 @@ public interface AbacAdmin {
    * Creates a compartment with the given short name and long name for the given policy.
    *
    * @param policyName the policy name
-   * @param compartmentShortName the compartment short name
-   * @param compartmentLongName the compartment long name
+   * @param compartmentShortName the short name of the compartment
+   * @param compartmentLongName the long name of the compartment
    * @throws ExecutionException if the operation fails
    */
   default void createCompartment(
@@ -131,7 +131,7 @@ public interface AbacAdmin {
    * Drops a compartment with the given short name for the given policy.
    *
    * @param policyName the policy name
-   * @param compartmentShortName the compartment short name
+   * @param compartmentShortName the short name of the compartment
    * @throws ExecutionException if the operation fails
    */
   default void dropCompartment(String policyName, String compartmentShortName)
@@ -143,7 +143,7 @@ public interface AbacAdmin {
    * Retrieves a compartment with the given short name for the given policy.
    *
    * @param policyName the policy name
-   * @param compartmentShortName the compartment short name
+   * @param compartmentShortName the short name of the compartment
    * @return the compartment
    * @throws ExecutionException if the operation fails
    */
@@ -164,14 +164,14 @@ public interface AbacAdmin {
   }
 
   /**
-   * Creates a group with the given short name, long name and parent group short name for the given
-   * policy.
+   * Creates a group for the given policy with the specified short name, long name, and the short
+   * name of the parent group.
    *
    * @param policyName the policy name
-   * @param groupShortName the group short name
-   * @param groupLongName the group long name
-   * @param parentGroupShortName the parent group short name. If null, the group is a top-level
-   *     group
+   * @param groupShortName the short name of the group
+   * @param groupLongName the long name of the group
+   * @param parentGroupShortName the short name of the parent group. If null, the group is a
+   *     top-level group
    * @throws ExecutionException if the operation fails
    */
   default void createGroup(
@@ -187,7 +187,7 @@ public interface AbacAdmin {
    * Drops a group with the given short name for the given policy.
    *
    * @param policyName the policy name
-   * @param groupShortName the group short name
+   * @param groupShortName the short name of the group
    * @throws ExecutionException if the operation fails
    */
   default void dropGroup(String policyName, String groupShortName) throws ExecutionException {
@@ -198,7 +198,7 @@ public interface AbacAdmin {
    * Retrieves a group with the given short name for the given policy.
    *
    * @param policyName the policy name
-   * @param groupShortName the group short name
+   * @param groupShortName the short name of the group
    * @return the group
    * @throws ExecutionException if the operation fails
    */
@@ -223,9 +223,11 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param levelShortName the level short name
-   * @param defaultLevelShortName the default level short name. If null, the default is the level
-   * @param rowLevelShortName the row level short name. If null, the default is the default level
+   * @param levelShortName the short name of the level to set
+   * @param defaultLevelShortName the short name of the default level. If null, the {@code
+   *     levelShortName} will be used as the default level
+   * @param rowLevelShortName the short name of the row level. If null, the {@code
+   *     defaultLevelShortName} will be used as the row level
    * @throws ExecutionException if the operation fails
    */
   default void setLevelsToUser(
@@ -244,7 +246,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param compartmentShortName the compartment short name
+   * @param compartmentShortName the short name of the compartment to set
    * @param accessMode the access mode
    * @param defaultCompartment whether the compartment is the default compartment
    * @param rowCompartment whether the compartment is the row compartment
@@ -266,7 +268,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param compartmentShortName the compartment short name
+   * @param compartmentShortName the short name of the compartment to remove
    * @throws ExecutionException if the operation fails
    */
   default void removeCompartmentFromUser(
@@ -280,7 +282,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param groupShortName the group short name
+   * @param groupShortName the short name of the group to set
    * @param accessMode the access mode
    * @param defaultGroup whether the group is the default group
    * @param rowGroup whether the group is the row group
@@ -302,7 +304,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param groupShortName the group short name
+   * @param groupShortName the short name of the group to remove
    * @throws ExecutionException if the operation fails
    */
   default void removeGroupFromUser(String policyName, String username, String groupShortName)
@@ -484,14 +486,14 @@ public interface AbacAdmin {
     /**
      * Returns the short name of the level.
      *
-     * @return the short name
+     * @return the short name of the level
      */
     String getShortName();
 
     /**
      * Returns the long name of the level.
      *
-     * @return the long name
+     * @return the long name of the level
      */
     String getLongName();
 
@@ -515,14 +517,14 @@ public interface AbacAdmin {
     /**
      * Returns the short name of the compartment.
      *
-     * @return the short name
+     * @return the short name of the compartment
      */
     String getShortName();
 
     /**
      * Returns the long name of the compartment.
      *
-     * @return the long name
+     * @return the long name of the compartment
      */
     String getLongName();
   }
@@ -539,7 +541,7 @@ public interface AbacAdmin {
     /**
      * Returns the short name of the group.
      *
-     * @return the short name
+     * @return the short name of the group
      */
     String getShortName();
 
@@ -565,23 +567,23 @@ public interface AbacAdmin {
     /** The level information. */
     interface LevelInfo {
       /**
-       * Returns the level short name.
+       * Returns the short name of the level.
        *
-       * @return the level short name
+       * @return the short name of the level
        */
       String getLevelShortName();
 
       /**
-       * Returns the default level short name.
+       * Returns the short name of the default level.
        *
-       * @return the default level short name
+       * @return the short name of the default level
        */
       String getDefaultLevelShortName();
 
       /**
-       * Returns the row level short name.
+       * Returns the short name of the row level.
        *
-       * @return the row level short name
+       * @return the short name of the row level
        */
       String getRowLevelShortName();
     }
@@ -717,7 +719,7 @@ public interface AbacAdmin {
     /**
      * Returns the state of the policy.
      *
-     * @return the state
+     * @return the state of the policy
      */
     PolicyState getState();
   }
@@ -748,7 +750,7 @@ public interface AbacAdmin {
     /**
      * Returns the state of the policy.
      *
-     * @return the state
+     * @return the state of the policy
      */
     PolicyState getState();
   }
