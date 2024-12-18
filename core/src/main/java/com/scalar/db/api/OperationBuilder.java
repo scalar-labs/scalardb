@@ -589,7 +589,7 @@ public class OperationBuilder {
   public interface AbacReadTagAttribute<T> {
     /**
      * Adds a read tag attribute for the specified policy. This is a utility method for
-     * Attribute-Based Access Control.
+     * attribute-based access control.
      *
      * @param policyName the policy name
      * @param readTag the read tag
@@ -601,7 +601,7 @@ public class OperationBuilder {
   public interface AbacWriteTagAttribute<T> {
     /**
      * Adds a write tag attribute for the specified policy. This is a utility method for
-     * Attribute-Based Access Control.
+     * attribute-based access control.
      *
      * @param policyName the policy name
      * @param writeTag the write tag
@@ -613,7 +613,7 @@ public class OperationBuilder {
   public interface ClearAbacReadTagAttribute<T> {
     /**
      * Clear the read tag attribute for the specified policy. This is a utility method for
-     * Attribute-Based Access Control.
+     * attribute-based access control.
      *
      * @param policyName the policy name
      * @return the operation builder
@@ -621,7 +621,7 @@ public class OperationBuilder {
     T clearReadTag(String policyName);
 
     /**
-     * Clear all read tags. This is a utility method for Attribute-Based Access Control.
+     * Clear all read tags. This is a utility method for attribute-based access control.
      *
      * @return the operation builder
      */
@@ -631,7 +631,7 @@ public class OperationBuilder {
   public interface ClearAbacWriteTagAttribute<T> {
     /**
      * Clear the write tag attribute for the specified policy. This is a utility method for
-     * Attribute-Based Access Control.
+     * attribute-based access control.
      *
      * @param policyName the policy name
      * @return the operation builder
@@ -639,7 +639,7 @@ public class OperationBuilder {
     T clearWriteTag(String policyName);
 
     /**
-     * Clear all write tags. This is a utility method for Attribute-Based Access Control.
+     * Clear all write tags. This is a utility method for attribute-based access control.
      *
      * @return the operation builder
      */

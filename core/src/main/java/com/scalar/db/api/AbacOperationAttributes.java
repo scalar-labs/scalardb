@@ -3,7 +3,7 @@ package com.scalar.db.api;
 import java.util.Map;
 import java.util.Optional;
 
-/** A utility class to manipulate the operation attributes for Attribute-Based Access Control. */
+/** A utility class to manipulate the operation attributes for attribute-based access control. */
 public final class AbacOperationAttributes {
 
   private static final String OPERATION_ATTRIBUTE_PREFIX = "abac-";

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-/** An interface for administrative operations for Attribute-Based Access Control. */
+/** An interface for administrative operations for attribute-based access control. */
 public interface AbacAdmin {
 
   /**
