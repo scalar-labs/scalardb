@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core.dataexport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class ExportReportTest {
+class ExportReportTest {
 
   @Test
   void getExportedRowCount_afterInitialisation_ShouldBeZero() {
