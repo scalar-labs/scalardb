@@ -11,10 +11,10 @@ import lombok.Setter;
 public class ControlFileTableFieldMapping {
 
   @JsonProperty("source_field")
-  public String sourceField;
+  private String sourceField;
 
   @JsonProperty("target_column")
-  public String targetColumn;
+  private String targetColumn;
 
   /**
    * Class constructor

@@ -14,17 +14,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-public class TableMetadataServiceTest {
+class TableMetadataServiceTest {
 
   DistributedStorageAdmin storageAdmin;
   TableMetadataService tableMetadataService;
 
   @BeforeEach
-  public void setup() throws ExecutionException {
+  void setup() throws ExecutionException {
     storageAdmin = Mockito.mock(DistributedStorageAdmin.class);
     Mockito.when(storageAdmin.getTableMetadata("namespace", "table"))
         .thenReturn(UnitTestUtils.createTestTableMetadata());
-    //        Mockito.when(storageAdmin.getTableMetadata("namespace1","table1")).thenReturn(null);
     tableMetadataService = new TableMetadataService(storageAdmin);
   }
 
@@ -41,8 +40,7 @@ public class TableMetadataServiceTest {
   }
 
   @Test
-  void getTableMetadata_withInvalidNamespaceAndTable_shouldThrowException()
-      throws TableMetadataException {
+  void getTableMetadata_withInvalidNamespaceAndTable_shouldThrowException() {
     TableMetadataRequest tableMetadataRequest = new TableMetadataRequest("namespace2", "table2");
     assertThatThrownBy(
             () ->

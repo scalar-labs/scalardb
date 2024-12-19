@@ -1,6 +1,9 @@
 package com.scalar.db.dataloader.core.tablemetadata;
 
+import lombok.Getter;
+
 /** Represents the request for metadata for a single ScalarDB table */
+@Getter
 public class TableMetadataRequest {
 
   private final String namespace;
@@ -17,11 +20,4 @@ public class TableMetadataRequest {
     this.tableName = tableName;
   }
 
-  public String getNamespace() {
-    return namespace;
-  }
-
-  public String getTableName() {
-    return tableName;
-  }
 }
