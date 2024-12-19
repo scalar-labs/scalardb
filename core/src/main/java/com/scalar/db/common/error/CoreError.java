@@ -690,6 +690,13 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
       Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
+  DATA_LOADER_CLUSTERING_KEY_NOT_FOUND(
+          Category.USER_ERROR, "0152", "The provided clustering key %s was not found", "", ""
+  ),
+  DATA_LOADER_INVALID_PROJECTION(
+          Category.USER_ERROR, "0153", "The column '%s' was not found", "", ""
+  ),
+
 
   //
   // Errors for the concurrency error category
