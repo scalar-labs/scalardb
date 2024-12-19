@@ -8,26 +8,32 @@ import com.scalar.db.dataloader.core.dataexport.ExportOptions;
 import com.scalar.db.io.Key;
 import java.util.LinkedHashSet;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
-/** Validation for Export options */
+/**
+ * A validator for ensuring that export options are consistent with the ScalarDB table metadata and
+ * follow the defined constraints.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ExportOptionsValidator {
 
   /**
-   * Validate export request
+   * Validates the export request.
    *
-   * @param exportOptions Export options
-   * @param tableMetadata Metadata for a single ScalarDB table
-   * @throws ExportOptionsValidationException when the options are invalid
+   * @param exportOptions The export options provided by the user.
+   * @param tableMetadata The metadata of the ScalarDB table to validate against.
+   * @throws ExportOptionsValidationException If the export options are invalid.
    */
   public static void validate(ExportOptions exportOptions, TableMetadata tableMetadata)
       throws ExportOptionsValidationException {
     LinkedHashSet<String> clusteringKeyNames = tableMetadata.getClusteringKeyNames();
     ScanRange scanRange = exportOptions.getScanRange();
 
-    // validate projections
+    // Validate projection columns
     validateProjectionColumns(tableMetadata.getColumnNames(), exportOptions.getProjectionColumns());
 
-    // validate sorts
+    // Validate sort orders
     if (!exportOptions.getSortOrders().isEmpty()) {
       for (Scan.Ordering sort : exportOptions.getSortOrders()) {
         validateClusteringKey(clusteringKeyNames, sort.getColumnName());
@@ -46,12 +52,11 @@ public class ExportOptionsValidator {
   }
 
   /**
-   * Check if the provided clustering key is available in the ScalarDB table
+   * Checks if the provided clustering key is valid for the ScalarDB table.
    *
-   * @param clusteringKeyNames List of clustering key names available in a
-   * @param key To be validated ScalarDB key
-   * @throws ExportOptionsValidationException if the key could not be found or is not a clustering
-   *     key
+   * @param clusteringKeyNames The set of valid clustering key names for the table.
+   * @param key The ScalarDB key to validate.
+   * @throws ExportOptionsValidationException If the key is invalid or not a clustering key.
    */
   private static void validateClusteringKey(LinkedHashSet<String> clusteringKeyNames, Key key)
       throws ExportOptionsValidationException {
@@ -63,12 +68,11 @@ public class ExportOptionsValidator {
   }
 
   /**
-   * Check if the provided clustering key is available in the ScalarDB table
+   * Checks if the provided clustering key column name is valid for the ScalarDB table.
    *
-   * @param clusteringKeyNames List of clustering key names available in a
-   * @param columnName Column name of the to be validated clustering key
-   * @throws ExportOptionsValidationException if the key could not be found or is not a clustering
-   *     key
+   * @param clusteringKeyNames The set of valid clustering key names for the table.
+   * @param columnName The column name of the clustering key to validate.
+   * @throws ExportOptionsValidationException If the column name is not a valid clustering key.
    */
   private static void validateClusteringKey(
       LinkedHashSet<String> clusteringKeyNames, String columnName)
@@ -84,11 +88,11 @@ public class ExportOptionsValidator {
   }
 
   /**
-   * Check if the provided projection column names are available in the ScalarDB table
+   * Checks if the provided projection column names are valid for the ScalarDB table.
    *
-   * @param columnNames List of ScalarDB table column names
-   * @param columns List of to be validated column names
-   * @throws ExportOptionsValidationException if the column name was not found in the table
+   * @param columnNames The set of valid column names for the table.
+   * @param columns The list of projection column names to validate.
+   * @throws ExportOptionsValidationException If any of the column names are invalid.
    */
   private static void validateProjectionColumns(
       LinkedHashSet<String> columnNames, List<String> columns)
@@ -97,7 +101,7 @@ public class ExportOptionsValidator {
       return;
     }
     for (String column : columns) {
-      // O(n) but list is always going to be very small, so it's ok
+      // O(n) lookup, but acceptable given the typically small list size
       if (!columnNames.contains(column)) {
         throw new ExportOptionsValidationException(
             CoreError.DATA_LOADER_INVALID_PROJECTION.buildMessage(column));
