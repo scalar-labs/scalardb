@@ -112,7 +112,9 @@ public class TableMetadataUtil {
    */
   public static String getTableLookupKey(ControlFileTable controlFileTable) {
     return String.format(
-        Constants.TABLE_LOOKUP_KEY_FORMAT, controlFileTable.getNamespace(), controlFileTable.getTableName());
+        Constants.TABLE_LOOKUP_KEY_FORMAT,
+        controlFileTable.getNamespace(),
+        controlFileTable.getTableName());
   }
 
   /**

@@ -19,5 +19,4 @@ public class TableMetadataRequest {
     this.namespace = namespace;
     this.tableName = tableName;
   }
-
 }

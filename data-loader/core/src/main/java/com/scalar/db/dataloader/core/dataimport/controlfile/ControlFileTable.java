@@ -30,6 +30,7 @@ public class ControlFileTable {
 
   /**
    * Added for mapping data to control file table object from API request
+   *
    * @param namespace namespace
    * @param tableName table name
    * @param mappings column name mapping from control file
