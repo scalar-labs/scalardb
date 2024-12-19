@@ -17,7 +17,7 @@ class ScalarDBDaoTest {
   private ScalarDBDao dao;
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     this.dao = new ScalarDBDao();
   }
 
