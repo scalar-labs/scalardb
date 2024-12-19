@@ -89,7 +89,7 @@ class ScalarDBDaoTest {
                 Key.newBuilder().addInt(TEST_COLUMN_2_CK, TEST_VALUE_INT).build(),
                 true,
                 false),
-            List.of(Scan.Ordering.asc(TEST_COLUMN_2_CK)),
+            Arrays.asList(Scan.Ordering.asc(TEST_COLUMN_2_CK)),
             new ArrayList<>(),
             0);
     // Create expected result
@@ -101,7 +101,7 @@ class ScalarDBDaoTest {
                 Key.newBuilder().addInt(TEST_COLUMN_2_CK, TEST_VALUE_INT).build(),
                 true,
                 false),
-            List.of(Scan.Ordering.asc(TEST_COLUMN_2_CK)),
+            Arrays.asList(Scan.Ordering.asc(TEST_COLUMN_2_CK)),
             new ArrayList<>(),
             0);
     // Compare Scan object
