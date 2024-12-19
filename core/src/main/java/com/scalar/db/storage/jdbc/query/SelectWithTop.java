@@ -13,10 +13,6 @@ public class SelectWithTop extends SimpleSelectQuery {
     this.limit = limit;
   }
 
-  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
-  @Override
-  protected final void finalize() {}
-
   @Override
   public String sql() {
     // This inserts "TOP ${limit}" clause, specific to SqlServer, right after the "SELECT" clause of
