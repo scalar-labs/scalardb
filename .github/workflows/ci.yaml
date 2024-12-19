@@ -1436,7 +1436,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -1496,7 +1496,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
