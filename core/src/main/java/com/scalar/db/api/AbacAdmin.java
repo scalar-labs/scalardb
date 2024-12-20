@@ -23,7 +23,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Enables a policy with the given name.
+   * Enables a policy that has the given name.
    *
    * @param policyName the policy name
    * @throws ExecutionException if the operation fails
@@ -33,7 +33,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Disables a policy with the given name.
+   * Disables a policy that has the given name.
    *
    * @param policyName the policy name
    * @throws ExecutionException if the operation fails
@@ -43,7 +43,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Retrieves a policy with the given name.
+   * Retrieves a policy that has the given name.
    *
    * @param policyName the policy name
    * @return the policy
@@ -79,7 +79,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Drops a level with the given short name for the given policy.
+   * Drops a level that has the given short name for the given policy.
    *
    * @param policyName the policy name
    * @param levelShortName the short name of the level
@@ -90,7 +90,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Retrieves a level with the given short name for the given policy.
+   * Retrieves a level that has the given short name for the given policy.
    *
    * @param policyName the policy name
    * @param levelShortName the short name of the level
@@ -128,7 +128,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Drops a compartment with the given short name for the given policy.
+   * Drops a compartment that has the given short name for the given policy.
    *
    * @param policyName the policy name
    * @param compartmentShortName the short name of the compartment
@@ -140,7 +140,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Retrieves a compartment with the given short name for the given policy.
+   * Retrieves a compartment that has the given short name for the given policy.
    *
    * @param policyName the policy name
    * @param compartmentShortName the short name of the compartment
@@ -184,7 +184,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Drops a group with the given short name for the given policy.
+   * Drops a group that has the given short name for the given policy.
    *
    * @param policyName the policy name
    * @param groupShortName the short name of the group
@@ -195,7 +195,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Retrieves a group with the given short name for the given policy.
+   * Retrieves a group that has the given short name for the given policy.
    *
    * @param policyName the policy name
    * @param groupShortName the short name of the group
@@ -219,7 +219,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Sets levels to a user with the given username for the given policy.
+   * Sets the given levels of the given policy to a user that has the given username.
    *
    * @param policyName the policy name
    * @param username the username
@@ -241,7 +241,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Adds a compartment to a user with the given username for the given policy. Before adding the
+   * Adds the given compartment of the given policy to a user that has the given username. Before adding the
    * compartment, levels must be set to the user.
    *
    * @param policyName the policy name
@@ -264,7 +264,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Removes a compartment from a user with the given username for the given policy.
+   * Removes the given compartment of the given policy from a user that has the given username.
    *
    * @param policyName the policy name
    * @param username the username
@@ -277,7 +277,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Adds a group to a user with the given username for the given policy. Before adding the group,
+   * Adds the given group of the given policy to a user that has the given username. Before adding the group,
    * levels must be set to the user.
    *
    * @param policyName the policy name
@@ -300,7 +300,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Removes a group from a user with the given username for the given policy.
+   * Removes the given group of the given policy from a user that has the given username.
    *
    * @param policyName the policy name
    * @param username the username
@@ -338,7 +338,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Applies a policy to a namespace.
+   * Applies the given policy to the given namespace.
    *
    * @param policyName the policy name
    * @param namespaceName the namespace name
@@ -350,7 +350,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Enables a namespace policy.
+   * Enables the given policy for the given namespace.
    *
    * @param policyName the policy name
    * @param namespaceName the namespace name
@@ -362,7 +362,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Disables a namespace policy.
+   * Disables the given policy for the given namespace.
    *
    * @param policyName the policy name
    * @param namespaceName the namespace name
@@ -374,7 +374,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Retrieves the namespace policies.
+   * Retrieves all namespace policies.
    *
    * @return the namespaces policies
    * @throws ExecutionException if the operation fails
@@ -384,7 +384,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Applies a policy to a table.
+   * Applies the given policy to the given table of the given namespace.
    *
    * @param policyName the policy name
    * @param namespaceName the namespace name
@@ -397,7 +397,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Enables a table policy.
+   * Enables the given policy of the given table of the given namespace.
    *
    * @param policyName the policy name
    * @param namespaceName the namespace name
@@ -410,7 +410,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Disables a table policy.
+   * Disables the given policy of the given table of the given namespace.
    *
    * @param policyName the policy name
    * @param namespaceName the namespace name
@@ -423,7 +423,7 @@ public interface AbacAdmin {
   }
 
   /**
-   * Retrieves the table policies.
+   * Retrieves all table policies.
    *
    * @return the table policies
    * @throws ExecutionException if the operation fails
