@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
+import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -76,6 +77,7 @@ public class GetBuilderTest {
             .projections("c5", "c6")
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
             .build();
 
     // Assert
@@ -87,7 +89,15 @@ public class GetBuilderTest {
                 partitionKey1,
                 clusteringKey1,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                ImmutableMap.of(
+                    "a1",
+                    "v1",
+                    "a2",
+                    "v2",
+                    "a3",
+                    "v3",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"),
                 ImmutableSet.of()));
   }
@@ -627,7 +637,7 @@ public class GetBuilderTest {
   public void
       buildGet_FromExistingAndUpdateAllParametersExceptConjunctions_ShouldBuildGetWithUpdatedParameters() {
     // Arrange
-    Get existingGet =
+    Get existingGet1 =
         new Get(
             NAMESPACE_1,
             TABLE_1,
@@ -643,10 +653,20 @@ public class GetBuilderTest {
                 Conjunction.of(
                     ConditionBuilder.column("ck4").isGreaterThanInt(10),
                     ConditionBuilder.column("col1").isGreaterThanInt(10))));
+    Get existingGet2 =
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of(AbacOperationAttributes.READ_TAG_PREFIX + "policyName1", "readTag"),
+            Collections.emptyList(),
+            ImmutableSet.of());
 
     // Act
-    Get newGet =
-        Get.newBuilder(existingGet)
+    Get newGet1 =
+        Get.newBuilder(existingGet1)
             .partitionKey(partitionKey2)
             .clusteringKey(clusteringKey2)
             .namespace(NAMESPACE_2)
@@ -660,10 +680,12 @@ public class GetBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
             .build();
+    Get newGet2 = Get.newBuilder(existingGet2).clearReadTag("policyName1").build();
 
     // Assert
-    assertThat(newGet)
+    assertThat(newGet1)
         .isEqualTo(
             new Get(
                 NAMESPACE_2,
@@ -671,7 +693,15 @@ public class GetBuilderTest {
                 partitionKey2,
                 clusteringKey2,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                ImmutableMap.of(
+                    "a4",
+                    "v4",
+                    "a5",
+                    "v5",
+                    "a6",
+                    "v6",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("c3", "c4", "c5", "c6", "c7"),
                 ImmutableSet.of(
                     Conjunction.of(
@@ -680,6 +710,17 @@ public class GetBuilderTest {
                     Conjunction.of(
                         ConditionBuilder.column("ck4").isGreaterThanInt(10),
                         ConditionBuilder.column("col1").isGreaterThanInt(10)))));
+    assertThat(newGet2)
+        .isEqualTo(
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                Consistency.LINEARIZABLE,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1230,6 +1271,7 @@ public class GetBuilderTest {
             .projections("c5", "c6")
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
             .build();
 
     // Assert
@@ -1240,7 +1282,15 @@ public class GetBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                ImmutableMap.of(
+                    "a1",
+                    "v1",
+                    "a2",
+                    "v2",
+                    "a3",
+                    "v3",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("c1", "c2", "c3", "c4", "c5", "c6"),
                 ImmutableSet.of()));
   }
@@ -1706,7 +1756,7 @@ public class GetBuilderTest {
   public void
       buildGetWithIndex_FromExistingAndUpdateAllParameters_ShouldBuildGetWithUpdatedParameters() {
     // Arrange
-    GetWithIndex existingGet =
+    GetWithIndex existingGet1 =
         new GetWithIndex(
             NAMESPACE_1,
             TABLE_1,
@@ -1715,10 +1765,19 @@ public class GetBuilderTest {
             ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             Arrays.asList("c1", "c2"),
             ImmutableSet.of());
+    GetWithIndex existingGet2 =
+        new GetWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of(AbacOperationAttributes.READ_TAG_PREFIX + "policyName1", "readTag"),
+            Collections.emptyList(),
+            ImmutableSet.of());
 
     // Act
-    Get newGet =
-        Get.newBuilder(existingGet)
+    Get newGet1 =
+        Get.newBuilder(existingGet1)
             .indexKey(indexKey2)
             .namespace(NAMESPACE_2)
             .table(TABLE_2)
@@ -1731,18 +1790,38 @@ public class GetBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
             .build();
+    Get newGet2 = Get.newBuilder(existingGet2).clearReadTag("policyName1").build();
 
     // Assert
-    assertThat(newGet)
+    assertThat(newGet1)
         .isEqualTo(
             new GetWithIndex(
                 NAMESPACE_2,
                 TABLE_2,
                 indexKey2,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                ImmutableMap.of(
+                    "a4",
+                    "v4",
+                    "a5",
+                    "v5",
+                    "a6",
+                    "v6",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("c3", "c4", "c5", "c6", "c7"),
+                ImmutableSet.of()));
+    assertThat(newGet2)
+        .isEqualTo(
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of(),
+                Collections.emptyList(),
                 ImmutableSet.of()));
   }
 

@@ -66,6 +66,8 @@ public class DeleteBuilderTest {
             .condition(condition1)
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
             .build();
 
     // Assert
@@ -77,7 +79,17 @@ public class DeleteBuilderTest {
                 partitionKey1,
                 clusteringKey1,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                ImmutableMap.of(
+                    "a1",
+                    "v1",
+                    "a2",
+                    "v2",
+                    "a3",
+                    "v3",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag",
+                    AbacOperationAttributes.WRITE_TAG_PREFIX + "policyName2",
+                    "writeTag"),
                 condition1));
   }
 
@@ -101,7 +113,7 @@ public class DeleteBuilderTest {
   @Test
   public void build_FromExistingAndUpdateAllParameters_ShouldBuildDeleteWithUpdatedParameters() {
     // Arrange
-    Delete existingDelete =
+    Delete existingDelete1 =
         new Delete(
             NAMESPACE_1,
             TABLE_1,
@@ -110,10 +122,23 @@ public class DeleteBuilderTest {
             Consistency.LINEARIZABLE,
             ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             condition1);
+    Delete existingDelete2 =
+        new Delete(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of(
+                AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                "readTag",
+                AbacOperationAttributes.WRITE_TAG_PREFIX + "policyName2",
+                "writeTag"),
+            condition1);
 
     // Act
-    Delete newDelete =
-        Delete.newBuilder(existingDelete)
+    Delete newDelete1 =
+        Delete.newBuilder(existingDelete1)
             .partitionKey(partitionKey2)
             .clusteringKey(clusteringKey2)
             .namespace(NAMESPACE_2)
@@ -124,10 +149,17 @@ public class DeleteBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
+            .build();
+    Delete newDelete2 =
+        Delete.newBuilder(existingDelete2)
+            .clearReadTag("policyName1")
+            .clearWriteTag("policyName2")
             .build();
 
     // Assert
-    assertThat(newDelete)
+    assertThat(newDelete1)
         .isEqualTo(
             new Delete(
                 NAMESPACE_2,
@@ -135,8 +167,28 @@ public class DeleteBuilderTest {
                 partitionKey2,
                 clusteringKey2,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                ImmutableMap.of(
+                    "a4",
+                    "v4",
+                    "a5",
+                    "v5",
+                    "a6",
+                    "v6",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag",
+                    AbacOperationAttributes.WRITE_TAG_PREFIX + "policyName2",
+                    "writeTag"),
                 condition2));
+    assertThat(newDelete2)
+        .isEqualTo(
+            new Delete(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                Consistency.LINEARIZABLE,
+                ImmutableMap.of(),
+                condition1));
   }
 
   @Test

@@ -4,10 +4,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.OperationBuilder.AbacReadTagAttribute;
 import com.scalar.db.api.OperationBuilder.All;
 import com.scalar.db.api.OperationBuilder.And;
 import com.scalar.db.api.OperationBuilder.Attribute;
 import com.scalar.db.api.OperationBuilder.Buildable;
+import com.scalar.db.api.OperationBuilder.ClearAbacReadTagAttribute;
 import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearBoundaries;
 import com.scalar.db.api.OperationBuilder.ClearConditions;
@@ -106,7 +108,8 @@ public class ScanBuilder extends SelectionBuilder {
           Consistency<BuildableScan>,
           Projection<BuildableScan>,
           Limit<BuildableScan>,
-          Attribute<BuildableScan> {
+          Attribute<BuildableScan>,
+          AbacReadTagAttribute<BuildableScan> {
     final List<Scan.Ordering> orderings = new ArrayList<>();
     final List<String> projections = new ArrayList<>();
     @Nullable Key startClusteringKey;
@@ -212,6 +215,14 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScan attributes(Map<String, String> attributes) {
       checkNotNull(attributes);
       this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableScan readTag(String policyName, String readTag) {
+      checkNotNull(policyName);
+      checkNotNull(readTag);
+      AbacOperationAttributes.setReadTag(attributes, policyName, readTag);
       return this;
     }
 
@@ -327,6 +338,12 @@ public class ScanBuilder extends SelectionBuilder {
     @Override
     public BuildableScanWithPartitionKey attributes(Map<String, String> attributes) {
       super.attributes(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableScan readTag(String policyName, String readTag) {
+      super.readTag(policyName, readTag);
       return this;
     }
 
@@ -498,7 +515,8 @@ public class ScanBuilder extends SelectionBuilder {
           WhereAnd<BuildableScanWithIndexOngoingWhereAnd>,
           WhereOr<BuildableScanWithIndexOngoingWhereOr>,
           Limit<BuildableScanWithIndex>,
-          Attribute<BuildableScanWithIndex> {
+          Attribute<BuildableScanWithIndex>,
+          AbacReadTagAttribute<BuildableScanWithIndex> {
     @Nullable private final String namespaceName;
     private final String tableName;
     private final Key indexKey;
@@ -557,6 +575,14 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScanWithIndex attributes(Map<String, String> attributes) {
       checkNotNull(attributes);
       this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableScanWithIndex readTag(String policyName, String readTag) {
+      checkNotNull(policyName);
+      checkNotNull(readTag);
+      AbacOperationAttributes.setReadTag(attributes, policyName, readTag);
       return this;
     }
 
@@ -717,7 +743,8 @@ public class ScanBuilder extends SelectionBuilder {
       implements Consistency<BuildableScanWithIndexWhere>,
           Projection<BuildableScanWithIndexWhere>,
           Limit<BuildableScanWithIndexWhere>,
-          Attribute<BuildableScanWithIndexWhere> {
+          Attribute<BuildableScanWithIndexWhere>,
+          AbacReadTagAttribute<BuildableScanWithIndexWhere> {
 
     BuildableScanWithIndex buildableScanWithIndex;
     final Where where;
@@ -778,6 +805,12 @@ public class ScanBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableScanWithIndexWhere readTag(String policyName, String readTag) {
+      buildableScanWithIndex = buildableScanWithIndex.readTag(policyName, readTag);
+      return this;
+    }
+
     public Scan build() {
       return buildableScanWithIndex.build(getConjunctions(where));
     }
@@ -791,7 +824,8 @@ public class ScanBuilder extends SelectionBuilder {
           WhereAnd<BuildableScanAllWithOngoingWhereAnd>,
           WhereOr<BuildableScanAllWithOngoingWhereOr>,
           Limit<BuildableScanAll>,
-          Attribute<BuildableScanAll> {
+          Attribute<BuildableScanAll>,
+          AbacReadTagAttribute<BuildableScanAll> {
     private final String namespaceName;
     private final String tableName;
     private final List<Scan.Ordering> orderings = new ArrayList<>();
@@ -868,6 +902,14 @@ public class ScanBuilder extends SelectionBuilder {
     public BuildableScanAll attributes(Map<String, String> attributes) {
       checkNotNull(attributes);
       this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableScanAll readTag(String policyName, String readTag) {
+      checkNotNull(policyName);
+      checkNotNull(readTag);
+      AbacOperationAttributes.setReadTag(attributes, policyName, readTag);
       return this;
     }
 
@@ -1028,7 +1070,8 @@ public class ScanBuilder extends SelectionBuilder {
           Projection<BuildableScanAllWithWhere>,
           Ordering<BuildableScanAllWithWhere>,
           Limit<BuildableScanAllWithWhere>,
-          Attribute<BuildableScanAllWithWhere> {
+          Attribute<BuildableScanAllWithWhere>,
+          AbacReadTagAttribute<BuildableScanAllWithWhere> {
 
     final BuildableScanAll buildableScanAll;
     final Where where;
@@ -1106,6 +1149,12 @@ public class ScanBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableScanAllWithWhere readTag(String policyName, String readTag) {
+      buildableScanAll.readTag(policyName, readTag);
+      return this;
+    }
+
     public Scan build() {
       return buildableScanAll.build(getConjunctions(where));
     }
@@ -1124,7 +1173,8 @@ public class ScanBuilder extends SelectionBuilder {
           ClearOrderings<BuildableScanOrScanAllFromExisting>,
           ClearBoundaries<BuildableScanOrScanAllFromExisting>,
           ClearNamespace<BuildableScanOrScanAllFromExisting>,
-          ClearAttribute<BuildableScanOrScanAllFromExisting> {
+          ClearAttribute<BuildableScanOrScanAllFromExisting>,
+          ClearAbacReadTagAttribute<BuildableScanOrScanAllFromExisting> {
 
     private final boolean isScanWithIndex;
     private final boolean isScanAll;
@@ -1207,6 +1257,12 @@ public class ScanBuilder extends SelectionBuilder {
     @Override
     public BuildableScanOrScanAllFromExisting attributes(Map<String, String> attributes) {
       super.attributes(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableScan readTag(String policyName, String readTag) {
+      super.readTag(policyName, readTag);
       return this;
     }
 
@@ -1374,6 +1430,18 @@ public class ScanBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableScanOrScanAllFromExisting clearReadTag(String policyName) {
+      AbacOperationAttributes.clearReadTag(attributes, policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableScanOrScanAllFromExisting clearReadTags() {
+      AbacOperationAttributes.clearReadTags(attributes);
+      return this;
+    }
+
     private void checkNotScanWithIndexOrScanAll() {
       if (isScanWithIndex || isScanAll) {
         throw new UnsupportedOperationException(
@@ -1466,10 +1534,12 @@ public class ScanBuilder extends SelectionBuilder {
           Ordering<BuildableScanFromExistingWithWhere>,
           Limit<BuildableScanFromExistingWithWhere>,
           Attribute<BuildableScanFromExistingWithWhere>,
+          AbacReadTagAttribute<BuildableScanFromExistingWithWhere>,
           ClearProjections<BuildableScanFromExistingWithWhere>,
           ClearOrderings<BuildableScanFromExistingWithWhere>,
           ClearNamespace<BuildableScanFromExistingWithWhere>,
-          ClearAttribute<BuildableScanFromExistingWithWhere> {
+          ClearAttribute<BuildableScanFromExistingWithWhere>,
+          ClearAbacReadTagAttribute<BuildableScanFromExistingWithWhere> {
 
     private final BuildableScanOrScanAllFromExisting buildableScanFromExisting;
     final Where where;
@@ -1585,6 +1655,12 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableScanFromExistingWithWhere readTag(String policyName, String readTag) {
+      buildableScanFromExisting.readTag(policyName, readTag);
+      return this;
+    }
+
+    @Override
     public BuildableScanFromExistingWithWhere clearProjections() {
       buildableScanFromExisting.clearProjections();
       return this;
@@ -1611,6 +1687,18 @@ public class ScanBuilder extends SelectionBuilder {
     @Override
     public BuildableScanFromExistingWithWhere clearAttribute(String name) {
       buildableScanFromExisting.clearAttribute(name);
+      return this;
+    }
+
+    @Override
+    public BuildableScanFromExistingWithWhere clearReadTag(String policyName) {
+      buildableScanFromExisting.clearReadTag(policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableScanFromExistingWithWhere clearReadTags() {
+      buildableScanFromExisting.clearReadTags();
       return this;
     }
 
