@@ -5,6 +5,9 @@ import com.scalar.db.dataloader.core.Constants;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Utility class for handling ScalarDB table metadata operations. */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TableMetadataUtil {
 
   /**
