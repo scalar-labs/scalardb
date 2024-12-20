@@ -164,8 +164,8 @@ public interface AbacAdmin {
   }
 
   /**
-   * Creates a group for the given policy with the specified short name, long name, and the short
-   * name of the parent group.
+   * Creates a group with the given short name, long name, and the short name of the parent group
+   * for the given policy.
    *
    * @param policyName the policy name
    * @param groupShortName the short name of the group
@@ -241,8 +241,8 @@ public interface AbacAdmin {
   }
 
   /**
-   * Adds the given compartment of the given policy to a user that has the given username. Before adding the
-   * compartment, levels must be set to the user.
+   * Adds the given compartment of the given policy to a user that has the given username. Before
+   * adding the compartment, levels must be set to the user.
    *
    * @param policyName the policy name
    * @param username the username
@@ -277,8 +277,8 @@ public interface AbacAdmin {
   }
 
   /**
-   * Adds the given group of the given policy to a user that has the given username. Before adding the group,
-   * levels must be set to the user.
+   * Adds the given group of the given policy to a user that has the given username. Before adding
+   * the group, levels must be set to the user.
    *
    * @param policyName the policy name
    * @param username the username
