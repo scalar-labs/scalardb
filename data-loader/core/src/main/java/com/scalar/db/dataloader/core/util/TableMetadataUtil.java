@@ -15,54 +15,43 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/** Utils for ScalarDB table metadata */
+/** Utility class for handling ScalarDB table metadata operations. */
 public class TableMetadataUtil {
 
   /**
-   * Check if the field is a metadata column or not
+   * Determines whether a given column is a metadata column based on predefined criteria.
    *
-   * @param columnName Table column name
-   * @param metadataColumns Fixed list of metadata columns
-   * @param columnNames List of all column names in a table
-   * @return The field is metadata or not
+   * @param columnName The name of the table column to check.
+   * @param metadataColumns A set of predefined metadata columns.
+   * @param columnNames A set of all column names in the table.
+   * @return {@code true} if the column is a metadata column; {@code false} otherwise.
    */
   public static boolean isMetadataColumn(
       String columnName, Set<String> metadataColumns, Set<String> columnNames) {
-    // Skip field if it can be ignored
     if (metadataColumns.contains(columnName)) {
       return true;
     }
-
-    // Skip if the field is a "before_" field
     return columnName.startsWith(Attribute.BEFORE_PREFIX)
         && !columnNames.contains(Attribute.BEFORE_PREFIX + columnName);
   }
 
   /**
-   * Check if the field is a metadata column or not
+   * Determines whether a given column is a metadata column using table metadata.
    *
-   * @param columnName ScalarDB table column name5
-   * @param tableMetadata Metadata for a single ScalarDB
-   * @return is the field a metadata column or not
+   * @param columnName The name of the ScalarDB table column to check.
+   * @param tableMetadata The metadata of the table.
+   * @return {@code true} if the column is a metadata column; {@code false} otherwise.
    */
   public static boolean isMetadataColumn(String columnName, TableMetadata tableMetadata) {
     Set<String> metadataColumns = getMetadataColumns();
     LinkedHashSet<String> columnNames = tableMetadata.getColumnNames();
-
-    // Skip field if it can be ignored
-    if (metadataColumns.contains(columnName)) {
-      return true;
-    }
-
-    // Skip if the field is a "before_" field
-    return columnName.startsWith(Attribute.BEFORE_PREFIX)
-        && !columnNames.contains(Attribute.BEFORE_PREFIX + columnName);
+    return isMetadataColumn(columnName, metadataColumns, columnNames);
   }
 
   /**
-   * Return a list of fixed metadata columns
+   * Retrieves a set of fixed metadata column names used in ScalarDB.
    *
-   * @return Set of columns
+   * @return A set of predefined metadata column names.
    */
   public static Set<String> getMetadataColumns() {
     return Stream.of(
@@ -80,10 +69,10 @@ public class TableMetadataUtil {
   }
 
   /**
-   * Return a map with the data types for all columns in a ScalarDB table
+   * Extracts a mapping of column names to their data types from the table metadata.
    *
-   * @param tableMetadata Metadata for a single ScalarDB table
-   * @return data types map
+   * @param tableMetadata The metadata of the ScalarDB table.
+   * @return A map where keys are column names and values are their corresponding {@link DataType}.
    */
   public static Map<String, DataType> extractColumnDataTypes(TableMetadata tableMetadata) {
     Map<String, DataType> definitions = new HashMap<>();
@@ -94,21 +83,21 @@ public class TableMetadataUtil {
   }
 
   /**
-   * Return lookup key for a table in a namespace
+   * Generates a unique lookup key for a table within a namespace.
    *
-   * @param namespace Namespace
-   * @param tableName Table name
-   * @return Table metadata lookup key
+   * @param namespace The namespace of the table.
+   * @param tableName The name of the table.
+   * @return A formatted string representing the table lookup key.
    */
   public static String getTableLookupKey(String namespace, String tableName) {
     return String.format(Constants.TABLE_LOOKUP_KEY_FORMAT, namespace, tableName);
   }
 
   /**
-   * Return lookup key for a table in a namespace
+   * Generates a unique lookup key for a table using control file table data.
    *
-   * @param controlFileTable Control file data mapping
-   * @return Table metadata lookup key
+   * @param controlFileTable The control file table object containing namespace and table name.
+   * @return A formatted string representing the table lookup key.
    */
   public static String getTableLookupKey(ControlFileTable controlFileTable) {
     return String.format(
@@ -118,38 +107,32 @@ public class TableMetadataUtil {
   }
 
   /**
-   * Populate the projection columns with metadata columns
+   * Adds metadata columns to a list of projection columns for a ScalarDB table.
    *
-   * @param tableMetadata Metadata for a single ScalarDB table
-   * @param projections List of projection columns
-   * @return List of projection columns with metadata columns
+   * @param tableMetadata The metadata of the ScalarDB table.
+   * @param projections A list of projection column names.
+   * @return A new list containing projection columns along with metadata columns.
    */
   public static List<String> populateProjectionsWithMetadata(
       TableMetadata tableMetadata, List<String> projections) {
     List<String> projectionMetadata = new ArrayList<>();
-
-    // Add projection columns along with metadata columns
     projections.forEach(
         projection -> {
           projectionMetadata.add(projection);
           if (!isKeyColumn(projection, tableMetadata)) {
-            // Add metadata column before the projection if it's not a key column
             projectionMetadata.add(Attribute.BEFORE_PREFIX + projection);
           }
         });
-
-    // Add fixed metadata columns
     projectionMetadata.addAll(getMetadataColumns());
-
     return projectionMetadata;
   }
 
   /**
-   * Checks if a column is a key column (partition key or clustering key) in the table.
+   * Checks whether a column is a key column (partition key or clustering key) in the table.
    *
-   * @param column The column name to check.
+   * @param column The name of the column to check.
    * @param tableMetadata The metadata of the ScalarDB table.
-   * @return True if the column is a key column, false otherwise.
+   * @return {@code true} if the column is a key column; {@code false} otherwise.
    */
   private static boolean isKeyColumn(String column, TableMetadata tableMetadata) {
     return tableMetadata.getPartitionKeyNames().contains(column)

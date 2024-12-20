@@ -9,20 +9,26 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Service for retrieving {@link TableMetadata} from ScalarDB. Provides methods to fetch metadata
+ * for individual tables or a collection of tables.
+ */
 @RequiredArgsConstructor
 public class TableMetadataService {
+
   private static final String ERROR_MISSING_NAMESPACE_OR_TABLE =
       "Missing namespace or table: %s, %s";
 
   private final DistributedStorageAdmin storageAdmin;
 
   /**
-   * Returns the TableMetadata for the given namespace and table name.
+   * Retrieves the {@link TableMetadata} for a specific namespace and table name.
    *
-   * @param namespace ScalarDb namespace
-   * @param tableName ScalarDb table name
-   * @return TableMetadata
-   * @throws TableMetadataException if the namespace or table is missing
+   * @param namespace The ScalarDB namespace.
+   * @param tableName The name of the table within the specified namespace.
+   * @return The {@link TableMetadata} object containing schema details of the specified table.
+   * @throws TableMetadataException If the table or namespace does not exist, or if an error occurs
+   *     while fetching the metadata.
    */
   public TableMetadata getTableMetadata(String namespace, String tableName)
       throws TableMetadataException {
@@ -40,11 +46,17 @@ public class TableMetadataService {
   }
 
   /**
-   * Returns the TableMetadata for the given list of TableMetadataRequest.
+   * Retrieves the {@link TableMetadata} for a collection of table metadata requests.
    *
-   * @param requests List of TableMetadataRequest
-   * @return Map of TableMetadata
-   * @throws TableMetadataException if the namespace or table is missing
+   * <p>Each request specifies a namespace and table name. The method consolidates the metadata into
+   * a map keyed by a unique lookup key generated for each table.
+   *
+   * @param requests A collection of {@link TableMetadataRequest} objects specifying the tables to
+   *     retrieve metadata for.
+   * @return A map where the keys are unique lookup keys (namespace + table name) and the values are
+   *     the corresponding {@link TableMetadata} objects.
+   * @throws TableMetadataException If any of the requested tables or namespaces are missing, or if
+   *     an error occurs while fetching the metadata.
    */
   public Map<String, TableMetadata> getTableMetadata(Collection<TableMetadataRequest> requests)
       throws TableMetadataException {

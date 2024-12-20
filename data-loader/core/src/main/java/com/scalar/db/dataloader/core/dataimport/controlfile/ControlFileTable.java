@@ -7,33 +7,50 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Represents the mapping for one table in the control file */
+/**
+ * Represents the configuration for a single table in the control file, including its namespace,
+ * table name, and field mappings. This class is used to define how data from a control file maps to
+ * a specific table in ScalarDB.
+ */
 @Getter
 @Setter
 public class ControlFileTable {
 
+  /** The namespace of the table in ScalarDB. */
   @JsonProperty("namespace")
   private String namespace;
 
+  /** The name of the table in ScalarDB. */
   @JsonProperty("table_name")
   private String tableName;
 
+  /**
+   * A list of mappings defining the correspondence between control file fields and table columns.
+   */
   @JsonProperty("mappings")
   private final List<ControlFileTableFieldMapping> mappings;
 
-  /** Class constructor */
+  /**
+   * Creates a new {@code ControlFileTable} instance with the specified namespace and table name.
+   * The mappings list is initialized as an empty list.
+   *
+   * @param namespace The namespace of the table in ScalarDB.
+   * @param tableName The name of the table in ScalarDB.
+   */
   public ControlFileTable(String namespace, String tableName) {
-    this.tableName = tableName;
     this.namespace = namespace;
+    this.tableName = tableName;
     this.mappings = new ArrayList<>();
   }
 
   /**
-   * Added for mapping data to control file table object from API request
+   * Constructs a {@code ControlFileTable} instance using data from a serialized JSON object. This
+   * constructor is used for deserialization of API requests or control files.
    *
-   * @param namespace namespace
-   * @param tableName table name
-   * @param mappings column name mapping from control file
+   * @param namespace The namespace of the table in ScalarDB.
+   * @param tableName The name of the table in ScalarDB.
+   * @param mappings A list of mappings that define the relationship between control file fields and
+   *     table columns.
    */
   @JsonCreator
   public ControlFileTable(
