@@ -325,21 +325,24 @@ public class OperationBuilder {
 
   public interface ImplicitPreReadEnabled<T> {
     /**
-     * Disables implicit pre-read for this put operation.
+     * Disables implicit pre-read for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T disableImplicitPreRead();
 
     /**
-     * Enables implicit pre-read for this put operation.
+     * Enables implicit pre-read for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T enableImplicitPreRead();
 
     /**
-     * Sets whether implicit pre-read is enabled or not for this put operation.
+     * Sets whether implicit pre-read is enabled or not for this put operation. This is a utility
+     * method for Consensus Commit.
      *
      * @param implicitPreReadEnabled whether implicit pre-read is enabled or not
      * @return the operation builder
@@ -349,21 +352,24 @@ public class OperationBuilder {
 
   public interface InsertModeEnabled<T> {
     /**
-     * Disables the insert mode for this put operation.
+     * Disables the insert mode for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T disableInsertMode();
 
     /**
-     * Enables the insert mode for this put operation.
+     * Enables the insert mode for this put operation. This is a utility method for Consensus
+     * Commit.
      *
      * @return the operation builder
      */
     T enableInsertMode();
 
     /**
-     * Sets whether the insert mode is enabled or not for this put operation.
+     * Sets whether the insert mode is enabled or not for this put operation. This is a utility
+     * method for Consensus Commit.
      *
      * @param insertModeEnabled whether the insert mode is enabled or not
      * @return the operation builder

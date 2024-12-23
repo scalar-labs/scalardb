@@ -463,30 +463,6 @@ public class PutTest {
   }
 
   @Test
-  public void setImplicitPreReadEnabled_ProperValueGiven_ShouldReturnWhatsSet() {
-    // Arrange
-    Put put = preparePut();
-
-    // Act
-    put.setImplicitPreReadEnabled(true);
-
-    // Assert
-    assertThat(put.isImplicitPreReadEnabled()).isTrue();
-  }
-
-  @Test
-  public void setInsertModeEnabled_ProperValueGiven_ShouldReturnWhatsSet() {
-    // Arrange
-    Put put = preparePut();
-
-    // Act
-    put.setInsertModeEnabled(true);
-
-    // Assert
-    assertThat(put.isInsertModeEnabled()).isTrue();
-  }
-
-  @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
     assertThatThrownBy(() -> new Put((Key) null)).isInstanceOf(NullPointerException.class);
@@ -588,36 +564,6 @@ public class PutTest {
     put.withCondition(new PutIfExists());
     Put another = preparePut();
     another.withCondition(new PutIfNotExists());
-
-    // Act
-    boolean ret = put.equals(another);
-
-    // Assert
-    assertThat(ret).isFalse();
-    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
-  }
-
-  @Test
-  public void equals_PutWithDifferentImplicitPreReadGiven_ShouldReturnFalse() {
-    // Arrange
-    Put put = preparePut();
-    Put another = preparePut();
-    another.setImplicitPreReadEnabled(true);
-
-    // Act
-    boolean ret = put.equals(another);
-
-    // Assert
-    assertThat(ret).isFalse();
-    assertThat(put.hashCode()).isNotEqualTo(another.hashCode());
-  }
-
-  @Test
-  public void equals_PutWithDifferentInsertModeGiven_ShouldReturnFalse() {
-    // Arrange
-    Put put = preparePut();
-    Put another = preparePut();
-    another.setInsertModeEnabled(true);
 
     // Act
     boolean ret = put.equals(another);

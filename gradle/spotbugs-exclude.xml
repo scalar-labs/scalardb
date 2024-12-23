@@ -7,6 +7,8 @@
       <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
       <!-- Temporarily excluded. See https://github.com/spotbugs/spotbugs/issues/1694 -->
       <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
+      <!-- To exclude Lombok thrown warnings -->
+      <Bug pattern="SAME_NAME_BUT_DIFFERENT"/>
     </Or>
   </Match>
 
@@ -31,5 +33,10 @@
       <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
       <Bug pattern="ODR_OPEN_DATABASE_RESOURCE"/>
     </Or>
+  </Match>
+  <!-- Ignore mutable object exposure warnings(caused by Lombok) for all classes in dataloader.core -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    <Package name="~com.scalar.db.dataloader.core.*"/>
   </Match>
 </FindBugsFilter>

@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Consistency;
@@ -26,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -101,9 +101,9 @@ public class CrudHandler {
         // transaction read it first. However, we update it only if a get operation has no
         // conjunction or the result exists. This is because we don’t know whether the record
         // actually exists or not due to the conjunction.
-        snapshot.put(key, result);
+        snapshot.putIntoReadSet(key, result);
       }
-      snapshot.put(get, result); // for re-read and validation
+      snapshot.putIntoGetSet(get, result); // for re-read and validation
       return;
     }
     throw new UncommittedRecordException(
@@ -117,7 +117,7 @@ public class CrudHandler {
       throws CrudException {
     TableMetadata metadata = getTableMetadata(key.getNamespace(), key.getTable());
     return snapshot
-        .mergeResult(key, snapshot.get(get), get.getConjunctions())
+        .getResult(key, get)
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled));
   }
 
@@ -139,17 +139,12 @@ public class CrudHandler {
     List<String> originalProjections = new ArrayList<>(originalScan.getProjections());
     Scan scan = (Scan) prepareStorageSelection(originalScan);
 
-    Map<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
-
-    Optional<Map<Snapshot.Key, TransactionResult>> resultsInSnapshot = snapshot.get(scan);
+    Optional<Map<Snapshot.Key, TransactionResult>> resultsInSnapshot = snapshot.getResults(scan);
     if (resultsInSnapshot.isPresent()) {
-      for (Entry<Snapshot.Key, TransactionResult> entry : resultsInSnapshot.get().entrySet()) {
-        snapshot
-            .mergeResult(entry.getKey(), Optional.of(entry.getValue()))
-            .ifPresent(result -> results.put(entry.getKey(), result));
-      }
-      return createScanResults(scan, originalProjections, results);
+      return createScanResults(scan, originalProjections, resultsInSnapshot.get());
     }
+
+    Map<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
 
     Scanner scanner = null;
     try {
@@ -169,9 +164,9 @@ public class CrudHandler {
         // We always update the read set to create before image by using the latest record (result)
         // because another conflicting transaction might have updated the record after this
         // transaction read it first.
-        snapshot.put(key, Optional.of(result));
+        snapshot.putIntoReadSet(key, Optional.of(result));
 
-        snapshot.mergeResult(key, Optional.of(result)).ifPresent(value -> results.put(key, value));
+        snapshot.getResult(key).ifPresent(value -> results.put(key, value));
       }
     } finally {
       if (scanner != null) {
@@ -182,7 +177,7 @@ public class CrudHandler {
         }
       }
     }
-    snapshot.put(scan, results);
+    snapshot.putIntoScanSet(scan, results);
 
     return createScanResults(scan, originalProjections, results);
   }
@@ -201,7 +196,7 @@ public class CrudHandler {
     Snapshot.Key key = new Snapshot.Key(put);
 
     if (put.getCondition().isPresent()
-        && (!put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key))) {
+        && (!isImplicitPreReadEnabled(put) && !snapshot.containsKeyInReadSet(key))) {
       throw new IllegalArgumentException(
           CoreError
               .CONSENSUS_COMMIT_PUT_CANNOT_HAVE_CONDITION_WHEN_TARGET_RECORD_UNREAD_AND_IMPLICIT_PRE_READ_DISABLED
@@ -209,14 +204,14 @@ public class CrudHandler {
     }
 
     if (put.getCondition().isPresent()) {
-      if (put.isImplicitPreReadEnabled() && !snapshot.containsKeyInReadSet(key)) {
+      if (isImplicitPreReadEnabled(put) && !snapshot.containsKeyInReadSet(key)) {
         read(key, createGet(key));
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
-          put, snapshot.getFromReadSet(key).orElse(null));
+          put, snapshot.getResult(key).orElse(null));
     }
 
-    snapshot.put(key, put);
+    snapshot.putIntoWriteSet(key, put);
   }
 
   public void delete(Delete delete) throws CrudException {
@@ -227,10 +222,10 @@ public class CrudHandler {
         read(key, createGet(key));
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
-          delete, snapshot.getFromReadSet(key).orElse(null));
+          delete, snapshot.getResult(key).orElse(null));
     }
 
-    snapshot.put(key, delete);
+    snapshot.putIntoDeleteSet(key, delete);
   }
 
   public void readIfImplicitPreReadEnabled() throws CrudException {
@@ -239,7 +234,7 @@ public class CrudHandler {
     // For each put in the write set, if implicit pre-read is enabled and the record is not read
     // yet, read the record
     for (Put put : snapshot.getPutsInWriteSet()) {
-      if (put.isImplicitPreReadEnabled()) {
+      if (isImplicitPreReadEnabled(put)) {
         Snapshot.Key key = new Snapshot.Key(put);
         if (!snapshot.containsKeyInReadSet(key)) {
           tasks.add(() -> read(key, createGet(key)));

@@ -108,6 +108,7 @@ dependencies {
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteDriverVersion}"
     implementation "com.yugabyte:jdbc-yugabytedb:${yugabyteDriverVersion}"
+    implementation "org.mariadb.jdbc:mariadb-java-client:${mariadDbDriverVersion}"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
