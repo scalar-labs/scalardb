@@ -246,7 +246,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param compartmentShortName the short name of the compartment to set
+   * @param compartmentShortName the short name of the compartment
    * @param accessMode the access mode
    * @param defaultCompartment whether the compartment is the default compartment
    * @param rowCompartment whether the compartment is the row compartment
@@ -268,7 +268,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param compartmentShortName the short name of the compartment to remove
+   * @param compartmentShortName the short name of the compartment
    * @throws ExecutionException if the operation fails
    */
   default void removeCompartmentFromUser(
@@ -282,7 +282,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param groupShortName the short name of the group to set
+   * @param groupShortName the short name of the group
    * @param accessMode the access mode
    * @param defaultGroup whether the group is the default group
    * @param rowGroup whether the group is the row group
@@ -304,7 +304,7 @@ public interface AbacAdmin {
    *
    * @param policyName the policy name
    * @param username the username
-   * @param groupShortName the short name of the group to remove
+   * @param groupShortName the short name of the group
    * @throws ExecutionException if the operation fails
    */
   default void removeGroupFromUser(String policyName, String username, String groupShortName)
