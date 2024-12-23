@@ -2,7 +2,6 @@ package com.scalar.db.dataloader.core.dataexport.validation;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.FileFormat;
@@ -14,136 +13,171 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ExportOptionsValidatorTest {
 
-  TableMetadata mockMetadata;
-  List<String> projectedColumns;
+  private TableMetadata singlePkCkMetadata;
+  private TableMetadata multiplePkCkMetadata;
+  private List<String> projectedColumns;
 
   @BeforeEach
   void setup() {
-    mockMetadata =
-        TableMetadata.newBuilder()
-            .addColumn("id", DataType.INT)
-            .addColumn("name", DataType.TEXT)
-            .addColumn("email", DataType.TEXT)
-            .addColumn("department", DataType.TEXT)
-            .addPartitionKey("id")
-            .addClusteringKey("department")
-            .build();
-    projectedColumns = new ArrayList<>();
-    projectedColumns.add("id");
-    projectedColumns.add("name");
-    projectedColumns.add("email");
-    projectedColumns.add("department");
+    singlePkCkMetadata = createMockMetadata(1, 1);
+    multiplePkCkMetadata = createMockMetadata(2, 2);
+    projectedColumns = createProjectedColumns();
+  }
+
+  private TableMetadata createMockMetadata(int pkCount, int ckCount) {
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+
+    // Add partition keys
+    for (int i = 1; i <= pkCount; i++) {
+      builder.addColumn("pk" + i, DataType.INT);
+      builder.addPartitionKey("pk" + i);
+    }
+
+    // Add clustering keys
+    for (int i = 1; i <= ckCount; i++) {
+      builder.addColumn("ck" + i, DataType.TEXT);
+      builder.addClusteringKey("ck" + i);
+    }
+
+    return builder.build();
+  }
+
+  private List<String> createProjectedColumns() {
+    List<String> columns = new ArrayList<>();
+    columns.add("pk1");
+    columns.add("ck1");
+    return columns;
   }
 
   @Test
-  void validate_withValidExportOptions_ShouldNotThrowException()
+  void validate_withValidExportOptionsForSinglePkCk_ShouldNotThrowException()
       throws ExportOptionsValidationException {
+
+    Key partitionKey = Key.newBuilder().add(IntColumn.of("pk1", 1)).build();
+
     ExportOptions exportOptions =
-        ExportOptions.builder(
-                "test",
-                "sample",
-                Key.newBuilder().add(IntColumn.of("id", 1)).build(),
-                FileFormat.JSON)
-            .sortOrders(Collections.emptyList())
-            .scanRange(new ScanRange(null, null, false, false))
+        ExportOptions.builder("test", "sample", partitionKey, FileFormat.JSON)
             .projectionColumns(projectedColumns)
-            .build();
-    ExportOptionsValidator.validate(exportOptions, mockMetadata);
-  }
-
-  @Test
-  void validate_withInValidColumnInProjectionColumnList_ShouldThrowException() {
-    ExportOptions exportOptions =
-        ExportOptions.builder(
-                "test",
-                "sample",
-                Key.newBuilder().add(IntColumn.of("id", 1)).build(),
-                FileFormat.JSON)
-            .sortOrders(Collections.emptyList())
             .scanRange(new ScanRange(null, null, false, false))
-            .projectionColumns(Collections.singletonList("sample"))
             .build();
-    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, mockMetadata))
-        .isInstanceOf(ExportOptionsValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_INVALID_PROJECTION.buildMessage("sample"));
+
+    ExportOptionsValidator.validate(exportOptions, singlePkCkMetadata);
   }
 
   @Test
-  void validate_withInValidSortOrderWithMultipleClusteringKeys_ShouldThrowException() {
-    mockMetadata =
-        TableMetadata.newBuilder()
-            .addColumn("id", DataType.INT)
-            .addColumn("name", DataType.TEXT)
-            .addColumn("email", DataType.TEXT)
-            .addColumn("department", DataType.TEXT)
-            .addColumn("building", DataType.TEXT)
-            .addPartitionKey("id")
-            .addClusteringKey("department")
-            .addClusteringKey("building")
-            .build();
-    ExportOptions exportOptions =
-        ExportOptions.builder(
-                "test",
-                "sample",
-                Key.newBuilder().add(IntColumn.of("id", 1)).build(),
-                FileFormat.JSON)
-            .sortOrders(
-                Collections.singletonList(new Scan.Ordering("name", Scan.Ordering.Order.ASC)))
-            .scanRange(new ScanRange(null, null, false, false))
-            .projectionColumns(Collections.singletonList("id"))
-            .build();
-    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, mockMetadata))
-        .isInstanceOf(ExportOptionsValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_CLUSTERING_KEY_NOT_FOUND.buildMessage("name"));
-  }
+  void validate_withValidExportOptionsForMultiplePkCk_ShouldNotThrowException()
+      throws ExportOptionsValidationException {
 
-  @Test
-  void validate_withInValidKeyInSortRange_ShouldThrowException() {
-    ExportOptions exportOptions =
-        ExportOptions.builder(
-                "test",
-                "sample",
-                Key.newBuilder().add(IntColumn.of("id", 1)).build(),
-                FileFormat.JSON)
-            .sortOrders(Collections.emptyList())
-            .scanRange(
-                new ScanRange(
-                    Key.newBuilder().add(IntColumn.of("id", 1)).build(),
-                    Key.newBuilder().add(IntColumn.of("id", 100)).build(),
-                    false,
-                    false))
-            .projectionColumns(Collections.singletonList("id"))
-            .build();
-    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, mockMetadata))
-        .isInstanceOf(ExportOptionsValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_CLUSTERING_KEY_NOT_FOUND.buildMessage("id"));
-  }
+    Key partitionKey =
+        Key.newBuilder().add(IntColumn.of("pk1", 1)).add(IntColumn.of("pk2", 2)).build();
 
-  @Test
-  void validate_withInValidEndKeyInSortRange_ShouldThrowException() {
     ExportOptions exportOptions =
-        ExportOptions.builder(
-                "test",
-                "sample",
-                Key.newBuilder().add(IntColumn.of("id", 1)).build(),
-                FileFormat.JSON)
-            .sortOrders(Collections.emptyList())
-            .scanRange(
-                new ScanRange(
-                    Key.newBuilder().add(TextColumn.of("department", "sample")).build(),
-                    Key.newBuilder().add(IntColumn.of("name", 100)).build(),
-                    false,
-                    false))
+        ExportOptions.builder("test", "sample", partitionKey, FileFormat.JSON)
             .projectionColumns(projectedColumns)
+            .scanRange(new ScanRange(null, null, false, false))
             .build();
-    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, mockMetadata))
+
+    ExportOptionsValidator.validate(exportOptions, multiplePkCkMetadata);
+  }
+
+  @Test
+  void validate_withIncompletePartitionKeyForSinglePk_ShouldThrowException() {
+    Key incompletePartitionKey = Key.newBuilder().build();
+
+    ExportOptions exportOptions =
+        ExportOptions.builder("test", "sample", incompletePartitionKey, FileFormat.JSON).build();
+
+    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, singlePkCkMetadata))
         .isInstanceOf(ExportOptionsValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_CLUSTERING_KEY_NOT_FOUND.buildMessage("name"));
+        .hasMessage(
+            CoreError.DATA_LOADER_INCOMPLETE_PARTITION_KEY.buildMessage(
+                singlePkCkMetadata.getPartitionKeyNames()));
+  }
+
+  @Test
+  void validate_withIncompletePartitionKeyForMultiplePks_ShouldThrowException() {
+    Key incompletePartitionKey = Key.newBuilder().add(IntColumn.of("pk1", 1)).build();
+
+    ExportOptions exportOptions =
+        ExportOptions.builder("test", "sample", incompletePartitionKey, FileFormat.JSON).build();
+
+    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, multiplePkCkMetadata))
+        .isInstanceOf(ExportOptionsValidationException.class)
+        .hasMessage(
+            CoreError.DATA_LOADER_INCOMPLETE_PARTITION_KEY.buildMessage(
+                multiplePkCkMetadata.getPartitionKeyNames()));
+  }
+
+  @Test
+  void validate_withInvalidProjectionColumn_ShouldThrowException() {
+    ExportOptions exportOptions =
+        ExportOptions.builder(
+                "test",
+                "sample",
+                Key.newBuilder().add(IntColumn.of("pk1", 1)).build(),
+                FileFormat.JSON)
+            .projectionColumns(Collections.singletonList("invalid_column"))
+            .build();
+
+    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, singlePkCkMetadata))
+        .isInstanceOf(ExportOptionsValidationException.class)
+        .hasMessage(CoreError.DATA_LOADER_INVALID_PROJECTION.buildMessage("invalid_column"));
+  }
+
+  @Test
+  void validate_withInvalidClusteringKeyInScanRange_ShouldThrowException() {
+    ScanRange scanRange =
+        new ScanRange(
+            Key.newBuilder().add(TextColumn.of("invalid_ck", "value")).build(),
+            Key.newBuilder().add(TextColumn.of("ck1", "value")).build(),
+            false,
+            false);
+
+    ExportOptions exportOptions =
+        ExportOptions.builder("test", "sample", createValidPartitionKey(), FileFormat.JSON)
+            .scanRange(scanRange)
+            .build();
+
+    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, singlePkCkMetadata))
+        .isInstanceOf(ExportOptionsValidationException.class)
+        .hasMessage(CoreError.DATA_LOADER_CLUSTERING_KEY_ORDER_MISMATCH.buildMessage("[ck1]"));
+  }
+
+  @Test
+  void validate_withInvalidPartitionKeyOrder_ShouldThrowException() {
+    // Partition key names are expected to be "pk1", "pk2"
+    LinkedHashSet<String> partitionKeyNames = new LinkedHashSet<>();
+    partitionKeyNames.add("pk1");
+    partitionKeyNames.add("pk2");
+
+    // Create a partition key with reversed order, expecting an error
+    Key invalidPartitionKey =
+        Key.newBuilder()
+            .add(IntColumn.of("pk2", 2)) // Incorrect order
+            .add(IntColumn.of("pk1", 1)) // Incorrect order
+            .build();
+
+    ExportOptions exportOptions =
+        ExportOptions.builder("test", "sample", invalidPartitionKey, FileFormat.JSON)
+            .projectionColumns(projectedColumns)
+            .scanRange(new ScanRange(null, null, false, false))
+            .build();
+
+    // Verify that the validator throws the correct exception
+    assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, multiplePkCkMetadata))
+        .isInstanceOf(ExportOptionsValidationException.class)
+        .hasMessage(
+            CoreError.DATA_LOADER_PARTITION_KEY_ORDER_MISMATCH.buildMessage(partitionKeyNames));
+  }
+
+  private Key createValidPartitionKey() {
+    return Key.newBuilder().add(IntColumn.of("pk1", 1)).build();
   }
 }
