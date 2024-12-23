@@ -35,4 +35,9 @@
       <Bug pattern="ODR_OPEN_DATABASE_RESOURCE"/>
     </Or>
   </Match>
+  <!-- Ignore mutable object exposure warnings(caused by Lombok) for all classes in dataloader.core -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    <Package name="~com.scalar.db.dataloader.core.*"/>
+  </Match>
 </FindBugsFilter>
