@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 class ColumnEncodingUtilsTest {
@@ -236,10 +237,16 @@ class ColumnEncodingUtilsTest {
     for (LocalDateTime dt = start; dt.isBefore(end); dt = dt.plusNanos(1_000_000)) {
       expectedTimestamps.add(ColumnEncodingUtils.encode(TimestampColumn.of("ts", dt)));
     }
+    long seed = System.currentTimeMillis();
+    System.out.printf(
+        "The seed used in the %s.%s unit test is %s\n",
+        this.getClass().getSimpleName(), "encodeTimestamp_ShouldPreserveOrder", seed);
+    ThreadLocal<Random> random = ThreadLocal.withInitial(Random::new);
+    random.get().setSeed(seed);
 
     // Act
     List<Long> shuffleThenSorted = new ArrayList<>(expectedTimestamps);
-    Collections.shuffle(shuffleThenSorted);
+    Collections.shuffle(shuffleThenSorted, random.get());
     shuffleThenSorted.sort(Comparator.naturalOrder());
 
     // Assert
@@ -255,10 +262,16 @@ class ColumnEncodingUtilsTest {
     for (Instant instant = start; instant.isBefore(end); instant = instant.plusNanos(1_000_000)) {
       expectedTimestamps.add(ColumnEncodingUtils.encode(TimestampTZColumn.of("ts", instant)));
     }
+    long seed = System.currentTimeMillis();
+    System.out.printf(
+        "The seed used in the %s.%s unit test is %s\n",
+        this.getClass().getSimpleName(), "encodeTimestampTZ_ShouldPreserveOrder", seed);
+    ThreadLocal<Random> random = ThreadLocal.withInitial(Random::new);
+    random.get().setSeed(seed);
 
     // Act
     List<Long> shuffleThenSorted = new ArrayList<>(expectedTimestamps);
-    Collections.shuffle(shuffleThenSorted);
+    Collections.shuffle(shuffleThenSorted, random.get());
     shuffleThenSorted.sort(Comparator.naturalOrder());
 
     // Assert

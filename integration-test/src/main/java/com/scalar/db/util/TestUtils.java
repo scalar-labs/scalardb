@@ -28,6 +28,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -281,7 +282,7 @@ public final class TestUtils {
     for (Result actualResult : actualResults) {
       ExpectedResult matchedExpectedResult = findFirstMatchingResult(actualResult, expectedResults);
       if (matchedExpectedResult == null) {
-        Assertions.fail("The actual result " + actualResult + " is not expected");
+        Assertions.fail("This actual result is not expected: " + actualResult);
       } else {
         expectedResults.remove(matchedExpectedResult);
       }
@@ -356,6 +357,11 @@ public final class TestUtils {
 
       public ExpectedResultBuilder column(Column<?> column) {
         columns.add(column);
+        return this;
+      }
+
+      public ExpectedResultBuilder columns(Collection<Column<?>> columns) {
+        this.columns.addAll(columns);
         return this;
       }
 

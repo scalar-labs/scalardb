@@ -272,14 +272,6 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.BLOB;
       case LONGVARBINARY:
         return DataType.BLOB;
-      case DATE:
-        return DataType.DATE;
-      case TIME:
-        return DataType.TIME;
-      case TIMESTAMP:
-        return DataType.TIMESTAMP;
-      case TIMESTAMP_WITH_TIMEZONE:
-        return DataType.TIMESTAMPTZ;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -364,18 +356,24 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String encodeDate(DateColumn column) {
     assert column.getDateValue() != null;
+    // Pass the date value as text otherwise the dates before the Julian to Gregorian Calendar
+    // transition (October 15, 1582) will be offset by 10 days.
     return column.getDateValue().format(DateTimeFormatter.BASIC_ISO_DATE);
   }
 
   @Override
   public String encodeTimestamp(TimestampColumn column) {
     assert column.getTimestampValue() != null;
+    // Pass the timestamp value as text otherwise the dates before the Julian to Gregorian Calendar
+    // transition (October 15, 1582) will be offset by 10 days.
     return column.getTimestampValue().format(DateTimeFormatter.ISO_DATE_TIME);
   }
 
   @Override
   public DateTimeOffset encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
+    // When using SQLServer DATETIMEOFFSET data type, we should use the SQLServer JDBC driver's
+    // microsoft.sql.DateTimeOffset class for encoding the value.
     return DateTimeOffset.valueOf(Timestamp.from(column.getTimestampTZValue()), 0);
   }
 

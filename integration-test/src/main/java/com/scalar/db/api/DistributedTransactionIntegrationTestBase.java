@@ -16,15 +16,32 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.util.TestUtils;
 import com.scalar.db.util.TestUtils.ExpectedResult;
 import com.scalar.db.util.TestUtils.ExpectedResult.ExpectedResultBuilder;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +51,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,19 +71,19 @@ public abstract class DistributedTransactionIntegrationTestBase {
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
   protected static final String SOME_COLUMN = "some_column";
+  protected static final String BOOLEAN_COL = "boolean_col";
+  protected static final String BIGINT_COL = "bigint_col";
+  protected static final String FLOAT_COL = "float_col";
+  protected static final String DOUBLE_COL = "double_col";
+  protected static final String TEXT_COL = "text_col";
+  protected static final String BLOB_COL = "blob_col";
+  protected static final String DATE_COL = "date_col";
+  protected static final String TIME_COL = "time_col";
+  protected static final String TIMESTAMP_COL = "timestamp_col";
+  protected static final String TIMESTAMPTZ_COL = "timestamptz_col";
   protected static final int INITIAL_BALANCE = 1000;
   protected static final int NUM_ACCOUNTS = 4;
   protected static final int NUM_TYPES = 4;
-  protected static final TableMetadata TABLE_METADATA =
-      TableMetadata.newBuilder()
-          .addColumn(ACCOUNT_ID, DataType.INT)
-          .addColumn(ACCOUNT_TYPE, DataType.INT)
-          .addColumn(BALANCE, DataType.INT)
-          .addColumn(SOME_COLUMN, DataType.INT)
-          .addPartitionKey(ACCOUNT_ID)
-          .addClusteringKey(ACCOUNT_TYPE)
-          .addSecondaryIndex(SOME_COLUMN)
-          .build();
   protected DistributedTransactionAdmin admin;
   protected DistributedTransactionManager manager;
   protected String namespace;
@@ -93,10 +111,32 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   private void createTables() throws ExecutionException {
+    TableMetadata.Builder tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(SOME_COLUMN, DataType.INT)
+            .addColumn(BOOLEAN_COL, DataType.BOOLEAN)
+            .addColumn(BIGINT_COL, DataType.BIGINT)
+            .addColumn(FLOAT_COL, DataType.FLOAT)
+            .addColumn(DOUBLE_COL, DataType.DOUBLE)
+            .addColumn(TEXT_COL, DataType.TEXT)
+            .addColumn(BLOB_COL, DataType.BLOB)
+            .addColumn(DATE_COL, DataType.DATE)
+            .addColumn(TIME_COL, DataType.TIME)
+            .addColumn(TIMESTAMPTZ_COL, DataType.TIMESTAMPTZ)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(SOME_COLUMN);
+    if (isTimestampTypeSupported()) {
+      tableMetadata.addColumn(TIMESTAMP_COL, DataType.TIMESTAMP);
+    }
+
     Map<String, String> options = getCreationOptions();
     admin.createCoordinatorTables(true, options);
     admin.createNamespace(namespace, true, options);
-    admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
+    admin.createTable(namespace, TABLE, tableMetadata.build(), true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -145,18 +185,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Get get = prepareGet(0, 0);
+    Get get = prepareGet(2, 3);
 
     // Act
     Optional<Result> result = transaction.get(get);
     transaction.commit();
 
     // Assert
-    assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
-    assertThat(result.get().getInt(SOME_COLUMN)).isEqualTo(0);
+    assertResult(2, 3, result);
   }
 
   @Test
@@ -190,22 +226,31 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Get get =
-        Get.newBuilder(prepareGet(1, 1))
+
+    GetBuilder.BuildableGetFromExistingWithOngoingWhereAnd get =
+        Get.newBuilder(prepareGet(1, 2))
             .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToInt(1))
-            .build();
+            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToInt(2))
+            .and(ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true))
+            .and(ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE))
+            .and(ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F))
+            .and(ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10))
+            .and(ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"))
+            .and(ConditionBuilder.column(DATE_COL).isLessThanDate(LocalDate.of(3000, 1, 1)))
+            .and(ConditionBuilder.column(TIME_COL).isNotNullTime())
+            .and(ConditionBuilder.column(TIMESTAMPTZ_COL).isNotEqualToTimestampTZ(Instant.EPOCH));
+    if (isTimestampTypeSupported()) {
+      get.and(
+          ConditionBuilder.column(TIMESTAMP_COL)
+              .isGreaterThanOrEqualToTimestamp(LocalDateTime.of(1970, 1, 1, 1, 2)));
+    }
 
     // Act
-    Optional<Result> result = transaction.get(get);
+    Optional<Result> result = transaction.get(get.build());
     transaction.commit();
 
     // Assert
-    assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(1);
-    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
-    assertThat(result.get().getInt(SOME_COLUMN)).isEqualTo(1);
+    assertResult(1, 2, result);
   }
 
   @Test
@@ -241,20 +286,9 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(0);
-
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(1);
-
-    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
-    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-    assertThat(results.get(2).getInt(SOME_COLUMN)).isEqualTo(2);
+    assertResult(1, 0, results.get(0));
+    assertResult(1, 1, results.get(1));
+    assertResult(1, 2, results.get(2));
   }
 
   @Test
@@ -473,15 +507,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
         new ExpectedResultBuilder()
             .column(IntColumn.of(ACCOUNT_ID, 1))
             .column(IntColumn.of(ACCOUNT_TYPE, 2))
-            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
-            .column(IntColumn.of(SOME_COLUMN, 2))
+            .columns(prepareNonKeyColumns(1, 2))
             .build());
     expectedResults.add(
         new ExpectedResultBuilder()
             .column(IntColumn.of(ACCOUNT_ID, 2))
             .column(IntColumn.of(ACCOUNT_TYPE, 1))
-            .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
-            .column(IntColumn.of(SOME_COLUMN, 2))
+            .columns(prepareNonKeyColumns(2, 1))
             .build());
 
     // Act
@@ -546,8 +578,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
                                 new ExpectedResultBuilder()
                                     .column(IntColumn.of(ACCOUNT_ID, i))
                                     .column(IntColumn.of(ACCOUNT_TYPE, j))
-                                    .column(IntColumn.of(BALANCE, INITIAL_BALANCE))
-                                    .column(IntColumn.of(SOME_COLUMN, i * j))
+                                    .columns(prepareNonKeyColumns(i, j))
                                     .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
@@ -556,22 +587,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void scan_ScanAllGivenWithLimit_ShouldReturnLimitedAmountOfRecords()
       throws TransactionException {
     // Arrange
-    put(
-        new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 1))
-            .forNamespace(namespace)
-            .forTable(TABLE));
-    put(
-        new Put(Key.ofInt(ACCOUNT_ID, 1), Key.ofInt(ACCOUNT_TYPE, 2))
-            .forNamespace(namespace)
-            .forTable(TABLE));
-    put(
-        new Put(Key.ofInt(ACCOUNT_ID, 2), Key.ofInt(ACCOUNT_TYPE, 1))
-            .forNamespace(namespace)
-            .forTable(TABLE));
-    put(
-        new Put(Key.ofInt(ACCOUNT_ID, 3), Key.ofInt(ACCOUNT_TYPE, 0))
-            .forNamespace(namespace)
-            .forTable(TABLE));
+    insert(prepareInsert(1, 1), prepareInsert(1, 2), prepareInsert(2, 1), prepareInsert(3, 0));
 
     DistributedTransaction scanAllTransaction = manager.start();
     ScanAll scanAll = prepareScanAll().withLimit(2);
@@ -587,26 +603,22 @@ public abstract class DistributedTransactionIntegrationTestBase {
             new ExpectedResultBuilder()
                 .column(IntColumn.of(ACCOUNT_ID, 1))
                 .column(IntColumn.of(ACCOUNT_TYPE, 1))
-                .column(IntColumn.ofNull(BALANCE))
-                .column(IntColumn.ofNull(SOME_COLUMN))
+                .columns(prepareNonKeyColumns(1, 1))
                 .build(),
             new ExpectedResultBuilder()
                 .column(IntColumn.of(ACCOUNT_ID, 1))
                 .column(IntColumn.of(ACCOUNT_TYPE, 2))
-                .column(IntColumn.ofNull(BALANCE))
-                .column(IntColumn.ofNull(SOME_COLUMN))
+                .columns(prepareNonKeyColumns(1, 2))
                 .build(),
             new ExpectedResultBuilder()
                 .column(IntColumn.of(ACCOUNT_ID, 2))
                 .column(IntColumn.of(ACCOUNT_TYPE, 1))
-                .column(IntColumn.ofNull(BALANCE))
-                .column(IntColumn.ofNull(SOME_COLUMN))
+                .columns(prepareNonKeyColumns(2, 1))
                 .build(),
             new ExpectedResultBuilder()
                 .column(IntColumn.of(ACCOUNT_ID, 3))
                 .column(IntColumn.of(ACCOUNT_TYPE, 0))
-                .column(IntColumn.ofNull(BALANCE))
-                .column(IntColumn.ofNull(SOME_COLUMN))
+                .columns(prepareNonKeyColumns(3, 0))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -656,19 +668,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
-    int expected = INITIAL_BALANCE;
-    Put put =
+    PutBuilder.Buildable put =
         Put.newBuilder()
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .build();
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(0, 0).forEach(put::value);
     DistributedTransaction transaction = manager.start();
 
     // Act
-    transaction.put(put);
+    transaction.put(put.build());
     transaction.commit();
 
     // Assert
@@ -676,28 +686,34 @@ public abstract class DistributedTransactionIntegrationTestBase {
     DistributedTransaction another = manager.start();
     Optional<Result> result = another.get(get);
     another.commit();
+
     assertThat(result.isPresent()).isTrue();
-    assertThat(getBalance(result.get())).isEqualTo(expected);
+    assertResult(0, 0, result);
   }
 
   @Test
   public void putAndCommit_PutGivenForExisting_ShouldUpdateRecord() throws TransactionException {
     // Arrange
-    populateRecords();
+    InsertBuilder.Buildable insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(2, 2).forEach(insert::value);
+    insert(insert.build());
     DistributedTransaction transaction = manager.start();
 
     // Act
-    int expected = INITIAL_BALANCE + 100;
-    Put put =
+    PutBuilder.Buildable put =
         Put.newBuilder()
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .enableImplicitPreRead()
-            .build();
-    transaction.put(put);
+            .enableImplicitPreRead();
+    prepareNonKeyColumns(0, 0).forEach(put::value);
+    transaction.put(put.build());
     transaction.commit();
 
     // Assert
@@ -706,7 +722,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     another.commit();
 
     assertThat(actual.isPresent()).isTrue();
-    assertThat(getBalance(actual.get())).isEqualTo(expected);
+    assertResult(0, 0, actual);
   }
 
   @Test
@@ -1341,37 +1357,37 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void put_withPutIfWithVerifiedCondition_shouldPutProperly() throws TransactionException {
     // Arrange
-    int someColumnValue = 10;
-    Put initialData =
-        Put.newBuilder(preparePut(0, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .intValue(SOME_COLUMN, someColumnValue)
-            .build();
-    put(initialData);
+    PutBuilder.Buildable initialData = Put.newBuilder(preparePut(2, 3));
+    prepareNonKeyColumns(1, 2).forEach(initialData::value);
+    put(initialData.build());
 
-    int updatedBalance = 2;
-    Put putIf =
-        Put.newBuilder(initialData)
-            .intValue(BALANCE, updatedBalance)
-            .condition(
-                ConditionBuilder.putIf(
-                        ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                    .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
-                    .build())
-            .enableImplicitPreRead()
-            .build();
+    List<ConditionalExpression> conditions =
+        Lists.newArrayList(
+            ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
+            ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
+            ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
+            ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
+            ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
+            ConditionBuilder.column(DATE_COL).isLessThanDate(LocalDate.of(3000, 1, 1)),
+            ConditionBuilder.column(TIME_COL).isNotNullTime(),
+            ConditionBuilder.column(TIMESTAMPTZ_COL).isNotEqualToTimestampTZ(Instant.EPOCH));
+    if (isTimestampTypeSupported()) {
+      conditions.add(
+          ConditionBuilder.column(TIMESTAMP_COL)
+              .isGreaterThanOrEqualToTimestamp(LocalDateTime.of(1970, 1, 1, 1, 2)));
+    }
+    PutBuilder.Buildable putIf = Put.newBuilder(initialData.build()).clearValues();
+    prepareNonKeyColumns(2, 3).forEach(putIf::value);
+    putIf.condition(ConditionBuilder.putIf(conditions)).enableImplicitPreRead().build();
 
     // Act
-    put(putIf);
+    put(putIf.build());
 
     // Assert
-    Optional<Result> optResult = get(prepareGet(0, 0));
-    assertThat(optResult.isPresent()).isTrue();
-    Result result = optResult.get();
-    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(result.getInt(BALANCE)).isEqualTo(updatedBalance);
-    assertThat(result.getInt(SOME_COLUMN)).isEqualTo(someColumnValue);
+    Optional<Result> optResult = get(prepareGet(2, 3));
+    assertResult(2, 3, optResult);
   }
 
   @Test
@@ -1426,16 +1442,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void delete_withDeleteIfWithVerifiedCondition_shouldDeleteProperly()
       throws TransactionException {
     // Arrange
-    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
-    put(initialData);
+    PutBuilder.Buildable initialData = Put.newBuilder(preparePut(1, 2));
+    prepareNonKeyColumns(1, 2).forEach(initialData::value);
+    put(initialData.build());
+
+    List<ConditionalExpression> conditions =
+        Lists.newArrayList(
+            ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
+            ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
+            ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
+            ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
+            ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
+            ConditionBuilder.column(DATE_COL).isLessThanDate(LocalDate.of(3000, 1, 1)),
+            ConditionBuilder.column(TIME_COL).isNotNullTime(),
+            ConditionBuilder.column(TIMESTAMPTZ_COL).isNotEqualToTimestampTZ(Instant.EPOCH));
 
     Delete deleteIf =
-        Delete.newBuilder(prepareDelete(0, 0))
-            .condition(
-                ConditionBuilder.deleteIf(
-                        ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                    .and(ConditionBuilder.column(SOME_COLUMN).isNullInt())
-                    .build())
+        Delete.newBuilder(prepareDelete(1, 2))
+            .condition(ConditionBuilder.deleteIf(conditions))
             .build();
 
     // Act
@@ -1598,19 +1624,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void insertAndCommit_InsertGivenForNonExisting_ShouldCreateRecord()
       throws TransactionException {
     // Arrange
-    int expected = INITIAL_BALANCE;
-    Insert insert =
-        Insert.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .build();
     DistributedTransaction transaction = manager.start();
 
     // Act
-    transaction.insert(insert);
+    transaction.insert(prepareInsert(0, 0));
     transaction.commit();
 
     // Assert
@@ -1619,7 +1636,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> result = another.get(get);
     another.commit();
     assertThat(result.isPresent()).isTrue();
-    assertThat(getBalance(result.get())).isEqualTo(expected);
+    assertResult(0, 0, result);
   }
 
   @Test
@@ -1655,19 +1672,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void upsertAndCommit_UpsertGivenForNonExisting_ShouldCreateRecord()
       throws TransactionException {
     // Arrange
-    int expected = INITIAL_BALANCE;
-    Upsert upsert =
+    UpsertBuilder.Buildable upsert =
         Upsert.newBuilder()
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .build();
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(0, 0).forEach(upsert::value);
     DistributedTransaction transaction = manager.start();
 
     // Act
-    transaction.upsert(upsert);
+    transaction.upsert(upsert.build());
     transaction.commit();
 
     // Assert
@@ -1675,28 +1690,33 @@ public abstract class DistributedTransactionIntegrationTestBase {
     DistributedTransaction another = manager.start();
     Optional<Result> result = another.get(get);
     another.commit();
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getBalance(result.get())).isEqualTo(expected);
+
+    assertResult(0, 0, result);
   }
 
   @Test
   public void upsertAndCommit_UpsertGivenForExisting_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
-    populateRecords();
+    InsertBuilder.Buildable insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(1, 1).forEach(insert::value);
+    insert(insert.build());
     DistributedTransaction transaction = manager.start();
 
     // Act
-    int expected = INITIAL_BALANCE + 100;
-    Upsert upsert =
+    UpsertBuilder.Buildable upsert =
         Upsert.newBuilder()
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .build();
-    transaction.upsert(upsert);
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(0, 0).forEach(upsert::value);
+    transaction.upsert(upsert.build());
     transaction.commit();
 
     // Assert
@@ -1704,8 +1724,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> actual = another.get(prepareGet(0, 0));
     another.commit();
 
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(getBalance(actual.get())).isEqualTo(expected);
+    assertResult(0, 0, actual);
   }
 
   @Test
@@ -1760,20 +1779,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
   public void updateAndCommit_UpdateGivenForExisting_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
-    populateRecords();
+    InsertBuilder.Buildable insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(1, 1).forEach(insert::value);
+    insert(insert.build());
+
     DistributedTransaction transaction = manager.start();
 
     // Act
-    int expected = INITIAL_BALANCE + 100;
-    Update update =
+    UpdateBuilder.Buildable update =
         Update.newBuilder()
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .build();
-    transaction.update(update);
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(0, 0).forEach(update::value);
+    transaction.update(update.build());
     transaction.commit();
 
     // Assert
@@ -1781,29 +1806,34 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> actual = another.get(prepareGet(0, 0));
     another.commit();
 
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(getBalance(actual.get())).isEqualTo(expected);
+    assertResult(0, 0, actual);
   }
 
   @Test
   public void updateAndCommit_UpdateWithUpdateIfExistsGivenForExisting_ShouldUpdateRecord()
       throws TransactionException {
     // Arrange
-    populateRecords();
+    InsertBuilder.Buildable insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(1, 1).forEach(insert::value);
+    insert(insert.build());
+
     DistributedTransaction transaction = manager.start();
 
     // Act
-    int expected = INITIAL_BALANCE + 100;
-    Update update =
+    UpdateBuilder.Buildable update =
         Update.newBuilder()
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expected)
-            .condition(ConditionBuilder.updateIfExists())
-            .build();
-    transaction.update(update);
+            .condition(ConditionBuilder.updateIfExists());
+    prepareNonKeyColumns(0, 0).forEach(update::value);
+    transaction.update(update.build());
     transaction.commit();
 
     // Assert
@@ -1811,51 +1841,59 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> actual = another.get(prepareGet(0, 0));
     another.commit();
 
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(getBalance(actual.get())).isEqualTo(expected);
+    assertResult(0, 0, actual);
   }
 
   @Test
   public void update_withUpdateIfWithVerifiedCondition_shouldUpdateProperly()
       throws TransactionException {
     // Arrange
-    int someColumnValue = 10;
-    Put initialData =
-        Put.newBuilder(preparePut(0, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .intValue(SOME_COLUMN, someColumnValue)
-            .build();
-    put(initialData);
+    InsertBuilder.Buildable insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 3));
+    prepareNonKeyColumns(1, 2).forEach(insert::value);
+    insert(insert.build());
 
-    int updatedBalance = 2;
-    Update updateIf =
+    List<ConditionalExpression> conditions =
+        Lists.newArrayList(
+            ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
+            ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
+            ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
+            ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
+            ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
+            ConditionBuilder.column(DATE_COL).isLessThanDate(LocalDate.of(3000, 1, 1)),
+            ConditionBuilder.column(TIME_COL).isNotNullTime(),
+            ConditionBuilder.column(TIMESTAMPTZ_COL).isNotEqualToTimestampTZ(Instant.EPOCH));
+    if (isTimestampTypeSupported()) {
+      conditions.add(
+          ConditionBuilder.column(TIMESTAMP_COL)
+              .isGreaterThanOrEqualToTimestamp(LocalDateTime.of(1970, 1, 1, 1, 2)));
+    }
+    UpdateBuilder.Buildable updateIf =
         Update.newBuilder()
             .namespace(namespace)
             .table(TABLE)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, updatedBalance)
-            .condition(
-                ConditionBuilder.updateIf(
-                        ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                    .and(ConditionBuilder.column(SOME_COLUMN).isNotNullInt())
-                    .build())
-            .build();
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 3))
+            .condition(ConditionBuilder.updateIf(conditions));
+    prepareNonKeyColumns(2, 3).forEach(updateIf::value);
 
     DistributedTransaction transaction = manager.start();
 
     // Act
-    transaction.update(updateIf);
+    transaction.update(updateIf.build());
     transaction.commit();
 
     // Assert
-    Optional<Result> optResult = get(prepareGet(0, 0));
+    Optional<Result> optResult = get(prepareGet(2, 3));
     assertThat(optResult.isPresent()).isTrue();
     Result result = optResult.get();
-    assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(result.getInt(BALANCE)).isEqualTo(updatedBalance);
-    assertThat(result.getInt(SOME_COLUMN)).isEqualTo(someColumnValue);
+    assertResult(2, 3, result);
   }
 
   @Test
@@ -2381,6 +2419,19 @@ public abstract class DistributedTransactionIntegrationTestBase {
     }
   }
 
+  protected void insert(Insert... insert) throws TransactionException {
+    DistributedTransaction tx = manager.start();
+    try {
+      for (Insert i : insert) {
+        tx.insert(i);
+      }
+      tx.commit();
+    } catch (TransactionException e) {
+      tx.rollback();
+      throw e;
+    }
+  }
+
   protected void delete(Delete delete) throws TransactionException {
     DistributedTransaction tx = manager.start();
     try {
@@ -2394,29 +2445,24 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
   protected void populateRecords() throws TransactionException {
     DistributedTransaction transaction = manager.start();
-    IntStream.range(0, NUM_ACCOUNTS)
-        .forEach(
-            i ->
-                IntStream.range(0, NUM_TYPES)
-                    .forEach(
-                        j -> {
-                          Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
-                          Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
-                          Put put =
-                              Put.newBuilder()
-                                  .namespace(namespace)
-                                  .table(TABLE)
-                                  .partitionKey(partitionKey)
-                                  .clusteringKey(clusteringKey)
-                                  .intValue(BALANCE, INITIAL_BALANCE)
-                                  .intValue(SOME_COLUMN, i * j)
-                                  .build();
-                          try {
-                            transaction.put(put);
-                          } catch (CrudException e) {
-                            throw new RuntimeException(e);
-                          }
-                        }));
+    for (int i = 0; i < NUM_ACCOUNTS; i++) {
+      for (int j = 0; j < NUM_TYPES; j++) {
+        Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
+        Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
+        InsertBuilder.Buildable insert =
+            Insert.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey);
+        prepareNonKeyColumns(i, j).forEach(insert::value);
+        try {
+          transaction.insert(insert.build());
+        } catch (CrudException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
     transaction.commit();
   }
 
@@ -2473,6 +2519,20 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
+  protected Insert prepareInsert(int id, int type) {
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
+    InsertBuilder.Buildable insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey);
+    prepareNonKeyColumns(id, type).forEach(insert::value);
+
+    return insert.build();
+  }
+
   protected List<Put> preparePuts() {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
@@ -2494,5 +2554,119 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  private void assertResult(int accountId, int accountType, Optional<Result> optResult) {
+    assertResult(accountId, accountType, optResult.orElse(null));
+  }
+
+  private void assertResult(int accountId, int accountType, Result result) {
+    String resultErrorMessage =
+        String.format("Result { accountId=%d, accountType=%d }", accountId, accountType);
+
+    assertThat(result).describedAs(resultErrorMessage + " is null").isNotNull();
+
+    List<String> columns =
+        Lists.newArrayList(
+            ACCOUNT_ID,
+            ACCOUNT_TYPE,
+            BALANCE,
+            SOME_COLUMN,
+            BOOLEAN_COL,
+            BIGINT_COL,
+            FLOAT_COL,
+            DOUBLE_COL,
+            TEXT_COL,
+            BLOB_COL,
+            DATE_COL,
+            TIME_COL,
+            TIMESTAMPTZ_COL);
+    if (isTimestampTypeSupported()) {
+      columns.add(TIMESTAMP_COL);
+    }
+    assertThat(result.getContainedColumnNames())
+        .describedAs("Columns are missing. %s", resultErrorMessage)
+        .containsExactlyInAnyOrderElementsOf(columns);
+    for (String column : columns) {
+      assertThat(result.isNull(column))
+          .describedAs("Column {%s} is null. %s", column, resultErrorMessage)
+          .isFalse();
+    }
+
+    String columnMessage = "Unexpected value for column {%s}. %s";
+    assertThat(result.getInt(ACCOUNT_ID))
+        .describedAs(columnMessage, ACCOUNT_ID, resultErrorMessage)
+        .isEqualTo(accountId);
+    assertThat(result.getInt(ACCOUNT_TYPE))
+        .describedAs(columnMessage, ACCOUNT_TYPE, resultErrorMessage)
+        .isEqualTo(accountType);
+    assertThat(result.getInt(BALANCE))
+        .describedAs(columnMessage, BALANCE, resultErrorMessage)
+        .isEqualTo(INITIAL_BALANCE);
+    assertThat(result.getInt(SOME_COLUMN))
+        .describedAs(columnMessage, SOME_COLUMN, resultErrorMessage)
+        .isEqualTo(accountId * accountType);
+    assertThat(result.getBoolean(BOOLEAN_COL))
+        .describedAs(columnMessage, BOOLEAN_COL, resultErrorMessage)
+        .isEqualTo(accountId % 2 == 0);
+    assertThat(result.getBigInt(BIGINT_COL))
+        .describedAs(columnMessage, BIGINT_COL, resultErrorMessage)
+        .isEqualTo((long) Math.pow(accountId, accountType));
+    assertThat(result.getFloat(FLOAT_COL))
+        .describedAs(columnMessage, FLOAT_COL, resultErrorMessage)
+        .isEqualTo(Float.parseFloat("0." + accountId + accountType));
+    assertThat(result.getDouble(DOUBLE_COL))
+        .describedAs(columnMessage, DOUBLE_COL, resultErrorMessage)
+        .isEqualTo(Float.parseFloat("10." + accountId + accountType));
+    assertThat(result.getText(TEXT_COL))
+        .describedAs(columnMessage, TEXT_COL, resultErrorMessage)
+        .isEqualTo(accountId + "" + accountType);
+    assertThat(result.getBlobAsBytes(BLOB_COL))
+        .describedAs(columnMessage, BLOB_COL, resultErrorMessage)
+        .isEqualTo((accountId + "" + accountType).getBytes(StandardCharsets.UTF_8));
+    assertThat(result.getDate(DATE_COL))
+        .describedAs(columnMessage, DATE_COL, resultErrorMessage)
+        .isEqualTo(LocalDate.ofEpochDay(accountId + accountType));
+    assertThat(result.getTime(TIME_COL))
+        .describedAs(columnMessage, TIME_COL, resultErrorMessage)
+        .isEqualTo(LocalTime.of(accountId, accountType));
+    assertThat(result.getTimestampTZ(TIMESTAMPTZ_COL))
+        .describedAs(columnMessage, TIMESTAMPTZ_COL, resultErrorMessage)
+        .isEqualTo(LocalDateTime.of(1970, 1, 1, accountId, accountType).toInstant(ZoneOffset.UTC));
+    if (isTimestampTypeSupported()) {
+      assertThat(result.getTimestamp(TIMESTAMP_COL))
+          .describedAs(columnMessage, TIMESTAMP_COL, resultErrorMessage)
+          .isEqualTo(LocalDateTime.of(1970, 1, 1, accountId, accountType));
+    }
+  }
+
+  protected List<Column<?>> prepareNonKeyColumns(int accountId, int accountType) {
+    ImmutableList.Builder<Column<?>> columns =
+        new ImmutableList.Builder<Column<?>>()
+            .add(
+                IntColumn.of(BALANCE, INITIAL_BALANCE),
+                IntColumn.of(SOME_COLUMN, accountId * accountType),
+                BooleanColumn.of(BOOLEAN_COL, accountId % 2 == 0),
+                BigIntColumn.of(BIGINT_COL, (long) Math.pow(accountId, accountType)),
+                FloatColumn.of(FLOAT_COL, Float.parseFloat("0." + accountId + accountType)),
+                DoubleColumn.of(DOUBLE_COL, Float.parseFloat("10." + accountId + accountType)),
+                TextColumn.of(TEXT_COL, accountId + "" + accountType),
+                BlobColumn.of(
+                    BLOB_COL, (accountId + "" + accountType).getBytes(StandardCharsets.UTF_8)),
+                DateColumn.of(DATE_COL, LocalDate.ofEpochDay(accountId + accountType)),
+                TimeColumn.of(TIME_COL, LocalTime.of(accountId, accountType)),
+                TimestampTZColumn.of(
+                    TIMESTAMPTZ_COL,
+                    LocalDateTime.of(1970, 1, 1, accountId, accountType)
+                        .toInstant(ZoneOffset.UTC)));
+    if (isTimestampTypeSupported()) {
+      columns.add(
+          TimestampColumn.of(TIMESTAMP_COL, LocalDateTime.of(1970, 1, 1, accountId, accountType)));
+    }
+    return columns.build();
   }
 }

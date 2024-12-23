@@ -49,13 +49,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +91,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private ExecutorService executorService;
   private long seed;
-  private ThreadLocal<Random> random;
+  protected ThreadLocal<Random> random;
 
   private DistributedStorage storage;
   private DistributedStorageAdmin admin;
@@ -364,7 +367,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         .build();
   }
 
-  private List<Column<?>> prepareNonKeyColumns(int i) {
+  protected List<Column<?>> prepareNonKeyColumns(int i) {
     List<Column<?>> columns = new ArrayList<>();
     columns.add(IntColumn.of(COL_NAME1, i));
     columns.add(BigIntColumn.of(COL_NAME2, i));
@@ -845,10 +848,10 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     assertScanResult(actual, getExpectedNullResults(operator), description(column, operator));
   }
 
-  @Disabled
-  @Test
-  public void scan_WithConjunctiveNormalFormConditionsShouldReturnProperResult()
-      throws IOException, ExecutionException {
+  @ParameterizedTest(name = "column with conditions: {0}")
+  @MethodSource("provideColumnsForCNFConditionsTest")
+  public void scan_WithConjunctiveNormalFormConditionsShouldReturnProperResult(
+      List<String> columnNamesToTest) throws IOException, ExecutionException {
     // Arrange
     prepareRecords();
     BuildableScanAllWithOngoingWhereAnd builder =
@@ -860,12 +863,17 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
                 prepareOrConditionSet(
                     ImmutableList.of(
                         IntColumn.of(PARTITION_KEY_NAME, 1), IntColumn.of(PARTITION_KEY_NAME, 2))));
-    List<Column<?>> columns1 = prepareNonKeyColumns(1);
-    List<Column<?>> columns2 = prepareNonKeyColumns(2);
+    Map<String, Column<?>> columns1ByName =
+        prepareNonKeyColumns(1).stream().collect(Collectors.toMap(Column::getName, c -> c));
+    Map<String, Column<?>> columns2ByName =
+        prepareNonKeyColumns(2).stream().collect(Collectors.toMap(Column::getName, c -> c));
     List<OrConditionSet> orConditionSets =
-        IntStream.range(0, columns1.size())
-            .boxed()
-            .map(i -> prepareOrConditionSet(ImmutableList.of(columns1.get(i), columns2.get(i))))
+        columnNamesToTest.stream()
+            .map(
+                columnName ->
+                    prepareOrConditionSet(
+                        ImmutableList.of(
+                            columns1ByName.get(columnName), columns2ByName.get(columnName))))
             .collect(Collectors.toList());
     orConditionSets.forEach(builder::and);
 
@@ -877,6 +885,13 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         actual,
         getExpectedResults(DataType.INT, Operator.LTE, CONDITION_TEST_PREDICATE_VALUE),
         "failed with CNF conditions");
+  }
+
+  protected Stream<Arguments> provideColumnsForCNFConditionsTest() {
+    List<String> allColumns =
+        prepareNonKeyColumns(0).stream().map(Column::getName).collect(Collectors.toList());
+
+    return Stream.of(Arguments.of(allColumns));
   }
 
   @Test
