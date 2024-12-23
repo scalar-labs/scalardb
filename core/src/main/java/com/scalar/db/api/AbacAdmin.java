@@ -313,13 +313,14 @@ public interface AbacAdmin {
   }
 
   /**
-   * Drops the user access for the given username for the given policy.
+   * Drops the user tag information of a user with the given username for the given policy.
    *
    * @param policyName the policy name
    * @param username the username
    * @throws ExecutionException if the operation fails
    */
-  default void dropUserAccess(String policyName, String username) throws ExecutionException {
+  default void dropUserTagInfoFromUser(String policyName, String username)
+      throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
@@ -344,7 +345,7 @@ public interface AbacAdmin {
    * @param namespaceName the namespace name
    * @throws ExecutionException if the operation fails
    */
-  default void applyNamespacePolicy(String policyName, String namespaceName)
+  default void applyPolicyToNamespace(String policyName, String namespaceName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
@@ -391,7 +392,7 @@ public interface AbacAdmin {
    * @param tableName the table name
    * @throws ExecutionException if the operation fails
    */
-  default void applyTablePolicy(String policyName, String namespaceName, String tableName)
+  default void applyPolicyToTable(String policyName, String namespaceName, String tableName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }

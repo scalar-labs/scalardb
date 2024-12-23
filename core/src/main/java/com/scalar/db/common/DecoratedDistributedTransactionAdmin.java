@@ -480,8 +480,9 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void dropUserAccess(String policyName, String username) throws ExecutionException {
-    distributedTransactionAdmin.dropUserAccess(policyName, username);
+  public void dropUserTagInfoFromUser(String policyName, String username)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropUserTagInfoFromUser(policyName, username);
   }
 
   @Override
@@ -491,9 +492,9 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void applyNamespacePolicy(String policyName, String namespaceName)
+  public void applyPolicyToNamespace(String policyName, String namespaceName)
       throws ExecutionException {
-    distributedTransactionAdmin.applyNamespacePolicy(policyName, namespaceName);
+    distributedTransactionAdmin.applyPolicyToNamespace(policyName, namespaceName);
   }
 
   @Override
@@ -514,9 +515,9 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void applyTablePolicy(String policyName, String namespaceName, String tableName)
+  public void applyPolicyToTable(String policyName, String namespaceName, String tableName)
       throws ExecutionException {
-    distributedTransactionAdmin.applyTablePolicy(policyName, namespaceName, tableName);
+    distributedTransactionAdmin.applyPolicyToTable(policyName, namespaceName, tableName);
   }
 
   @Override
