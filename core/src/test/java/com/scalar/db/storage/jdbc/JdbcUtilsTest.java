@@ -1,17 +1,27 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Answers;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class JdbcUtilsTest {
@@ -41,6 +51,7 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new com.mysql.cj.jdbc.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getConnectionProperties()).thenReturn(Collections.emptyMap());
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
@@ -83,6 +94,7 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new org.postgresql.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getConnectionProperties()).thenReturn(Collections.emptyMap());
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
@@ -105,6 +117,40 @@ public class JdbcUtilsTest {
     assertThat(dataSource.getMaxOpenPreparedStatements()).isEqualTo(200);
 
     dataSource.close();
+  }
+
+  @Test
+  public void
+      initDataSource_WithRdbEngineConnectionProperties_ShouldAddPropertiesOnlyIfNotInConnectionString() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(
+        DatabaseConfig.CONTACT_POINTS,
+        "jdbc:sqlserver://localhost:5432;prop1=prop1Value;prop3=prop3Value");
+    properties.setProperty(DatabaseConfig.USERNAME, "foo");
+    properties.setProperty(DatabaseConfig.PASSWORD, "pass");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    Driver driver = new com.microsoft.sqlserver.jdbc.SQLServerDriver();
+    when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getConnectionProperties())
+        .thenReturn(ImmutableMap.of("prop1", "prop1Value", "prop2", "prop2Value"));
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      BasicDataSource dataSource = spy(BasicDataSource.class);
+      jdbcUtils.when(JdbcUtils::createDataSource).thenReturn(dataSource);
+
+      // Act
+      jdbcUtils.when(() -> JdbcUtils.initDataSource(config, rdbEngine)).thenCallRealMethod();
+
+      // Assert
+      verify(dataSource, never()).addConnectionProperty("prop1", "prop1Value");
+      verify(dataSource).addConnectionProperty("prop2", "prop2Value");
+      verify(dataSource, never()).setConnectionProperties(anyString());
+    }
   }
 
   @Test

@@ -7,10 +7,14 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.ColumnVisitor;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.PreparedStatement;
@@ -128,6 +132,58 @@ public class PreparedStatementBinder implements ColumnVisitor {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
         preparedStatement.setBytes(index++, column.getBlobValueAsBytes());
+      }
+    } catch (SQLException e) {
+      sqlException = e;
+    }
+  }
+
+  @Override
+  public void visit(DateColumn column) {
+    try {
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setObject(index++, rdbEngine.encodeDate(column));
+      }
+    } catch (SQLException e) {
+      sqlException = e;
+    }
+  }
+
+  @Override
+  public void visit(TimeColumn column) {
+    try {
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setObject(index++, rdbEngine.encodeTime(column));
+      }
+    } catch (SQLException e) {
+      sqlException = e;
+    }
+  }
+
+  @Override
+  public void visit(TimestampColumn column) {
+    try {
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setObject(index++, rdbEngine.encodeTimestamp(column));
+      }
+    } catch (SQLException e) {
+      sqlException = e;
+    }
+  }
+
+  @Override
+  public void visit(TimestampTZColumn column) {
+    try {
+      if (column.hasNullValue()) {
+        preparedStatement.setNull(index++, getSqlType(column.getName()));
+      } else {
+        preparedStatement.setObject(index++, rdbEngine.encodeTimestampTZ(column));
       }
     } catch (SQLException e) {
       sqlException = e;

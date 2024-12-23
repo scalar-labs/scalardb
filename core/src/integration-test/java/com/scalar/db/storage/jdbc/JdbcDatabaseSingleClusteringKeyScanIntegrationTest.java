@@ -6,6 +6,8 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
@@ -54,5 +56,13 @@ public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
       }
     }
     return super.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  @Override
+  protected Set<DataType> getClusteringKeyTypes() {
+    // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
+    return super.getClusteringKeyTypes().stream()
+        .filter(type -> type != DataType.TIMESTAMPTZ)
+        .collect(Collectors.toSet());
   }
 }

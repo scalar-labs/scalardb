@@ -24,8 +24,7 @@ public final class JdbcTestUtils {
 
   public static double nextOracleDouble(Random random) {
     return random
-        .doubles(MIN_ORACLE_DOUBLE_VALUE, MAX_ORACLE_DOUBLE_VALUE)
-        .limit(1)
+        .doubles(1, MIN_ORACLE_DOUBLE_VALUE, MAX_ORACLE_DOUBLE_VALUE)
         .findFirst()
         .orElse(0.0d);
   }

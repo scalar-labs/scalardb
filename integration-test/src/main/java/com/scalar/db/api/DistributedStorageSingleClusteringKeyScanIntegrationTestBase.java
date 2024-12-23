@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.Sets;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -80,7 +81,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   }
 
   protected Set<DataType> getClusteringKeyTypes() {
-    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
+    return Sets.newHashSet(DataType.values());
   }
 
   private void createTables() throws ExecutionException {

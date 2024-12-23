@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.Sets;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -70,11 +71,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   }
 
   protected Set<DataType> getPartitionKeyTypes() {
-    return new HashSet<>(Arrays.asList(DataType.valuesWithoutTimesRelatedTypes()));
-  }
-
-  protected boolean isFloatTypeKeySupported() {
-    return true;
+    return Sets.newHashSet(DataType.values());
   }
 
   private void createTables() throws ExecutionException {
@@ -147,10 +144,6 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
   @Test
   public void getAndScanAndDelete_ShouldBehaveCorrectly() throws ExecutionException, IOException {
     for (DataType partitionKeyType : partitionKeyTypes) {
-      if (!isFloatTypeKeySupported()
-          && (partitionKeyType == DataType.FLOAT || partitionKeyType == DataType.DOUBLE)) {
-        continue;
-      }
       random.setSeed(seed);
 
       truncateTable(partitionKeyType);

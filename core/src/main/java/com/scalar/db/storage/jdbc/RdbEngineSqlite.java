@@ -3,6 +3,11 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.storage.TimeRelatedColumnEncodingUtils;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
@@ -10,6 +15,7 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
@@ -86,16 +92,16 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       case INT:
         return "INT";
       case BIGINT:
+      case DATE:
+      case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
         return "BIGINT";
       case FLOAT:
         return "FLOAT";
       case DOUBLE:
         return "DOUBLE";
       case TEXT:
-      case DATE:
-      case TIME:
-      case TIMESTAMP:
-      case TIMESTAMPTZ:
         return "TEXT";
       case BLOB:
         return "BLOB";
@@ -116,6 +122,10 @@ class RdbEngineSqlite implements RdbEngineStrategy {
         return Types.BOOLEAN;
       case INT:
         return Types.INTEGER;
+      case DATE:
+      case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
       case BIGINT:
         return Types.BIGINT;
       case FLOAT:
@@ -282,5 +292,52 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
+  }
+
+  @Override
+  public Long encodeDate(DateColumn column) {
+    return TimeRelatedColumnEncodingUtils.encode(column);
+  }
+
+  @Override
+  public Long encodeTime(TimeColumn column) {
+    return TimeRelatedColumnEncodingUtils.encode(column);
+  }
+
+  @Override
+  public Long encodeTimestamp(TimestampColumn column) {
+    return TimeRelatedColumnEncodingUtils.encode(column);
+  }
+
+  @Override
+  public Long encodeTimestampTZ(TimestampTZColumn column) {
+    return TimeRelatedColumnEncodingUtils.encode(column);
+  }
+
+  @Override
+  public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
+    return DateColumn.of(
+        columnName, TimeRelatedColumnEncodingUtils.decodeDate(resultSet.getLong(columnName)));
+  }
+
+  @Override
+  public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
+    return TimeColumn.of(
+        columnName, TimeRelatedColumnEncodingUtils.decodeTime(resultSet.getLong(columnName)));
+  }
+
+  @Override
+  public TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    return TimestampColumn.of(
+        columnName, TimeRelatedColumnEncodingUtils.decodeTimestamp(resultSet.getLong(columnName)));
+  }
+
+  @Override
+  public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    return TimestampTZColumn.of(
+        columnName,
+        TimeRelatedColumnEncodingUtils.decodeTimestampTZ(resultSet.getLong(columnName)));
   }
 }

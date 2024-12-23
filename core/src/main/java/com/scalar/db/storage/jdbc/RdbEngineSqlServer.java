@@ -1,10 +1,14 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
@@ -12,9 +16,13 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -180,11 +188,11 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case DATE:
         return "DATE";
       case TIME:
-        return "TIME";
+        return "TIME(6)";
       case TIMESTAMP:
-        return "DATETIME2";
+        return "DATETIME2(3)";
       case TIMESTAMPTZ:
-        return "DATETIMEOFFSET";
+        return "DATETIMEOFFSET(3)";
       default:
         throw new AssertionError();
     }
@@ -288,6 +296,14 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+        return Types.TIMESTAMP;
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP_WITH_TIMEZONE;
       default:
         throw new AssertionError();
     }
@@ -335,5 +351,36 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
+  }
+
+  @Override
+  public String encodeDate(DateColumn column) {
+    assert column.getDateValue() != null;
+    // Pass the date value as text otherwise the dates before the Julian to Gregorian Calendar
+    // transition (October 15, 1582) will be offset by 10 days.
+    return column.getDateValue().format(DateTimeFormatter.BASIC_ISO_DATE);
+  }
+
+  @Override
+  public String encodeTimestamp(TimestampColumn column) {
+    assert column.getTimestampValue() != null;
+    // Pass the timestamp value as text otherwise the dates before the Julian to Gregorian Calendar
+    // transition (October 15, 1582) will be offset by 10 days.
+    return column.getTimestampValue().format(DateTimeFormatter.ISO_DATE_TIME);
+  }
+
+  @Override
+  public DateTimeOffset encodeTimestampTZ(TimestampTZColumn column) {
+    assert column.getTimestampTZValue() != null;
+    // When using SQLServer DATETIMEOFFSET data type, we should use the SQLServer JDBC driver's
+    // microsoft.sql.DateTimeOffset class for encoding the value.
+    return DateTimeOffset.valueOf(Timestamp.from(column.getTimestampTZValue()), 0);
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties() {
+    // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
+    // It is being considered setting to it to false by default in a future driver release.
+    return ImmutableMap.of("sendTimeAsDatetime", "false");
   }
 }
