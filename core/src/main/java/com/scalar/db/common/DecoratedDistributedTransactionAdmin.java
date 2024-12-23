@@ -510,6 +510,12 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public Optional<NamespacePolicy> getNamespacePolicy(String policyName, String namespaceName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getNamespacePolicy(policyName, namespaceName);
+  }
+
+  @Override
   public List<NamespacePolicy> getNamespacePolicies() throws ExecutionException {
     return distributedTransactionAdmin.getNamespacePolicies();
   }
@@ -530,6 +536,12 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   public void disableTablePolicy(String policyName, String namespaceName, String tableName)
       throws ExecutionException {
     distributedTransactionAdmin.disableTablePolicy(policyName, namespaceName, tableName);
+  }
+
+  @Override
+  public Optional<TablePolicy> getTablePolicy(
+      String policyName, String namespaceName, String tableName) throws ExecutionException {
+    return distributedTransactionAdmin.getTablePolicy(policyName, namespaceName, tableName);
   }
 
   @Override

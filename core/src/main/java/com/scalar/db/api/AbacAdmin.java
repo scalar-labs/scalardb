@@ -375,6 +375,20 @@ public interface AbacAdmin {
   }
 
   /**
+   * Retrieves the namespace policy for the given namespace.
+   *
+   * @param policyName the policy name
+   * @param namespaceName the namespace name
+   * @return the namespace policy. If the policy is not applied to the namespace, returns an empty
+   *     optional
+   * @throws ExecutionException if the operation fails
+   */
+  default Optional<NamespacePolicy> getNamespacePolicy(String policyName, String namespaceName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
+  }
+
+  /**
    * Retrieves all namespace policies.
    *
    * @return the namespaces policies
@@ -420,6 +434,20 @@ public interface AbacAdmin {
    */
   default void disableTablePolicy(String policyName, String namespaceName, String tableName)
       throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Retrieves the table policy for the given table of the given namespace.
+   *
+   * @param policyName the policy name
+   * @param namespaceName the namespace name
+   * @param tableName the table name
+   * @return the table policy. If the policy is not applied to the table, returns an empty optional
+   * @throws ExecutionException if the operation fails
+   */
+  default Optional<TablePolicy> getTablePolicy(
+      String policyName, String namespaceName, String tableName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
