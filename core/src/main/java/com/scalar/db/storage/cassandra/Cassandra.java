@@ -87,10 +87,6 @@ public class Cassandra extends AbstractDistributedStorage {
     this.operationChecker = operationChecker;
   }
 
-  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
-  @Override
-  protected final void finalize() {}
-
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
