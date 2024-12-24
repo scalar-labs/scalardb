@@ -248,8 +248,8 @@ public interface AbacAdmin {
    * @param username the username
    * @param compartmentShortName the short name of the compartment
    * @param accessMode the access mode
-   * @param defaultCompartment whether the compartment is the default compartment
-   * @param rowCompartment whether the compartment is the row compartment
+   * @param defaultCompartment whether the compartment is a default compartment
+   * @param rowCompartment whether the compartment is a row compartment
    * @throws ExecutionException if the operation fails
    */
   default void addCompartmentToUser(
@@ -284,8 +284,8 @@ public interface AbacAdmin {
    * @param username the username
    * @param groupShortName the short name of the group
    * @param accessMode the access mode
-   * @param defaultGroup whether the group is the default group
-   * @param rowGroup whether the group is the row group
+   * @param defaultGroup whether the group is a default group
+   * @param rowGroup whether the group is a row group
    * @throws ExecutionException if the operation fails
    */
   default void addGroupToUser(
