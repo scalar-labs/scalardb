@@ -117,10 +117,6 @@ public class JdbcAdminImportTestUtils {
     majorVersion = getMajorVersion();
   }
 
-  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
-  @Override
-  protected final void finalize() {}
-
   public Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes(String namespace)
       throws SQLException {
     if (JdbcTestUtils.isMysql(rdbEngine)) {
