@@ -690,6 +690,12 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
       Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
+  ABAC_NOT_ENABLED(
+      Category.USER_ERROR,
+      "0152",
+      "The attribute-based access control feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
