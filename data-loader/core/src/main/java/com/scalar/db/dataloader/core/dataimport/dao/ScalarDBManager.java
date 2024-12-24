@@ -7,6 +7,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
+import javax.annotation.Nullable;
 
 /**
  * A manager to retrieve the various ScalarDB managers based on the running mode
@@ -16,7 +17,7 @@ import java.io.IOException;
 public class ScalarDBManager {
 
   /* Distributed storage for ScalarDB connection that is running in storage mode. */
-  private final DistributedStorage storage;
+  @Nullable private final DistributedStorage storage;
   /* Distributed Transaction manager for ScalarDB connection that is running in transaction mode */
   private final DistributedTransactionManager transactionManager;
   /* Distributed storage admin for ScalarDB admin operations */
