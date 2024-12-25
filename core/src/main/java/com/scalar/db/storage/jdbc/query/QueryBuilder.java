@@ -13,10 +13,10 @@ import java.util.Objects;
  */
 public final class QueryBuilder {
 
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public QueryBuilder(RdbEngineStrategy rdbEngine) {
+  public QueryBuilder(RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     this.rdbEngine = Objects.requireNonNull(rdbEngine);
   }
 

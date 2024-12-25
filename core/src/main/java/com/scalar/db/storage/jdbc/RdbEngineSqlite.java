@@ -35,7 +35,7 @@ import org.sqlite.SQLiteException;
  * native SQLite library in JAR</a>, we should assure the real error messages in
  * RdbEngineStrategyTest.
  */
-class RdbEngineSqlite implements RdbEngineStrategy {
+class RdbEngineSqlite implements RdbEngineStrategy<Long, Long, Long, Long> {
   private static final String NAMESPACE_SEPARATOR = "$";
 
   @Override

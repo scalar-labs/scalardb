@@ -13,7 +13,7 @@ import java.util.Random;
 public class JdbcDatabaseSinglePartitionKeyIntegrationTest
     extends DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

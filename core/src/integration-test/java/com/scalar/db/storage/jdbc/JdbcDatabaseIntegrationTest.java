@@ -6,7 +6,7 @@ import java.util.Properties;
 
 public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

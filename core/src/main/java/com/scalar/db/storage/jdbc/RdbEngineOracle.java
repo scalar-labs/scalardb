@@ -8,7 +8,10 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
@@ -17,14 +20,17 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineOracle implements RdbEngineStrategy {
+class RdbEngineOracle
+    implements RdbEngineStrategy<LocalDate, LocalDateTime, LocalDateTime, OffsetDateTime> {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private final String keyColumnSize;
   private final JdbcConfig config;
@@ -370,9 +376,24 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
+  public LocalDate encodeDate(DateColumn column) {
+    return RdbEngineStrategy.defaultEncodeDate(column);
+  }
+
+  @Override
   public LocalDateTime encodeTime(TimeColumn column) {
     assert column.getTimeValue() != null;
     return LocalDateTime.of(
         config.getOracleTimeColumnDefaultDateComponent(), column.getTimeValue());
+  }
+
+  @Override
+  public LocalDateTime encodeTimestamp(TimestampColumn column) {
+    return RdbEngineStrategy.defaultEncodeTimestamp(column);
+  }
+
+  @Override
+  public OffsetDateTime encodeTimestampTZ(TimestampTZColumn column) {
+    return RdbEngineStrategy.defaultEncodeTimestampTZ(column);
   }
 }

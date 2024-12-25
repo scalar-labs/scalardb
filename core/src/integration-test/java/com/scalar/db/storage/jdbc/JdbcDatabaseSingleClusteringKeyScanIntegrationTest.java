@@ -13,7 +13,7 @@ import java.util.Random;
 public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

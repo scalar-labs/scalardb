@@ -26,7 +26,7 @@ import org.mockito.MockitoAnnotations;
 
 public class JdbcUtilsTest {
 
-  @Mock private RdbEngineStrategy rdbEngine;
+  @Mock private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @BeforeEach
   public void setUp() throws Exception {

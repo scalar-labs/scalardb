@@ -49,27 +49,27 @@ public final class JdbcTestUtils {
     return TextColumn.of(columnName, builder.toString());
   }
 
-  public static boolean isPostgresql(RdbEngineStrategy rdbEngine) {
+  public static boolean isPostgresql(RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     return rdbEngine instanceof RdbEnginePostgresql;
   }
 
-  public static boolean isMysql(RdbEngineStrategy rdbEngine) {
+  public static boolean isMysql(RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     return rdbEngine instanceof RdbEngineMysql;
   }
 
-  public static boolean isOracle(RdbEngineStrategy rdbEngine) {
+  public static boolean isOracle(RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     return rdbEngine instanceof RdbEngineOracle;
   }
 
-  public static boolean isSqlServer(RdbEngineStrategy rdbEngine) {
+  public static boolean isSqlServer(RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     return rdbEngine instanceof RdbEngineSqlServer;
   }
 
-  public static boolean isSqlite(RdbEngineStrategy rdbEngine) {
+  public static boolean isSqlite(RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     return rdbEngine instanceof RdbEngineSqlite;
   }
 
-  public static boolean isYugabyte(RdbEngineStrategy rdbEngine) {
+  public static boolean isYugabyte(RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     return rdbEngine instanceof RdbEngineYugabyte;
   }
 
@@ -83,13 +83,13 @@ public final class JdbcTestUtils {
    */
   public static List<DataType> filterDataTypes(
       List<DataType> typesToBeFiltered,
-      RdbEngineStrategy currentRdbEngine,
-      Map<Class<? extends RdbEngineStrategy>, List<DataType>>
+      RdbEngineStrategy<?, ?, ?, ?> currentRdbEngine,
+      Map<Class<? extends RdbEngineStrategy<?, ?, ?, ?>>, List<DataType>>
           excludedDataTypesByRdbEngine) {
     return typesToBeFiltered.stream()
         .filter(
             type -> {
-              for (Entry<Class<? extends RdbEngineStrategy>, List<DataType>>
+              for (Entry<Class<? extends RdbEngineStrategy<?, ?, ?, ?>>, List<DataType>>
                   excludedTypesByEngine : excludedDataTypesByRdbEngine.entrySet()) {
                 if (excludedTypesByEngine.getKey().equals(currentRdbEngine.getClass())
                     && excludedTypesByEngine.getValue().contains(type)) {

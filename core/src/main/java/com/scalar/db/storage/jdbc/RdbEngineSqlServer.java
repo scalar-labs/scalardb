@@ -7,6 +7,7 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
@@ -18,6 +19,7 @@ import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +28,7 @@ import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineSqlServer implements RdbEngineStrategy {
+class RdbEngineSqlServer implements RdbEngineStrategy<String, LocalTime, String, DateTimeOffset> {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineSqlServer.class);
 
   @Override
@@ -359,6 +361,11 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
     // Pass the date value as text otherwise the dates before the Julian to Gregorian Calendar
     // transition (October 15, 1582) will be offset by 10 days.
     return column.getDateValue().format(DateTimeFormatter.BASIC_ISO_DATE);
+  }
+
+  @Override
+  public LocalTime encodeTime(TimeColumn column) {
+    return RdbEngineStrategy.defaultEncodeTime(column);
   }
 
   @Override

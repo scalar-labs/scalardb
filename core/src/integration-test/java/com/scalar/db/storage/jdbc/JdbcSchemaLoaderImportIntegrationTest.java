@@ -16,7 +16,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
       LoggerFactory.getLogger(JdbcSchemaLoaderImportIntegrationTest.class);
 
   private JdbcAdminImportTestUtils testUtils;
-  private RdbEngineStrategy rdbEngine;
+  private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

@@ -13,7 +13,7 @@ public enum RdbEngine {
   SQLITE,
   YUGABYTE;
 
-  public static RdbEngineStrategy createRdbEngineStrategy(RdbEngine rdbEngine) {
+  public static RdbEngineStrategy<?, ?, ?, ?> createRdbEngineStrategy(RdbEngine rdbEngine) {
     switch (rdbEngine) {
       case MYSQL:
         return new RdbEngineMysql();
