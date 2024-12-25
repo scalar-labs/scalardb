@@ -120,8 +120,7 @@ public class JdbcUtilsTest {
   }
 
   @Test
-  public void
-      initDataSource_WithRdbEngineConnectionProperties_ShouldAddPropertiesOnlyIfNotInConnectionString() {
+  public void initDataSource_WithRdbEngineConnectionProperties_ShouldAddProperties() {
     // Arrange
     Properties properties = new Properties();
     properties.setProperty(
@@ -147,7 +146,7 @@ public class JdbcUtilsTest {
       jdbcUtils.when(() -> JdbcUtils.initDataSource(config, rdbEngine)).thenCallRealMethod();
 
       // Assert
-      verify(dataSource, never()).addConnectionProperty("prop1", "prop1Value");
+      verify(dataSource).addConnectionProperty("prop1", "prop1Value");
       verify(dataSource).addConnectionProperty("prop2", "prop2Value");
       verify(dataSource, never()).setConnectionProperties(anyString());
     }

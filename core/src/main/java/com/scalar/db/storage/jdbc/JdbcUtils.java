@@ -69,12 +69,8 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
-    // Add connection properties if it doesn't already exist in the connection string to not
-    // override the user settings
     for (Entry<String, String> entry : rdbEngine.getConnectionProperties().entrySet()) {
-      if (!dataSource.getUrl().contains(entry.getKey())) {
-        dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
-      }
+      dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
     }
 
     return dataSource;
