@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
+
   private JdbcUtils() {}
 
   public static BasicDataSource initDataSource(JdbcConfig config, RdbEngineStrategy rdbEngine) {

@@ -22,7 +22,7 @@ import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineSqlServer implements RdbEngineStrategy {
+class RdbEngineSqlServer extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineSqlServer.class);
   private final RdbEngineTimeTypeSqlServer timeTypeEngine;
 
@@ -206,8 +206,13 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      DataType overrideDataType) {
     switch (type) {
       case BIT:
         if (columnSize != 1) {
@@ -273,6 +278,19 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.BLOB;
       case LONGVARBINARY:
         return DataType.BLOB;
+      case DATE:
+        return DataType.DATE;
+      case TIME:
+        return DataType.TIME;
+      case TIMESTAMP:
+        return DataType.TIMESTAMP;
+      case OTHER:
+        if (!typeName.equalsIgnoreCase("datetimeoffset")) {
+          throw new IllegalArgumentException(
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
+        }
+        return DataType.TIMESTAMPTZ;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -304,7 +322,7 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case TIMESTAMP:
         return Types.TIMESTAMP;
       case TIMESTAMPTZ:
-        return Types.TIMESTAMP_WITH_TIMEZONE;
+        return microsoft.sql.Types.DATETIMEOFFSET;
       default:
         throw new AssertionError();
     }

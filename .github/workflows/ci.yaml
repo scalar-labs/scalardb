@@ -413,7 +413,7 @@ jobs:
     steps:
       - name: Run MySQL 5.7
         run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --explicit-defaults-for-timestamp
 
       - uses: actions/checkout@v4
 

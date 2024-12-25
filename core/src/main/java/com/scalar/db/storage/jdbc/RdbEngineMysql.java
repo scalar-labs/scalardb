@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineMysql implements RdbEngineStrategy {
+class RdbEngineMysql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
@@ -237,8 +237,13 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      @Nullable DataType overrideDataType) {
     switch (type) {
       case BIT:
         if (columnSize != 1) {
@@ -310,6 +315,21 @@ class RdbEngineMysql implements RdbEngineStrategy {
               typeName);
         }
         return DataType.BLOB;
+      case DATE:
+        if (typeName.equalsIgnoreCase("YEAR")) {
+          throw new IllegalArgumentException(
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
+        }
+        return DataType.DATE;
+      case TIME:
+        return DataType.TIME;
+        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
+      case TIMESTAMP:
+        if (overrideDataType == DataType.TIMESTAMPTZ || typeName.equalsIgnoreCase("TIMESTAMP")) {
+          return DataType.TIMESTAMPTZ;
+        }
+        return DataType.TIMESTAMP;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
