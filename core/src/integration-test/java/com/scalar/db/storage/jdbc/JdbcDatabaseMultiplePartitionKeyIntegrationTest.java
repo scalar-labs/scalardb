@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
-import static java.util.stream.Collectors.toList;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
@@ -78,20 +78,15 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
 
   @Override
   protected List<DataType> getDataTypes() {
-    return super.getDataTypes().stream()
-        .filter(
-            type -> {
-              if (JdbcTestUtils.isOracle(rdbEngine) && type == DataType.TIMESTAMPTZ) {
-                // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
-                return false;
-              } else if (JdbcTestUtils.isYugabyte(rdbEngine)
-                  && (type == DataType.FLOAT || type == DataType.DOUBLE)) {
-                // FLOAT and DOUBLE types cannot be used as partition key in Yugabyte
-                return false;
-              } else {
-                return true;
-              }
-            })
-        .collect(toList());
+    // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
+    // FLOAT and DOUBLE types cannot be used as partition key in Yugabyte
+    return JdbcTestUtils.filterDataTypes(
+        super.getDataTypes(),
+        rdbEngine,
+        ImmutableMap.of(
+            RdbEngineOracle.class,
+            ImmutableList.of(DataType.TIMESTAMPTZ),
+            RdbEngineYugabyte.class,
+            ImmutableList.of(DataType.FLOAT, DataType.DOUBLE)));
   }
 }

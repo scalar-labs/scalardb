@@ -1,13 +1,14 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
@@ -59,10 +60,11 @@ public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected Set<DataType> getClusteringKeyTypes() {
+  protected List<DataType> getClusteringKeyTypes() {
     // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
-    return super.getClusteringKeyTypes().stream()
-        .filter(type -> type != DataType.TIMESTAMPTZ)
-        .collect(Collectors.toSet());
+    return JdbcTestUtils.filterDataTypes(
+        super.getClusteringKeyTypes(),
+        rdbEngine,
+        ImmutableMap.of(RdbEngineOracle.class, ImmutableList.of(DataType.TIMESTAMPTZ)));
   }
 }

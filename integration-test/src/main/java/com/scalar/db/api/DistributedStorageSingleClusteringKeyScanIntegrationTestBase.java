@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.common.collect.Sets;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -54,7 +53,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   private DistributedStorageAdmin admin;
   private DistributedStorage storage;
   private String namespace;
-  private Set<DataType> clusteringKeyTypes;
+  private List<DataType> clusteringKeyTypes;
 
   private long seed;
 
@@ -80,8 +79,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     return NAMESPACE;
   }
 
-  protected Set<DataType> getClusteringKeyTypes() {
-    return Sets.newHashSet(DataType.values());
+  protected List<DataType> getClusteringKeyTypes() {
+    return Arrays.asList(DataType.values());
   }
 
   private void createTables() throws ExecutionException {

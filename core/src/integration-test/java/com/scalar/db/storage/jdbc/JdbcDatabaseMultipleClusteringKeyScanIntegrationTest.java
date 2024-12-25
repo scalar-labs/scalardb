@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
@@ -8,7 +10,6 @@ import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
@@ -85,8 +86,9 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   @Override
   protected List<DataType> getDataTypes() {
     // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
-    return super.getDataTypes().stream()
-        .filter(type -> !(JdbcTestUtils.isOracle(rdbEngine) && type == DataType.TIMESTAMPTZ))
-        .collect(Collectors.toList());
+    return JdbcTestUtils.filterDataTypes(
+        super.getDataTypes(),
+        rdbEngine,
+        ImmutableMap.of(RdbEngineOracle.class, ImmutableList.of(DataType.TIMESTAMPTZ)));
   }
 }
