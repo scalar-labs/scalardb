@@ -40,7 +40,7 @@ subprojects {
         commonsTextVersion = '1.13.0'
         junitVersion = '5.11.4'
         commonsLangVersion = '3.17.0'
-        assertjVersion = '3.26.3'
+        assertjVersion = '3.27.0'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'
         errorproneVersion = '2.10.0'
