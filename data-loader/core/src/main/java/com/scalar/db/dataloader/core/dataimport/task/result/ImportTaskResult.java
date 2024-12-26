@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.List;
 import lombok.Builder;
-import lombok.Setter;
 import lombok.Value;
 
 @Builder
@@ -21,7 +20,6 @@ public class ImportTaskResult {
   @JsonProperty("rawRecord")
   JsonNode rawRecord;
 
-  @Setter
   @JsonProperty("dataChunkId")
   int dataChunkId;
 }
