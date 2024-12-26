@@ -173,58 +173,6 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Constructs a {@code Key} with a single column with a DATE type
-   *
-   * @param columnName a column name
-   * @param dateValue a DATE value of the column as LocalDate type
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofDate(String,
-   *     LocalDate)} instead
-   */
-  @Deprecated
-  public Key(String columnName, LocalDate dateValue) {
-    columns = Collections.singletonList(DateColumn.of(columnName, dateValue));
-  }
-
-  /**
-   * Constructs a {@code Key} with a single column with a TIME type
-   *
-   * @param columnName a column name
-   * @param timeValue a TIME value of the column as LocalTime type
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofTime(String,
-   *     LocalTime)} instead
-   */
-  @Deprecated
-  public Key(String columnName, LocalTime timeValue) {
-    columns = Collections.singletonList(TimeColumn.of(columnName, timeValue));
-  }
-
-  /**
-   * Constructs a {@code Key} with a single column with a TIMESTAMP type
-   *
-   * @param columnName a column name
-   * @param timestampValue a TIMESTAMP value of the column as LocalDateTime type
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #ofTimestamp(String, LocalDateTime)} instead
-   */
-  @Deprecated
-  public Key(String columnName, LocalDateTime timestampValue) {
-    columns = Collections.singletonList(TimestampColumn.of(columnName, timestampValue));
-  }
-
-  /**
-   * Constructs a {@code Key} with a single column with a TIMESTAMPTZ type
-   *
-   * @param columnName a column name
-   * @param timestampTZValue a TIMESTAMPTZ value of the column as Instant type
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
-   *     #ofTimestampTZ(String, Instant)} instead
-   */
-  @Deprecated
-  public Key(String columnName, Instant timestampTZValue) {
-    columns = Collections.singletonList(TimestampTZColumn.of(columnName, timestampTZValue));
-  }
-
-  /**
    * Constructs a {@code Key} with two columns
    *
    * @param n1 a column name of the 1st column
@@ -701,7 +649,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @return a {@code Key} object
    */
   public static Key ofDate(String columnName, LocalDate value) {
-    return new Key(columnName, value);
+    return new Key(Collections.singletonList(DateColumn.of(columnName, value)));
   }
 
   /**
@@ -712,7 +660,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @return a {@code Key} object
    */
   public static Key ofTime(String columnName, LocalTime value) {
-    return new Key(columnName, value);
+    return new Key(Collections.singletonList(TimeColumn.of(columnName, value)));
   }
 
   /**
@@ -723,7 +671,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @return a {@code Key} object
    */
   public static Key ofTimestamp(String columnName, LocalDateTime value) {
-    return new Key(columnName, value);
+    return new Key(Collections.singletonList(TimestampColumn.of(columnName, value)));
   }
 
   /**
@@ -734,7 +682,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @return a {@code Key} object
    */
   public static Key ofTimestampTZ(String columnName, Instant value) {
-    return new Key(columnName, value);
+    return new Key(Collections.singletonList(TimestampTZColumn.of(columnName, value)));
   }
 
   /**
