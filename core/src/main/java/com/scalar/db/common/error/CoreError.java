@@ -690,25 +690,31 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
       Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
+  ABAC_NOT_ENABLED(
+      Category.USER_ERROR,
+      "0152",
+      "The attribute-based access control feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "",
+      ""),
   DATA_LOADER_CLUSTERING_KEY_NOT_FOUND(
-      Category.USER_ERROR, "0152", "The provided clustering key %s was not found", "", ""),
+      Category.USER_ERROR, "0153", "The provided clustering key %s was not found", "", ""),
   DATA_LOADER_INVALID_PROJECTION(
-      Category.USER_ERROR, "0153", "The column '%s' was not found", "", ""),
+      Category.USER_ERROR, "0154", "The column '%s' was not found", "", ""),
   DATA_LOADER_INCOMPLETE_PARTITION_KEY(
       Category.USER_ERROR,
-      "0154",
+      "0155",
       "The provided partition key is incomplete. Required key: %s",
       "",
       ""),
   DATA_LOADER_CLUSTERING_KEY_ORDER_MISMATCH(
       Category.USER_ERROR,
-      "0155",
+      "0156",
       "The provided clustering key order does not match the table schema. Required order: %s",
       "",
       ""),
   DATA_LOADER_PARTITION_KEY_ORDER_MISMATCH(
       Category.USER_ERROR,
-      "0156",
+      "0157",
       "The provided partition key order does not match the table schema. Required order: %s",
       "",
       ""),
