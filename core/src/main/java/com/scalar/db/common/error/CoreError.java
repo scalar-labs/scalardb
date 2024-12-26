@@ -717,7 +717,7 @@ public enum CoreError implements ScalarDbError {
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
       Category.USER_ERROR,
       "0156",
-      "This TimestampTZ column value is out of the valid range. It must from 1000-01-01T00:00:00.000Z through 9999-12-31T23:59:59.999Z. Value: %s",
+      "This TimestampTZ column value is out of the valid range. It must be from 1000-01-01T00:00:00.000Z through 9999-12-31T23:59:59.999Z. Value: %s",
       "",
       ""),
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
