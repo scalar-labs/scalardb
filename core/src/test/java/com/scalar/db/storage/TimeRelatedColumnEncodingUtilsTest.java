@@ -6,6 +6,7 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

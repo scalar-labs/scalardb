@@ -1,4 +1,4 @@
-package com.scalar.db.storage;
+package com.scalar.db.util;
 
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;

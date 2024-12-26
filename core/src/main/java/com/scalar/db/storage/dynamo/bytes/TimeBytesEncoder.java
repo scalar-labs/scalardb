@@ -4,7 +4,7 @@ import static com.scalar.db.storage.dynamo.bytes.BytesUtils.encodeLong;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.TimeColumn;
-import com.scalar.db.storage.TimeRelatedColumnEncodingUtils;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import javax.annotation.concurrent.ThreadSafe;
 

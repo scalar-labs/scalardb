@@ -12,7 +12,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.TimeRelatedColumnEncodingUtils;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.util.Base64;
 import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
