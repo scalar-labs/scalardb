@@ -71,7 +71,7 @@ public final class TimeRelatedColumnEncodingUtils {
     // - the epoch second: the number of seconds since the epoch date 1970-01-01
     // - the nano of second: the number of nanoseconds since the start of the second.
     //
-    // The range and precision of a ScalarDB timestamp and timestampTZ is from January 1st of 1000
+    // The range and precision of a ScalarDB TIMESTAMP and TIMESTAMPTZ is from January 1st of 1000
     // to December 31st of 9999, and its precision is up to 1 millisecond. Since the range is
     // smaller and precision less precise, both components can be encoded into a single long value.
     // The long value format is "<epochSecond><millisecondOfSecond>", where the rightmost 3 digits

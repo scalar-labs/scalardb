@@ -526,7 +526,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
     // Julian to the Gregorian calendar.
     // For dates before the introduction of the Gregorian Calendar in October 15th, 1582. The JDBC
     // driver and Java internal time representation differs which can cause time adjustment issues
-    // depending on the way a date, timestamp or timestampTz is inserted into the database.
+    // depending on the way a DATE, TIMESTAMP or TIMESTAMPTZ is inserted into the database.
 
     // Arrange
     LocalDate start = LocalDate.of(1582, 10, 4);
