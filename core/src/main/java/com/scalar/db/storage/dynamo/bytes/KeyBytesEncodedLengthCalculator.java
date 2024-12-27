@@ -6,11 +6,15 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -74,5 +78,33 @@ public class KeyBytesEncodedLengthCalculator implements ColumnVisitor {
   public void visit(BlobColumn value) {
     length +=
         BytesEncoders.BLOB.encodedLength(value, keyOrders.getOrDefault(value.getName(), Order.ASC));
+  }
+
+  @Override
+  public void visit(DateColumn column) {
+    length +=
+        BytesEncoders.DATE.encodedLength(
+            column, keyOrders.getOrDefault(column.getName(), Order.ASC));
+  }
+
+  @Override
+  public void visit(TimeColumn column) {
+    length +=
+        BytesEncoders.TIME.encodedLength(
+            column, keyOrders.getOrDefault(column.getName(), Order.ASC));
+  }
+
+  @Override
+  public void visit(TimestampColumn column) {
+    length +=
+        BytesEncoders.TIMESTAMP.encodedLength(
+            column, keyOrders.getOrDefault(column.getName(), Order.ASC));
+  }
+
+  @Override
+  public void visit(TimestampTZColumn column) {
+    length +=
+        BytesEncoders.TIMESTAMPTZ.encodedLength(
+            column, keyOrders.getOrDefault(column.getName(), Order.ASC));
   }
 }

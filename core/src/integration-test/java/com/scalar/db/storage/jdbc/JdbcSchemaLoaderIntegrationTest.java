@@ -9,7 +9,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
-  @LazyInit private RdbEngineStrategy rdbEngine;
+  @LazyInit private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

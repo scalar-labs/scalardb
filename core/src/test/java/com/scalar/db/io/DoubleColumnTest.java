@@ -32,6 +32,11 @@ public class DoubleColumnTest {
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getBlobValueAsBytes)
         .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDateValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimeValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampTZValue)
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -57,6 +62,11 @@ public class DoubleColumnTest {
     assertThatThrownBy(column::getBlobValueAsByteBuffer)
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getBlobValueAsBytes)
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDateValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimeValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampTZValue)
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -84,6 +94,11 @@ public class DoubleColumnTest {
     assertThatThrownBy(column::getBlobValueAsByteBuffer)
         .isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getBlobValueAsBytes)
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDateValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimeValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampTZValue)
         .isInstanceOf(UnsupportedOperationException.class);
   }
 

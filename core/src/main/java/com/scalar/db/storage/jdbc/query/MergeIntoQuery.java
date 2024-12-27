@@ -17,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MergeIntoQuery implements UpsertQuery {
 
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -39,9 +39,9 @@ public class MergeIntoQuery implements UpsertQuery {
   @Override
   public String sql() {
     List<String> enclosedKeyNames = new ArrayList<>();
-    partitionKey.forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName())));
+    partitionKey.getColumns().forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName())));
     clusteringKey.ifPresent(
-        k -> k.forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName()))));
+        k -> k.getColumns().forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName()))));
 
     List<String> enclosedValueNames =
         columns.keySet().stream().map(rdbEngine::enclose).collect(Collectors.toList());

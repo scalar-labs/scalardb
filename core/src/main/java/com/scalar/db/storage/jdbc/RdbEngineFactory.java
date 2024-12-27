@@ -8,7 +8,7 @@ public final class RdbEngineFactory {
     throw new AssertionError();
   }
 
-  public static RdbEngineStrategy create(JdbcConfig config) {
+  public static RdbEngineStrategy<?, ?, ?, ?> create(JdbcConfig config) {
     String jdbcUrl = config.getJdbcUrl();
 
     if (jdbcUrl.startsWith("jdbc:mysql:")) {

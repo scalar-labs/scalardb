@@ -36,7 +36,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
   private final TableMetadata tableMetadata;
   private final Connection connection;
   private final QueryBuilder queryBuilder;
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   private boolean isMutated;
   private SQLException sqlException;
@@ -46,7 +46,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
       Mutation mutation,
       TableMetadata tableMetadata,
       Connection connection,
-      RdbEngineStrategy rdbEngine,
+      RdbEngineStrategy<?, ?, ?, ?> rdbEngine,
       QueryBuilder queryBuilder) {
     assert mutation.getCondition().isPresent();
     this.mutation = mutation;

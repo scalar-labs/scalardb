@@ -17,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
 
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -55,8 +55,8 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
 
   private String makeValuesSqlString() {
     List<String> names = new ArrayList<>();
-    partitionKey.forEach(v -> names.add(v.getName()));
-    clusteringKey.ifPresent(k -> k.forEach(v -> names.add(v.getName())));
+    partitionKey.getColumns().forEach(v -> names.add(v.getName()));
+    clusteringKey.ifPresent(k -> k.getColumns().forEach(v -> names.add(v.getName())));
     names.addAll(columns.keySet());
     return "("
         + names.stream().map(rdbEngine::enclose).collect(Collectors.joining(","))

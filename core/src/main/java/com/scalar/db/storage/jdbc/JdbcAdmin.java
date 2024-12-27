@@ -59,7 +59,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final String INDEX_NAME_PREFIX = "index";
 
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
   private final BasicDataSource dataSource;
   private final String metadataSchema;
 

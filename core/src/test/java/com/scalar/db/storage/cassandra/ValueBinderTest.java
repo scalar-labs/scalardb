@@ -7,12 +7,21 @@ import com.datastax.driver.core.BoundStatement;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Date;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -26,6 +35,11 @@ public class ValueBinderTest {
   private static final float ANY_FLOAT = 1.0f;
   private static final double ANY_DOUBLE = 1.0;
   private static final String ANY_STRING = "1";
+  private static final LocalDate ANY_DATE = LocalDate.ofEpochDay(1);
+  private static final LocalTime ANY_TIME = LocalTime.ofSecondOfDay(1);
+  private static final LocalDateTime ANY_TIMESTAMP =
+      LocalDateTime.of(LocalDate.ofEpochDay(1), LocalTime.ofSecondOfDay(1));
+  private static final Instant ANY_TIMESTAMPTZ = Instant.ofEpochSecond(1);
 
   @Mock private BoundStatement bound;
 
@@ -213,6 +227,110 @@ public class ValueBinderTest {
   public void visit_BlobColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
     // Arrange
     BlobColumn column = BlobColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_DateColumnAcceptCalled_ShouldCallSetString() {
+    // Arrange
+    DateColumn column = DateColumn.of(ANY_NAME, ANY_DATE);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound)
+        .setDate(
+            0,
+            com.datastax.driver.core.LocalDate.fromYearMonthDay(
+                ANY_DATE.getYear(), ANY_DATE.getMonthValue(), ANY_DATE.getDayOfMonth()));
+  }
+
+  @Test
+  public void visit_DateColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    DateColumn column = DateColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_TimeColumnAcceptCalled_ShouldCallSetString() {
+    // Arrange
+    TimeColumn column = TimeColumn.of(ANY_NAME, ANY_TIME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setTime(0, ANY_TIME.toNanoOfDay());
+  }
+
+  @Test
+  public void visit_TimeColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    TimeColumn column = TimeColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
+  public void visit_TimestampColumnAcceptCalled_ShouldThrowUnsupportOperationException() {
+    // Arrange
+    TimestampColumn column = TimestampColumn.of(ANY_NAME, ANY_TIMESTAMP);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act Assert
+    assertThatThrownBy(() -> column.accept(binder))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void visit_TimestampColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    TimestampColumn column = TimestampColumn.ofNull(ANY_NAME);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act Assert
+    assertThatThrownBy(() -> column.accept(binder))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void visit_TimestampTZAcceptCalled_ShouldCallSetString() {
+    // Arrange
+    TimestampTZColumn column = TimestampTZColumn.of(ANY_NAME, ANY_TIMESTAMPTZ);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    column.accept(binder);
+
+    // Assert
+    verify(bound).setTimestamp(0, Date.from(ANY_TIMESTAMPTZ));
+  }
+
+  @Test
+  public void visit_TimestampTZColumnWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    TimestampTZColumn column = TimestampTZColumn.ofNull(ANY_NAME);
     ValueBinder binder = new ValueBinder(bound);
 
     // Act

@@ -24,12 +24,12 @@ public class DynamoMultiplePartitionKeyIntegrationTest
   @Override
   protected ListMultimap<DataType, DataType> getPartitionKeyTypes() {
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
-    for (DataType firstClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
+    for (DataType firstClusteringKeyType : DataType.values()) {
       // BLOB type is supported only for the last value in partition key
       if (firstClusteringKeyType == DataType.BLOB) {
         continue;
       }
-      for (DataType secondClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
+      for (DataType secondClusteringKeyType : DataType.values()) {
         clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
       }
     }

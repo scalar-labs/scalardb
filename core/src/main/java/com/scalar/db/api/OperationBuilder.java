@@ -3,6 +3,10 @@ package com.scalar.db.api;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -253,6 +257,42 @@ public class OperationBuilder {
      * @return the Put operation builder
      */
     T blobValue(String columnName, @Nullable ByteBuffer value);
+
+    /**
+     * Adds the specified DATE value as a LocalDate to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a DATE value to put as LocalDate type
+     * @return the Put operation builder
+     */
+    T dateValue(String columnName, @Nullable LocalDate value);
+
+    /**
+     * Adds the specified TIME value as a LocalTime to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a TIME value to put as LocalTime type
+     * @return the Put operation builder
+     */
+    T timeValue(String columnName, @Nullable LocalTime value);
+
+    /**
+     * Adds the specified TIMESTAMP value as a LocalDateTime value to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a TIMESTAMP value to put as LocalDateTime type
+     * @return the Put operation builder
+     */
+    T timestampValue(String columnName, @Nullable LocalDateTime value);
+
+    /**
+     * Adds the specified TIMESTAMPTZ value as an Instant to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a TIMESTAMPTZ value to put as Instant type
+     * @return the Put operation builder
+     */
+    T timestampTZValue(String columnName, @Nullable Instant value);
 
     /**
      * Adds a column to the list of put values.

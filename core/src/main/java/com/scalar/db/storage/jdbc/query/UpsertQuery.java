@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface UpsertQuery extends Query {
 
   class Builder {
-    final RdbEngineStrategy rdbEngine;
+    final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
     final String schema;
     final String table;
     final TableMetadata tableMetadata;
@@ -19,7 +19,11 @@ public interface UpsertQuery extends Query {
     Optional<Key> clusteringKey;
     Map<String, Column<?>> columns;
 
-    Builder(RdbEngineStrategy rdbEngine, String schema, String table, TableMetadata tableMetadata) {
+    Builder(
+        RdbEngineStrategy<?, ?, ?, ?> rdbEngine,
+        String schema,
+        String table,
+        TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
       this.schema = schema;
       this.table = table;

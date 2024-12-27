@@ -9,11 +9,16 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +76,21 @@ public class ResultInterpreter {
             : TextColumn.of(name, row.getString(name));
       case BLOB:
         return row.isNull(name) ? BlobColumn.ofNull(name) : BlobColumn.of(name, row.getBytes(name));
+      case DATE:
+        return row.isNull(name)
+            ? DateColumn.ofNull(name)
+            : DateColumn.of(name, LocalDate.ofEpochDay(row.getDate(name).getDaysSinceEpoch()));
+      case TIME:
+        return row.isNull(name)
+            ? TimeColumn.ofNull(name)
+            : TimeColumn.of(name, LocalTime.ofNanoOfDay(row.getTime(name)));
+      case TIMESTAMP:
+        throw new UnsupportedOperationException(
+            "The TIMESTAMP type is not supported with Cassandra.");
+      case TIMESTAMPTZ:
+        return row.isNull(name)
+            ? TimestampTZColumn.ofNull(name)
+            : TimestampTZColumn.of(name, row.getTimestamp(name).toInstant());
       default:
         throw new AssertionError();
     }

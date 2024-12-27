@@ -6,21 +6,31 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineMysql implements RdbEngineStrategy {
+class RdbEngineMysql
+    implements RdbEngineStrategy<LocalDate, LocalTime, LocalDateTime, LocalDateTime> {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
 
@@ -206,10 +216,10 @@ class RdbEngineMysql implements RdbEngineStrategy {
       case DATE:
         return "DATE";
       case TIME:
-        return "TIME";
+        return "TIME(6)";
       case TIMESTAMP:
       case TIMESTAMPTZ:
-        return "DATETIME";
+        return "DATETIME(3)";
       default:
         throw new AssertionError();
     }
@@ -325,6 +335,14 @@ class RdbEngineMysql implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP;
+
       default:
         throw new AssertionError();
     }
@@ -388,5 +406,39 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
     // method is used for filtering.
     return namespace;
+  }
+
+  @Override
+  public LocalDate encodeDate(DateColumn column) {
+    return RdbEngineStrategy.defaultEncodeDate(column);
+  }
+
+  @Override
+  public LocalTime encodeTime(TimeColumn column) {
+    return RdbEngineStrategy.defaultEncodeTime(column);
+  }
+
+  @Override
+  public LocalDateTime encodeTimestamp(TimestampColumn column) {
+    return RdbEngineStrategy.defaultEncodeTimestamp(column);
+  }
+
+  @Override
+  public LocalDateTime encodeTimestampTZ(TimestampTZColumn column) {
+    assert column.getTimestampTZValue() != null;
+    // Encoding as an OffsetDateTime result in the time being offset arbitrarily depending on the
+    // client, session or server time zone. So we encode it as a LocalDateTime instead.
+    return column.getTimestampTZValue().atOffset(ZoneOffset.UTC).toLocalDateTime();
+  }
+
+  @Override
+  public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    LocalDateTime localDateTime = resultSet.getObject(columnName, LocalDateTime.class);
+    if (localDateTime == null) {
+      return TimestampTZColumn.ofNull(columnName);
+    } else {
+      return TimestampTZColumn.of(columnName, localDateTime.toInstant(ZoneOffset.UTC));
+    }
   }
 }

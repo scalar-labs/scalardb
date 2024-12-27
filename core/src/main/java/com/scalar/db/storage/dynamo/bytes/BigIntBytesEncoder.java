@@ -1,6 +1,6 @@
 package com.scalar.db.storage.dynamo.bytes;
 
-import static com.scalar.db.storage.dynamo.bytes.BytesUtils.mask;
+import static com.scalar.db.storage.dynamo.bytes.BytesUtils.encodeLong;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.BigIntColumn;
@@ -21,14 +21,6 @@ public class BigIntBytesEncoder implements BytesEncoder<BigIntColumn> {
   public void encode(BigIntColumn column, Order order, ByteBuffer dst) {
     assert !column.hasNullValue();
 
-    long v = column.getBigIntValue();
-    dst.put(mask((byte) ((v >> 56) ^ 0x80), order)); // Flip a sign bit to make it binary comparable
-    dst.put(mask((byte) (v >> 48), order));
-    dst.put(mask((byte) (v >> 40), order));
-    dst.put(mask((byte) (v >> 32), order));
-    dst.put(mask((byte) (v >> 24), order));
-    dst.put(mask((byte) (v >> 16), order));
-    dst.put(mask((byte) (v >> 8), order));
-    dst.put(mask((byte) v, order));
+    encodeLong(column.getBigIntValue(), order, dst);
   }
 }

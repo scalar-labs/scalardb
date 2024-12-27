@@ -32,4 +32,9 @@ public class CassandraConditionalMutationIntegrationTest
         return super.shouldMutate(initialColumn, columnToCompare, operator);
     }
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

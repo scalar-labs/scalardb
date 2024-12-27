@@ -1,13 +1,13 @@
 package com.scalar.db.storage.dynamo;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class DynamoMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
@@ -18,21 +18,11 @@ public class DynamoMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
+  protected List<DataType> getDataTypes() {
     // Return types without BLOB because blob is not supported for clustering key for now
-    ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
-    for (DataType firstClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
-      if (firstClusteringKeyType == DataType.BLOB) {
-        continue;
-      }
-      for (DataType secondClusteringKeyType : DataType.valuesWithoutTimesRelatedTypes()) {
-        if (secondClusteringKeyType == DataType.BLOB) {
-          continue;
-        }
-        clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
-      }
-    }
-    return clusteringKeyTypes;
+    return super.getDataTypes().stream()
+        .filter(type -> type != DataType.BLOB)
+        .collect(Collectors.toList());
   }
 
   @Override

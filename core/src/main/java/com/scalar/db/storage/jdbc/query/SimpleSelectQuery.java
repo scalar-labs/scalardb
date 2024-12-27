@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class SimpleSelectQuery implements SelectQuery {
 
   private final List<String> projections;
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -94,11 +94,11 @@ public class SimpleSelectQuery implements SelectQuery {
   private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
     partitionKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
+        k -> k.getColumns().forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     clusteringKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
+        k -> k.getColumns().forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     commonClusteringKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
+        k -> k.getColumns().forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     startColumn.ifPresent(
         c -> conditions.add(rdbEngine.enclose(c.getName()) + (startInclusive ? ">=?" : ">?")));
     endColumn.ifPresent(

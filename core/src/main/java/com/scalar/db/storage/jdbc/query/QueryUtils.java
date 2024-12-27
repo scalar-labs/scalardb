@@ -8,7 +8,9 @@ public final class QueryUtils {
   private QueryUtils() {}
 
   public static String getConditionString(
-      String columnName, ConditionalExpression.Operator operator, RdbEngineStrategy rdbEngine) {
+      String columnName,
+      ConditionalExpression.Operator operator,
+      RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     switch (operator) {
       case EQ:
         return rdbEngine.enclose(columnName) + "=?";

@@ -42,14 +42,14 @@ public class JdbcService {
 
   private final TableMetadataManager tableMetadataManager;
   private final OperationChecker operationChecker;
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
   private final QueryBuilder queryBuilder;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
-      RdbEngineStrategy rdbEngine) {
+      RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
     this(tableMetadataManager, operationChecker, rdbEngine, new QueryBuilder(rdbEngine));
   }
 
@@ -57,7 +57,7 @@ public class JdbcService {
   JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
-      RdbEngineStrategy rdbEngine,
+      RdbEngineStrategy<?, ?, ?, ?> rdbEngine,
       QueryBuilder queryBuilder) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.operationChecker = Objects.requireNonNull(operationChecker);
@@ -83,7 +83,8 @@ public class JdbcService {
         if (resultSet.next()) {
           Optional<Result> ret =
               Optional.of(
-                  new ResultInterpreter(get.getProjections(), tableMetadata).interpret(resultSet));
+                  new ResultInterpreter(get.getProjections(), tableMetadata, rdbEngine)
+                      .interpret(resultSet));
           if (resultSet.next()) {
             throw new IllegalArgumentException(
                 CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
@@ -107,7 +108,7 @@ public class JdbcService {
     selectQuery.bind(preparedStatement);
     ResultSet resultSet = preparedStatement.executeQuery();
     return new ScannerImpl(
-        new ResultInterpreter(scan.getProjections(), tableMetadata),
+        new ResultInterpreter(scan.getProjections(), tableMetadata, rdbEngine),
         connection,
         preparedStatement,
         resultSet);
@@ -125,7 +126,7 @@ public class JdbcService {
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
         List<Result> ret = new ArrayList<>();
         ResultInterpreter resultInterpreter =
-            new ResultInterpreter(scan.getProjections(), tableMetadata);
+            new ResultInterpreter(scan.getProjections(), tableMetadata, rdbEngine);
         while (resultSet.next()) {
           ret.add(resultInterpreter.interpret(resultSet));
         }

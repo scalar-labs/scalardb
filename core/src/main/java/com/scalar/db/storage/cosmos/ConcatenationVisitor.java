@@ -4,10 +4,15 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -108,5 +113,29 @@ public class ConcatenationVisitor implements ColumnVisitor {
     // Use Base64 encoding
     columns.add(
         Base64.getUrlEncoder().withoutPadding().encodeToString(column.getBlobValueAsBytes()));
+  }
+
+  @Override
+  public void visit(DateColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
+  }
+
+  @Override
+  public void visit(TimeColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
+  }
+
+  @Override
+  public void visit(TimestampColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
+  }
+
+  @Override
+  public void visit(TimestampTZColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
   }
 }

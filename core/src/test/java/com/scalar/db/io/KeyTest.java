@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -20,6 +24,10 @@ public class KeyTest {
   private static final String ANY_TEXT_4 = "text4";
   private static final int ANY_INT_1 = 10;
   private static final int ANY_INT_2 = 20;
+  private static final LocalDate ANY_DATE = DateColumn.MAX_VALUE;
+  private static final LocalTime ANY_TIME = TimeColumn.MAX_VALUE;
+  private static final LocalDateTime ANY_TIMESTAMP = TimestampColumn.MAX_VALUE;
+  private static final Instant ANY_TIMESTAMPTZ = TimestampTZColumn.MAX_VALUE;
 
   @Test
   public void constructor_WithSingleBooleanValue_ShouldReturnWhatsSet() {
@@ -185,6 +193,18 @@ public class KeyTest {
             "key9",
             2468);
     Key key4 = new Key("key1", true, "key2", 5678, "key3", 1234L, "key4", 4.56f, "key5", 1.23);
+    Key key5 =
+        new Key(
+            "key1",
+            ANY_DATE,
+            "key2",
+            ANY_TIME,
+            "key3",
+            ANY_TIMESTAMP,
+            "key4",
+            ANY_TIMESTAMPTZ,
+            "key5",
+            1.23);
 
     // Act Assert
     List<Value<?>> values1 = key1.get();
@@ -249,16 +269,36 @@ public class KeyTest {
     assertThat(values4.get(4)).isEqualTo(new DoubleValue("key5", 1.23));
 
     assertThat(key4.size()).isEqualTo(5);
-    assertThat(key1.getColumnName(0)).isEqualTo("key1");
-    assertThat(key1.getBooleanValue(0)).isEqualTo(true);
-    assertThat(key1.getColumnName(1)).isEqualTo("key2");
-    assertThat(key1.getIntValue(1)).isEqualTo(5678);
+    assertThat(key4.getColumnName(0)).isEqualTo("key1");
+    assertThat(key4.getBooleanValue(0)).isEqualTo(true);
+    assertThat(key4.getColumnName(1)).isEqualTo("key2");
+    assertThat(key4.getIntValue(1)).isEqualTo(5678);
     assertThat(key4.getColumnName(2)).isEqualTo("key3");
     assertThat(key4.getBigIntValue(2)).isEqualTo(1234L);
     assertThat(key4.getColumnName(3)).isEqualTo("key4");
     assertThat(key4.getFloatValue(3)).isEqualTo(4.56f);
     assertThat(key4.getColumnName(4)).isEqualTo("key5");
     assertThat(key4.getDoubleValue(4)).isEqualTo(1.23);
+
+    List<Column<?>> columns5 = key5.getColumns();
+    assertThat(columns5.size()).isEqualTo(5);
+    assertThat(columns5.get(0)).isEqualTo(DateColumn.of("key1", ANY_DATE));
+    assertThat(columns5.get(1)).isEqualTo(TimeColumn.of("key2", ANY_TIME));
+    assertThat(columns5.get(2)).isEqualTo(TimestampColumn.of("key3", ANY_TIMESTAMP));
+    assertThat(columns5.get(3)).isEqualTo(TimestampTZColumn.of("key4", ANY_TIMESTAMPTZ));
+    assertThat(columns5.get(4)).isEqualTo(DoubleColumn.of("key5", 1.23));
+
+    assertThat(key5.size()).isEqualTo(5);
+    assertThat(key5.getColumnName(0)).isEqualTo("key1");
+    assertThat(key5.getDateValue(0)).isEqualTo(ANY_DATE);
+    assertThat(key5.getColumnName(1)).isEqualTo("key2");
+    assertThat(key5.getTimeValue(1)).isEqualTo(ANY_TIME);
+    assertThat(key5.getColumnName(2)).isEqualTo("key3");
+    assertThat(key5.getTimestampValue(2)).isEqualTo(ANY_TIMESTAMP);
+    assertThat(key5.getColumnName(3)).isEqualTo("key4");
+    assertThat(key5.getTimestampTZValue(3)).isEqualTo(ANY_TIMESTAMPTZ);
+    assertThat(key5.getColumnName(4)).isEqualTo("key5");
+    assertThat(key5.getDoubleValue(4)).isEqualTo(1.23);
   }
 
   @Test
@@ -413,6 +453,74 @@ public class KeyTest {
   }
 
   @Test
+  public void ofDate_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    Key key = Key.ofDate(name, ANY_DATE);
+
+    // Act Assert
+    List<Column<?>> columns = key.getColumns();
+    assertThat(columns.size()).isEqualTo(1);
+    assertThat(columns.get(0).getName()).isEqualTo(name);
+    assertThat(columns.get(0).getDateValue()).isEqualTo(ANY_DATE);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getDateValue(0)).isEqualTo(ANY_DATE);
+  }
+
+  @Test
+  public void ofTime_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    Key key = Key.ofTime(name, ANY_TIME);
+
+    // Act Assert
+    List<Column<?>> columns = key.getColumns();
+    assertThat(columns.size()).isEqualTo(1);
+    assertThat(columns.get(0).getName()).isEqualTo(name);
+    assertThat(columns.get(0).getTimeValue()).isEqualTo(ANY_TIME);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getTimeValue(0)).isEqualTo(ANY_TIME);
+  }
+
+  @Test
+  public void ofTimestamp_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    Key key = Key.ofTimestamp(name, ANY_TIMESTAMP);
+
+    // Act Assert
+    List<Column<?>> columns = key.getColumns();
+    assertThat(columns.size()).isEqualTo(1);
+    assertThat(columns.get(0).getName()).isEqualTo(name);
+    assertThat(columns.get(0).getTimestampValue()).isEqualTo(ANY_TIMESTAMP);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getTimestampValue(0)).isEqualTo(ANY_TIMESTAMP);
+  }
+
+  @Test
+  public void ofTimestampTZ_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    Key key = Key.ofTimestampTZ(name, ANY_TIMESTAMPTZ);
+
+    // Act Assert
+    List<Column<?>> columns = key.getColumns();
+    assertThat(columns.size()).isEqualTo(1);
+    assertThat(columns.get(0).getName()).isEqualTo(name);
+    assertThat(columns.get(0).getTimestampTZValue()).isEqualTo(ANY_TIMESTAMPTZ);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getTimestampTZValue(0)).isEqualTo(ANY_TIMESTAMPTZ);
+  }
+
+  @Test
   public void of_ShouldReturnWhatsSet() {
     // Arrange
     Key key1 = Key.of("key1", true, "key2", 5678);
@@ -428,6 +536,18 @@ public class KeyTest {
             "key9",
             2468);
     Key key4 = Key.of("key1", true, "key2", 5678, "key3", 1234L, "key4", 4.56f, "key5", 1.23);
+    Key key5 =
+        Key.of(
+            "key1",
+            ANY_DATE,
+            "key2",
+            ANY_TIME,
+            "key3",
+            ANY_TIMESTAMP,
+            "key4",
+            ANY_TIMESTAMPTZ,
+            "key5",
+            1.23);
 
     // Act Assert
     List<Value<?>> values1 = key1.get();
@@ -502,6 +622,26 @@ public class KeyTest {
     assertThat(key4.getFloatValue(3)).isEqualTo(4.56f);
     assertThat(key4.getColumnName(4)).isEqualTo("key5");
     assertThat(key4.getDoubleValue(4)).isEqualTo(1.23);
+
+    List<Column<?>> columns5 = key5.getColumns();
+    assertThat(columns5.size()).isEqualTo(5);
+    assertThat(columns5.get(0)).isEqualTo(DateColumn.of("key1", ANY_DATE));
+    assertThat(columns5.get(1)).isEqualTo(TimeColumn.of("key2", ANY_TIME));
+    assertThat(columns5.get(2)).isEqualTo(TimestampColumn.of("key3", ANY_TIMESTAMP));
+    assertThat(columns5.get(3)).isEqualTo(TimestampTZColumn.of("key4", ANY_TIMESTAMPTZ));
+    assertThat(columns5.get(4)).isEqualTo(DoubleColumn.of("key5", 1.23));
+
+    assertThat(key5.size()).isEqualTo(5);
+    assertThat(key5.getColumnName(0)).isEqualTo("key1");
+    assertThat(key5.getDateValue(0)).isEqualTo(ANY_DATE);
+    assertThat(key5.getColumnName(1)).isEqualTo("key2");
+    assertThat(key5.getTimeValue(1)).isEqualTo(ANY_TIME);
+    assertThat(key5.getColumnName(2)).isEqualTo("key3");
+    assertThat(key5.getTimestampValue(2)).isEqualTo(ANY_TIMESTAMP);
+    assertThat(key5.getColumnName(3)).isEqualTo("key4");
+    assertThat(key5.getTimestampTZValue(3)).isEqualTo(ANY_TIMESTAMPTZ);
+    assertThat(key5.getColumnName(4)).isEqualTo("key5");
+    assertThat(key5.getDoubleValue(4)).isEqualTo(1.23);
   }
 
   @Test
@@ -599,13 +739,17 @@ public class KeyTest {
             .add(DoubleColumn.of("key5", 1.23))
             .add(TextColumn.of("key6", "string_key"))
             .add(BlobColumn.of("key7", "blob_key".getBytes(StandardCharsets.UTF_8)))
+            .addTimestampTZ("key8", ANY_TIMESTAMPTZ)
+            .addTime("key9", ANY_TIME)
+            .addDate("key10", ANY_DATE)
+            .addTimestamp("key11", ANY_TIMESTAMP)
             .build();
 
     // Act
     List<Column<?>> columns = key.getColumns();
 
     // Assert
-    assertThat(columns.size()).isEqualTo(7);
+    assertThat(columns.size()).isEqualTo(11);
     assertThat(columns.get(0).getName()).isEqualTo("key1");
     assertThat(columns.get(0).getBooleanValue()).isEqualTo(true);
     assertThat(columns.get(1).getName()).isEqualTo("key2");
@@ -621,6 +765,14 @@ public class KeyTest {
     assertThat(columns.get(6).getName()).isEqualTo("key7");
     assertThat(columns.get(6).getBlobValue())
         .isEqualTo(ByteBuffer.wrap("blob_key".getBytes(StandardCharsets.UTF_8)));
+    assertThat(columns.get(7).getName()).isEqualTo("key8");
+    assertThat(columns.get(7).getTimestampTZValue()).isEqualTo(ANY_TIMESTAMPTZ);
+    assertThat(columns.get(8).getName()).isEqualTo("key9");
+    assertThat(columns.get(8).getTimeValue()).isEqualTo(ANY_TIME);
+    assertThat(columns.get(9).getName()).isEqualTo("key10");
+    assertThat(columns.get(9).getDateValue()).isEqualTo(ANY_DATE);
+    assertThat(columns.get(10).getName()).isEqualTo("key11");
+    assertThat(columns.get(10).getTimestampValue()).isEqualTo(ANY_TIMESTAMP);
   }
 
   @Test

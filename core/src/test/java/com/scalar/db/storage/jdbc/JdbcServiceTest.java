@@ -53,7 +53,7 @@ public class JdbcServiceTest {
   @Mock private QueryBuilder queryBuilder;
   @Mock private OperationChecker operationChecker;
   @Mock private TableMetadataManager tableMetadataManager;
-  @Mock private RdbEngineStrategy rdbEngine;
+  @Mock private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
 
   @Mock private SelectQuery.Builder selectQueryBuilder;
   @Mock private SelectQuery selectQuery;

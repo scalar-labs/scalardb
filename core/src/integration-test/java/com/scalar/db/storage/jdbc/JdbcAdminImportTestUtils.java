@@ -107,7 +107,7 @@ public class JdbcAdminImportTestUtils {
           "geometry",
           "geography");
 
-  private final RdbEngineStrategy rdbEngine;
+  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
   private final int majorVersion;
   private final BasicDataSource dataSource;
 

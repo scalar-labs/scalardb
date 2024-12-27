@@ -37,6 +37,11 @@ public class BlobColumnTest {
     assertThatThrownBy(column::getFloatValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getTextValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDateValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimeValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampTZValue)
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -66,6 +71,11 @@ public class BlobColumnTest {
     assertThatThrownBy(column::getFloatValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getTextValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDateValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimeValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampTZValue)
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -90,6 +100,11 @@ public class BlobColumnTest {
     assertThatThrownBy(column::getFloatValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getTextValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDateValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimeValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampTZValue)
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -121,6 +136,11 @@ public class BlobColumnTest {
     assertThatThrownBy(column::getFloatValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getDoubleValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getTextValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getDateValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimeValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(column::getTimestampTZValue)
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
