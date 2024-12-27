@@ -711,7 +711,7 @@ public enum CoreError implements ScalarDbError {
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
       Category.USER_ERROR,
       "0155",
-      "This TIMESTAMPTZ column value precision cannot be smaller than one millisecond. Value: %s",
+      "This TIMESTAMP column value precision cannot be smaller than one millisecond. Value: %s",
       "",
       ""),
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
