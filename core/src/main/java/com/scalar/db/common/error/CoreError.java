@@ -693,37 +693,37 @@ public enum CoreError implements ScalarDbError {
   OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE(
       Category.USER_ERROR,
       "0152",
-      "This Date column value is out of the valid range. It must be from 1000-01-01 through 9999-12-12. Value: %s",
+      "This DATE column value is out of the valid range. It must be between 1000-01-01 and 9999-12-12. Value: %s",
       "",
       ""),
   SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME(
       Category.USER_ERROR,
       "0153",
-      "This Time column value precision cannot be smaller than a microsecond. Value: %s",
+      "This Time column value precision cannot be smaller than one microsecond. Value: %s",
       "",
       ""),
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
       Category.USER_ERROR,
       "0154",
-      "This Timestamp column value is out of the valid range. It must be from 1000-01-01T00:00:00.000 through 9999-12-31T23:59:59.999. Value: %s",
+      "This Timestamp column value is out of the valid range. It must be between 1000-01-01T00:00:00.000 and 9999-12-31T23:59:59.999. Value: %s",
       "",
       ""),
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
       Category.USER_ERROR,
       "0155",
-      "This Timestamp column value precision cannot be smaller than a millisecond. Value: %s",
+      "This Timestamp column value precision cannot be smaller than one millisecond. Value: %s",
       "",
       ""),
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
       Category.USER_ERROR,
       "0156",
-      "This TimestampTZ column value is out of the valid range. It must be from 1000-01-01T00:00:00.000Z through 9999-12-31T23:59:59.999Z. Value: %s",
+      "This TimestampTZ column value is out of the valid range. It must be between 1000-01-01T00:00:00.000Z to 9999-12-31T23:59:59.999Z. Value: %s",
       "",
       ""),
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
       Category.USER_ERROR,
       "0157",
-      "This TimestampTZ column value precision cannot be smaller than a millisecond. Value: %s",
+      "This TimestampTZ column value precision cannot be smaller than one millisecond. Value: %s",
       "",
       ""),
 
