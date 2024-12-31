@@ -691,6 +691,50 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
       Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
 
+  DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
+      Category.USER_ERROR,
+      "0158",
+      "Duplicate data mappings found for table '%s' in the control file",
+      "",
+      ""),
+  DATA_LOADER_MISSING_COLUMN_MAPPING(
+      Category.USER_ERROR,
+      "0159",
+      "No mapping found for column '%s' in table '%s' in the control file. \\nControl file validation set at 'FULL'. All columns need to be mapped.",
+      "",
+      ""),
+  DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS(
+      Category.USER_ERROR, "0160", "The control file is missing data mappings", "", ""),
+  DATA_LOADER__MISSING_NAMESPACE_OR_TABLE(
+      Category.USER_ERROR,
+      "0161",
+      "The provided namespace '%s' and/or table name '%s' is incorrect and could not be found",
+      "",
+      ""),
+  DATA_LOADER_TARGET_COLUMN_NOT_FOUND(
+      Category.USER_ERROR,
+      "0162",
+      "The target column '%s' for source field '%s' could not be found in table '%s'",
+      "",
+      ""),
+  DATA_LOADER_MISSING_PARTITION_KEY(
+      Category.USER_ERROR,
+      "0163",
+      "The required partition key '%s' is missing in the control file mapping for table '%s'",
+      "",
+      ""),
+  DATA_LOADER_MISSING_CLUSTERING_KEY(
+      Category.USER_ERROR,
+      "0164",
+      "The required clustering key '%s' is missing in the control file mapping for table '%s'",
+      "",
+      ""),
+  DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND(
+      Category.USER_ERROR,
+      "0165",
+      "Multiple data mappings found for column '%s' in table '%s'",
+      "",
+      ""),
   //
   // Errors for the concurrency error category
   //
