@@ -28,19 +28,12 @@ public class ProducerTaskFactory {
       TableMetadata tableMetadata,
       Map<String, DataType> dataTypeByColumnName) {
     return switch (fileFormat) {
-      case JSON ->
-          new JsonProducerTask(
-              includeMetadata,
-              projectionColumns,
-              tableMetadata,
-              dataTypeByColumnName,
-              prettyPrintJson);
-      case JSONL ->
-          new JsonLineProducerTask(
-              includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName);
-      case CSV ->
-          new CsvProducerTask(
-              includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, delimiter);
+      case JSON -> new JsonProducerTask(
+          includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, prettyPrintJson);
+      case JSONL -> new JsonLineProducerTask(
+          includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName);
+      case CSV -> new CsvProducerTask(
+          includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, delimiter);
     };
   }
 }
