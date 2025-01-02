@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.task.validation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import java.util.HashSet;
 import java.util.Set;
@@ -80,7 +81,7 @@ class ImportSourceRecordValidatorTest {
             partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false);
     Assertions.assertFalse(result.getColumnsWithErrors().isEmpty());
     Assertions.assertEquals(
-        "missing required field or column mapping for clustering key id1",
+        CoreError.DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN.buildMessage("id1"),
         result.getErrorMessages().get(0));
   }
 }
