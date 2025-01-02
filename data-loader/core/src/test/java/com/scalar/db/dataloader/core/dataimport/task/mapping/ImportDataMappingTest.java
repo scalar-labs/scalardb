@@ -3,8 +3,6 @@ package com.scalar.db.dataloader.core.dataimport.task.mapping;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTableFieldMapping;
 import java.util.ArrayList;
@@ -14,12 +12,10 @@ import org.junit.jupiter.api.Test;
 
 public class ImportDataMappingTest {
 
-  TableMetadata mockMetadata;
   ControlFileTable controlFilTable;
 
   @BeforeEach
   void setup() {
-    mockMetadata = UnitTestUtils.createTestTableMetadata();
     controlFilTable = new ControlFileTable("namespace", "table");
     ControlFileTableFieldMapping m1 = new ControlFileTableFieldMapping("source_id", "target_id");
     ControlFileTableFieldMapping m2 =
