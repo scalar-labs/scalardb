@@ -87,6 +87,8 @@ public class UpsertBuilderTest {
             .value(TextColumn.of("text2", "another_value"))
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
             .build();
 
     // Assert
@@ -117,7 +119,18 @@ public class UpsertBuilderTest {
     assertThat(actual.getColumns().get("text").getTextValue()).isEqualTo("a_value");
     assertThat(actual.getColumns().get("text2").getTextValue()).isEqualTo("another_value");
     assertThat(actual.getAttributes())
-        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
+        .isEqualTo(
+            ImmutableMap.of(
+                "a1",
+                "v1",
+                "a2",
+                "v2",
+                "a3",
+                "v3",
+                AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                "readTag",
+                AbacOperationAttributes.WRITE_TAG_PREFIX + "policyName2",
+                "writeTag"));
   }
 
   @Test
@@ -210,7 +223,7 @@ public class UpsertBuilderTest {
   @Test
   public void build_FromExistingAndUpdateAllParameters_ShouldBuildUpsertWithUpdatedParameters() {
     // Arrange
-    Upsert existingUpsert =
+    Upsert existingUpsert1 =
         Upsert.newBuilder()
             .namespace(NAMESPACE_1)
             .table(TABLE_1)
@@ -233,10 +246,20 @@ public class UpsertBuilderTest {
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
+    Upsert existingUpsert2 =
+        Upsert.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .partitionKey(partitionKey1)
+            .clusteringKey(clusteringKey1)
+            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
+            .build();
 
     // Act
-    Upsert newUpsert =
-        Upsert.newBuilder(existingUpsert)
+    Upsert newUpsert1 =
+        Upsert.newBuilder(existingUpsert1)
             .namespace(NAMESPACE_2)
             .table(TABLE_2)
             .partitionKey(partitionKey2)
@@ -260,37 +283,64 @@ public class UpsertBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
+            .build();
+    Upsert newUpsert2 =
+        Upsert.newBuilder(existingUpsert2)
+            .clearReadTag("policyName1")
+            .clearWriteTag("policyName2")
             .build();
 
     // Assert
-    assertThat(newUpsert.forNamespace()).hasValue(NAMESPACE_2);
-    assertThat(newUpsert.forTable()).hasValue(TABLE_2);
-    Assertions.<Key>assertThat(newUpsert.getPartitionKey()).isEqualTo(partitionKey2);
-    assertThat(newUpsert.getClusteringKey()).hasValue(clusteringKey2);
-    assertThat(newUpsert.getColumns().size()).isEqualTo(14);
-    assertThat(newUpsert.getColumns().get("bigint1").getBigIntValue())
+    assertThat(newUpsert1.forNamespace()).hasValue(NAMESPACE_2);
+    assertThat(newUpsert1.forTable()).hasValue(TABLE_2);
+    Assertions.<Key>assertThat(newUpsert1.getPartitionKey()).isEqualTo(partitionKey2);
+    assertThat(newUpsert1.getClusteringKey()).hasValue(clusteringKey2);
+    assertThat(newUpsert1.getColumns().size()).isEqualTo(14);
+    assertThat(newUpsert1.getColumns().get("bigint1").getBigIntValue())
         .isEqualTo(BigIntColumn.MIN_VALUE);
-    assertThat(newUpsert.getColumns().get("bigint2").getBigIntValue())
+    assertThat(newUpsert1.getColumns().get("bigint2").getBigIntValue())
         .isEqualTo(Long.valueOf(BigIntColumn.MIN_VALUE));
-    assertThat(newUpsert.getColumns().get("blob1").getBlobValueAsBytes())
+    assertThat(newUpsert1.getColumns().get("blob1").getBlobValueAsBytes())
         .isEqualTo("foo".getBytes(StandardCharsets.UTF_8));
-    assertThat(newUpsert.getColumns().get("blob2").getBlobValueAsByteBuffer())
+    assertThat(newUpsert1.getColumns().get("blob2").getBlobValueAsByteBuffer())
         .isEqualTo(ByteBuffer.allocate(2));
-    assertThat(newUpsert.getColumns().get("bool1").getBooleanValue()).isFalse();
-    assertThat(newUpsert.getColumns().get("bool2").getBooleanValue()).isFalse();
-    assertThat(newUpsert.getColumns().get("double1").getDoubleValue()).isEqualTo(Double.MIN_VALUE);
-    assertThat(newUpsert.getColumns().get("double2").getDoubleValue())
+    assertThat(newUpsert1.getColumns().get("bool1").getBooleanValue()).isFalse();
+    assertThat(newUpsert1.getColumns().get("bool2").getBooleanValue()).isFalse();
+    assertThat(newUpsert1.getColumns().get("double1").getDoubleValue()).isEqualTo(Double.MIN_VALUE);
+    assertThat(newUpsert1.getColumns().get("double2").getDoubleValue())
         .isEqualTo(Double.valueOf(Double.MIN_VALUE));
-    assertThat(newUpsert.getColumns().get("float1").getFloatValue()).isEqualTo(Float.MIN_VALUE);
-    assertThat(newUpsert.getColumns().get("float2").getFloatValue())
+    assertThat(newUpsert1.getColumns().get("float1").getFloatValue()).isEqualTo(Float.MIN_VALUE);
+    assertThat(newUpsert1.getColumns().get("float2").getFloatValue())
         .isEqualTo(Float.valueOf(Float.MIN_VALUE));
-    assertThat(newUpsert.getColumns().get("int1").getIntValue()).isEqualTo(Integer.MIN_VALUE);
-    assertThat(newUpsert.getColumns().get("int2").getIntValue())
+    assertThat(newUpsert1.getColumns().get("int1").getIntValue()).isEqualTo(Integer.MIN_VALUE);
+    assertThat(newUpsert1.getColumns().get("int2").getIntValue())
         .isEqualTo(Integer.valueOf(Integer.MIN_VALUE));
-    assertThat(newUpsert.getColumns().get("text").getTextValue()).isEqualTo("another_value");
-    assertThat(newUpsert.getColumns().get("text2").getTextValue()).isEqualTo("foo");
-    assertThat(newUpsert.getAttributes())
-        .isEqualTo(ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"));
+    assertThat(newUpsert1.getColumns().get("text").getTextValue()).isEqualTo("another_value");
+    assertThat(newUpsert1.getColumns().get("text2").getTextValue()).isEqualTo("foo");
+    assertThat(newUpsert1.getAttributes())
+        .isEqualTo(
+            ImmutableMap.of(
+                "a4",
+                "v4",
+                "a5",
+                "v5",
+                "a6",
+                "v6",
+                AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                "readTag",
+                AbacOperationAttributes.WRITE_TAG_PREFIX + "policyName2",
+                "writeTag"));
+
+    assertThat(newUpsert2.forNamespace()).hasValue(NAMESPACE_1);
+    assertThat(newUpsert2.forTable()).hasValue(TABLE_1);
+    Assertions.<Key>assertThat(newUpsert2.getPartitionKey()).isEqualTo(partitionKey1);
+    assertThat(newUpsert2.getClusteringKey()).hasValue(clusteringKey1);
+    assertThat(newUpsert2.getColumns().size()).isEqualTo(1);
+    assertThat(newUpsert2.getColumns().get("bigint1").getBigIntValue())
+        .isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(newUpsert2.getAttributes()).isEmpty();
   }
 
   @Test
