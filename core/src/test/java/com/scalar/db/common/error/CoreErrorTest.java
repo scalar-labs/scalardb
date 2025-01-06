@@ -23,7 +23,7 @@ public class CoreErrorTest {
     String code = error.buildCode();
 
     // Assert
-    Assertions.assertThat(code).isEqualTo("CORE-10000");
+    Assertions.assertThat(code).isEqualTo("DB-CORE-10000");
   }
 
   @Test
@@ -43,6 +43,6 @@ public class CoreErrorTest {
 
     // Assert
     Assertions.assertThat(message)
-        .isEqualTo("CORE-10000: Only a single-column index is supported. Operation: " + put);
+        .isEqualTo("DB-CORE-10000: Only a single-column index is supported. Operation: " + put);
   }
 }
