@@ -27,7 +27,6 @@ public class PreparedStatementBinder implements ColumnVisitor {
   private final PreparedStatement preparedStatement;
   private final TableMetadata tableMetadata;
   private final RdbEngineStrategy rdbEngine;
-
   private int index = 1;
   private SQLException sqlException;
 
@@ -144,7 +143,8 @@ public class PreparedStatementBinder implements ColumnVisitor {
       if (column.hasNullValue()) {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
-        preparedStatement.setObject(index++, rdbEngine.encodeDate(column));
+        preparedStatement.setObject(
+            index++, rdbEngine.getTimeTypeStrategy().convert(rdbEngine.encode(column)));
       }
     } catch (SQLException e) {
       sqlException = e;
@@ -157,7 +157,8 @@ public class PreparedStatementBinder implements ColumnVisitor {
       if (column.hasNullValue()) {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
-        preparedStatement.setObject(index++, rdbEngine.encodeTime(column));
+        preparedStatement.setObject(
+            index++, rdbEngine.getTimeTypeStrategy().convert(rdbEngine.encode(column)));
       }
     } catch (SQLException e) {
       sqlException = e;
@@ -170,7 +171,8 @@ public class PreparedStatementBinder implements ColumnVisitor {
       if (column.hasNullValue()) {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
-        preparedStatement.setObject(index++, rdbEngine.encodeTimestamp(column));
+        preparedStatement.setObject(
+            index++, rdbEngine.getTimeTypeStrategy().convert(rdbEngine.encode(column)));
       }
     } catch (SQLException e) {
       sqlException = e;
@@ -183,7 +185,8 @@ public class PreparedStatementBinder implements ColumnVisitor {
       if (column.hasNullValue()) {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
-        preparedStatement.setObject(index++, rdbEngine.encodeTimestampTZ(column));
+        preparedStatement.setObject(
+            index++, rdbEngine.getTimeTypeStrategy().convert(rdbEngine.encode(column)));
       }
     } catch (SQLException e) {
       sqlException = e;

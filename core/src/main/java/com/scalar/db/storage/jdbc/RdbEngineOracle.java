@@ -8,7 +8,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.TimeColumn;
 import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
@@ -17,7 +16,9 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,17 +28,17 @@ import org.slf4j.LoggerFactory;
 class RdbEngineOracle implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private final String keyColumnSize;
-  private final JdbcConfig config;
+  private final RdbEngineTimeTypeOracle timeTypeEngine;
 
   RdbEngineOracle(JdbcConfig config) {
     keyColumnSize = String.valueOf(config.getOracleVariableKeyColumnSize());
-    this.config = config;
+    this.timeTypeEngine = new RdbEngineTimeTypeOracle(config);
   }
 
   @VisibleForTesting
   RdbEngineOracle() {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
-    config = null;
+    timeTypeEngine = null;
   }
 
   @Override
@@ -370,9 +371,8 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public LocalDateTime encodeTime(TimeColumn column) {
-    assert column.getTimeValue() != null;
-    return LocalDateTime.of(
-        config.getOracleTimeColumnDefaultDateComponent(), column.getTimeValue());
+  public RdbEngineTimeTypeStrategy<LocalDate, LocalDateTime, LocalDateTime, OffsetDateTime>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

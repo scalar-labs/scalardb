@@ -144,22 +144,22 @@ public interface RdbEngineStrategy {
     return namespace;
   }
 
-  default Object encodeDate(DateColumn column) {
+  default LocalDate encode(DateColumn column) {
     assert column.getDateValue() != null;
     return column.getDateValue();
   }
 
-  default Object encodeTime(TimeColumn column) {
+  default LocalTime encode(TimeColumn column) {
     assert column.getTimeValue() != null;
     return column.getTimeValue();
   }
 
-  default Object encodeTimestamp(TimestampColumn column) {
+  default LocalDateTime encode(TimestampColumn column) {
     assert column.getTimestampValue() != null;
     return column.getTimestampValue();
   }
 
-  default Object encodeTimestampTZ(TimestampTZColumn column) {
+  default OffsetDateTime encode(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC);
   }
@@ -195,4 +195,6 @@ public interface RdbEngineStrategy {
   default Map<String, String> getConnectionProperties() {
     return Collections.emptyMap();
   }
+
+  RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
 }

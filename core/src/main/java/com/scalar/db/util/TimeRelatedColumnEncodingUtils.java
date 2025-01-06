@@ -19,7 +19,11 @@ public final class TimeRelatedColumnEncodingUtils {
 
   public static long encode(DateColumn column) {
     assert column.getDateValue() != null;
-    return column.getDateValue().toEpochDay();
+    return encode(column.getDateValue());
+  }
+
+  public static long encode(LocalDate date) {
+    return date.toEpochDay();
   }
 
   public static LocalDate decodeDate(long epochDay) {
@@ -28,7 +32,11 @@ public final class TimeRelatedColumnEncodingUtils {
 
   public static long encode(TimeColumn column) {
     assert column.getTimeValue() != null;
-    return column.getTimeValue().toNanoOfDay();
+    return encode(column.getTimeValue());
+  }
+
+  public static long encode(LocalTime time) {
+    return time.toNanoOfDay();
   }
 
   public static LocalTime decodeTime(long nanoOfDay) {
@@ -37,7 +45,11 @@ public final class TimeRelatedColumnEncodingUtils {
 
   public static long encode(TimestampColumn column) {
     assert column.getTimestampValue() != null;
-    return encodeInstant(column.getTimestampValue().toInstant(ZoneOffset.UTC));
+    return encode(column.getTimestampValue());
+  }
+
+  public static long encode(LocalDateTime timestamp) {
+    return encode(timestamp.toInstant(ZoneOffset.UTC));
   }
 
   public static LocalDateTime decodeTimestamp(long longTimestamp) {
@@ -52,7 +64,7 @@ public final class TimeRelatedColumnEncodingUtils {
 
   public static long encode(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
-    return encodeInstant(column.getTimestampTZValue());
+    return encode(column.getTimestampTZValue());
   }
 
   public static Instant decodeTimestampTZ(long longTimestampTZ) {
@@ -66,7 +78,7 @@ public final class TimeRelatedColumnEncodingUtils {
   }
 
   @SuppressWarnings("JavaInstantGetSecondsGetNano")
-  private static long encodeInstant(Instant instant) {
+  public static long encode(Instant instant) {
     // A Java Instant object is internally represented with two components:
     // - the epoch second: the number of seconds since the epoch date 1970-01-01
     // - the nano of second: the number of nanoseconds since the start of the second.

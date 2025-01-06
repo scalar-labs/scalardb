@@ -6,7 +6,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -17,7 +16,9 @@ import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -28,14 +29,17 @@ import org.slf4j.LoggerFactory;
 class RdbEngineMysql implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
+  private final RdbEngineTimeTypeMysql timeTypeEngine;
 
   RdbEngineMysql(JdbcConfig config) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
+    timeTypeEngine = new RdbEngineTimeTypeMysql();
   }
 
   @VisibleForTesting
   RdbEngineMysql() {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+    timeTypeEngine = new RdbEngineTimeTypeMysql();
   }
 
   @Override
@@ -404,19 +408,6 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public Object encodeTimestamp(TimestampColumn column) {
-    return column.getTimestampValue();
-  }
-
-  @Override
-  public Object encodeTimestampTZ(TimestampTZColumn column) {
-    assert column.getTimestampTZValue() != null;
-    // Encoding as an OffsetDateTime result in the time being offset arbitrarily depending on the
-    // client, session or server time zone. So we encode it as a LocalDateTime instead.
-    return column.getTimestampTZValue().atOffset(ZoneOffset.UTC).toLocalDateTime();
-  }
-
-  @Override
   public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
       throws SQLException {
     LocalDateTime localDateTime = resultSet.getObject(columnName, LocalDateTime.class);
@@ -425,5 +416,11 @@ class RdbEngineMysql implements RdbEngineStrategy {
     } else {
       return TimestampTZColumn.of(columnName, localDateTime.toInstant(ZoneOffset.UTC));
     }
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, LocalDateTime>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

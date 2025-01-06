@@ -37,6 +37,11 @@ import org.sqlite.SQLiteException;
  */
 class RdbEngineSqlite implements RdbEngineStrategy {
   private static final String NAMESPACE_SEPARATOR = "$";
+  private final RdbEngineTimeTypeSqlite timeTypeEngine;
+
+  public RdbEngineSqlite() {
+    timeTypeEngine = new RdbEngineTimeTypeSqlite();
+  }
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
@@ -295,26 +300,6 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public Long encodeDate(DateColumn column) {
-    return TimeRelatedColumnEncodingUtils.encode(column);
-  }
-
-  @Override
-  public Long encodeTime(TimeColumn column) {
-    return TimeRelatedColumnEncodingUtils.encode(column);
-  }
-
-  @Override
-  public Long encodeTimestamp(TimestampColumn column) {
-    return TimeRelatedColumnEncodingUtils.encode(column);
-  }
-
-  @Override
-  public Long encodeTimestampTZ(TimestampTZColumn column) {
-    return TimeRelatedColumnEncodingUtils.encode(column);
-  }
-
-  @Override
   public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
     return DateColumn.of(
         columnName, TimeRelatedColumnEncodingUtils.decodeDate(resultSet.getLong(columnName)));
@@ -339,5 +324,10 @@ class RdbEngineSqlite implements RdbEngineStrategy {
     return TimestampTZColumn.of(
         columnName,
         TimeRelatedColumnEncodingUtils.decodeTimestampTZ(resultSet.getLong(columnName)));
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<Long, Long, Long, Long> getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

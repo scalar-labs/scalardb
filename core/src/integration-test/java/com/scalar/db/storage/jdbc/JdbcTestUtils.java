@@ -84,13 +84,12 @@ public final class JdbcTestUtils {
   public static List<DataType> filterDataTypes(
       List<DataType> typesToBeFiltered,
       RdbEngineStrategy currentRdbEngine,
-      Map<Class<? extends RdbEngineStrategy>, List<DataType>>
-          excludedDataTypesByRdbEngine) {
+      Map<Class<? extends RdbEngineStrategy>, List<DataType>> excludedDataTypesByRdbEngine) {
     return typesToBeFiltered.stream()
         .filter(
             type -> {
-              for (Entry<Class<? extends RdbEngineStrategy>, List<DataType>>
-                  excludedTypesByEngine : excludedDataTypesByRdbEngine.entrySet()) {
+              for (Entry<Class<? extends RdbEngineStrategy>, List<DataType>> excludedTypesByEngine :
+                  excludedDataTypesByRdbEngine.entrySet()) {
                 if (excludedTypesByEngine.getKey().equals(currentRdbEngine.getClass())
                     && excludedTypesByEngine.getValue().contains(type)) {
                   return false;

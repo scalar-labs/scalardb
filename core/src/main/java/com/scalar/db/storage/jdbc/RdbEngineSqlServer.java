@@ -6,9 +6,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DateColumn;
-import com.scalar.db.io.TimestampColumn;
-import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
@@ -16,9 +13,8 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -28,6 +24,11 @@ import org.slf4j.LoggerFactory;
 
 class RdbEngineSqlServer implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineSqlServer.class);
+  private final RdbEngineTimeTypeSqlServer timeTypeEngine;
+
+  RdbEngineSqlServer() {
+    timeTypeEngine = new RdbEngineTimeTypeSqlServer();
+  }
 
   @Override
   public String[] createSchemaSqls(String fullSchema) {
@@ -354,33 +355,15 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public String encodeDate(DateColumn column) {
-    assert column.getDateValue() != null;
-    // Pass the date value as text otherwise the dates before the Julian to Gregorian Calendar
-    // transition (October 15, 1582) will be offset by 10 days.
-    return column.getDateValue().format(DateTimeFormatter.BASIC_ISO_DATE);
-  }
-
-  @Override
-  public String encodeTimestamp(TimestampColumn column) {
-    assert column.getTimestampValue() != null;
-    // Pass the timestamp value as text otherwise the dates before the Julian to Gregorian Calendar
-    // transition (October 15, 1582) will be offset by 10 days.
-    return column.getTimestampValue().format(DateTimeFormatter.ISO_DATE_TIME);
-  }
-
-  @Override
-  public DateTimeOffset encodeTimestampTZ(TimestampTZColumn column) {
-    assert column.getTimestampTZValue() != null;
-    // When using SQLServer DATETIMEOFFSET data type, we should use the SQLServer JDBC driver's
-    // microsoft.sql.DateTimeOffset class for encoding the value.
-    return DateTimeOffset.valueOf(Timestamp.from(column.getTimestampTZValue()), 0);
-  }
-
-  @Override
   public Map<String, String> getConnectionProperties() {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
     // It is being considered setting to it to false by default in a future driver release.
     return ImmutableMap.of("sendTimeAsDatetime", "false");
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<String, LocalTime, String, DateTimeOffset>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }
