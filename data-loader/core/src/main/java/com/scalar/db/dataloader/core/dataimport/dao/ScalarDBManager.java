@@ -48,9 +48,7 @@ public class ScalarDBManager {
     storage = null;
   }
 
-  /**
-   * @return storage for ScalarDB connection that is running in storage mode
-   */
+  /** @return storage for ScalarDB connection that is running in storage mode */
   public DistributedStorage getDistributedStorage() {
     return storage;
   }
@@ -63,9 +61,7 @@ public class ScalarDBManager {
     return transactionManager;
   }
 
-  /**
-   * @return Distributed storage admin for ScalarDB admin operations
-   */
+  /** @return Distributed storage admin for ScalarDB admin operations */
   public DistributedStorageAdmin getDistributedStorageAdmin() {
     return storageAdmin;
   }

@@ -111,8 +111,8 @@ public class ExportManager {
     return exportReport;
   }
 
-  /***
-   * To process result data chunk
+  /**
+   * * To process result data chunk
    *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
@@ -152,11 +152,12 @@ public class ExportManager {
     }
   }
 
-  /***
-   * To split result into batches
+  /**
+   * * To split result into batches
+   *
    * @param iterator iterator which parse results
    * @param batchSize size of batch
-   * @return  a list of results split to batches
+   * @return a list of results split to batches
    */
   private List<Result> fetchDataChunk(Iterator<Result> iterator, int batchSize) {
     List<Result> batch = new ArrayList<>();
@@ -168,8 +169,9 @@ public class ExportManager {
     return batch;
   }
 
-  /***
-   * To validate export options
+  /**
+   * * To validate export options
+   *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
    * @throws ExportOptionsValidationException thrown if any of the export option validation fails
@@ -179,8 +181,9 @@ public class ExportManager {
     ExportOptionsValidator.validate(exportOptions, tableMetadata);
   }
 
-  /***
-   *  To update projection columns of export options if include metadata options is enabled
+  /**
+   * * To update projection columns of export options if include metadata options is enabled
+   *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
    */
@@ -194,8 +197,9 @@ public class ExportManager {
     }
   }
 
-  /***
-   * To create and write the header row to the CSV export file
+  /**
+   * * To create and write the header row to the CSV export file
+   *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
    * @param dataTypeByColumnName map of columns and their data types
@@ -218,8 +222,9 @@ public class ExportManager {
     writer.flush();
   }
 
-  /***
-   * To create a scanner object
+  /**
+   * * To create a scanner object
+   *
    * @param exportOptions export options
    * @param dao scalardb dao object
    * @param storage distributed storage object
@@ -250,8 +255,9 @@ public class ExportManager {
     }
   }
 
-  /***
-   * To generate the header row of CSV export file
+  /**
+   * * To generate the header row of CSV export file
+   *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
    * @param dataTypeByColumnName map of columns and their data types
@@ -286,11 +292,13 @@ public class ExportManager {
     return headerRow.toString();
   }
 
-  /***
-   * To ignore a column or not based on conditions such as if it is a metadata column or if it is not include in selected projections
+  /**
+   * * To ignore a column or not based on conditions such as if it is a metadata column or if it is
+   * not include in selected projections
+   *
    * @param isIncludeTransactionMetadata to include transaction metadata or not
    * @param columnName column name
-   * @param columnsToIgnore set of columns to  ignore
+   * @param columnsToIgnore set of columns to ignore
    * @param dataTypeColumnNames data types of columns
    * @param projections selected columns for projection
    * @return ignore the column or not

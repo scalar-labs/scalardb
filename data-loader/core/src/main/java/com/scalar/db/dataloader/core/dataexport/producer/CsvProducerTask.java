@@ -8,6 +8,7 @@ import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
+import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -45,8 +46,9 @@ public class CsvProducerTask extends ProducerTask {
     this.delimiter = delimiter;
   }
 
-  /***
-   * Process scalardb scan result data and returns CSV data
+  /**
+   * * Process scalardb scan result data and returns CSV data
+   *
    * @param dataChunk list of results
    * @param exportReport export report
    * @return result converted to string
@@ -110,8 +112,9 @@ public class CsvProducerTask extends ProducerTask {
     return "";
   }
 
-  /***
-   * Convert result column value to string
+  /**
+   * * Convert result column value to string
+   *
    * @param result scalardb result
    * @param columnName column name
    * @param dataType datatype of the column
@@ -121,17 +124,31 @@ public class CsvProducerTask extends ProducerTask {
     if (result.isNull(columnName)) {
       return null;
     }
-    return switch (dataType) {
-      case INT -> Integer.toString(result.getInt(columnName));
-      case BIGINT -> Long.toString(result.getBigInt(columnName));
-      case FLOAT -> DecimalUtil.convertToNonScientific(result.getFloat(columnName));
-      case DOUBLE -> DecimalUtil.convertToNonScientific(result.getDouble(columnName));
-      case BLOB -> {
+    String value = "";
+    switch (dataType) {
+      case INT:
+        value = Integer.toString(result.getInt(columnName));
+        break;
+      case BIGINT:
+        value = Long.toString(result.getBigInt(columnName));
+        break;
+      case FLOAT:
+        value = DecimalUtil.convertToNonScientific(result.getFloat(columnName));
+        break;
+      case DOUBLE:
+        value = DecimalUtil.convertToNonScientific(result.getDouble(columnName));
+        break;
+      case BLOB:
         byte[] encoded = Base64.getEncoder().encode(result.getBlobAsBytes(columnName));
-        yield new String(encoded);
-      }
-      case BOOLEAN -> Boolean.toString(result.getBoolean(columnName));
-      case TEXT -> result.getText(columnName);
-    };
+        value = new String(encoded, Charset.defaultCharset());
+        break;
+      case BOOLEAN:
+        value = Boolean.toString(result.getBoolean(columnName));
+        break;
+      case TEXT:
+        value = result.getText(columnName);
+        break;
+    }
+    return value;
   }
 }

@@ -8,6 +8,7 @@ import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
+import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -36,8 +37,9 @@ public class JsonProducerTask extends ProducerTask {
     this.prettyPrintJson = prettyPrintJson;
   }
 
-  /***
-   * Process scalardb scan result data and returns CSV data
+  /**
+   * * Process scalardb scan result data and returns CSV data
+   *
    * @param dataChunk list of results
    * @param exportReport export report
    * @return result converted to string
@@ -92,12 +94,12 @@ public class JsonProducerTask extends ProducerTask {
     return objectNode;
   }
 
-  /***
-   * Add result column name and value to json object node
+  /**
+   * * Add result column name and value to json object node
+   *
    * @param result scalardb result
    * @param columnName column name
    * @param dataType datatype of the column
-   *
    */
   private void addToObjectNode(
       ObjectNode objectNode, Result result, String columnName, DataType dataType) {
@@ -130,7 +132,7 @@ public class JsonProducerTask extends ProducerTask {
       case BLOB:
         // convert to base64 string
         byte[] encoded = Base64.getEncoder().encode(result.getBlobAsBytes(columnName));
-        objectNode.put(columnName, new String(encoded));
+        objectNode.put(columnName, new String(encoded, Charset.defaultCharset()));
         break;
     }
   }

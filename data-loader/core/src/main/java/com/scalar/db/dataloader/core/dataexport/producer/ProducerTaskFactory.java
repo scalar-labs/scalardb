@@ -14,7 +14,8 @@ public class ProducerTaskFactory {
   private final boolean includeMetadata;
   private final boolean prettyPrintJson;
 
-  /***
+  /**
+   * *
    *
    * @param fileFormat file format
    * @param projectionColumns columns names that are selected
@@ -27,13 +28,30 @@ public class ProducerTaskFactory {
       List<String> projectionColumns,
       TableMetadata tableMetadata,
       Map<String, DataType> dataTypeByColumnName) {
-    return switch (fileFormat) {
-      case JSON -> new JsonProducerTask(
-          includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, prettyPrintJson);
-      case JSONL -> new JsonLineProducerTask(
-          includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName);
-      case CSV -> new CsvProducerTask(
-          includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, delimiter);
-    };
+    ProducerTask producerTask;
+    switch (fileFormat) {
+      case JSON:
+        producerTask =
+            new JsonProducerTask(
+                includeMetadata,
+                projectionColumns,
+                tableMetadata,
+                dataTypeByColumnName,
+                prettyPrintJson);
+        break;
+      case JSONL:
+        producerTask =
+            new JsonLineProducerTask(
+                includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName);
+        break;
+      case CSV:
+        producerTask =
+            new CsvProducerTask(
+                includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, delimiter);
+        break;
+      default:
+        producerTask = null;
+    }
+    return producerTask;
   }
 }
