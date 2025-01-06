@@ -26,7 +26,7 @@ public class PreparedStatementBinder implements ColumnVisitor {
 
   private final PreparedStatement preparedStatement;
   private final TableMetadata tableMetadata;
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
 
   private int index = 1;
   private SQLException sqlException;
@@ -35,7 +35,7 @@ public class PreparedStatementBinder implements ColumnVisitor {
   public PreparedStatementBinder(
       PreparedStatement preparedStatement,
       TableMetadata tableMetadata,
-      RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
+      RdbEngineStrategy rdbEngine) {
     this.preparedStatement = preparedStatement;
     this.tableMetadata = tableMetadata;
     this.rdbEngine = rdbEngine;

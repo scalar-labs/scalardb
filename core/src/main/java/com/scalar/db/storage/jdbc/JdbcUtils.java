@@ -9,8 +9,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public final class JdbcUtils {
   private JdbcUtils() {}
 
-  public static BasicDataSource initDataSource(
-      JdbcConfig config, RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
+  public static BasicDataSource initDataSource(JdbcConfig config, RdbEngineStrategy rdbEngine) {
     return initDataSource(config, rdbEngine, false);
   }
 
@@ -20,7 +19,7 @@ public final class JdbcUtils {
   }
 
   public static BasicDataSource initDataSource(
-      JdbcConfig config, RdbEngineStrategy<?, ?, ?, ?> rdbEngine, boolean transactional) {
+      JdbcConfig config, RdbEngineStrategy rdbEngine, boolean transactional) {
     BasicDataSource dataSource = createDataSource();
 
     /*
@@ -77,7 +76,7 @@ public final class JdbcUtils {
   }
 
   public static BasicDataSource initDataSourceForTableMetadata(
-      JdbcConfig config, RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
+      JdbcConfig config, RdbEngineStrategy rdbEngine) {
     BasicDataSource dataSource = createDataSource();
 
     /*
@@ -97,7 +96,7 @@ public final class JdbcUtils {
   }
 
   public static BasicDataSource initDataSourceForAdmin(
-      JdbcConfig config, RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
+      JdbcConfig config, RdbEngineStrategy rdbEngine) {
     BasicDataSource dataSource = createDataSource();
 
     /*

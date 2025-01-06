@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminRepairIntegrationTestBase {
-  @LazyInit private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProps(String testName) {

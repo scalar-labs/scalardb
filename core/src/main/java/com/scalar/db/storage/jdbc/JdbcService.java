@@ -42,14 +42,14 @@ public class JdbcService {
 
   private final TableMetadataManager tableMetadataManager;
   private final OperationChecker operationChecker;
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final QueryBuilder queryBuilder;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
-      RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
+      RdbEngineStrategy rdbEngine) {
     this(tableMetadataManager, operationChecker, rdbEngine, new QueryBuilder(rdbEngine));
   }
 
@@ -57,7 +57,7 @@ public class JdbcService {
   JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
-      RdbEngineStrategy<?, ?, ?, ?> rdbEngine,
+      RdbEngineStrategy rdbEngine,
       QueryBuilder queryBuilder) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.operationChecker = Objects.requireNonNull(operationChecker);

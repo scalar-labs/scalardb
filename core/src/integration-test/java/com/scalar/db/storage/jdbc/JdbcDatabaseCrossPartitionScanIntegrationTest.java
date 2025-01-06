@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.Arguments;
 public class JdbcDatabaseCrossPartitionScanIntegrationTest
     extends DistributedStorageCrossPartitionScanIntegrationTestBase {
 
-  private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

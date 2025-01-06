@@ -11,7 +11,7 @@ import java.util.Random;
 public class JdbcDatabaseColumnValueIntegrationTest
     extends DistributedStorageColumnValueIntegrationTestBase {
 
-  private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

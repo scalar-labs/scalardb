@@ -14,7 +14,7 @@ import java.util.Random;
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
-  @LazyInit private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

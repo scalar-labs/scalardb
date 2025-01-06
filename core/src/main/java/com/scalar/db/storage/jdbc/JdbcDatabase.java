@@ -41,7 +41,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final JdbcService jdbcService;
 
   @Inject
@@ -67,7 +67,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       DatabaseConfig databaseConfig,
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
-      RdbEngineStrategy<?, ?, ?, ?> rdbEngine,
+      RdbEngineStrategy rdbEngine,
       JdbcService jdbcService) {
     super(databaseConfig);
     this.dataSource = dataSource;

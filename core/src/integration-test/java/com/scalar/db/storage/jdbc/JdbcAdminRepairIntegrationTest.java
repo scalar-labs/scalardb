@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 public class JdbcAdminRepairIntegrationTest
     extends DistributedStorageAdminRepairIntegrationTestBase {
-  @LazyInit private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

@@ -11,7 +11,7 @@ import java.util.Random;
 public class JdbcDatabaseSecondaryIndexIntegrationTest
     extends DistributedStorageSecondaryIndexIntegrationTestBase {
 
-  private RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {

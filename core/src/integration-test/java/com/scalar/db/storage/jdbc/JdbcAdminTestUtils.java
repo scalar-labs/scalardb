@@ -16,7 +16,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public class JdbcAdminTestUtils extends AdminTestUtils {
 
   private final String metadataSchema;
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
 
   public JdbcAdminTestUtils(Properties properties) {

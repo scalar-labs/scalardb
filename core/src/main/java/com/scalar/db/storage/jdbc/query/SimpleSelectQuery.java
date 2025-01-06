@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class SimpleSelectQuery implements SelectQuery {
 
   private final List<String> projections;
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;

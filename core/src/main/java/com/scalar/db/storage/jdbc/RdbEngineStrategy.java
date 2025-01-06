@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
  * An interface to hide the difference between underlying JDBC SQL engines in SQL dialects, error
  * codes, and so on. It's NOT responsible for actually connecting to underlying engines.
  */
-public interface RdbEngineStrategy<T_DATE, T_TIME, T_TIMESTAMP, T_TIMESTAMPTZ> {
+public interface RdbEngineStrategy {
 
   boolean isDuplicateTableError(SQLException e);
 
@@ -144,30 +144,22 @@ public interface RdbEngineStrategy<T_DATE, T_TIME, T_TIMESTAMP, T_TIMESTAMPTZ> {
     return namespace;
   }
 
-  T_DATE encodeDate(DateColumn column);
-
-  static LocalDate defaultEncodeDate(DateColumn column) {
+  default Object encodeDate(DateColumn column) {
     assert column.getDateValue() != null;
     return column.getDateValue();
   }
 
-  T_TIME encodeTime(TimeColumn column);
-
-  static LocalTime defaultEncodeTime(TimeColumn column) {
+  default Object encodeTime(TimeColumn column) {
     assert column.getTimeValue() != null;
     return column.getTimeValue();
   }
 
-  T_TIMESTAMP encodeTimestamp(TimestampColumn column);
-
-  static LocalDateTime defaultEncodeTimestamp(TimestampColumn column) {
+  default Object encodeTimestamp(TimestampColumn column) {
     assert column.getTimestampValue() != null;
     return column.getTimestampValue();
   }
 
-  T_TIMESTAMPTZ encodeTimestampTZ(TimestampTZColumn column);
-
-  static OffsetDateTime defaultEncodeTimestampTZ(TimestampTZColumn column) {
+  default Object encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC);
   }

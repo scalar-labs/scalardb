@@ -70,7 +70,7 @@ public class JdbcAdminTest {
   private static final String NAMESPACE = "namespace";
   private static final String TABLE = "table";
   private static final String COLUMN_1 = "c1";
-  private static final ImmutableMap<RdbEngine, RdbEngineStrategy<?, ?, ?, ?>> RDB_ENGINES =
+  private static final ImmutableMap<RdbEngine, RdbEngineStrategy> RDB_ENGINES =
       ImmutableMap.of(
           RdbEngine.MYSQL,
           new RdbEngineMysql(),

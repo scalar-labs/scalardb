@@ -17,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;

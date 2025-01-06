@@ -30,11 +30,11 @@ public class ResultInterpreter {
 
   private final List<String> projections;
   private final TableMetadata metadata;
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ResultInterpreter(
-      List<String> projections, TableMetadata metadata, RdbEngineStrategy<?, ?, ?, ?> rdbEngine) {
+      List<String> projections, TableMetadata metadata, RdbEngineStrategy rdbEngine) {
     this.projections = Objects.requireNonNull(projections);
     this.metadata = Objects.requireNonNull(metadata);
     this.rdbEngine = rdbEngine;

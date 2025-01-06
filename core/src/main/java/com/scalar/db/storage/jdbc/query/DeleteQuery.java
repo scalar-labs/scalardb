@@ -20,7 +20,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class DeleteQuery implements Query {
 
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -86,7 +86,7 @@ public class DeleteQuery implements Query {
   }
 
   public static class Builder {
-    private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+    private final RdbEngineStrategy rdbEngine;
     private final String schema;
     private final String table;
     private final TableMetadata tableMetadata;
@@ -94,11 +94,7 @@ public class DeleteQuery implements Query {
     private Optional<Key> clusteringKey;
     private List<ConditionalExpression> otherConditions;
 
-    Builder(
-        RdbEngineStrategy<?, ?, ?, ?> rdbEngine,
-        String schema,
-        String table,
-        TableMetadata tableMetadata) {
+    Builder(RdbEngineStrategy rdbEngine, String schema, String table, TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
       this.schema = schema;
       this.table = table;

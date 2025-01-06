@@ -17,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class InsertQuery implements Query {
 
-  private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+  private final RdbEngineStrategy rdbEngine;
   private final String schema;
   private final String table;
   private final TableMetadata tableMetadata;
@@ -79,7 +79,7 @@ public class InsertQuery implements Query {
   }
 
   public static class Builder {
-    private final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+    private final RdbEngineStrategy rdbEngine;
     private final String schema;
     private final String table;
     private final TableMetadata tableMetadata;
@@ -87,11 +87,7 @@ public class InsertQuery implements Query {
     private Optional<Key> clusteringKey;
     private Map<String, Column<?>> columns;
 
-    Builder(
-        RdbEngineStrategy<?, ?, ?, ?> rdbEngine,
-        String schema,
-        String table,
-        TableMetadata tableMetadata) {
+    Builder(RdbEngineStrategy rdbEngine, String schema, String table, TableMetadata tableMetadata) {
       this.rdbEngine = rdbEngine;
       this.schema = schema;
       this.table = table;

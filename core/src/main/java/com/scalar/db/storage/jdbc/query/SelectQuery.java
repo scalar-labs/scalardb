@@ -16,7 +16,7 @@ import java.util.Set;
 public interface SelectQuery extends Query {
 
   class Builder {
-    final RdbEngineStrategy<?, ?, ?, ?> rdbEngine;
+    final RdbEngineStrategy rdbEngine;
     final List<String> projections;
     String schema;
     String table;
@@ -36,7 +36,7 @@ public interface SelectQuery extends Query {
     boolean isCrossPartitionQuery;
     Set<Conjunction> conjunctions = Collections.emptySet();
 
-    Builder(RdbEngineStrategy<?, ?, ?, ?> rdbEngine, List<String> projections) {
+    Builder(RdbEngineStrategy rdbEngine, List<String> projections) {
       this.rdbEngine = rdbEngine;
       this.projections = projections;
     }

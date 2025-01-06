@@ -6,8 +6,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DateColumn;
-import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
@@ -19,9 +17,7 @@ import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,8 +25,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineMysql
-    implements RdbEngineStrategy<LocalDate, LocalTime, LocalDateTime, LocalDateTime> {
+class RdbEngineMysql implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
 
@@ -409,22 +404,12 @@ class RdbEngineMysql
   }
 
   @Override
-  public LocalDate encodeDate(DateColumn column) {
-    return RdbEngineStrategy.defaultEncodeDate(column);
+  public Object encodeTimestamp(TimestampColumn column) {
+    return column.getTimestampValue();
   }
 
   @Override
-  public LocalTime encodeTime(TimeColumn column) {
-    return RdbEngineStrategy.defaultEncodeTime(column);
-  }
-
-  @Override
-  public LocalDateTime encodeTimestamp(TimestampColumn column) {
-    return RdbEngineStrategy.defaultEncodeTimestamp(column);
-  }
-
-  @Override
-  public LocalDateTime encodeTimestampTZ(TimestampTZColumn column) {
+  public Object encodeTimestampTZ(TimestampTZColumn column) {
     assert column.getTimestampTZValue() != null;
     // Encoding as an OffsetDateTime result in the time being offset arbitrarily depending on the
     // client, session or server time zone. So we encode it as a LocalDateTime instead.
