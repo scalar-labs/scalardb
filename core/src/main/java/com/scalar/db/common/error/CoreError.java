@@ -699,7 +699,7 @@ public enum CoreError implements ScalarDbError {
   SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME(
       Category.USER_ERROR,
       "0153",
-      "This TIME column value precision cannot be smaller than one microsecond. Value: %s",
+      "This TIME column value precision cannot be shorter than one microsecond. Value: %s",
       "",
       ""),
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
@@ -711,7 +711,7 @@ public enum CoreError implements ScalarDbError {
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
       Category.USER_ERROR,
       "0155",
-      "This TIMESTAMP column value precision cannot be smaller than one millisecond. Value: %s",
+      "This TIMESTAMP column value precision cannot be shorter than one millisecond. Value: %s",
       "",
       ""),
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
@@ -723,7 +723,7 @@ public enum CoreError implements ScalarDbError {
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
       Category.USER_ERROR,
       "0157",
-      "This TIMESTAMPTZ column value precision cannot be smaller than one millisecond. Value: %s",
+      "This TIMESTAMPTZ column value precision cannot be shorter than one millisecond. Value: %s",
       "",
       ""),
 
