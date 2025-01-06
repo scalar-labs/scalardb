@@ -1001,7 +1001,7 @@ public enum CoreError implements ScalarDbError {
       ""),
   ;
 
-  private static final String COMPONENT_NAME = "CORE";
+  private static final String COMPONENT_NAME = "DB-CORE";
 
   private final Category category;
   private final String id;
