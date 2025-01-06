@@ -719,8 +719,11 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
-          Category.USER_ERROR, "0168","Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match.", "", ""
-  ),
+      Category.USER_ERROR,
+      "0168",
+      "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match.",
+      "",
+      ""),
   //
   // Errors for the concurrency error category
   //
