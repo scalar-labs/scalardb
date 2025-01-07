@@ -6,9 +6,10 @@
       <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
       <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
       <!-- Temporarily excluded. See https://github.com/spotbugs/spotbugs/issues/1694 -->
-      <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
+      <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
       <!-- To exclude Lombok thrown warnings -->
       <Bug pattern="SAME_NAME_BUT_DIFFERENT"/>
+      <Bug pattern="CT_CONSTRUCTOR_THROW"/>
     </Or>
   </Match>
 
