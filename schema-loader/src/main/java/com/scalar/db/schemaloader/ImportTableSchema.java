@@ -33,10 +33,6 @@ public class ImportTableSchema {
     this.options = buildOptions(tableDefinition, options);
   }
 
-  // For the SpotBugs warning CT_CONSTRUCTOR_THROW
-  @Override
-  protected final void finalize() {}
-
   private ImmutableMap<String, String> buildOptions(
       JsonObject tableDefinition, Map<String, String> globalOptions) {
     ImmutableMap.Builder<String, String> optionsBuilder = ImmutableMap.builder();
