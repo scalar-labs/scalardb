@@ -8,4 +8,13 @@ public class ErrorMessage {
   public static final String INVALID_COLUMN_NON_EXISTENT =
       "Invalid key: Column %s does not exist in the table %s in namespace %s.";
   public static final String ERROR_METHOD_NULL_ARGUMENT = "Method null argument not allowed";
+  public static final String PARTITION_KEY_ORDER_MISMATCH =
+      "The provided partition key order does not match the table schema. Required order: %s";
+  public static final String INCOMPLETE_PARTITION_KEY =
+      "The provided partition key is incomplete. Required key: %s";
+  public static final String CLUSTERING_KEY_ORDER_MISMATCH =
+      "The provided clustering key order does not match the table schema. Required order: %s";
+  public static final String CLUSTERING_KEY_NOT_FOUND =
+      "The provided clustering key %s was not found";
+  public static final String INVALID_PROJECTION = "The column '%s' was not found";
 }
