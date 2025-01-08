@@ -749,6 +749,13 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_MISSING_COLUMN(
       Category.USER_ERROR, "0168", "Missing field or column mapping for %s", "", ""),
+  DATA_LOADER_MISSING_SOURCE_FIELD(
+      Category.USER_ERROR,
+      "0169",
+      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "",
+      ""),
+
   //
   // Errors for the concurrency error category
   //
