@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
@@ -13,13 +14,21 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalTime;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RdbEngineSqlServer implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineSqlServer.class);
+  private final RdbEngineTimeTypeSqlServer timeTypeEngine;
+
+  RdbEngineSqlServer() {
+    timeTypeEngine = new RdbEngineTimeTypeSqlServer();
+  }
 
   @Override
   public String[] createSchemaSqls(String fullSchema) {
@@ -180,11 +189,11 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
       case DATE:
         return "DATE";
       case TIME:
-        return "TIME";
+        return "TIME(6)";
       case TIMESTAMP:
-        return "DATETIME2";
+        return "DATETIME2(3)";
       case TIMESTAMPTZ:
-        return "DATETIMEOFFSET";
+        return "DATETIMEOFFSET(3)";
       default:
         throw new AssertionError();
     }
@@ -288,6 +297,14 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+        return Types.TIMESTAMP;
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP_WITH_TIMEZONE;
       default:
         throw new AssertionError();
     }
@@ -335,5 +352,18 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties() {
+    // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
+    // It is being considered setting to it to false by default in a future driver release.
+    return ImmutableMap.of("sendTimeAsDatetime", "false");
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<String, LocalTime, String, DateTimeOffset>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

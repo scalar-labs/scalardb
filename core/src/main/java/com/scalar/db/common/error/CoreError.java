@@ -690,6 +690,42 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
       Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE(
+      Category.USER_ERROR,
+      "0152",
+      "This DATE column value is out of the valid range. It must be between 1000-01-01 and 9999-12-12. Value: %s",
+      "",
+      ""),
+  SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME(
+      Category.USER_ERROR,
+      "0153",
+      "This TIME column value precision cannot be shorter than one microsecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0154",
+      "This TIMESTAMP column value is out of the valid range. It must be between 1000-01-01T00:00:00.000 and 9999-12-31T23:59:59.999. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0155",
+      "This TIMESTAMP column value precision cannot be shorter than one millisecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0156",
+      "This TIMESTAMPTZ column value is out of the valid range. It must be between 1000-01-01T00:00:00.000Z to 9999-12-31T23:59:59.999Z. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0157",
+      "This TIMESTAMPTZ column value precision cannot be shorter than one millisecond. Value: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

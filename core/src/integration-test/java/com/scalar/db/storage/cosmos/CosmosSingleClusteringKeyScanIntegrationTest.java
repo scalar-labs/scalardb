@@ -2,10 +2,10 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.io.DataType;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 public class CosmosSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
@@ -15,10 +15,10 @@ public class CosmosSingleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected Set<DataType> getClusteringKeyTypes() {
+  protected List<DataType> getClusteringKeyTypes() {
     // Return types without BLOB because blob is not supported for clustering key for now
-    Set<DataType> clusteringKeyTypes = new HashSet<>();
-    for (DataType dataType : DataType.valuesWithoutTimesRelatedTypes()) {
+    List<DataType> clusteringKeyTypes = new ArrayList<>();
+    for (DataType dataType : DataType.values()) {
       if (dataType == DataType.BLOB) {
         continue;
       }

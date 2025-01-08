@@ -16,12 +16,20 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -199,6 +207,30 @@ public class UpsertBuilder {
     }
 
     @Override
+    public Buildable dateValue(String columnName, @Nullable LocalDate value) {
+      columns.put(columnName, DateColumn.of(columnName, value));
+      return this;
+    }
+
+    @Override
+    public Buildable timeValue(String columnName, @Nullable LocalTime value) {
+      columns.put(columnName, TimeColumn.of(columnName, value));
+      return this;
+    }
+
+    @Override
+    public Buildable timestampValue(String columnName, @Nullable LocalDateTime value) {
+      columns.put(columnName, TimestampColumn.of(columnName, value));
+      return this;
+    }
+
+    @Override
+    public Buildable timestampTZValue(String columnName, @Nullable Instant value) {
+      columns.put(columnName, TimestampTZColumn.of(columnName, value));
+      return this;
+    }
+
+    @Override
     public Buildable value(Column<?> column) {
       columns.put(column.getName(), column);
       return this;
@@ -349,6 +381,30 @@ public class UpsertBuilder {
     @Override
     public BuildableFromExisting blobValue(String columnName, @Nullable ByteBuffer value) {
       super.blobValue(columnName, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting dateValue(String columnName, @Nullable LocalDate value) {
+      super.dateValue(columnName, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting timeValue(String columnName, @Nullable LocalTime value) {
+      super.timeValue(columnName, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting timestampValue(String columnName, @Nullable LocalDateTime value) {
+      super.timestampValue(columnName, value);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting timestampTZValue(String columnName, @Nullable Instant value) {
+      super.timestampTZValue(columnName, value);
       return this;
     }
 

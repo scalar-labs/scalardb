@@ -7,6 +7,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -18,11 +19,15 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
@@ -44,12 +49,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +67,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageCrossPartitionScanIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "storage_cross_partition_scan";
+  private static final String TEST_NAME = "storage_cross_part_scan";
   private static final String NAMESPACE_BASE_NAME = "int_test_" + TEST_NAME + "_";
   private static final String CONDITION_TEST_TABLE = "condition_test_table";
   private static final String PARTITION_KEY_NAME = "pk";
@@ -69,6 +78,10 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   private static final String COL_NAME5 = "c5";
   private static final String COL_NAME6 = "c6";
   private static final String COL_NAME7 = "c7";
+  private static final String COL_NAME8 = "c8";
+  private static final String COL_NAME9 = "c9";
+  private static final String COL_NAME10 = "c10";
+  private static final String COL_NAME11 = "c11";
   private static final int CONDITION_TEST_TABLE_NUM_ROWS = 3;
   private static final int CONDITION_TEST_PREDICATE_VALUE = 2;
   private static final int FIRST_COLUMN_CARDINALITY = 5;
@@ -78,7 +91,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private ExecutorService executorService;
   private long seed;
-  private ThreadLocal<Random> random;
+  protected ThreadLocal<Random> random;
 
   private DistributedStorage storage;
   private DistributedStorageAdmin admin;
@@ -133,11 +146,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   }
 
   private void createTableForConditionTests() throws ExecutionException {
-    Map<String, String> options = getCreationOptions();
-    admin.createNamespace(getNamespaceName(), true, options);
-    admin.createTable(
-        getNamespaceName(),
-        CONDITION_TEST_TABLE,
+    TableMetadata.Builder tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(PARTITION_KEY_NAME, DataType.INT)
             .addColumn(COL_NAME1, DataType.INT)
@@ -147,10 +156,18 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
             .addColumn(COL_NAME5, DataType.TEXT)
             .addColumn(COL_NAME6, DataType.BOOLEAN)
             .addColumn(COL_NAME7, DataType.BLOB)
-            .addPartitionKey(PARTITION_KEY_NAME)
-            .build(),
-        true,
-        options);
+            .addColumn(COL_NAME8, DataType.DATE)
+            .addColumn(COL_NAME9, DataType.TIME)
+            .addColumn(COL_NAME10, DataType.TIMESTAMPTZ)
+            .addPartitionKey(PARTITION_KEY_NAME);
+    if (isTimestampTypeSupported()) {
+      tableMetadata.addColumn(COL_NAME11, DataType.TIMESTAMP);
+    }
+
+    Map<String, String> options = getCreationOptions();
+    admin.createNamespace(getNamespaceName(), true, options);
+    admin.createTable(
+        getNamespaceName(), CONDITION_TEST_TABLE, tableMetadata.build(), true, options);
   }
 
   private void createTablesForOrderingTests()
@@ -194,9 +211,13 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   }
 
   private ListMultimap<DataType, DataType> getColumnTypes() {
+    List<DataType> dataTypes = Lists.newArrayList(DataType.values());
+    if (!isTimestampTypeSupported()) {
+      dataTypes.remove(DataType.TIMESTAMP);
+    }
     ListMultimap<DataType, DataType> columnTypes = ArrayListMultimap.create();
-    for (DataType firstColumnType : DataType.valuesWithoutTimesRelatedTypes()) {
-      for (DataType secondColumnType : DataType.valuesWithoutTimesRelatedTypes()) {
+    for (DataType firstColumnType : dataTypes) {
+      for (DataType secondColumnType : dataTypes) {
         columnTypes.put(firstColumnType, secondColumnType);
       }
     }
@@ -346,7 +367,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         .build();
   }
 
-  private List<Column<?>> prepareNonKeyColumns(int i) {
+  protected List<Column<?>> prepareNonKeyColumns(int i) {
     List<Column<?>> columns = new ArrayList<>();
     columns.add(IntColumn.of(COL_NAME1, i));
     columns.add(BigIntColumn.of(COL_NAME2, i));
@@ -355,6 +376,12 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     columns.add(TextColumn.of(COL_NAME5, String.valueOf(i)));
     columns.add(BooleanColumn.of(COL_NAME6, i % 2 == 0));
     columns.add(BlobColumn.of(COL_NAME7, String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
+    columns.add(DateColumn.of(COL_NAME8, DateColumn.MIN_VALUE.plusDays(i)));
+    columns.add(TimeColumn.of(COL_NAME9, TimeColumn.MIN_VALUE.plusSeconds(i)));
+    columns.add(TimestampTZColumn.of(COL_NAME10, TimestampTZColumn.MIN_VALUE.plusSeconds(i)));
+    if (isTimestampTypeSupported()) {
+      columns.add(TimestampColumn.of(COL_NAME11, TimestampColumn.MIN_VALUE.plusSeconds(i)));
+    }
     return columns;
   }
 
@@ -367,6 +394,12 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     columns.add(TextColumn.ofNull(COL_NAME5));
     columns.add(BooleanColumn.ofNull(COL_NAME6));
     columns.add(BlobColumn.ofNull(COL_NAME7));
+    columns.add(DateColumn.ofNull(COL_NAME8));
+    columns.add(TimeColumn.ofNull(COL_NAME9));
+    columns.add(TimestampTZColumn.ofNull(COL_NAME10));
+    if (isTimestampTypeSupported()) {
+      columns.add(TimestampColumn.ofNull(COL_NAME11));
+    }
     return columns;
   }
 
@@ -815,9 +848,10 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     assertScanResult(actual, getExpectedNullResults(operator), description(column, operator));
   }
 
-  @Test
-  public void scan_WithConjunctiveNormalFormConditionsShouldReturnProperResult()
-      throws IOException, ExecutionException {
+  @ParameterizedTest(name = "column with conditions: {0}")
+  @MethodSource("provideColumnsForCNFConditionsTest")
+  public void scan_WithConjunctiveNormalFormConditionsShouldReturnProperResult(
+      List<String> columnNamesToTest) throws IOException, ExecutionException {
     // Arrange
     prepareRecords();
     BuildableScanAllWithOngoingWhereAnd builder =
@@ -829,12 +863,17 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
                 prepareOrConditionSet(
                     ImmutableList.of(
                         IntColumn.of(PARTITION_KEY_NAME, 1), IntColumn.of(PARTITION_KEY_NAME, 2))));
-    List<Column<?>> columns1 = prepareNonKeyColumns(1);
-    List<Column<?>> columns2 = prepareNonKeyColumns(2);
+    Map<String, Column<?>> columns1ByName =
+        prepareNonKeyColumns(1).stream().collect(Collectors.toMap(Column::getName, c -> c));
+    Map<String, Column<?>> columns2ByName =
+        prepareNonKeyColumns(2).stream().collect(Collectors.toMap(Column::getName, c -> c));
     List<OrConditionSet> orConditionSets =
-        IntStream.range(0, columns1.size())
-            .boxed()
-            .map(i -> prepareOrConditionSet(ImmutableList.of(columns1.get(i), columns2.get(i))))
+        columnNamesToTest.stream()
+            .map(
+                columnName ->
+                    prepareOrConditionSet(
+                        ImmutableList.of(
+                            columns1ByName.get(columnName), columns2ByName.get(columnName))))
             .collect(Collectors.toList());
     orConditionSets.forEach(builder::and);
 
@@ -846,6 +885,13 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
         actual,
         getExpectedResults(DataType.INT, Operator.LTE, CONDITION_TEST_PREDICATE_VALUE),
         "failed with CNF conditions");
+  }
+
+  protected Stream<Arguments> provideColumnsForCNFConditionsTest() {
+    List<String> allColumns =
+        prepareNonKeyColumns(0).stream().map(Column::getName).collect(Collectors.toList());
+
+    return Stream.of(Arguments.of(allColumns));
   }
 
   @Test
@@ -1201,5 +1247,9 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     public String toString() {
       return "Tuple{" + "first=" + first + ", second=" + second + '}';
     }
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

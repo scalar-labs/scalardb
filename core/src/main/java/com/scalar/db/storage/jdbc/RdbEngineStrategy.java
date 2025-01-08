@@ -4,11 +4,23 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Collections;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
@@ -131,4 +143,58 @@ public interface RdbEngineStrategy {
   default @Nullable String getSchemaName(String namespace) {
     return namespace;
   }
+
+  default LocalDate encode(DateColumn column) {
+    assert column.getDateValue() != null;
+    return column.getDateValue();
+  }
+
+  default LocalTime encode(TimeColumn column) {
+    assert column.getTimeValue() != null;
+    return column.getTimeValue();
+  }
+
+  default LocalDateTime encode(TimestampColumn column) {
+    assert column.getTimestampValue() != null;
+    return column.getTimestampValue();
+  }
+
+  default OffsetDateTime encode(TimestampTZColumn column) {
+    assert column.getTimestampTZValue() != null;
+    return column.getTimestampTZValue().atOffset(ZoneOffset.UTC);
+  }
+
+  default DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
+    return DateColumn.of(columnName, resultSet.getObject(columnName, LocalDate.class));
+  }
+
+  default TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
+    return TimeColumn.of(columnName, resultSet.getObject(columnName, LocalTime.class));
+  }
+
+  default TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    return TimestampColumn.of(columnName, resultSet.getObject(columnName, LocalDateTime.class));
+  }
+
+  default TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    OffsetDateTime offsetDateTime = resultSet.getObject(columnName, OffsetDateTime.class);
+    if (offsetDateTime == null) {
+      return TimestampTZColumn.ofNull(columnName);
+    } else {
+      return TimestampTZColumn.of(columnName, offsetDateTime.toInstant());
+    }
+  }
+
+  /**
+   * Return the connection properties for the underlying database.
+   *
+   * @return a map where key=property_name and value=property_value
+   */
+  default Map<String, String> getConnectionProperties() {
+    return Collections.emptyMap();
+  }
+
+  RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
 }

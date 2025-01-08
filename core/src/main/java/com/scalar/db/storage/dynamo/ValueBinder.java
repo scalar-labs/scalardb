@@ -4,10 +4,15 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.Map;
@@ -109,6 +114,62 @@ public final class ValueBinder implements ColumnVisitor {
       values.put(
           alias + i,
           AttributeValue.builder().b(SdkBytes.fromByteBuffer(column.getBlobValue())).build());
+    }
+    i++;
+  }
+
+  @Override
+  public void visit(DateColumn column) {
+    if (column.hasNullValue()) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    } else {
+      values.put(
+          alias + i,
+          AttributeValue.builder()
+              .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
+              .build());
+    }
+    i++;
+  }
+
+  @Override
+  public void visit(TimeColumn column) {
+    if (column.hasNullValue()) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    } else {
+      values.put(
+          alias + i,
+          AttributeValue.builder()
+              .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
+              .build());
+    }
+    i++;
+  }
+
+  @Override
+  public void visit(TimestampColumn column) {
+    if (column.hasNullValue()) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    } else {
+      values.put(
+          alias + i,
+          AttributeValue.builder()
+              .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
+              .build());
+    }
+    i++;
+  }
+
+  @Override
+  public void visit(TimestampTZColumn column) {
+    if (column.hasNullValue()) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    } else {
+      values.put(
+          alias + i,
+          AttributeValue.builder()
+              .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
+              .build());
     }
     i++;
   }

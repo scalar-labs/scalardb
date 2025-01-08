@@ -16,6 +16,9 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,14 +28,17 @@ import org.slf4j.LoggerFactory;
 class RdbEngineOracle implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private final String keyColumnSize;
+  private final RdbEngineTimeTypeOracle timeTypeEngine;
 
   RdbEngineOracle(JdbcConfig config) {
     keyColumnSize = String.valueOf(config.getOracleVariableKeyColumnSize());
+    this.timeTypeEngine = new RdbEngineTimeTypeOracle(config);
   }
 
   @VisibleForTesting
   RdbEngineOracle() {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+    timeTypeEngine = null;
   }
 
   @Override
@@ -213,10 +219,11 @@ class RdbEngineOracle implements RdbEngineStrategy {
       case DATE:
         return "DATE";
       case TIME:
+        return "TIMESTAMP(6)";
       case TIMESTAMP:
-        return "TIMESTAMP";
+        return "TIMESTAMP(3)";
       case TIMESTAMPTZ:
-        return "TIMESTAMP WITH TIME ZONE";
+        return "TIMESTAMP(3) WITH TIME ZONE";
       default:
         throw new AssertionError();
     }
@@ -324,6 +331,14 @@ class RdbEngineOracle implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+        return Types.TIMESTAMP;
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP_WITH_TIMEZONE;
       default:
         throw new AssertionError();
     }
@@ -353,5 +368,11 @@ class RdbEngineOracle implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<LocalDate, LocalDateTime, LocalDateTime, OffsetDateTime>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

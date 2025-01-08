@@ -12,6 +12,10 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -525,7 +529,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       TableMetadata metadata = metadataBuilder.build();
       admin.createTable(namespace1, TABLE4, metadata, options);
       storage = storageFactory.getStorage();
-      storage.put(
+      PutBuilder.Buildable put =
           Put.newBuilder()
               .namespace(namespace1)
               .table(TABLE4)
@@ -538,8 +542,19 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .booleanValue(COL_NAME7, true)
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
-              // TODO add put values for data, time, timestamp and timestamptz
-              .build());
+              .dateValue(COL_NAME10, LocalDate.of(2020, 6, 2))
+              .timeValue(COL_NAME11, LocalTime.of(12, 2, 6, 123_456_000))
+              .timestampTZValue(
+                  COL_NAME12,
+                  LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000))
+                      .toInstant(ZoneOffset.UTC));
+      if (isTimestampTypeSupported()) {
+        put.timestampValue(
+            COL_NAME13,
+            LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000)));
+      }
+      storage.put(put.build());
+
       // Act
       admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME3, options);

@@ -3,11 +3,11 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
-import java.util.Set;
 
 public class DynamoSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
@@ -18,10 +18,10 @@ public class DynamoSingleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected Set<DataType> getClusteringKeyTypes() {
+  protected List<DataType> getClusteringKeyTypes() {
     // Return types without BLOB because blob is not supported for clustering key for now
-    Set<DataType> clusteringKeyTypes = new HashSet<>();
-    for (DataType dataType : DataType.valuesWithoutTimesRelatedTypes()) {
+    List<DataType> clusteringKeyTypes = new ArrayList<>();
+    for (DataType dataType : DataType.values()) {
       if (dataType == DataType.BLOB) {
         continue;
       }
