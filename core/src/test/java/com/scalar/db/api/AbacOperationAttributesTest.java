@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.Test;
 public class AbacOperationAttributesTest {
 
   @Test
-  public void setReadTag_ShouldSetReadTag() {
+  public void setReadTag_MapGiven_ShouldSetReadTag() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
     String policyName = "policyName";
@@ -22,6 +23,21 @@ public class AbacOperationAttributesTest {
 
     // Assert
     assertThat(attributes)
+        .containsEntry(AbacOperationAttributes.READ_TAG_PREFIX + policyName, readTag);
+  }
+
+  @Test
+  public void setReadTag_ImmutableMapBuilderGiven_ShouldSetReadTag() {
+    // Arrange
+    ImmutableMap.Builder<String, String> attributesBuilder = ImmutableMap.builder();
+    String policyName = "policyName";
+    String readTag = "readTag";
+
+    // Act
+    AbacOperationAttributes.setReadTag(attributesBuilder, policyName, readTag);
+
+    // Assert
+    assertThat(attributesBuilder.build())
         .containsEntry(AbacOperationAttributes.READ_TAG_PREFIX + policyName, readTag);
   }
 
@@ -60,7 +76,7 @@ public class AbacOperationAttributesTest {
   }
 
   @Test
-  public void setWriteTag_ShouldSetWriteTag() {
+  public void setWriteTag_MapGiven_ShouldSetWriteTag() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
     String policyName = "policyName";
@@ -71,6 +87,21 @@ public class AbacOperationAttributesTest {
 
     // Assert
     assertThat(attributes)
+        .containsEntry(AbacOperationAttributes.WRITE_TAG_PREFIX + policyName, writeTag);
+  }
+
+  @Test
+  public void setWriteTag_ImmutableMapBuilderGiven_ShouldSetWriteTag() {
+    // Arrange
+    ImmutableMap.Builder<String, String> attributesBuilder = ImmutableMap.builder();
+    String policyName = "policyName";
+    String writeTag = "writeTag";
+
+    // Act
+    AbacOperationAttributes.setWriteTag(attributesBuilder, policyName, writeTag);
+
+    // Assert
+    assertThat(attributesBuilder.build())
         .containsEntry(AbacOperationAttributes.WRITE_TAG_PREFIX + policyName, writeTag);
   }
 
