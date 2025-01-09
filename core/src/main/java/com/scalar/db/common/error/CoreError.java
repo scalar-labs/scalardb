@@ -728,12 +728,12 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_MISSING_COLUMN_MAPPING(
       Category.USER_ERROR,
       "0159",
-      "No mapping found for column '%s' in table '%s' in the control file. \\nControl file validation set at 'FULL'. All columns need to be mapped.",
+      "No mapping found for column '%s' in table '%s' in the control file. Control file validation set at 'FULL'. All columns need to be mapped.",
       "",
       ""),
   DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS(
       Category.USER_ERROR, "0160", "The control file is missing data mappings", "", ""),
-  DATA_LOADER__MISSING_NAMESPACE_OR_TABLE(
+  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
       Category.USER_ERROR,
       "0161",
       "The provided namespace '%s' and/or table name '%s' is incorrect and could not be found",
@@ -760,7 +760,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND(
       Category.USER_ERROR,
       "0165",
-      "Multiple data mappings found for column '%s' in table '%s'",
+      "Duplicated data mappings found for column '%s' in table '%s'",
       "",
       ""),
   //
@@ -1016,13 +1016,13 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_ERROR_CRUD_EXCEPTION(
       Category.INTERNAL_ERROR,
       "0047",
-      "Something went wrong while trying to save the data. Details %s",
+      "Something went wrong while trying to save the data. Details: %s",
       "",
       ""),
   DATA_LOADER_ERROR_SCAN(
       Category.INTERNAL_ERROR,
       "0048",
-      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details %s",
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
 

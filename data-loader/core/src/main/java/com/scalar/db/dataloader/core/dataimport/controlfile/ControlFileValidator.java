@@ -123,8 +123,8 @@ public class ControlFileValidator {
     String lookupKey = TableMetadataUtil.getTableLookupKey(controlFileTable);
     if (!tableMetadataMap.containsKey(lookupKey)) {
       throw new ControlFileValidationException(
-          CoreError.DATA_LOADER__MISSING_NAMESPACE_OR_TABLE.buildMessage(
-              controlFileTable.getNamespace(), controlFileTable.getTableName()));
+          CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(
+              controlFileTable.getNamespace(), controlFileTable.getTable()));
     }
   }
 
