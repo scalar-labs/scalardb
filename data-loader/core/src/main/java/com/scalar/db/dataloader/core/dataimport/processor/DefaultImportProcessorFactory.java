@@ -2,6 +2,12 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 
 public class DefaultImportProcessorFactory implements ImportProcessorFactory {
 
+  /**
+   * Create import processor object based in file format in import params
+   *
+   * @param params import processor params objects
+   * @return generated import processor object
+   */
   @Override
   public ImportProcessor createImportProcessor(ImportProcessorParams params) {
     ImportProcessor importProcessor;
