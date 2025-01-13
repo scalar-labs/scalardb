@@ -177,7 +177,7 @@ public abstract class ImportTask {
     Optional<Key> optionalPartitionKey =
         KeyUtils.createPartitionKeyFromSource(
             partitionKeyNames, dataTypeByColumnName, mutableSourceRecord);
-    if (optionalPartitionKey.isEmpty()) {
+    if (!optionalPartitionKey.isPresent()) {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(tableName)
@@ -190,7 +190,7 @@ public abstract class ImportTask {
       optionalClusteringKey =
           KeyUtils.createClusteringKeyFromSource(
               clusteringKeyNames, dataTypeByColumnName, mutableSourceRecord);
-      if (optionalClusteringKey.isEmpty()) {
+      if (!optionalClusteringKey.isPresent()) {
         return ImportTargetResult.builder()
             .namespace(namespace)
             .tableName(tableName)
