@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -16,6 +17,11 @@ public final class AbacOperationAttributes {
     attributes.put(READ_TAG_PREFIX + policyName, readTag);
   }
 
+  public static void setReadTag(
+      ImmutableMap.Builder<String, String> attributesBuilder, String policyName, String readTag) {
+    attributesBuilder.put(READ_TAG_PREFIX + policyName, readTag);
+  }
+
   public static void clearReadTag(Map<String, String> attributes, String policyName) {
     attributes.remove(READ_TAG_PREFIX + policyName);
   }
@@ -27,6 +33,11 @@ public final class AbacOperationAttributes {
   public static void setWriteTag(
       Map<String, String> attributes, String policyName, String writeTag) {
     attributes.put(WRITE_TAG_PREFIX + policyName, writeTag);
+  }
+
+  public static void setWriteTag(
+      ImmutableMap.Builder<String, String> attributesBuilder, String policyName, String writeTag) {
+    attributesBuilder.put(WRITE_TAG_PREFIX + policyName, writeTag);
   }
 
   public static void clearWriteTag(Map<String, String> attributes, String policyName) {
