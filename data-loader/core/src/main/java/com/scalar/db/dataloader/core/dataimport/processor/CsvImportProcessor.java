@@ -46,7 +46,7 @@ public class CsvImportProcessor extends ImportProcessor {
               try {
                 String header = params.getImportOptions().getCustomHeaderRow();
                 String delimiter = Character.toString(params.getImportOptions().getDelimiter());
-                if (delimiter.isBlank()) {
+                if (delimiter.trim().isEmpty()) {
                   delimiter = ",";
                 }
                 if (header == null) {
