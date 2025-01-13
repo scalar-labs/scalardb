@@ -724,6 +724,7 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match.",
       "",
       ""),
+
   //
   // Errors for the concurrency error category
   //

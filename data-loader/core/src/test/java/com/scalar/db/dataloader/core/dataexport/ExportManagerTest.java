@@ -69,11 +69,13 @@ class ExportManagerTest {
                 storage))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
-    try (BufferedWriter writer = new BufferedWriter(Files.newBufferedWriter(
-            Paths.get(filePath),
-            Charset.defaultCharset(),            // Explicitly use the default charset
-            StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND))) {
+    try (BufferedWriter writer =
+        new BufferedWriter(
+            Files.newBufferedWriter(
+                Paths.get(filePath),
+                Charset.defaultCharset(), // Explicitly use the default charset
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND))) {
       exportManager.startExport(exportOptions, mockData, writer);
     }
     File file = new File(filePath);
@@ -113,11 +115,13 @@ class ExportManagerTest {
                 storage))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
-    try (BufferedWriter writer = new BufferedWriter(Files.newBufferedWriter(
-            Paths.get(filePath),
-            Charset.defaultCharset(),            // Explicitly use the default charset
-            StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND))) {
+    try (BufferedWriter writer =
+        new BufferedWriter(
+            Files.newBufferedWriter(
+                Paths.get(filePath),
+                Charset.defaultCharset(), // Explicitly use the default charset
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND))) {
       exportManager.startExport(exportOptions, mockData, writer);
     }
     File file = new File(filePath);
@@ -158,11 +162,13 @@ class ExportManagerTest {
                 storage))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
-    try (BufferedWriter writer = new BufferedWriter(Files.newBufferedWriter(
-            Paths.get(filePath),
-            Charset.defaultCharset(),            // Explicitly use the default charset
-            StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND))) {
+    try (BufferedWriter writer =
+        new BufferedWriter(
+            Files.newBufferedWriter(
+                Paths.get(filePath),
+                Charset.defaultCharset(), // Explicitly use the default charset
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND))) {
       exportManager.startExport(exportOptions, mockData, writer);
     }
     File file = new File(filePath);
