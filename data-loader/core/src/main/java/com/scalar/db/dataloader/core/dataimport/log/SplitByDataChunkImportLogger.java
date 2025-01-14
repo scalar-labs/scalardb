@@ -148,8 +148,6 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
       default:
         logfilePath = "";
     }
-    ;
-
     return logfilePath;
   }
 
@@ -181,7 +179,6 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
         logWriterMap = summaryLogWriters;
         break;
     }
-    ;
     return logWriterMap;
   }
 }

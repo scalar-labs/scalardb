@@ -13,6 +13,7 @@ import com.scalar.db.dataloader.core.dataimport.log.writer.LogWriterFactoryConfi
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -131,7 +132,9 @@ class SplitByDataChunkImportLoggerTest {
 
   private void assertTransactionBatchResult(
       ImportTransactionBatchResult expected, Path dataChunkLogFileName) throws IOException {
-    String logContent = Files.readString(dataChunkLogFileName);
+    //    String logContent = Files.readString(dataChunkLogFileName);
+    String logContent =
+        new String(Files.readAllBytes(dataChunkLogFileName), StandardCharsets.UTF_8);
     DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
     List<ImportTransactionBatchResult> logEntries =
         objectMapper.readValue(
@@ -214,7 +217,8 @@ class SplitByDataChunkImportLoggerTest {
       Path dataChunkLogFile = tempDir.resolve(logFileName);
       assertTrue(Files.exists(dataChunkLogFile), "Data chunk summary log file should exist");
 
-      String logContent = Files.readString(dataChunkLogFile);
+      //      String logContent = Files.readString(dataChunkLogFile);
+      String logContent = new String(Files.readAllBytes(dataChunkLogFile), StandardCharsets.UTF_8);
       DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
       List<ImportDataChunkStatus> logEntries =
           objectMapper.readValue(logContent, new TypeReference<List<ImportDataChunkStatus>>() {});

@@ -13,6 +13,7 @@ import com.scalar.db.dataloader.core.dataimport.log.writer.LogWriterFactoryConfi
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -145,7 +146,8 @@ class SingleFileImportLoggerTest {
     if (logSuccessRecords || !success) {
       assertTrue(Files.exists(logFileName), "Log file should exist");
 
-      String logContent = Files.readString(logFileName);
+      String logContent = new String(Files.readAllBytes(logFileName), StandardCharsets.UTF_8);
+
       List<ImportTransactionBatchResult> logEntries =
           objectMapper.readValue(
               logContent, new TypeReference<List<ImportTransactionBatchResult>>() {});
@@ -242,7 +244,7 @@ class SingleFileImportLoggerTest {
     Path summaryLogFile = tempDir.resolve(logFileName);
     assertTrue(Files.exists(summaryLogFile));
 
-    String logContent = Files.readString(summaryLogFile);
+    String logContent = new String(Files.readAllBytes(summaryLogFile), StandardCharsets.UTF_8);
     DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
     List<ImportDataChunkStatus> logEntries =
         objectMapper.readValue(logContent, new TypeReference<List<ImportDataChunkStatus>>() {});
