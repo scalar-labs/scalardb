@@ -1,14 +1,18 @@
 package com.scalar.db.dataloader.core.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import java.util.*;
 import javax.annotation.Nullable;
 
 /**
@@ -21,6 +25,22 @@ public final class KeyUtils {
 
   /** Restrict instantiation via private constructor */
   private KeyUtils() {}
+
+  public static Optional<Key> createClusteringKeyFromSource(
+      Set<String> clusteringKeyNames,
+      Map<String, DataType> dataTypeByColumnName,
+      ObjectNode sourceRecord) {
+    return clusteringKeyNames.isEmpty()
+        ? Optional.empty()
+        : createKeyFromSource(clusteringKeyNames, dataTypeByColumnName, sourceRecord);
+  }
+
+  public static Optional<Key> createPartitionKeyFromSource(
+      Set<String> partitionKeyNames,
+      Map<String, DataType> dataTypeByColumnName,
+      ObjectNode sourceRecord) {
+    return createKeyFromSource(partitionKeyNames, dataTypeByColumnName, sourceRecord);
+  }
 
   /**
    * Converts a key-value pair, in the format of <key>=<value>, into a ScalarDB Key instance for a
@@ -83,6 +103,53 @@ public final class KeyUtils {
       return Key.newBuilder().add(keyValue).build();
     } catch (ColumnParsingException e) {
       throw new KeyParsingException(e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Create a new composite ScalarDB key.
+   *
+   * @param dataTypes List of data types for the columns
+   * @param columnNames List of column names
+   * @param values List of key values
+   * @return ScalarDB Key instance, or empty if the provided arrays are not of the same length
+   * @throws Base64Exception if there is an error creating the key values
+   */
+  public static Optional<Key> createCompositeKey(
+      List<DataType> dataTypes, List<String> columnNames, List<String> values)
+      throws Base64Exception, ColumnParsingException {
+    if (!CollectionUtil.areSameLength(dataTypes, columnNames, values)) {
+      return Optional.empty();
+    }
+    Key.Builder builder = Key.newBuilder();
+    for (int i = 0; i < dataTypes.size(); i++) {
+      ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnNames.get(i)).build();
+      Column<?> keyValue =
+          ColumnUtils.createColumnFromValue(dataTypes.get(i), columnInfo, values.get(i));
+      builder.add(keyValue);
+    }
+    return Optional.of(builder.build());
+  }
+
+  private static Optional<Key> createKeyFromSource(
+      Set<String> keyNames, Map<String, DataType> columnDataTypes, JsonNode sourceRecord) {
+    List<DataType> dataTypes = new ArrayList<>();
+    List<String> columnNames = new ArrayList<>();
+    List<String> values = new ArrayList<>();
+
+    for (String keyName : keyNames) {
+      if (!columnDataTypes.containsKey(keyName) || !sourceRecord.has(keyName)) {
+        return Optional.empty();
+      }
+      dataTypes.add(columnDataTypes.get(keyName));
+      columnNames.add(keyName);
+      values.add(sourceRecord.get(keyName).asText());
+    }
+
+    try {
+      return createCompositeKey(dataTypes, columnNames, values);
+    } catch (Base64Exception | ColumnParsingException e) {
+      return Optional.empty();
     }
   }
 }
