@@ -7,6 +7,7 @@ import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 public class LocalFileLogWriter implements LogWriter {
@@ -21,7 +22,7 @@ public class LocalFileLogWriter implements LogWriter {
    */
   public LocalFileLogWriter(String filePath, ImportLoggerConfig importLoggerConfig)
       throws IOException {
-    Path path = Path.of(filePath);
+    Path path = Paths.get(filePath);
     this.objectMapper = new DataLoaderObjectMapper();
     this.logWriter =
         objectMapper
