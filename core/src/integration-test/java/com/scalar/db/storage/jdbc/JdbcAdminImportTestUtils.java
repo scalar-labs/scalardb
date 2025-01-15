@@ -192,7 +192,11 @@ public class JdbcAdminImportTestUtils {
     columns.put("col23", "TIME(6)");
     columns.put("col24", "DATETIME(6)");
     columns.put("col25", "DATETIME(6)"); // override to TIMESTAMPTZ
-    columns.put("col26", "TIMESTAMP(6)");
+    // With Mysql 5.7, if a TIMESTAMP column is not explicitly declared with the NULL attribute, it
+    // is declared automatically with the NOT NULL attribute and assigned a default value equal to
+    // the current timestamp.
+    // cf. the "--explicit-defaults-for-timestamp" option documentation
+    columns.put("col26", "TIMESTAMP(6) NULL");
     if (isMariaDB()) {
       columns.put("col27", "JSON");
     }
