@@ -600,80 +600,89 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
   @CsvSource({"-2,11", "11,11"})
   public void put_forTimeRelatedTypesWithVariousJvmTimezone_ShouldPutCorrectly(
       int insertTimeZone, int readTimeZone) throws ExecutionException {
-    // Different time zones between the insert client, read client and server can
-    // cause issue where the time can be offset. Such issues were observed for MySQL and MariaDB.
-    //
-    // Ideally we would run this test by setting the server time zone in additions to the insert
-    // and read client timezone. But setting the server time zone is complicated and the server is
-    // likely running on the Japan timezone (UTC+9), UTC or a US mainland timezone(UTC-8 to UTC-5).
-    // So we use UTC-2 or UTC+11 timezones for the client, that corresponds respectively to timezone
-    // in the middle of the Atlantic Ocean and the Pacific Ocean, which should never align on the
-    // server timezone.
+    TimeZone originalDefaultTimezone = TimeZone.getDefault();
+    try {
+      // Different time zones between the insert client, read client and server can
+      // cause issue where the time can be offset. Such issues were observed for MySQL and MariaDB.
+      //
+      // Ideally we would run this test by setting the server time zone in additions to the insert
+      // and read client timezone. But setting the server time zone is complicated and the server is
+      // likely running on the Japan timezone (UTC+9), UTC or a US mainland timezone(UTC-8 to
+      // UTC-5).
+      // So we use UTC-2 or UTC+11 timezones for the client, that corresponds respectively to
+      // timezone
+      // in the middle of the Atlantic Ocean and the Pacific Ocean, which should never align on the
+      // server timezone.
 
-    // Arrange
-    // Set JVM default time zone for inserting
-    TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.ofHours(insertTimeZone)));
+      // Arrange
+      // Set JVM default time zone for inserting
+      TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.ofHours(insertTimeZone)));
 
-    LocalDate anyDate = LocalDate.of(2000, 5, 6);
-    LocalTime anyTime = LocalTime.of(12, 13, 14, 123_456_000);
-    IntColumn partitionKeyValue = IntColumn.of(PARTITION_KEY, 1);
-    BooleanColumn col1Value = BooleanColumn.ofNull(COL_NAME1);
-    IntColumn col2Value = IntColumn.ofNull(COL_NAME2);
-    BigIntColumn col3Value = BigIntColumn.ofNull(COL_NAME3);
-    FloatColumn col4Value = FloatColumn.ofNull(COL_NAME4);
-    DoubleColumn col5Value = DoubleColumn.ofNull(COL_NAME5);
-    TextColumn col6Value = TextColumn.ofNull(COL_NAME6);
-    BlobColumn col7Value = BlobColumn.ofNull(COL_NAME7);
-    DateColumn col8Value = DateColumn.of(COL_NAME8, anyDate);
-    TimeColumn col9Value = TimeColumn.of(COL_NAME9, anyTime);
-    TimestampTZColumn col10Value =
-        TimestampTZColumn.of(
-            COL_NAME10,
-            LocalDateTime.of(anyDate, anyTime).withNano(123_000_000).toInstant(ZoneOffset.UTC));
-    TimestampColumn column11Value = null;
-    if (isTimestampTypeSupported()) {
-      column11Value =
-          TimestampColumn.of(COL_NAME11, LocalDateTime.of(anyDate, anyTime).withNano(123_000_000));
+      LocalDate anyDate = LocalDate.of(2000, 5, 6);
+      LocalTime anyTime = LocalTime.of(12, 13, 14, 123_456_000);
+      IntColumn partitionKeyValue = IntColumn.of(PARTITION_KEY, 1);
+      BooleanColumn col1Value = BooleanColumn.ofNull(COL_NAME1);
+      IntColumn col2Value = IntColumn.ofNull(COL_NAME2);
+      BigIntColumn col3Value = BigIntColumn.ofNull(COL_NAME3);
+      FloatColumn col4Value = FloatColumn.ofNull(COL_NAME4);
+      DoubleColumn col5Value = DoubleColumn.ofNull(COL_NAME5);
+      TextColumn col6Value = TextColumn.ofNull(COL_NAME6);
+      BlobColumn col7Value = BlobColumn.ofNull(COL_NAME7);
+      DateColumn col8Value = DateColumn.of(COL_NAME8, anyDate);
+      TimeColumn col9Value = TimeColumn.of(COL_NAME9, anyTime);
+      TimestampTZColumn col10Value =
+          TimestampTZColumn.of(
+              COL_NAME10,
+              LocalDateTime.of(anyDate, anyTime).withNano(123_000_000).toInstant(ZoneOffset.UTC));
+      TimestampColumn column11Value = null;
+      if (isTimestampTypeSupported()) {
+        column11Value =
+            TimestampColumn.of(
+                COL_NAME11, LocalDateTime.of(anyDate, anyTime).withNano(123_000_000));
+      }
+
+      PutBuilder.Buildable put =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
+              .value(col1Value)
+              .value(col2Value)
+              .value(col3Value)
+              .value(col4Value)
+              .value(col5Value)
+              .value(col6Value)
+              .value(col7Value)
+              .value(col8Value)
+              .value(col9Value)
+              .value(col10Value);
+      if (isTimestampTypeSupported()) {
+        put.value(column11Value);
+      }
+      // Act
+      storage.put(put.build());
+
+      // Assert
+      // Set JVM default time zone for reading
+      TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.ofHours(readTimeZone)));
+
+      assertResult(
+          partitionKeyValue,
+          col1Value,
+          col2Value,
+          col3Value,
+          col4Value,
+          col5Value,
+          col6Value,
+          col7Value,
+          col8Value,
+          col9Value,
+          col10Value,
+          column11Value);
+    } finally {
+      // Reset JVM default time zone to the original value
+      TimeZone.setDefault(originalDefaultTimezone);
     }
-
-    PutBuilder.Buildable put =
-        Put.newBuilder()
-            .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
-            .value(col1Value)
-            .value(col2Value)
-            .value(col3Value)
-            .value(col4Value)
-            .value(col5Value)
-            .value(col6Value)
-            .value(col7Value)
-            .value(col8Value)
-            .value(col9Value)
-            .value(col10Value);
-    if (isTimestampTypeSupported()) {
-      put.value(column11Value);
-    }
-    // Act
-    storage.put(put.build());
-
-    // Assert
-    // Set JVM default time zone for reading
-    TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.ofHours(readTimeZone)));
-
-    assertResult(
-        partitionKeyValue,
-        col1Value,
-        col2Value,
-        col3Value,
-        col4Value,
-        col5Value,
-        col6Value,
-        col7Value,
-        col8Value,
-        col9Value,
-        col10Value,
-        column11Value);
   }
 
   private void assertResult(
@@ -690,6 +699,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
       TimestampTZColumn col10Value,
       @Nullable TimestampColumn col11Value)
       throws ExecutionException {
+    System.out.println("default timezone: " + TimeZone.getDefault());
     assert (isTimestampTypeSupported() == (col11Value != null));
 
     Optional<Result> actualOpt =
