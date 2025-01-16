@@ -5,15 +5,12 @@ import com.scalar.db.dataloader.core.Constants;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -36,39 +33,6 @@ public class TableMetadataUtil {
     }
     return columnName.startsWith(Attribute.BEFORE_PREFIX)
         && !columnNames.contains(Attribute.BEFORE_PREFIX + columnName);
-  }
-
-  /**
-   * Determines whether a given column is a metadata column using table metadata.
-   *
-   * @param columnName The name of the ScalarDB table column to check.
-   * @param tableMetadata The metadata of the table.
-   * @return {@code true} if the column is a metadata column; {@code false} otherwise.
-   */
-  public static boolean isMetadataColumn(String columnName, TableMetadata tableMetadata) {
-    Set<String> metadataColumns = getMetadataColumns();
-    LinkedHashSet<String> columnNames = tableMetadata.getColumnNames();
-    return isMetadataColumn(columnName, metadataColumns, columnNames);
-  }
-
-  /**
-   * Retrieves a set of fixed metadata column names used in ScalarDB.
-   *
-   * @return A set of predefined metadata column names.
-   */
-  public static Set<String> getMetadataColumns() {
-    return Stream.of(
-            Attribute.ID,
-            Attribute.STATE,
-            Attribute.VERSION,
-            Attribute.PREPARED_AT,
-            Attribute.COMMITTED_AT,
-            Attribute.BEFORE_ID,
-            Attribute.BEFORE_STATE,
-            Attribute.BEFORE_VERSION,
-            Attribute.BEFORE_PREPARED_AT,
-            Attribute.BEFORE_COMMITTED_AT)
-        .collect(Collectors.toCollection(HashSet::new));
   }
 
   /**
@@ -106,7 +70,7 @@ public class TableMetadataUtil {
     return String.format(
         Constants.TABLE_LOOKUP_KEY_FORMAT,
         controlFileTable.getNamespace(),
-        controlFileTable.getTableName());
+        controlFileTable.getTable());
   }
 
   /**
@@ -126,7 +90,7 @@ public class TableMetadataUtil {
             projectionMetadata.add(Attribute.BEFORE_PREFIX + projection);
           }
         });
-    projectionMetadata.addAll(getMetadataColumns());
+    projectionMetadata.addAll(ConsensusCommitUtils.getTransactionMetaColumns().keySet());
     return projectionMetadata;
   }
 

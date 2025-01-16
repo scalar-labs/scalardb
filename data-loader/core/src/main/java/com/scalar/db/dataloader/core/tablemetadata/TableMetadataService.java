@@ -64,7 +64,7 @@ public class TableMetadataService {
 
     for (TableMetadataRequest request : requests) {
       String namespace = request.getNamespace();
-      String tableName = request.getTableName();
+      String tableName = request.getTable();
       TableMetadata tableMetadata = getTableMetadata(namespace, tableName);
       String key = TableMetadataUtil.getTableLookupKey(namespace, tableName);
       metadataMap.put(key, tableMetadata);
