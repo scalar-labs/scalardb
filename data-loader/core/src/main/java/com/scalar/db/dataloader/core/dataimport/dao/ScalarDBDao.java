@@ -178,11 +178,11 @@ public class ScalarDBDao {
     // scan data
     try {
       logger.info(SCAN_START_MSG);
-      Scanner scanner = storage.scan(scan);
-      List<Result> allResults = scanner.all();
-      scanner.close();
-      logger.info(SCAN_END_MSG);
-      return allResults;
+      try (Scanner scanner = storage.scan(scan)) {
+        List<Result> allResults = scanner.all();
+        logger.info(SCAN_END_MSG);
+        return allResults;
+      }
     } catch (ExecutionException | IOException e) {
       throw new ScalarDBDaoException(
           CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
@@ -322,6 +322,10 @@ public class ScalarDBDao {
       // projection columns
       if (projectionColumns != null && !projectionColumns.isEmpty()) {
         buildableScanAll.projections(projectionColumns);
+      }
+      // Can ordering be added?
+      for (Scan.Ordering sort : sortOrders) {
+        buildableScanAll.ordering(sort);
       }
 
       // limit
