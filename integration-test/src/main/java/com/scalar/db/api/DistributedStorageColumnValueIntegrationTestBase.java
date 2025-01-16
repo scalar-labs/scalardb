@@ -699,7 +699,6 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
       TimestampTZColumn col10Value,
       @Nullable TimestampColumn col11Value)
       throws ExecutionException {
-    System.out.println("default timezone: " + TimeZone.getDefault());
     assert (isTimestampTypeSupported() == (col11Value != null));
 
     Optional<Result> actualOpt =
