@@ -192,7 +192,7 @@ public class JdbcAdminImportTestUtils {
     columns.put("col23", "TIME(6)");
     columns.put("col24", "DATETIME(6)");
     columns.put("col25", "DATETIME(6)"); // override to TIMESTAMPTZ
-    // With Mysql 5.7, if a TIMESTAMP column is not explicitly declared with the NULL attribute, it
+    // With MySQL 5.7, if a TIMESTAMP column is not explicitly declared with the NULL attribute, it
     // is declared automatically with the NOT NULL attribute and assigned a default value equal to
     // the current timestamp.
     // cf. the "--explicit-defaults-for-timestamp" option documentation
@@ -757,6 +757,7 @@ public class JdbcAdminImportTestUtils {
       return new JdbcTestData(
           tableName, createTableSql, overrideColumnsType, tableMetadata, columns);
     }
+
     /**
      * Create test data for a table that cannot be imported.
      *
