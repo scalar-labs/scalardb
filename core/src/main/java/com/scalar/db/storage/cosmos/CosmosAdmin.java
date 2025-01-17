@@ -636,7 +636,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table) {
+  public TableMetadata getImportTableMetadata(
+      String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
@@ -647,7 +648,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options) {
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 

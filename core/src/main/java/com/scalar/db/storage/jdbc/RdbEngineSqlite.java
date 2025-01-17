@@ -35,7 +35,7 @@ import org.sqlite.SQLiteException;
  * native SQLite library in JAR</a>, we should assure the real error messages in
  * RdbEngineStrategyTest.
  */
-class RdbEngineSqlite implements RdbEngineStrategy {
+class RdbEngineSqlite extends AbstractRdbEngine {
   private static final String NAMESPACE_SEPARATOR = "$";
   private final RdbEngineTimeTypeSqlite timeTypeEngine;
 
@@ -152,8 +152,13 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  public DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      DataType overrideDataType) {
     throw new AssertionError("SQLite is not supported");
   }
 

@@ -26,7 +26,7 @@ public class TableSchema {
   static final String PARTITION_KEY = "partition-key";
   static final String CLUSTERING_KEY = "clustering-key";
   static final String SECONDARY_INDEX = "secondary-index";
-  private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
+  static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
       ImmutableMap.<String, DataType>builder()
           .put("BOOLEAN", DataType.BOOLEAN)
           .put("INT", DataType.INT)

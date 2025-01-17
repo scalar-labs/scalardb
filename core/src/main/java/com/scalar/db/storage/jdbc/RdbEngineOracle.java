@@ -22,10 +22,11 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineOracle implements RdbEngineStrategy {
+class RdbEngineOracle extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private final String keyColumnSize;
   private final RdbEngineTimeTypeOracle timeTypeEngine;
@@ -242,8 +243,13 @@ class RdbEngineOracle implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      @Nullable DataType overrideDataType) {
     String numericTypeDescription = String.format("%s(%d, %d)", typeName, columnSize, digits);
     switch (type) {
       case NUMERIC:
@@ -307,6 +313,29 @@ class RdbEngineOracle implements RdbEngineStrategy {
             columnDescription,
             typeName);
         return DataType.BLOB;
+      case TIMESTAMP:
+        // handles "date" type
+        if (typeName.equalsIgnoreCase("date")) {
+          if (overrideDataType == DataType.TIME) {
+            return DataType.TIME;
+          }
+          if (overrideDataType == DataType.TIMESTAMP) {
+            return DataType.TIMESTAMP;
+          }
+          return DataType.DATE;
+        }
+        // handles "timestamp" type
+        if (overrideDataType == DataType.TIME) {
+          return DataType.TIME;
+        }
+        return DataType.TIMESTAMP;
+      case OTHER:
+        if (typeName.toLowerCase().endsWith("time zone")) {
+          return DataType.TIMESTAMPTZ;
+        }
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(

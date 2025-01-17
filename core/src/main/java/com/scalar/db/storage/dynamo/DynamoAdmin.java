@@ -1363,7 +1363,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table) {
+  public TableMetadata getImportTableMetadata(
+      String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in DynamoDB");
   }
@@ -1376,7 +1377,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options) {
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in DynamoDB");
   }

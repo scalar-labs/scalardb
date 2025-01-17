@@ -1075,11 +1075,16 @@ public class CosmosAdminTest {
     String column = "col";
 
     // Act
-    Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(namespace, table));
+    Throwable thrown1 =
+        catchThrowable(
+            () -> admin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
     Throwable thrown2 =
         catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
     Throwable thrown3 =
-        catchThrowable(() -> admin.importTable(namespace, table, Collections.emptyMap()));
+        catchThrowable(
+            () ->
+                admin.importTable(
+                    namespace, table, Collections.emptyMap(), Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);

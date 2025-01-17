@@ -21,10 +21,11 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEnginePostgresql implements RdbEngineStrategy {
+class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
 
@@ -230,8 +231,13 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      @Nullable DataType overrideDataType) {
     switch (type) {
       case BIT:
         if (columnSize != 1) {
@@ -289,6 +295,20 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return DataType.TEXT;
       case BINARY:
         return DataType.BLOB;
+      case DATE:
+        return DataType.DATE;
+      case TIME:
+        if (typeName.equalsIgnoreCase("timetz")) {
+          throw new IllegalArgumentException(
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
+        }
+        return DataType.TIME;
+      case TIMESTAMP:
+        if (typeName.equalsIgnoreCase("timestamptz")) {
+          return DataType.TIMESTAMPTZ;
+        }
+        return DataType.TIMESTAMP;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(

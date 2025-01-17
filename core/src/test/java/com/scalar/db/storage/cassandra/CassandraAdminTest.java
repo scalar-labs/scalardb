@@ -879,12 +879,16 @@ public class CassandraAdminTest {
 
     // Act
     Throwable thrown1 =
-        catchThrowable(() -> cassandraAdmin.getImportTableMetadata(namespace, table));
+        catchThrowable(
+            () -> cassandraAdmin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
     Throwable thrown2 =
         catchThrowable(
             () -> cassandraAdmin.addRawColumnToTable(namespace, table, column, DataType.INT));
     Throwable thrown3 =
-        catchThrowable(() -> cassandraAdmin.importTable(namespace, table, Collections.emptyMap()));
+        catchThrowable(
+            () ->
+                cassandraAdmin.importTable(
+                    namespace, table, Collections.emptyMap(), Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
