@@ -729,7 +729,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_IMPORT_DATA_TYPE_OVERRIDE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0158",
-      "The underlying storage data type %s is not supported as ScalarDB %s data type: %s",
+      "The underlying-storage data type %s is not supported as the ScalarDB %s data type: %s",
       "",
       ""),
 
