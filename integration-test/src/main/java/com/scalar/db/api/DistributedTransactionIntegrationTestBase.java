@@ -687,7 +687,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> result = another.get(get);
     another.commit();
 
-    assertThat(result.isPresent()).isTrue();
     assertResult(0, 0, result);
   }
 
@@ -721,7 +720,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> actual = another.get(prepareGet(0, 0));
     another.commit();
 
-    assertThat(actual.isPresent()).isTrue();
     assertResult(0, 0, actual);
   }
 
@@ -928,18 +926,25 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void mutateAndCommit_ShouldMutateRecordsProperly() throws TransactionException {
     // Arrange
-    populateRecords();
-    Put put =
-        Put.newBuilder(preparePut(0, 0))
-            .intValue(BALANCE, INITIAL_BALANCE - 100)
-            .enableImplicitPreRead()
-            .build();
-    Delete delete = prepareDelete(1, 0);
+    InsertBuilder.Buildable insertRecord1 =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0));
+    prepareNonKeyColumns(1, 1).forEach(insertRecord1::value);
+    Insert insertRecord2 = prepareInsert(1, 0);
+
+    insert(insertRecord1.build(), insertRecord2);
+
+    PutBuilder.Buildable putRecord1 = Put.newBuilder(preparePut(0, 0)).enableImplicitPreRead();
+    prepareNonKeyColumns(0, 0).forEach(putRecord1::value);
+    Delete deleteRecord2 = prepareDelete(1, 0);
 
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    transaction.mutate(Arrays.asList(put, delete));
+    transaction.mutate(Arrays.asList(putRecord1.build(), deleteRecord2));
     transaction.commit();
 
     // Assert
@@ -948,8 +953,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> result2 = another.get(prepareGet(1, 0));
     another.commit();
 
-    assertThat(result1.isPresent()).isTrue();
-    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE - 100);
+    assertResult(0, 0, result1);
     assertThat(result2.isPresent()).isFalse();
   }
 
@@ -1468,7 +1472,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     delete(deleteIf);
 
     // Assert
-    Optional<Result> optResult = get(prepareGet(0, 0));
+    Optional<Result> optResult = get(prepareGet(1, 2));
     assertThat(optResult.isPresent()).isFalse();
   }
 
@@ -1635,7 +1639,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
     DistributedTransaction another = manager.start();
     Optional<Result> result = another.get(get);
     another.commit();
-    assertThat(result.isPresent()).isTrue();
     assertResult(0, 0, result);
   }
 
@@ -1890,10 +1893,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    Optional<Result> optResult = get(prepareGet(2, 3));
-    assertThat(optResult.isPresent()).isTrue();
-    Result result = optResult.get();
-    assertResult(2, 3, result);
+    Optional<Result> actual = get(prepareGet(2, 3));
+    assertResult(2, 3, actual);
   }
 
   @Test
