@@ -43,8 +43,6 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
-  private static final Logger logger = LoggerFactory.getLogger(SelectStatementHandler.class);
-
   /**
    * Constructs {@code SelectStatementHandler} with the specified {@code Session}
    *
@@ -60,7 +58,6 @@ public class SelectStatementHandler extends StatementHandler {
     try {
       return handleInternal(operation);
     } catch (RuntimeException e) {
-      logger.error(e.getMessage(), e);
       throw new ExecutionException(
           CoreError.CASSANDRA_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
@@ -294,7 +291,6 @@ public class SelectStatementHandler extends StatementHandler {
       case DESC:
         return QueryBuilder.desc(quoteIfNecessary(ordering.getColumnName()));
       default:
-        logger.warn("Unsupported ordering specified. Using Order.ASC");
         return QueryBuilder.asc(quoteIfNecessary(ordering.getColumnName()));
     }
   }

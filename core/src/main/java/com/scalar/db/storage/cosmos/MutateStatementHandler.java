@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 /** An abstraction for handler classes for mutate statements */
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
-  private static final Logger logger = LoggerFactory.getLogger(MutateStatementHandler.class);
   private static final String MUTATION_STORED_PROCEDURE = "mutate.js";
 
   public MutateStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
@@ -60,7 +59,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   private void throwException(CosmosException exception) throws ExecutionException {
-    logger.error(exception.getMessage());
     int statusCode = exception.getSubStatusCode();
 
     if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
