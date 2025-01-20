@@ -83,7 +83,9 @@ public class JdbcAdminTest {
           RdbEngine.SQLITE,
           new RdbEngineSqlite(),
           RdbEngine.YUGABYTE,
-          new RdbEngineYugabyte());
+          new RdbEngineYugabyte(),
+          RdbEngine.MARIADB,
+          new RdbEngineMariaDB());
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -119,6 +121,7 @@ public class JdbcAdminTest {
   private void mockUndefinedTableError(RdbEngine rdbEngine, SQLException sqlException) {
     switch (rdbEngine) {
       case MYSQL:
+      case MARIADB:
         when(sqlException.getErrorCode()).thenReturn(1049);
         break;
       case POSTGRESQL:
@@ -3450,6 +3453,7 @@ public class JdbcAdminTest {
       case SQL_SERVER:
       case MYSQL:
       case ORACLE:
+      case MARIADB:
         duplicateKeyException = mock(SQLException.class);
         when(duplicateKeyException.getSQLState()).thenReturn("23000");
         break;
