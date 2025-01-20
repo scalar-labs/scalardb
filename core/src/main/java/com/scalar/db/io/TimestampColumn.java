@@ -44,15 +44,6 @@ public class TimestampColumn implements Column<LocalDateTime> {
   }
 
   @Override
-  protected final void finalize() throws Throwable {
-    // TODO delete this method once https://github.com/scalar-labs/scalardb/pull/2421 is merge
-
-    // Override the finalize method to prevent a finalizer attack in case an
-    // IllegalArgumentException is thrown in the constructor
-    // cf. Spotbug CT_CONSTRUCTOR_THROW alert
-  }
-
-  @Override
   public String getName() {
     return name;
   }

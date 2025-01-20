@@ -210,29 +210,29 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   /** This interface defines test data for running import table related integration tests. */
   public interface TestData {
 
-    /** @return true if the table is supported for import, false otherwise */
+    /** Returns true if the table is supported for import, false otherwise */
     boolean isImportableTable();
 
-    /** @return the table name */
+    /** Returns the table name */
     String getTableName();
 
-    /** @return the columns for which the data type should be overridden when importing the table */
+    /** Returns the columns for which the data type should be overridden when importing the table */
     Map<String, DataType> getOverrideColumnsType();
 
     /*
-     * @return the expected table metadata of the imported table
+     * Returns the expected table metadata of the imported table
      */
     TableMetadata getTableMetadata();
 
-    /** @return a sample Insert operation for the table */
+    /** Returns a sample Insert operation for the table */
     Insert getInsert(String namespace, String table);
 
-    /** @return a sample Put operation for the table */
+    /** Returns a sample Put operation for the table */
     Put getPut(String namespace, String table);
 
     /**
-     * @return a Get operation to retrieve the record inserted with {@link #getPut(String, String)}
-     *     or {@link #getInsert(String, String)}
+     * Returns a Get operation to retrieve the record inserted with {@link #getPut(String, String)}
+     * or {@link #getInsert(String, String)}
      */
     Get getGet(String namespace, String table);
   }

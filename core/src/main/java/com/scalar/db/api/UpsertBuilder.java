@@ -3,7 +3,11 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.OperationBuilder.AbacReadTagAttribute;
+import com.scalar.db.api.OperationBuilder.AbacWriteTagAttribute;
 import com.scalar.db.api.OperationBuilder.Attribute;
+import com.scalar.db.api.OperationBuilder.ClearAbacReadTagAttribute;
+import com.scalar.db.api.OperationBuilder.ClearAbacWriteTagAttribute;
 import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearNamespace;
@@ -82,7 +86,11 @@ public class UpsertBuilder {
   }
 
   public static class Buildable extends OperationBuilder.Buildable<Upsert>
-      implements ClusteringKey<Buildable>, Values<Buildable>, Attribute<Buildable> {
+      implements ClusteringKey<Buildable>,
+          Values<Buildable>,
+          Attribute<Buildable>,
+          AbacReadTagAttribute<Buildable>,
+          AbacWriteTagAttribute<Buildable> {
     final Map<String, Column<?>> columns = new LinkedHashMap<>();
     @Nullable Key clusteringKey;
     final Map<String, String> attributes = new HashMap<>();
@@ -110,6 +118,22 @@ public class UpsertBuilder {
     public Buildable attributes(Map<String, String> attributes) {
       checkNotNull(attributes);
       this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
+    public Buildable readTag(String policyName, String readTag) {
+      checkNotNull(policyName);
+      checkNotNull(readTag);
+      AbacOperationAttributes.setReadTag(attributes, policyName, readTag);
+      return this;
+    }
+
+    @Override
+    public Buildable writeTag(String policyName, String writeTag) {
+      checkNotNull(policyName);
+      checkNotNull(writeTag);
+      AbacOperationAttributes.setWriteTag(attributes, policyName, writeTag);
       return this;
     }
 
@@ -255,7 +279,9 @@ public class UpsertBuilder {
           ClearClusteringKey<BuildableFromExisting>,
           ClearValues<BuildableFromExisting>,
           ClearNamespace<BuildableFromExisting>,
-          ClearAttribute<BuildableFromExisting> {
+          ClearAttribute<BuildableFromExisting>,
+          ClearAbacReadTagAttribute<BuildableFromExisting>,
+          ClearAbacWriteTagAttribute<BuildableFromExisting> {
 
     BuildableFromExisting(Upsert upsert) {
       super(
@@ -303,6 +329,18 @@ public class UpsertBuilder {
     @Override
     public BuildableFromExisting attributes(Map<String, String> attributes) {
       super.attributes(attributes);
+      return this;
+    }
+
+    @Override
+    public Buildable readTag(String policyName, String readTag) {
+      super.readTag(policyName, readTag);
+      return this;
+    }
+
+    @Override
+    public Buildable writeTag(String policyName, String writeTag) {
+      super.writeTag(policyName, writeTag);
       return this;
     }
 
@@ -447,6 +485,30 @@ public class UpsertBuilder {
     @Override
     public BuildableFromExisting clearAttribute(String name) {
       attributes.remove(name);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearReadTag(String policyName) {
+      AbacOperationAttributes.clearReadTag(attributes, policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearReadTags() {
+      AbacOperationAttributes.clearReadTags(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearWriteTag(String policyName) {
+      AbacOperationAttributes.clearWriteTag(attributes, policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearWriteTags() {
+      AbacOperationAttributes.clearWriteTags(attributes);
       return this;
     }
   }

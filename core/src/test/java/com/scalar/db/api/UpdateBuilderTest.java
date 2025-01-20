@@ -110,6 +110,8 @@ public class UpdateBuilderTest {
             .condition(condition1)
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
             .build();
 
     // Assert
@@ -146,7 +148,18 @@ public class UpdateBuilderTest {
         .isEqualTo(ANY_TIMESTAMPTZ);
     assertThat(actual.getCondition()).hasValue(condition1);
     assertThat(actual.getAttributes())
-        .isEqualTo(ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"));
+        .isEqualTo(
+            ImmutableMap.of(
+                "a1",
+                "v1",
+                "a2",
+                "v2",
+                "a3",
+                "v3",
+                AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                "readTag",
+                AbacOperationAttributes.WRITE_TAG_PREFIX + "policyName2",
+                "writeTag"));
   }
 
   @Test
@@ -258,7 +271,7 @@ public class UpdateBuilderTest {
   @Test
   public void build_FromExistingAndUpdateAllParameters_ShouldBuildUpdateWithUpdatedParameters() {
     // Arrange
-    Update existingUpdate =
+    Update existingUpdate1 =
         Update.newBuilder()
             .namespace(NAMESPACE_1)
             .table(TABLE_1)
@@ -286,10 +299,20 @@ public class UpdateBuilderTest {
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
             .build();
+    Update existingUpdate2 =
+        Update.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .partitionKey(partitionKey1)
+            .clusteringKey(clusteringKey1)
+            .bigIntValue("bigint1", BigIntColumn.MIN_VALUE)
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
+            .build();
 
     // Act
-    Update newUpdate =
-        Update.newBuilder(existingUpdate)
+    Update newUpdate1 =
+        Update.newBuilder(existingUpdate1)
             .namespace(NAMESPACE_2)
             .table(TABLE_2)
             .partitionKey(partitionKey2)
@@ -319,46 +342,73 @@ public class UpdateBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
+            .writeTag("policyName2", "writeTag")
+            .build();
+    Update newUpdate2 =
+        Update.newBuilder(existingUpdate2)
+            .clearReadTag("policyName1")
+            .clearWriteTag("policyName2")
             .build();
 
     // Assert
-    assertThat(newUpdate.forNamespace()).hasValue(NAMESPACE_2);
-    assertThat(newUpdate.forTable()).hasValue(TABLE_2);
-    Assertions.<Key>assertThat(newUpdate.getPartitionKey()).isEqualTo(partitionKey2);
-    assertThat(newUpdate.getClusteringKey()).hasValue(clusteringKey2);
-    assertThat(newUpdate.getColumns().size()).isEqualTo(18);
-    assertThat(newUpdate.getColumns().get("bigint1").getBigIntValue())
+    assertThat(newUpdate1.forNamespace()).hasValue(NAMESPACE_2);
+    assertThat(newUpdate1.forTable()).hasValue(TABLE_2);
+    Assertions.<Key>assertThat(newUpdate1.getPartitionKey()).isEqualTo(partitionKey2);
+    assertThat(newUpdate1.getClusteringKey()).hasValue(clusteringKey2);
+    assertThat(newUpdate1.getColumns().size()).isEqualTo(18);
+    assertThat(newUpdate1.getColumns().get("bigint1").getBigIntValue())
         .isEqualTo(BigIntColumn.MIN_VALUE);
-    assertThat(newUpdate.getColumns().get("bigint2").getBigIntValue())
+    assertThat(newUpdate1.getColumns().get("bigint2").getBigIntValue())
         .isEqualTo(Long.valueOf(BigIntColumn.MIN_VALUE));
-    assertThat(newUpdate.getColumns().get("blob1").getBlobValueAsBytes())
+    assertThat(newUpdate1.getColumns().get("blob1").getBlobValueAsBytes())
         .isEqualTo("foo".getBytes(StandardCharsets.UTF_8));
-    assertThat(newUpdate.getColumns().get("blob2").getBlobValueAsByteBuffer())
+    assertThat(newUpdate1.getColumns().get("blob2").getBlobValueAsByteBuffer())
         .isEqualTo(ByteBuffer.allocate(2));
-    assertThat(newUpdate.getColumns().get("bool1").getBooleanValue()).isFalse();
-    assertThat(newUpdate.getColumns().get("bool2").getBooleanValue()).isFalse();
-    assertThat(newUpdate.getColumns().get("double1").getDoubleValue()).isEqualTo(Double.MIN_VALUE);
-    assertThat(newUpdate.getColumns().get("double2").getDoubleValue())
+    assertThat(newUpdate1.getColumns().get("bool1").getBooleanValue()).isFalse();
+    assertThat(newUpdate1.getColumns().get("bool2").getBooleanValue()).isFalse();
+    assertThat(newUpdate1.getColumns().get("double1").getDoubleValue()).isEqualTo(Double.MIN_VALUE);
+    assertThat(newUpdate1.getColumns().get("double2").getDoubleValue())
         .isEqualTo(Double.valueOf(Double.MIN_VALUE));
-    assertThat(newUpdate.getColumns().get("float1").getFloatValue()).isEqualTo(Float.MIN_VALUE);
-    assertThat(newUpdate.getColumns().get("float2").getFloatValue())
+    assertThat(newUpdate1.getColumns().get("float1").getFloatValue()).isEqualTo(Float.MIN_VALUE);
+    assertThat(newUpdate1.getColumns().get("float2").getFloatValue())
         .isEqualTo(Float.valueOf(Float.MIN_VALUE));
-    assertThat(newUpdate.getColumns().get("int1").getIntValue()).isEqualTo(Integer.MIN_VALUE);
-    assertThat(newUpdate.getColumns().get("int2").getIntValue())
+    assertThat(newUpdate1.getColumns().get("int1").getIntValue()).isEqualTo(Integer.MIN_VALUE);
+    assertThat(newUpdate1.getColumns().get("int2").getIntValue())
         .isEqualTo(Integer.valueOf(Integer.MIN_VALUE));
-    assertThat(newUpdate.getColumns().get("text").getTextValue()).isEqualTo("another_value");
-    assertThat(newUpdate.getColumns().get("date1").getDateValue())
+    assertThat(newUpdate1.getColumns().get("text").getTextValue()).isEqualTo("another_value");
+    assertThat(newUpdate1.getColumns().get("date1").getDateValue())
         .isEqualTo(LocalDate.ofEpochDay(123));
-    assertThat(newUpdate.getColumns().get("time1").getTimeValue())
+    assertThat(newUpdate1.getColumns().get("time1").getTimeValue())
         .isEqualTo(LocalTime.ofSecondOfDay(456));
-    assertThat(newUpdate.getColumns().get("timestamp1").getTimestampValue())
+    assertThat(newUpdate1.getColumns().get("timestamp1").getTimestampValue())
         .isEqualTo(LocalDateTime.of(LocalDate.ofEpochDay(12354), LocalTime.NOON));
-    assertThat(newUpdate.getColumns().get("timestampTZ1").getTimestampTZValue())
+    assertThat(newUpdate1.getColumns().get("timestampTZ1").getTimestampTZValue())
         .isEqualTo(Instant.ofEpochSecond(-12));
-    assertThat(newUpdate.getColumns().get("text2").getTextValue()).isEqualTo("foo");
-    assertThat(newUpdate.getCondition()).hasValue(condition2);
-    assertThat(newUpdate.getAttributes())
-        .isEqualTo(ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"));
+    assertThat(newUpdate1.getColumns().get("text2").getTextValue()).isEqualTo("foo");
+    assertThat(newUpdate1.getCondition()).hasValue(condition2);
+    assertThat(newUpdate1.getAttributes())
+        .isEqualTo(
+            ImmutableMap.of(
+                "a4",
+                "v4",
+                "a5",
+                "v5",
+                "a6",
+                "v6",
+                AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                "readTag",
+                AbacOperationAttributes.WRITE_TAG_PREFIX + "policyName2",
+                "writeTag"));
+
+    assertThat(newUpdate2.forNamespace()).hasValue(NAMESPACE_1);
+    assertThat(newUpdate2.forTable()).hasValue(TABLE_1);
+    Assertions.<Key>assertThat(newUpdate2.getPartitionKey()).isEqualTo(partitionKey1);
+    assertThat(newUpdate2.getClusteringKey()).hasValue(clusteringKey1);
+    assertThat(newUpdate2.getColumns().size()).isEqualTo(1);
+    assertThat(newUpdate2.getColumns().get("bigint1").getBigIntValue())
+        .isEqualTo(BigIntColumn.MIN_VALUE);
+    assertThat(newUpdate2.getAttributes()).isEmpty();
   }
 
   @Test
