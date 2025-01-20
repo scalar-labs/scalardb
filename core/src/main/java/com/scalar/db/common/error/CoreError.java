@@ -718,6 +718,8 @@ public enum CoreError implements ScalarDbError {
       "The provided partition key order does not match the table schema. Required order: %s",
       "",
       ""),
+  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
+      Category.USER_ERROR, "0158", "Missing namespace or table: %s, %s", "", ""),
 
   //
   // Errors for the concurrency error category

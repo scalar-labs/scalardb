@@ -10,30 +10,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /** Utility class for handling ScalarDB table metadata operations. */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TableMetadataUtil {
-
-  /**
-   * Determines whether a given column is a metadata column based on predefined criteria.
-   *
-   * @param columnName The name of the table column to check.
-   * @param metadataColumns A set of predefined metadata columns.
-   * @param columnNames A set of all column names in the table.
-   * @return {@code true} if the column is a metadata column; {@code false} otherwise.
-   */
-  public static boolean isMetadataColumn(
-      String columnName, Set<String> metadataColumns, Set<String> columnNames) {
-    if (metadataColumns.contains(columnName)) {
-      return true;
-    }
-    return columnName.startsWith(Attribute.BEFORE_PREFIX)
-        && !columnNames.contains(Attribute.BEFORE_PREFIX + columnName);
-  }
 
   /**
    * Extracts a mapping of column names to their data types from the table metadata.
