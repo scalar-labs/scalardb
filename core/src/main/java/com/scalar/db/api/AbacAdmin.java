@@ -339,51 +339,48 @@ public interface AbacAdmin {
   }
 
   /**
-   * Applies the given policy to the given namespace.
+   * Creates a namespace policy with the given policy and the given namespace.
    *
+   * @param namespacePolicyName the namespace policy name
    * @param policyName the policy name
    * @param namespaceName the namespace name
    * @throws ExecutionException if the operation fails
    */
-  default void applyPolicyToNamespace(String policyName, String namespaceName)
+  default void createNamespacePolicy(
+      String namespacePolicyName, String policyName, String namespaceName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Enables the given policy for the given namespace.
+   * Enables a namespace policy that has the given name.
    *
-   * @param policyName the policy name
-   * @param namespaceName the namespace name
+   * @param namespacePolicyName the namespace policy name
    * @throws ExecutionException if the operation fails
    */
-  default void enableNamespacePolicy(String policyName, String namespaceName)
-      throws ExecutionException {
+  default void enableNamespacePolicy(String namespacePolicyName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Disables the given policy for the given namespace.
+   * Disables a namespace policy that has the given name.
    *
-   * @param policyName the policy name
-   * @param namespaceName the namespace name
+   * @param namespacePolicyName the namespace policy name
    * @throws ExecutionException if the operation fails
    */
-  default void disableNamespacePolicy(String policyName, String namespaceName)
-      throws ExecutionException {
+  default void disableNamespacePolicy(String namespacePolicyName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Retrieves the namespace policy for the given namespace.
+   * Retrieves a namespace policy that has the given name.
    *
-   * @param policyName the policy name
-   * @param namespaceName the namespace name
+   * @param namespacePolicyName the namespace policy name
    * @return the namespace policy. If the policy is not applied to the namespace, returns an empty
    *     optional
    * @throws ExecutionException if the operation fails
    */
-  default Optional<NamespacePolicy> getNamespacePolicy(String policyName, String namespaceName)
+  default Optional<NamespacePolicy> getNamespacePolicy(String namespacePolicyName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
@@ -399,55 +396,48 @@ public interface AbacAdmin {
   }
 
   /**
-   * Applies the given policy to the given table of the given namespace.
+   * Creates a table policy with the given policy and the given table.
    *
+   * @param tablePolicyName the table policy name
    * @param policyName the policy name
    * @param namespaceName the namespace name
    * @param tableName the table name
    * @throws ExecutionException if the operation fails
    */
-  default void applyPolicyToTable(String policyName, String namespaceName, String tableName)
+  default void createTablePolicy(
+      String tablePolicyName, String policyName, String namespaceName, String tableName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Enables the given policy of the given table of the given namespace.
+   * Enables a table policy that has the given name.
    *
-   * @param policyName the policy name
-   * @param namespaceName the namespace name
-   * @param tableName the table name
+   * @param tablePolicyName the table policy name
    * @throws ExecutionException if the operation fails
    */
-  default void enableTablePolicy(String policyName, String namespaceName, String tableName)
-      throws ExecutionException {
+  default void enableTablePolicy(String tablePolicyName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Disables the given policy of the given table of the given namespace.
+   * Disables a table policy that has the given name.
    *
-   * @param policyName the policy name
-   * @param namespaceName the namespace name
-   * @param tableName the table name
+   * @param tablePolicyName the table policy name
    * @throws ExecutionException if the operation fails
    */
-  default void disableTablePolicy(String policyName, String namespaceName, String tableName)
-      throws ExecutionException {
+  default void disableTablePolicy(String tablePolicyName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Retrieves the table policy for the given table of the given namespace.
+   * Retrieves a table policy that has the given name.
    *
-   * @param policyName the policy name
-   * @param namespaceName the namespace name
-   * @param tableName the table name
+   * @param tablePolicyName the table policy name
    * @return the table policy. If the policy is not applied to the table, returns an empty optional
    * @throws ExecutionException if the operation fails
    */
-  default Optional<TablePolicy> getTablePolicy(
-      String policyName, String namespaceName, String tableName) throws ExecutionException {
+  default Optional<TablePolicy> getTablePolicy(String tablePolicyName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.ABAC_NOT_ENABLED.buildMessage());
   }
 
@@ -732,6 +722,13 @@ public interface AbacAdmin {
   /** The namespace policy. */
   interface NamespacePolicy {
     /**
+     * Returns the namespace policy name.
+     *
+     * @return the namespace policy name
+     */
+    String getName();
+
+    /**
      * Returns the policy name.
      *
      * @return the policy name
@@ -755,6 +752,13 @@ public interface AbacAdmin {
 
   /** The table policy. */
   interface TablePolicy {
+    /**
+     * Returns the table policy name.
+     *
+     * @return the table policy name
+     */
+    String getName();
+
     /**
      * Returns the policy name.
      *

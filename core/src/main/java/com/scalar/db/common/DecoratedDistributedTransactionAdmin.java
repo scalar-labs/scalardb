@@ -481,27 +481,27 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void applyPolicyToNamespace(String policyName, String namespaceName)
+  public void createNamespacePolicy(
+      String namespacePolicyName, String policyName, String namespaceName)
       throws ExecutionException {
-    distributedTransactionAdmin.applyPolicyToNamespace(policyName, namespaceName);
+    distributedTransactionAdmin.createNamespacePolicy(
+        namespacePolicyName, policyName, namespaceName);
   }
 
   @Override
-  public void enableNamespacePolicy(String policyName, String namespaceName)
-      throws ExecutionException {
-    distributedTransactionAdmin.enableNamespacePolicy(policyName, namespaceName);
+  public void enableNamespacePolicy(String namespacePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.enableNamespacePolicy(namespacePolicyName);
   }
 
   @Override
-  public void disableNamespacePolicy(String policyName, String namespaceName)
-      throws ExecutionException {
-    distributedTransactionAdmin.disableNamespacePolicy(policyName, namespaceName);
+  public void disableNamespacePolicy(String namespacePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.disableNamespacePolicy(namespacePolicyName);
   }
 
   @Override
-  public Optional<NamespacePolicy> getNamespacePolicy(String policyName, String namespaceName)
+  public Optional<NamespacePolicy> getNamespacePolicy(String namespacePolicyName)
       throws ExecutionException {
-    return distributedTransactionAdmin.getNamespacePolicy(policyName, namespaceName);
+    return distributedTransactionAdmin.getNamespacePolicy(namespacePolicyName);
   }
 
   @Override
@@ -510,27 +510,26 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void applyPolicyToTable(String policyName, String namespaceName, String tableName)
+  public void createTablePolicy(
+      String tablePolicyName, String policyName, String namespaceName, String tableName)
       throws ExecutionException {
-    distributedTransactionAdmin.applyPolicyToTable(policyName, namespaceName, tableName);
+    distributedTransactionAdmin.createTablePolicy(
+        tablePolicyName, policyName, namespaceName, tableName);
   }
 
   @Override
-  public void enableTablePolicy(String policyName, String namespaceName, String tableName)
-      throws ExecutionException {
-    distributedTransactionAdmin.enableTablePolicy(policyName, namespaceName, tableName);
+  public void enableTablePolicy(String tablePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.enableTablePolicy(tablePolicyName);
   }
 
   @Override
-  public void disableTablePolicy(String policyName, String namespaceName, String tableName)
-      throws ExecutionException {
-    distributedTransactionAdmin.disableTablePolicy(policyName, namespaceName, tableName);
+  public void disableTablePolicy(String tablePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.disableTablePolicy(tablePolicyName);
   }
 
   @Override
-  public Optional<TablePolicy> getTablePolicy(
-      String policyName, String namespaceName, String tableName) throws ExecutionException {
-    return distributedTransactionAdmin.getTablePolicy(policyName, namespaceName, tableName);
+  public Optional<TablePolicy> getTablePolicy(String tablePolicyName) throws ExecutionException {
+    return distributedTransactionAdmin.getTablePolicy(tablePolicyName);
   }
 
   @Override
