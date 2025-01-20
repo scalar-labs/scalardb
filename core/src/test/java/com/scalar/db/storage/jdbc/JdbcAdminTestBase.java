@@ -83,7 +83,9 @@ public abstract class JdbcAdminTestBase {
           RdbEngine.SQLITE,
           new RdbEngineSqlite(),
           RdbEngine.YUGABYTE,
-          new RdbEngineYugabyte());
+          new RdbEngineYugabyte(),
+          RdbEngine.MARIADB,
+          new RdbEngineMariaDB());
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -123,6 +125,7 @@ public abstract class JdbcAdminTestBase {
   private void mockUndefinedTableError(RdbEngine rdbEngine, SQLException sqlException) {
     switch (rdbEngine) {
       case MYSQL:
+      case MARIADB:
         when(sqlException.getErrorCode()).thenReturn(1049);
         break;
       case POSTGRESQL:
@@ -2977,6 +2980,7 @@ public abstract class JdbcAdminTestBase {
       case POSTGRESQL:
       case YUGABYTE:
       case SQL_SERVER:
+      case MARIADB:
         statements.add(
             "CREATE SCHEMA "
                 + (rdbEngine.equals(RdbEngine.SQL_SERVER) ? "" : "IF NOT EXISTS ")
