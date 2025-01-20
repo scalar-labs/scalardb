@@ -12,8 +12,6 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** An abstraction for handler classes for mutate statements */
 @ThreadSafe
