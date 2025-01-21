@@ -34,5 +34,10 @@ public class ConsensusCommitAdminIntegrationTestWithCassandra
   }
 
   @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
+
+  @Override
   protected void extraCheckOnCoordinatorTable() {}
 }

@@ -6,31 +6,40 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineMysql implements RdbEngineStrategy {
+class RdbEngineMysql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
+  private final RdbEngineTimeTypeMysql timeTypeEngine;
 
   RdbEngineMysql(JdbcConfig config) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
+    timeTypeEngine = new RdbEngineTimeTypeMysql();
   }
 
   @VisibleForTesting
   RdbEngineMysql() {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+    timeTypeEngine = new RdbEngineTimeTypeMysql();
   }
 
   @Override
@@ -200,6 +209,13 @@ class RdbEngineMysql implements RdbEngineStrategy {
         return "INT";
       case TEXT:
         return "LONGTEXT";
+      case DATE:
+        return "DATE";
+      case TIME:
+        return "TIME(6)";
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
+        return "DATETIME(3)";
       default:
         throw new AssertionError();
     }
@@ -218,8 +234,13 @@ class RdbEngineMysql implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      @Nullable DataType overrideDataType) {
     switch (type) {
       case BIT:
         if (columnSize != 1) {
@@ -291,6 +312,21 @@ class RdbEngineMysql implements RdbEngineStrategy {
               typeName);
         }
         return DataType.BLOB;
+      case DATE:
+        if (typeName.equalsIgnoreCase("YEAR")) {
+          throw new IllegalArgumentException(
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
+        }
+        return DataType.DATE;
+      case TIME:
+        return DataType.TIME;
+        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
+      case TIMESTAMP:
+        if (overrideDataType == DataType.TIMESTAMPTZ || typeName.equalsIgnoreCase("TIMESTAMP")) {
+          return DataType.TIMESTAMPTZ;
+        }
+        return DataType.TIMESTAMP;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -315,6 +351,14 @@ class RdbEngineMysql implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP;
+
       default:
         throw new AssertionError();
     }
@@ -373,5 +417,22 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
     // method is used for filtering.
     return namespace;
+  }
+
+  @Override
+  public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    LocalDateTime localDateTime = resultSet.getObject(columnName, LocalDateTime.class);
+    if (localDateTime == null) {
+      return TimestampTZColumn.ofNull(columnName);
+    } else {
+      return TimestampTZColumn.of(columnName, localDateTime.toInstant(ZoneOffset.UTC));
+    }
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, LocalDateTime>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

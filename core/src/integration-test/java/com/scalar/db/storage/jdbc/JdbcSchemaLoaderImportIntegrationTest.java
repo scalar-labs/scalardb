@@ -1,10 +1,15 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.DataType;
 import com.scalar.db.schemaloader.SchemaLoaderImportIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -13,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
+
   private static final Logger logger =
       LoggerFactory.getLogger(JdbcSchemaLoaderImportIntegrationTest.class);
 
@@ -42,21 +48,111 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Override
   protected void createImportableTable(String namespace, String table) throws Exception {
-    testUtils.execute(
-        "CREATE TABLE "
-            + rdbEngine.encloseFullTableName(namespace, table)
-            + "("
-            + rdbEngine.enclose("pk")
-            + " CHAR(8),"
-            + rdbEngine.enclose("col")
-            + " CHAR(8), PRIMARY KEY("
-            + rdbEngine.enclose("pk")
-            + "))");
+    String sql;
+
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      sql =
+          "CREATE TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + "("
+              + rdbEngine.enclose("pk")
+              + " CHAR(8),"
+              + rdbEngine.enclose("col1")
+              + " CHAR(8),"
+              + rdbEngine.enclose("col2")
+              + " DATETIME,"
+              + "PRIMARY KEY("
+              + rdbEngine.enclose("pk")
+              + "))";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      sql =
+          "CREATE TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + "("
+              + rdbEngine.enclose("pk")
+              + " CHAR(8),"
+              + rdbEngine.enclose("col1")
+              + " CHAR(8),"
+              + rdbEngine.enclose("col2")
+              + " DATE,"
+              + "PRIMARY KEY("
+              + rdbEngine.enclose("pk")
+              + "))";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isSqlServer(rdbEngine)) {
+      sql =
+          "CREATE TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + "("
+              + rdbEngine.enclose("pk")
+              + " CHAR(8),"
+              + rdbEngine.enclose("col1")
+              + " CHAR(8),"
+              + "PRIMARY KEY("
+              + rdbEngine.enclose("pk")
+              + "))";
+    } else {
+      throw new AssertionError();
+    }
+
+    testUtils.execute(sql);
+  }
+
+  @Override
+  protected Map<String, DataType> getImportableTableOverrideColumnsType() {
+    // col1 type override confirms overriding with the default data type mapping does not fail
+    // col2 really performs a type override
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMPTZ);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMP);
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return ImmutableMap.of("col1", DataType.TEXT);
+    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
+      return Collections.emptyMap();
+    } else {
+      throw new AssertionError();
+    }
+  }
+
+  @Override
+  protected TableMetadata getImportableTableMetadata(boolean hasTypeOverride) {
+    TableMetadata.Builder metadata = TableMetadata.newBuilder();
+    metadata.addPartitionKey("pk");
+    metadata.addColumn("pk", DataType.TEXT);
+    metadata.addColumn("col1", DataType.TEXT);
+
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return metadata
+          .addColumn("col2", hasTypeOverride ? DataType.TIMESTAMPTZ : DataType.TIMESTAMP)
+          .build();
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return metadata
+          .addColumn("col2", hasTypeOverride ? DataType.TIMESTAMP : DataType.DATE)
+          .build();
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return metadata.build();
+    } else {
+      throw new AssertionError();
+    }
   }
 
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Override
   protected void createNonImportableTable(String namespace, String table) throws Exception {
+    String nonImportableDataType;
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      nonImportableDataType = "YEAR";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      nonImportableDataType = "INTERVAL";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      nonImportableDataType = "INT";
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      nonImportableDataType = "MONEY";
+    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
+      nonImportableDataType = "TEXT";
+    } else {
+      throw new AssertionError();
+    }
     testUtils.execute(
         "CREATE TABLE "
             + rdbEngine.encloseFullTableName(namespace, table)
@@ -64,7 +160,9 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
             + rdbEngine.enclose("pk")
             + " CHAR(8),"
             + rdbEngine.enclose("col")
-            + " DATE, PRIMARY KEY("
+            + " "
+            + nonImportableDataType
+            + ", PRIMARY KEY("
             + rdbEngine.enclose("pk")
             + "))");
   }

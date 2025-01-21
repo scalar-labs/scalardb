@@ -15,4 +15,9 @@ public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegratio
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CassandraAdminTestUtils(getProperties(testName));
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

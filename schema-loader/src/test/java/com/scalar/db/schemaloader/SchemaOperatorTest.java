@@ -511,12 +511,14 @@ public class SchemaOperatorTest {
     when(importTableSchema.getNamespace()).thenReturn("ns");
     when(importTableSchema.isTransactionTable()).thenReturn(true);
     when(importTableSchema.getTable()).thenReturn("tb");
+    Map<String, DataType> overrideColumnsType = ImmutableMap.of("c1", DataType.INT);
+    when(importTableSchema.getOverrideColumnsType()).thenReturn(overrideColumnsType);
 
     // Act
     operator.importTables(tableSchemaList, options);
 
     // Assert
-    verify(transactionAdmin, times(3)).importTable("ns", "tb", options);
+    verify(transactionAdmin, times(3)).importTable("ns", "tb", options, overrideColumnsType);
     verifyNoInteractions(storageAdmin);
   }
 
@@ -528,12 +530,14 @@ public class SchemaOperatorTest {
     when(importTableSchema.getNamespace()).thenReturn("ns");
     when(importTableSchema.isTransactionTable()).thenReturn(false);
     when(importTableSchema.getTable()).thenReturn("tb");
+    Map<String, DataType> overrideColumnsType = ImmutableMap.of("c1", DataType.INT);
+    when(importTableSchema.getOverrideColumnsType()).thenReturn(overrideColumnsType);
 
     // Act
     operator.importTables(tableSchemaList, options);
 
     // Assert
-    verify(storageAdmin, times(3)).importTable("ns", "tb", options);
+    verify(storageAdmin, times(3)).importTable("ns", "tb", options, overrideColumnsType);
     verifyNoInteractions(transactionAdmin);
   }
 }

@@ -437,7 +437,28 @@ public interface Admin {
    *     table does not exist, or if the table does not meet the requirement of ScalarDB table
    * @throws ExecutionException if the operation fails
    */
-  void importTable(String namespace, String table, Map<String, String> options)
+  default void importTable(String namespace, String table, Map<String, String> options)
+      throws ExecutionException {
+    importTable(namespace, table, options, Collections.emptyMap());
+  }
+
+  /**
+   * Imports an existing table that is not managed by ScalarDB.
+   *
+   * @param namespace an existing namespace
+   * @param table an existing table
+   * @param options options to import
+   * @param overrideColumnsType a map of column data type by column name. Only set the column for
+   *     which you want to override the default data type mapping.
+   * @throws IllegalArgumentException if the table is already managed by ScalarDB, if the target
+   *     table does not exist, or if the table does not meet the requirement of ScalarDB table
+   * @throws ExecutionException if the operation fails
+   */
+  void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
       throws ExecutionException;
 
   /**

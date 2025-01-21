@@ -16,4 +16,9 @@ public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegr
         .getSystemNamespaceName()
         .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

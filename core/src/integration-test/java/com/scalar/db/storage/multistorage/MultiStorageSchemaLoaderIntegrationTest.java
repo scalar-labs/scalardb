@@ -56,4 +56,9 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
         MultiStorageEnv.getPropertiesForCassandra(testName),
         MultiStorageEnv.getPropertiesForJdbc(testName));
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

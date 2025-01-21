@@ -7,6 +7,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.util.AdminTestUtils;
@@ -88,7 +90,10 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   protected Map<String, Object> getImportSchemaJsonMap() {
     return ImmutableMap.of(
         namespace1 + "." + TABLE_1,
-        ImmutableMap.<String, Object>builder().put("transaction", true).build(),
+        ImmutableMap.<String, Object>builder()
+            .put("transaction", true)
+            .put("override-columns-type", getImportableTableOverrideColumnsType())
+            .build(),
         namespace2 + "." + TABLE_2,
         ImmutableMap.<String, Object>builder().put("transaction", false).build());
   }
@@ -154,6 +159,10 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
   protected abstract void dropNonImportableTable(String namespace, String table) throws Exception;
 
+  protected abstract Map<String, DataType> getImportableTableOverrideColumnsType();
+
+  protected abstract TableMetadata getImportableTableMetadata(boolean hasTypeOverride);
+
   protected void waitForDifferentSessionDdl() {
     // No wait by default.
   }
@@ -168,9 +177,11 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     createExistingDatabase(namespace2);
 
     waitForDifferentSessionDdl();
+    // TABLE_1 set options to override column types.
     createImportableTable(namespace1, TABLE_1);
 
     waitForDifferentSessionDdl();
+    // TABLE_2 does not set options to override column types.
     createImportableTable(namespace2, TABLE_2);
 
     // Act
@@ -182,6 +193,10 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     assertThat(exitCode).isEqualTo(0);
     assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
     assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
+    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
+        .isEqualTo(getImportableTableMetadata(true));
+    assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2))
+        .isEqualTo(getImportableTableMetadata(false));
     assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
   }
 

@@ -12,6 +12,7 @@ import java.sql.JDBCType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,19 +41,47 @@ public class RdbEngineTest {
               String description =
                   String.format(
                       "database engine specific test failed: "
-                          + "%s, JDBCType = %s, type name = %s, column size = %d, digits = %dp",
-                      rdbEngineType, given.type, given.typeName, given.columnSize, given.digits);
+                          + "%s, JDBCType = %s, type name = %s, column size = %d, digits = %dp, overrideDataType = %s",
+                      rdbEngineType,
+                      given.type,
+                      given.typeName,
+                      given.columnSize,
+                      given.digits,
+                      given.overrideDataType);
               if (expected != null) {
-                DataType actual =
-                    rdbEngine.getDataTypeForScalarDb(
-                        given.type, given.typeName, given.columnSize, given.digits, "");
-                assertThat(actual).as(description).isEqualTo(expected);
+                if (given.overrideDataType != null) {
+                  DataType actualWithAllowedOverride =
+                      rdbEngine.getDataTypeForScalarDb(
+                          given.type,
+                          given.typeName,
+                          given.columnSize,
+                          given.digits,
+                          "",
+                          given.overrideDataType);
+                  assertThat(actualWithAllowedOverride).as(description).isEqualTo(expected);
+                } else {
+                  DataType actualWithoutOverride =
+                      rdbEngine.getDataTypeForScalarDb(
+                          given.type, given.typeName, given.columnSize, given.digits, "", null);
+                  assertThat(actualWithoutOverride).as(description).isEqualTo(expected);
+
+                  // Overriding with the default type mapping should works as well
+                  DataType actualWithOverrideSameAsDefault =
+                      rdbEngine.getDataTypeForScalarDb(
+                          given.type, given.typeName, given.columnSize, given.digits, "", expected);
+                  assertThat(actualWithOverrideSameAsDefault).as(description).isEqualTo(expected);
+                }
               } else {
                 Throwable thrown =
                     catchThrowable(
                         () ->
                             rdbEngine.getDataTypeForScalarDb(
-                                given.type, given.typeName, given.columnSize, given.digits, ""));
+                                given.type,
+                                given.typeName,
+                                given.columnSize,
+                                given.digits,
+                                "",
+                                given.overrideDataType));
                 assertThat(thrown).as(description).isInstanceOf(IllegalArgumentException.class);
               }
             });
@@ -155,18 +184,64 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.DECIMAL, "decimal"), null);
 
     // DATE/TIME/TIMESTAMP
-    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.DATE, "DATE"), null);
-    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.TIME, "TIME"), null);
-    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP"), null);
-    DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.DATE, "date"), null);
-    DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.TIME, "time"), null);
-    DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.TIMESTAMP, "timestamp"), null);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.DATE, "DATE"), null);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.TIME, "TIME"), null);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP"), null);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.DATE, "date"), null);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.TIME, "time"), null);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.TIMESTAMP, "datetime"), null);
+    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.DATE, "DATE"), DataType.DATE);
+    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.DATE, "YEAR"), null);
+    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.TIME, "TIME"), DataType.TIME);
+    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.TIMESTAMP, "DATETIME"), DataType.TIMESTAMP);
+    DATA_TYPE_MAP
+        .get(MYSQL)
+        .put(
+            new Column(JDBCType.TIMESTAMP, "DATETIME", DataType.TIMESTAMPTZ), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP"), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP
+        .get(MYSQL)
+        .put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP", DataType.TIMESTAMP), null);
+    DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.DATE, "date"), DataType.DATE);
+    DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.TIME, "time"), DataType.TIME);
+    DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.TIME, "timetz"), null);
+    DATA_TYPE_MAP
+        .get(POSTGRESQL)
+        .put(new Column(JDBCType.TIMESTAMP, "timestamp"), DataType.TIMESTAMP);
+    DATA_TYPE_MAP
+        .get(POSTGRESQL)
+        .put(new Column(JDBCType.TIMESTAMP, "timestamptz"), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.TIMESTAMP, "DATE"), DataType.DATE);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.TIMESTAMP, "DATE", DataType.TIME), DataType.TIME);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.TIMESTAMP, "DATE", DataType.TIMESTAMP), DataType.TIMESTAMP);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP"), DataType.TIMESTAMP);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP", DataType.TIME), DataType.TIME);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.OTHER, "TIMESTAMP WITH TIME ZONE"), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.OTHER, "TIMESTAMP(3) WITH TIME ZONE"), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.OTHER, "TIMESTAMP WITH LOCAL TIME ZONE"), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.OTHER, "TIMESTAMP(1) WITH LOCAL TIME ZONE"), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.DATE, "date"), DataType.DATE);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.TIME, "time"), DataType.TIME);
+    DATA_TYPE_MAP
+        .get(SQL_SERVER)
+        .put(new Column(JDBCType.TIMESTAMP, "datetime"), DataType.TIMESTAMP);
+    DATA_TYPE_MAP
+        .get(SQL_SERVER)
+        .put(new Column(JDBCType.TIMESTAMP, "datetime2"), DataType.TIMESTAMP);
+    DATA_TYPE_MAP
+        .get(SQL_SERVER)
+        .put(new Column(JDBCType.TIMESTAMP, "smalldatetime"), DataType.TIMESTAMP);
+    DATA_TYPE_MAP
+        .get(SQL_SERVER)
+        .put(new Column(JDBCType.OTHER, "datetimeoffset"), DataType.TIMESTAMPTZ);
 
     // Other unsupported data types
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.BIT, "BIT", 8, 0), null);
@@ -186,16 +261,31 @@ public class RdbEngineTest {
     final String typeName;
     final int columnSize;
     final int digits;
+    @Nullable final DataType overrideDataType;
 
     Column(JDBCType type, String typeName) {
-      this(type, typeName, 0, 0);
+      this(type, typeName, 0, 0, null);
+    }
+
+    Column(JDBCType type, String typeName, DataType overrideDataType) {
+      this(type, typeName, 0, 0, overrideDataType);
     }
 
     Column(JDBCType type, String typeName, int columnSize, int digits) {
+      this(type, typeName, columnSize, digits, null);
+    }
+
+    Column(
+        JDBCType type,
+        String typeName,
+        int columnSize,
+        int digits,
+        @Nullable DataType overrideDataType) {
       this.type = type;
       this.typeName = typeName;
       this.columnSize = columnSize;
       this.digits = digits;
+      this.overrideDataType = overrideDataType;
     }
 
     @Override
@@ -215,7 +305,7 @@ public class RdbEngineTest {
 
     @Override
     public int hashCode() {
-      return Objects.hash(type, typeName, columnSize, digits);
+      return Objects.hash(type, typeName, columnSize, digits, overrideDataType);
     }
 
     @Override

@@ -190,8 +190,13 @@ public class CassandraAdminTest {
             .addColumn("c1", DataType.INT)
             .addColumn("c2", DataType.TEXT)
             .addColumn("c3", DataType.BLOB)
-            .addColumn("c4", DataType.INT)
+            .addColumn("c4", DataType.BIGINT)
             .addColumn("c5", DataType.BOOLEAN)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c2")
             .addSecondaryIndex("c4")
             .build();
@@ -202,10 +207,15 @@ public class CassandraAdminTest {
     TableOptions<Options> createTableStatement =
         SchemaBuilder.createTable(namespace, table)
             .addPartitionKey("c1", com.datastax.driver.core.DataType.cint())
-            .addClusteringColumn("c4", com.datastax.driver.core.DataType.cint())
+            .addClusteringColumn("c4", com.datastax.driver.core.DataType.bigint())
             .addColumn("c2", com.datastax.driver.core.DataType.text())
             .addColumn("c3", com.datastax.driver.core.DataType.blob())
             .addColumn("c5", com.datastax.driver.core.DataType.cboolean())
+            .addColumn("c6", com.datastax.driver.core.DataType.cdouble())
+            .addColumn("c7", com.datastax.driver.core.DataType.cfloat())
+            .addColumn("c8", com.datastax.driver.core.DataType.date())
+            .addColumn("c9", com.datastax.driver.core.DataType.time())
+            .addColumn("c10", com.datastax.driver.core.DataType.timestamp())
             .withOptions()
             .clusteringOrder("c4", Direction.ASC)
             .compactionOptions(SchemaBuilder.sizedTieredStategy());
@@ -225,6 +235,7 @@ public class CassandraAdminTest {
             .addPartitionKey("c7")
             .addClusteringKey("c4")
             .addClusteringKey("c6", Order.DESC)
+            .addClusteringKey("c9", Order.ASC)
             .addColumn("c1", DataType.INT)
             .addColumn("c2", DataType.TEXT)
             .addColumn("c3", DataType.BLOB)
@@ -232,6 +243,9 @@ public class CassandraAdminTest {
             .addColumn("c5", DataType.BIGINT)
             .addColumn("c6", DataType.BOOLEAN)
             .addColumn("c7", DataType.TEXT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c2")
             .addSecondaryIndex("c4")
             .build();
@@ -248,12 +262,16 @@ public class CassandraAdminTest {
             .addPartitionKey("c7", com.datastax.driver.core.DataType.text())
             .addClusteringColumn("c4", com.datastax.driver.core.DataType.cdouble())
             .addClusteringColumn("c6", com.datastax.driver.core.DataType.cboolean())
+            .addClusteringColumn("c9", com.datastax.driver.core.DataType.time())
             .addColumn("c2", com.datastax.driver.core.DataType.text())
             .addColumn("c3", com.datastax.driver.core.DataType.blob())
             .addColumn("c5", com.datastax.driver.core.DataType.bigint())
+            .addColumn("c8", com.datastax.driver.core.DataType.date())
+            .addColumn("c10", com.datastax.driver.core.DataType.timestamp())
             .withOptions()
             .clusteringOrder("c4", Direction.ASC)
             .clusteringOrder("c6", Direction.DESC)
+            .clusteringOrder("c9", Direction.ASC)
             .compactionOptions(SchemaBuilder.leveledStrategy());
     verify(cassandraSession).execute(createTableStatement.getQueryString());
   }
@@ -615,12 +633,16 @@ public class CassandraAdminTest {
 
     // Act
     Throwable thrown1 =
-        catchThrowable(() -> cassandraAdmin.getImportTableMetadata(namespace, table));
+        catchThrowable(
+            () -> cassandraAdmin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
     Throwable thrown2 =
         catchThrowable(
             () -> cassandraAdmin.addRawColumnToTable(namespace, table, column, DataType.INT));
     Throwable thrown3 =
-        catchThrowable(() -> cassandraAdmin.importTable(namespace, table, Collections.emptyMap()));
+        catchThrowable(
+            () ->
+                cassandraAdmin.importTable(
+                    namespace, table, Collections.emptyMap(), Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
