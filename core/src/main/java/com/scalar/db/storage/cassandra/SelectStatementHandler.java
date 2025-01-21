@@ -289,7 +289,7 @@ public class SelectStatementHandler extends StatementHandler {
       case DESC:
         return QueryBuilder.desc(quoteIfNecessary(ordering.getColumnName()));
       default:
-        return QueryBuilder.asc(quoteIfNecessary(ordering.getColumnName()));
+        throw new AssertionError("Unsupported ordering is specified");
     }
   }
 
