@@ -35,7 +35,7 @@ public class CosmosAdminRepairIntegrationTest
     cosmosAdminTestUtils.getTableStoredProcedure(getNamespace(), getTable()).delete();
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
 
     // Assert
     assertThatCode(

@@ -12,6 +12,10 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
@@ -278,6 +282,42 @@ public class ConditionalExpression {
    */
   public byte[] getBlobValueAsBytes() {
     return column.getBlobValueAsBytes();
+  }
+
+  /**
+   * Returns the DATE value to compare with the target column.
+   *
+   * @return the DATE value to compare with the target column
+   */
+  public LocalDate getDateValue() {
+    return column.getDateValue();
+  }
+
+  /**
+   * Returns the TIME value to compare with the target column.
+   *
+   * @return the TIME value to compare with the target column
+   */
+  public LocalTime getTimeValue() {
+    return column.getTimeValue();
+  }
+
+  /**
+   * Returns the TIMESTAMP value to compare with the target column.
+   *
+   * @return the TIMESTAMP value to compare with the target column
+   */
+  public LocalDateTime getTimestampValue() {
+    return column.getTimestampValue();
+  }
+
+  /**
+   * Returns the TIMESTAMPTZ value to compare with the target column.
+   *
+   * @return the TIMESTAMPTZ value to compare with the target column
+   */
+  public Instant getTimestampTZValue() {
+    return column.getTimestampTZValue();
   }
 
   /**

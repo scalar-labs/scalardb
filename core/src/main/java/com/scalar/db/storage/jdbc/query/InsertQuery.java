@@ -45,8 +45,8 @@ public class InsertQuery implements Query {
 
   private String makeValuesSqlString() {
     List<String> names = new ArrayList<>();
-    partitionKey.forEach(v -> names.add(v.getName()));
-    clusteringKey.ifPresent(k -> k.forEach(v -> names.add(v.getName())));
+    partitionKey.getColumns().forEach(v -> names.add(v.getName()));
+    clusteringKey.ifPresent(k -> k.getColumns().forEach(v -> names.add(v.getName())));
     names.addAll(columns.keySet());
     return "("
         + names.stream().map(rdbEngine::enclose).collect(Collectors.joining(","))
