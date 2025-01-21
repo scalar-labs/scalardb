@@ -15,14 +15,10 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** An abstraction for handler classes for mutate statements */
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
-  private static final Logger logger = LoggerFactory.getLogger(MutateStatementHandler.class);
-
   public MutateStatementHandler(Session session) {
     super(session);
   }
