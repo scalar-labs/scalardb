@@ -116,7 +116,7 @@ public abstract class StatementHandler {
           return ConsistencyLevel.QUORUM;
         }
       default:
-        throw new AssertionError("Unsupported consistency is specified");
+        throw new AssertionError("Unsupported consistency is specified: " + consistency);
     }
   }
 
