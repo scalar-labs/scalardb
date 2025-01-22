@@ -313,10 +313,11 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table)
+  public TableMetadata getImportTableMetadata(
+      String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     try {
-      return admin.getImportTableMetadata(namespace, table);
+      return admin.getImportTableMetadata(namespace, table, overrideColumnsType);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           CoreError.GETTING_IMPORT_TABLE_METADATA_FAILED.buildMessage(
@@ -326,7 +327,11 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options)
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata != null) {
@@ -336,7 +341,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     }
 
     try {
-      admin.importTable(namespace, table, options);
+      admin.importTable(namespace, table, options, overrideColumnsType);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           CoreError.IMPORTING_TABLE_FAILED.buildMessage(
