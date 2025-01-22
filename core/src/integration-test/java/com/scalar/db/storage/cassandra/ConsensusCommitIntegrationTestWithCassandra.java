@@ -9,4 +9,9 @@ public class ConsensusCommitIntegrationTestWithCassandra
   protected Properties getProps(String testName) {
     return ConsensusCommitCassandraEnv.getProperties(testName);
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

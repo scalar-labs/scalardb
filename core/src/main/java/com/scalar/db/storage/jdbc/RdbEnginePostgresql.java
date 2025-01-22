@@ -14,14 +14,24 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEnginePostgresql implements RdbEngineStrategy {
+class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
+  private final RdbEngineTimeTypePostgresql timeTypeEngine;
+
+  public RdbEnginePostgresql() {
+    timeTypeEngine = new RdbEngineTimeTypePostgresql();
+  }
 
   @Override
   public String[] createNamespaceSqls(String fullNamespace) {
@@ -195,6 +205,14 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return "INT";
       case TEXT:
         return "TEXT";
+      case DATE:
+        return "DATE";
+      case TIME:
+        return "TIME";
+      case TIMESTAMP:
+        return "TIMESTAMP";
+      case TIMESTAMPTZ:
+        return "TIMESTAMP WITH TIME ZONE";
       default:
         throw new AssertionError();
     }
@@ -211,8 +229,13 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      @Nullable DataType overrideDataType) {
     switch (type) {
       case BIT:
         if (columnSize != 1) {
@@ -270,6 +293,20 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return DataType.TEXT;
       case BINARY:
         return DataType.BLOB;
+      case DATE:
+        return DataType.DATE;
+      case TIME:
+        if (typeName.equalsIgnoreCase("timetz")) {
+          throw new IllegalArgumentException(
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
+        }
+        return DataType.TIME;
+      case TIMESTAMP:
+        if (typeName.equalsIgnoreCase("timestamptz")) {
+          return DataType.TIMESTAMPTZ;
+        }
+        return DataType.TIMESTAMP;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -294,6 +331,14 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.VARBINARY;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+        return Types.TIMESTAMP;
+      case TIMESTAMPTZ:
+        return Types.TIMESTAMP_WITH_TIMEZONE;
       default:
         throw new AssertionError();
     }
@@ -312,5 +357,11 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   @Override
   public Driver getDriver() {
     return new org.postgresql.Driver();
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, OffsetDateTime>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

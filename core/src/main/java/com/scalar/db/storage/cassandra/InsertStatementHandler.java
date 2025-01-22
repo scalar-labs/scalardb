@@ -63,9 +63,14 @@ public class InsertStatementHandler extends MutateStatementHandler {
         insertInto(
             quoteIfNecessary(put.forNamespace().get()), quoteIfNecessary(put.forTable().get()));
 
-    put.getPartitionKey().forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker()));
+    put.getPartitionKey()
+        .getColumns()
+        .forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker()));
     put.getClusteringKey()
-        .ifPresent(k -> k.forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker())));
+        .ifPresent(
+            k ->
+                k.getColumns()
+                    .forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker())));
     put.getColumns().keySet().forEach(n -> insert.value(quoteIfNecessary(n), bindMarker()));
 
     setCondition(insert, put);

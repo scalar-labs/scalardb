@@ -190,9 +190,13 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options)
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
-    distributedTransactionAdmin.importTable(namespace, table, options);
+    distributedTransactionAdmin.importTable(namespace, table, options, overrideColumnsType);
   }
 
   @Override

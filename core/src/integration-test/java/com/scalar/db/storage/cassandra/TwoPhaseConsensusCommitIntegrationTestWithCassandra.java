@@ -9,4 +9,9 @@ public class TwoPhaseConsensusCommitIntegrationTestWithCassandra
   protected Properties getProps1(String testName) {
     return ConsensusCommitCassandraEnv.getProperties(testName);
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

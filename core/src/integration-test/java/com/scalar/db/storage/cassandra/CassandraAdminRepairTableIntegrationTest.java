@@ -43,11 +43,17 @@ public class CassandraAdminRepairTableIntegrationTest
     // Act
     assertThatCode(
             () ->
-                admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions()))
+                admin.repairTable(
+                    getNamespace(), getTable(), getTableMetadata(), getCreationOptions()))
         .doesNotThrowAnyException();
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
+  }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
   }
 }

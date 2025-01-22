@@ -9,4 +9,9 @@ public class CassandraColumnValueIntegrationTest
   protected Properties getProperties(String testName) {
     return CassandraEnv.getProperties(testName);
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

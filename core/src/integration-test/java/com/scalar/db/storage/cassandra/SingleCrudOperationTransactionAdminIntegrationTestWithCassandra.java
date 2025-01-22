@@ -23,4 +23,9 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCassandra
   protected String getSystemNamespaceName(Properties properties) {
     return DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME;
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

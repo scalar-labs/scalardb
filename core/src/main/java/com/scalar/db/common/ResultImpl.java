@@ -6,6 +6,10 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -111,6 +115,42 @@ public class ResultImpl extends AbstractResult {
     Column<?> column = columns.get(columnName);
     assert column != null;
     return column.getBlobValueAsBytes();
+  }
+
+  @Nullable
+  @Override
+  public LocalDate getDate(String columnName) {
+    checkIfExists(columnName);
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getDateValue();
+  }
+
+  @Nullable
+  @Override
+  public LocalTime getTime(String columnName) {
+    checkIfExists(columnName);
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getTimeValue();
+  }
+
+  @Nullable
+  @Override
+  public LocalDateTime getTimestamp(String columnName) {
+    checkIfExists(columnName);
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getTimestampValue();
+  }
+
+  @Nullable
+  @Override
+  public Instant getTimestampTZ(String columnName) {
+    checkIfExists(columnName);
+    Column<?> column = columns.get(columnName);
+    assert column != null;
+    return column.getTimestampTZValue();
   }
 
   @Nullable

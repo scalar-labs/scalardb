@@ -7,12 +7,18 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
+import java.time.LocalDate;
+import java.util.Date;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -99,6 +105,45 @@ public final class ValueBinder implements ColumnVisitor {
       assert column.getBlobValueAsBytes() != null;
       byte[] b = column.getBlobValueAsBytes();
       bound.setBytes(i++, (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip());
+    }
+  }
+
+  @Override
+  public void visit(DateColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      assert column.getDateValue() != null;
+      LocalDate date = column.getDateValue();
+      bound.setDate(
+          i++,
+          com.datastax.driver.core.LocalDate.fromYearMonthDay(
+              date.getYear(), date.getMonthValue(), date.getDayOfMonth()));
+    }
+  }
+
+  @Override
+  public void visit(TimeColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      assert column.getTimeValue() != null;
+      bound.setTime(i++, column.getTimeValue().toNanoOfDay());
+    }
+  }
+
+  @Override
+  public void visit(TimestampColumn column) {
+    throw new UnsupportedOperationException("The TIMESTAMP type is not supported with Cassandra");
+  }
+
+  @Override
+  public void visit(TimestampTZColumn column) {
+    if (column.hasNullValue()) {
+      bound.setToNull(i++);
+    } else {
+      assert column.getTimestampTZValue() != null;
+      bound.setTimestamp(i++, Date.from(column.getTimestampTZValue()));
     }
   }
 }

@@ -232,7 +232,11 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options)
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     checkNamespace(namespace);
 
@@ -242,7 +246,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
           CoreError.TABLE_ALREADY_EXISTS.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table)));
     }
-    tableMetadata = admin.getImportTableMetadata(namespace, table);
+    tableMetadata = admin.getImportTableMetadata(namespace, table, overrideColumnsType);
 
     // add transaction metadata columns
     for (Map.Entry<String, DataType> entry :

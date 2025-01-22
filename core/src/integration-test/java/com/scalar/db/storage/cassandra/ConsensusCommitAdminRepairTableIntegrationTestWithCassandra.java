@@ -43,14 +43,20 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCassandra
     // Act
     assertThatCode(
             () -> {
-              admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+              admin.repairTable(
+                  getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
               admin.repairCoordinatorTables(getCreationOptions());
             })
         .doesNotThrowAnyException();
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
     assertThat(admin.coordinatorTablesExist()).isTrue();
+  }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
   }
 }

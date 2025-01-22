@@ -86,9 +86,13 @@ public class SingleCrudOperationTransactionAdmin implements DistributedTransacti
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options)
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
-    distributedStorageAdmin.importTable(namespace, table, options);
+    distributedStorageAdmin.importTable(namespace, table, options, overrideColumnsType);
   }
 
   @Override
