@@ -110,4 +110,9 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     // one session to the other, so we need to wait
     Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

@@ -10,6 +10,10 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -85,6 +89,30 @@ public class TransactionResult extends AbstractResult {
   @Override
   public byte[] getBlobAsBytes(String columnName) {
     return result.getBlobAsBytes(columnName);
+  }
+
+  @Nullable
+  @Override
+  public LocalDate getDate(String columnName) {
+    return result.getDate(columnName);
+  }
+
+  @Nullable
+  @Override
+  public LocalTime getTime(String columnName) {
+    return result.getTime(columnName);
+  }
+
+  @Nullable
+  @Override
+  public LocalDateTime getTimestamp(String columnName) {
+    return result.getTimestamp(columnName);
+  }
+
+  @Nullable
+  @Override
+  public Instant getTimestampTZ(String columnName) {
+    return result.getTimestampTZ(columnName);
   }
 
   @Nullable
