@@ -221,6 +221,12 @@ public final class ScalarDbUtils {
         return new TextValue(column.getName(), column.getTextValue());
       case BLOB:
         return new BlobValue(column.getName(), column.getBlobValue());
+      case DATE:
+      case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
+        throw new UnsupportedOperationException(
+            "The type " + column.getDataType() + " is not supported");
       default:
         throw new AssertionError();
     }

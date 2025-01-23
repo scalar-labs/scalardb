@@ -127,6 +127,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(DataType.DOUBLE, ScalarAttributeType.N)
           .put(DataType.TEXT, ScalarAttributeType.S)
           .put(DataType.BLOB, ScalarAttributeType.B)
+          .put(DataType.DATE, ScalarAttributeType.N)
+          .put(DataType.TIME, ScalarAttributeType.N)
+          .put(DataType.TIMESTAMP, ScalarAttributeType.N)
+          .put(DataType.TIMESTAMPTZ, ScalarAttributeType.N)
           .build();
   private static final ImmutableSet<String> TABLE_SCALING_TYPE_SET =
       ImmutableSet.<String>builder().add(SCALING_TYPE_READ).add(SCALING_TYPE_WRITE).build();
@@ -1245,6 +1249,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         return DataType.BOOLEAN;
       case "blob":
         return DataType.BLOB;
+      case "date":
+        return DataType.DATE;
+      case "time":
+        return DataType.TIME;
+      case "timestamp":
+        return DataType.TIMESTAMP;
+      case "timestamptz":
+        return DataType.TIMESTAMPTZ;
       default:
         throw new ExecutionException("Unknown column type: " + columnType);
     }
@@ -1351,7 +1363,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table) {
+  public TableMetadata getImportTableMetadata(
+      String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in DynamoDB");
   }
@@ -1364,7 +1377,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options) {
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(
         "Import-related functionality is not supported in DynamoDB");
   }
