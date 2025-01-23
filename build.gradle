@@ -18,7 +18,7 @@ subprojects {
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'com.scalar.db.jdk-configuration'
 
-    project.version = '3.11.5-SNAPSHOT'
+    project.version = '3.11.5'
 
     ext {
         guiceVersion = '5.1.0'
