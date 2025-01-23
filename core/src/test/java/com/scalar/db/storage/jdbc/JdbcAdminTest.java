@@ -12,7 +12,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -35,6 +38,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -214,7 +218,15 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 "c6", DataType.DOUBLE.toString(), null, null, false),
             new SelectAllFromMetadataTableResultSetMocker.Row(
-                "c7", DataType.FLOAT.toString(), null, null, false));
+                "c7", DataType.FLOAT.toString(), null, null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c8", DataType.DATE.toString(), null, null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c9", DataType.TIME.toString(), null, null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c10", DataType.TIMESTAMP.toString(), null, null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c11", DataType.TIMESTAMPTZ.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection.prepareStatement(any())).thenReturn(selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -237,6 +249,10 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
     assertThat(actualMetadata).isEqualTo(expectedMetadata);
@@ -469,7 +485,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForMysql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -481,7 +497,7 @@ public class JdbcAdminTest {
     when(config.getMysqlVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineMysql(config),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -490,7 +506,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForPostgresql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -500,8 +516,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlServer_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -510,7 +525,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -524,7 +539,7 @@ public class JdbcAdminTest {
     when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineOracle(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -535,7 +550,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlite_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" BIGINT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -563,6 +578,10 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -593,7 +612,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.MYSQL,
-        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
+        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -603,7 +622,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX IF NOT EXISTS \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -614,8 +633,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -625,7 +643,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(19),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
@@ -637,7 +655,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQLITE,
-        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" BIGINT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -666,6 +684,10 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -1003,7 +1025,11 @@ public class JdbcAdminTest {
             + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
         "INSERT INTO `"
             + METADATA_SCHEMA
-            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+            + "`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,false,8)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,false,9)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,false,10)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,false,11)");
   }
 
   @Test
@@ -1044,7 +1070,11 @@ public class JdbcAdminTest {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
         "INSERT INTO \""
             + METADATA_SCHEMA
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,false,8)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,false,9)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,false,10)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,false,11)");
   }
 
   @Test
@@ -1084,7 +1114,11 @@ public class JdbcAdminTest {
             + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
         "INSERT INTO ["
             + METADATA_SCHEMA
-            + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+            + "].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,0,8)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,0,9)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,0,10)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,0,11)");
   }
 
   @Test
@@ -1117,7 +1151,11 @@ public class JdbcAdminTest {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
         "INSERT INTO \""
             + METADATA_SCHEMA
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,0,8)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,0,9)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,0,10)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,0,11)");
   }
 
   @Test
@@ -1156,7 +1194,11 @@ public class JdbcAdminTest {
             + "$metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,FALSE,6)",
         "INSERT INTO \""
             + METADATA_SCHEMA
-            + "$metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)");
+            + "$metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,FALSE,7)",
+        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,FALSE,8)",
+        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,FALSE,9)",
+        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,FALSE,10)",
+        "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,FALSE,11)");
   }
 
   private void addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
@@ -1176,6 +1218,10 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -1220,6 +1266,10 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -1255,6 +1305,10 @@ public class JdbcAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
             .addSecondaryIndex("c4")
             .build();
@@ -2640,7 +2694,7 @@ public class JdbcAdminTest {
         .thenReturn("");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -2653,18 +2707,42 @@ public class JdbcAdminTest {
     expectedColumns.put("pk1", DataType.TEXT);
     expectedColumns.put("pk2", DataType.TEXT);
     expectedColumns.put("col", DataType.FLOAT);
-
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
     String description = "database engine specific test failed: " + rdbEngine;
+    Map<String, DataType> overrideColumnsType = ImmutableMap.of("col", DataType.FLOAT);
 
     // Act
-    TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE);
+    TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType);
 
     // Assert
     verify(checkTableExistStatement, description(description))
         .execute(expectedCheckTableExistStatement);
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
+    verify(rdbEngineStrategy)
+        .getDataTypeForScalarDb(
+            any(JDBCType.class),
+            anyString(),
+            anyInt(),
+            anyInt(),
+            eq(getFullTableName(NAMESPACE, TABLE) + " pk1"),
+            eq(null));
+    verify(rdbEngineStrategy)
+        .getDataTypeForScalarDb(
+            any(JDBCType.class),
+            anyString(),
+            anyInt(),
+            anyInt(),
+            eq(getFullTableName(NAMESPACE, TABLE) + " pk2"),
+            eq(null));
+    verify(rdbEngineStrategy)
+        .getDataTypeForScalarDb(
+            any(JDBCType.class),
+            anyString(),
+            anyInt(),
+            anyInt(),
+            eq(getFullTableName(NAMESPACE, TABLE) + " col"),
+            eq(DataType.FLOAT));
   }
 
   private void getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(
@@ -2673,7 +2751,7 @@ public class JdbcAdminTest {
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act Assert
-    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE))
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -2712,7 +2790,7 @@ public class JdbcAdminTest {
     when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
 
     // Act Assert
-    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE))
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
         .isInstanceOf(IllegalArgumentException.class);
     verify(
             checkTableExistStatement,
@@ -2741,7 +2819,9 @@ public class JdbcAdminTest {
     String description = "database engine specific test failed: " + rdbEngine;
 
     // Act
-    Throwable thrown = catchThrowable(() -> admin.getImportTableMetadata(NAMESPACE, TABLE));
+    Throwable thrown =
+        catchThrowable(
+            () -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()));
 
     // Assert
     verify(checkTableExistStatement, description(description))
@@ -2774,8 +2854,8 @@ public class JdbcAdminTest {
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
     when(columnResults.next()).thenReturn(true).thenReturn(false);
     when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
-    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.TIMESTAMP);
-    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("timestamp");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.OTHER);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("any_unsupported_type");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
 
@@ -2792,7 +2872,9 @@ public class JdbcAdminTest {
     String description = "database engine specific test failed: " + rdbEngine;
 
     // Act
-    Throwable thrown = catchThrowable(() -> admin.getImportTableMetadata(NAMESPACE, TABLE));
+    Throwable thrown =
+        catchThrowable(
+            () -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()));
 
     // Assert
     verify(checkTableExistStatement, description(description))
@@ -2884,7 +2966,9 @@ public class JdbcAdminTest {
 
     when(dataSource.getConnection()).thenReturn(connection);
     TableMetadata importedTableMetadata = mock(TableMetadata.class);
-    doReturn(importedTableMetadata).when(adminSpy).getImportTableMetadata(anyString(), anyString());
+    doReturn(importedTableMetadata)
+        .when(adminSpy)
+        .getImportTableMetadata(anyString(), anyString(), anyMap());
     doNothing().when(adminSpy).createNamespacesTableIfNotExists(connection);
     doNothing().when(adminSpy).upsertIntoNamespacesTable(any(), anyString());
     doNothing()
@@ -2892,10 +2976,10 @@ public class JdbcAdminTest {
         .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
 
     // Act
-    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap());
+    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), Collections.emptyMap());
 
     // Assert
-    verify(adminSpy).getImportTableMetadata(NAMESPACE, TABLE);
+    verify(adminSpy).getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap());
     verify(adminSpy).createNamespacesTableIfNotExists(connection);
     verify(adminSpy).upsertIntoNamespacesTable(connection, NAMESPACE);
     verify(adminSpy)

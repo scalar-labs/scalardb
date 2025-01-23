@@ -6,6 +6,10 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -117,6 +121,34 @@ public class ProjectedResult extends AbstractResult {
   public byte[] getBlobAsBytes(String columnName) {
     checkIfExists(columnName);
     return original.getBlobAsBytes(columnName);
+  }
+
+  @Nullable
+  @Override
+  public LocalDate getDate(String columnName) {
+    checkIfExists(columnName);
+    return original.getDate(columnName);
+  }
+
+  @Nullable
+  @Override
+  public LocalTime getTime(String columnName) {
+    checkIfExists(columnName);
+    return original.getTime(columnName);
+  }
+
+  @Nullable
+  @Override
+  public LocalDateTime getTimestamp(String columnName) {
+    checkIfExists(columnName);
+    return original.getTimestamp(columnName);
+  }
+
+  @Nullable
+  @Override
+  public Instant getTimestampTZ(String columnName) {
+    checkIfExists(columnName);
+    return original.getTimestampTZ(columnName);
   }
 
   @Nullable

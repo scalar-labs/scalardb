@@ -48,9 +48,9 @@ public class DeleteQuery implements Query {
 
   private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
-    partitionKey.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?"));
+    partitionKey.getColumns().forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?"));
     clusteringKey.ifPresent(
-        k -> k.forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
+        k -> k.getColumns().forEach(v -> conditions.add(rdbEngine.enclose(v.getName()) + "=?")));
     otherConditions.forEach(
         c ->
             conditions.add(
