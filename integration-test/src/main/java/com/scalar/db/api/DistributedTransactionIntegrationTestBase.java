@@ -67,7 +67,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
   protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE = "test_table";
-  protected static final String TABLE_2 = "test_table_2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
@@ -138,7 +137,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
     admin.createCoordinatorTables(true, options);
     admin.createNamespace(namespace, true, options);
     admin.createTable(namespace, TABLE, tableMetadata.build(), true, options);
-    admin.createTable(namespace, TABLE_2, tableMetadata.build(), true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -148,7 +146,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
-    admin.truncateTable(namespace, TABLE_2);
     admin.truncateCoordinatorTables();
   }
 
@@ -179,7 +176,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
   private void dropTables() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
-    admin.dropTable(namespace, TABLE_2);
     admin.dropNamespace(namespace);
     admin.dropCoordinatorTables();
   }
