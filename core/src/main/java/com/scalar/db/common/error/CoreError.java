@@ -762,6 +762,8 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
       Category.USER_ERROR, "0165", "Missing namespace or table: %s, %s", "", ""),
+  DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED(
+      Category.USER_ERROR, "0166", "Failed to retrieve table metadata. Details:  %s", "", ""),
 
   //
   // Errors for the concurrency error category

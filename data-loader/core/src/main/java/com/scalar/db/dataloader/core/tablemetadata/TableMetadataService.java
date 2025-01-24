@@ -39,7 +39,7 @@ public class TableMetadataService {
       return tableMetadata;
     } catch (ExecutionException e) {
       throw new TableMetadataException(
-          CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName),
+          CoreError.DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED.buildMessage(e.getMessage()),
           e.getCause());
     }
   }

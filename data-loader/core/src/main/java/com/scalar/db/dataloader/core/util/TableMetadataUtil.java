@@ -3,33 +3,16 @@ package com.scalar.db.dataloader.core.util;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.Constants;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
-import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /** Utility class for handling ScalarDB table metadata operations. */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TableMetadataUtil {
-
-  /**
-   * Extracts a mapping of column names to their data types from the table metadata.
-   *
-   * @param tableMetadata The metadata of the ScalarDB table.
-   * @return A map where keys are column names and values are their corresponding {@link DataType}.
-   */
-  public static Map<String, DataType> extractColumnDataTypes(TableMetadata tableMetadata) {
-    Map<String, DataType> definitions = new HashMap<>();
-    for (String columnName : tableMetadata.getColumnNames()) {
-      definitions.put(columnName, tableMetadata.getColumnDataType(columnName));
-    }
-    return definitions;
-  }
 
   /**
    * Generates a unique lookup key for a table within a namespace.
