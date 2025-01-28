@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -285,10 +286,10 @@ public class ScalarDBDao {
   public Scanner createScanner(
       String namespace,
       String table,
-      Key partitionKey,
-      ScanRange scanRange,
-      List<Scan.Ordering> sortOrders,
-      List<String> projectionColumns,
+      @Nullable Key partitionKey,
+      @Nullable ScanRange scanRange,
+      @Nullable List<Scan.Ordering> sortOrders,
+      @Nullable List<String> projectionColumns,
       int limit,
       DistributedStorage storage)
       throws ScalarDBDaoException {
@@ -317,10 +318,10 @@ public class ScalarDBDao {
   Scan createScan(
       String namespace,
       String table,
-      Key partitionKey,
-      ScanRange scanRange,
-      List<Scan.Ordering> sortOrders,
-      List<String> projectionColumns,
+      @Nullable Key partitionKey,
+      @Nullable ScanRange scanRange,
+      @Nullable List<Scan.Ordering> sortOrders,
+      @Nullable List<String> projectionColumns,
       int limit) {
     // If no partition key is provided a scan all is created
     if (partitionKey == null) {
@@ -331,9 +332,11 @@ public class ScalarDBDao {
       if (projectionColumns != null && !projectionColumns.isEmpty()) {
         buildableScanAll.projections(projectionColumns);
       }
-      // Can ordering be added?
-      for (Scan.Ordering sort : sortOrders) {
-        buildableScanAll.ordering(sort);
+
+      if (sortOrders != null && !sortOrders.isEmpty()) {
+        for (Scan.Ordering sort : sortOrders) {
+          buildableScanAll.ordering(sort);
+        }
       }
 
       // limit
@@ -361,8 +364,10 @@ public class ScalarDBDao {
     }
 
     // clustering order
-    for (Scan.Ordering sort : sortOrders) {
-      buildableScan.ordering(sort);
+    if (sortOrders != null && !sortOrders.isEmpty()) {
+      for (Scan.Ordering sort : sortOrders) {
+        buildableScan.ordering(sort);
+      }
     }
 
     // projections
@@ -386,7 +391,8 @@ public class ScalarDBDao {
    * @param clusteringKey Optional clustering key for get
    * @return ScalarDB Get instance
    */
-  private Get createGetWith(String namespace, String table, Key partitionKey, Key clusteringKey) {
+  private Get createGetWith(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
     GetBuilder.BuildableGetWithPartitionKey buildable =
         Get.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey);
     if (clusteringKey != null) {
@@ -409,7 +415,7 @@ public class ScalarDBDao {
       String namespace,
       String table,
       Key partitionKey,
-      Key clusteringKey,
+      @Nullable Key clusteringKey,
       List<Column<?>> columns) {
     Buildable buildable =
         Put.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey);

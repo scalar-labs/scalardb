@@ -6,7 +6,7 @@ import com.scalar.db.service.StorageFactory;
 import java.io.IOException;
 import javax.annotation.Nullable;
 
-public class ScalarDbStorageManger {
+public class ScalarDbStorageManager {
 
   @Nullable private final DistributedStorage storage;
   private final DistributedStorageAdmin storageAdmin;
@@ -16,17 +16,17 @@ public class ScalarDbStorageManger {
    *
    * @param storageFactory Factory to create all the necessary ScalarDB data managers
    */
-  public ScalarDbStorageManger(StorageFactory storageFactory) throws IOException {
+  public ScalarDbStorageManager(StorageFactory storageFactory) throws IOException {
     storage = storageFactory.getStorage();
     storageAdmin = storageFactory.getStorageAdmin();
   }
 
-  /** @return storage for ScalarDB connection that is running in storage mode */
+  /** Returns distributed storage for ScalarDB connection that is running in storage mode */
   public DistributedStorage getDistributedStorage() {
     return storage;
   }
 
-  /** @return Distributed storage admin for ScalarDB admin operations */
+  /** Returns distributed storage admin for ScalarDB admin operations */
   public DistributedStorageAdmin getDistributedStorageAdmin() {
     return storageAdmin;
   }
