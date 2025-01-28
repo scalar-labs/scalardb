@@ -1,5 +1,8 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static java.nio.file.StandardOpenOption.APPEND;
+import static java.nio.file.StandardOpenOption.CREATE;
+
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
@@ -21,7 +24,8 @@ import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
@@ -80,7 +84,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
               outputDirectory, outputFileName, exportOptions.getOutputFileFormat());
       LOGGER.info("Exporting data to file: {}", filePath);
 
-      try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
+      try (BufferedWriter writer =
+          Files.newBufferedWriter(Paths.get(filePath), Charset.defaultCharset(), CREATE, APPEND)) {
         exportManager.startExport(exportOptions, tableMetadata, writer);
       }
 
