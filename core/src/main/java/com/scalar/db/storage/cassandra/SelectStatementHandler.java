@@ -33,8 +33,6 @@ import java.util.Set;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A handler class for select statement
@@ -43,8 +41,6 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
-  private static final Logger logger = LoggerFactory.getLogger(SelectStatementHandler.class);
-
   /**
    * Constructs {@code SelectStatementHandler} with the specified {@code Session}
    *
@@ -60,7 +56,6 @@ public class SelectStatementHandler extends StatementHandler {
     try {
       return handleInternal(operation);
     } catch (RuntimeException e) {
-      logger.error(e.getMessage(), e);
       throw new ExecutionException(
           CoreError.CASSANDRA_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
@@ -171,7 +166,9 @@ public class SelectStatementHandler extends StatementHandler {
 
   private void setKey(Select.Where statement, Optional<Key> key) {
     key.ifPresent(
-        k -> k.forEach(v -> statement.and(eq(quoteIfNecessary(v.getName()), bindMarker()))));
+        k ->
+            k.getColumns()
+                .forEach(v -> statement.and(eq(quoteIfNecessary(v.getName()), bindMarker()))));
   }
 
   private void setStart(Select.Where statement, Scan scan, Set<String> traveledEqualKeySet) {
@@ -294,8 +291,7 @@ public class SelectStatementHandler extends StatementHandler {
       case DESC:
         return QueryBuilder.desc(quoteIfNecessary(ordering.getColumnName()));
       default:
-        logger.warn("Unsupported ordering specified. Using Order.ASC");
-        return QueryBuilder.asc(quoteIfNecessary(ordering.getColumnName()));
+        throw new AssertionError("Unsupported ordering is specified: " + ordering.getOrder());
     }
   }
 

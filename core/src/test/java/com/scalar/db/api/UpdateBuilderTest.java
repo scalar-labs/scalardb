@@ -4,10 +4,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +28,12 @@ public class UpdateBuilderTest {
 
   private static final String TABLE_1 = "table1";
   private static final String TABLE_2 = "table2";
+
+  private static final LocalDate ANY_DATE = DateColumn.MAX_VALUE;
+  private static final LocalTime ANY_TIME = TimeColumn.MAX_VALUE;
+  private static final LocalDateTime ANY_TIMESTAMP = TimestampColumn.MAX_VALUE;
+  private static final Instant ANY_TIMESTAMPTZ = TimestampTZColumn.MAX_VALUE;
+
   @Mock private Key partitionKey1;
   @Mock private Key partitionKey2;
   @Mock private Key clusteringKey1;
@@ -88,6 +102,10 @@ public class UpdateBuilderTest {
             .intValue("int1", Integer.MAX_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .textValue("text", "a_value")
+            .dateValue("date1", ANY_DATE)
+            .timeValue("time1", ANY_TIME)
+            .timestampValue("timestamp1", ANY_TIMESTAMP)
+            .timestampTZValue("timestampTZ1", ANY_TIMESTAMPTZ)
             .value(TextColumn.of("text2", "another_value"))
             .condition(condition1)
             .attribute("a1", "v1")
@@ -101,7 +119,7 @@ public class UpdateBuilderTest {
     assertThat(actual.forTable()).hasValue(TABLE_1);
     Assertions.<Key>assertThat(actual.getPartitionKey()).isEqualTo(partitionKey1);
     assertThat(actual.getClusteringKey()).hasValue(clusteringKey1);
-    assertThat(actual.getColumns().size()).isEqualTo(14);
+    assertThat(actual.getColumns().size()).isEqualTo(18);
     assertThat(actual.getColumns().get("bigint1").getBigIntValue())
         .isEqualTo(BigIntColumn.MAX_VALUE);
     assertThat(actual.getColumns().get("bigint2").getBigIntValue())
@@ -123,6 +141,11 @@ public class UpdateBuilderTest {
         .isEqualTo(Integer.valueOf(Integer.MAX_VALUE));
     assertThat(actual.getColumns().get("text").getTextValue()).isEqualTo("a_value");
     assertThat(actual.getColumns().get("text2").getTextValue()).isEqualTo("another_value");
+    assertThat(actual.getColumns().get("date1").getDateValue()).isEqualTo(ANY_DATE);
+    assertThat(actual.getColumns().get("time1").getTimeValue()).isEqualTo(ANY_TIME);
+    assertThat(actual.getColumns().get("timestamp1").getTimestampValue()).isEqualTo(ANY_TIMESTAMP);
+    assertThat(actual.getColumns().get("timestampTZ1").getTimestampTZValue())
+        .isEqualTo(ANY_TIMESTAMPTZ);
     assertThat(actual.getCondition()).hasValue(condition1);
     assertThat(actual.getAttributes())
         .isEqualTo(
@@ -155,6 +178,10 @@ public class UpdateBuilderTest {
             .floatValue("float", null)
             .intValue("int", null)
             .textValue("text", null)
+            .dateValue("date", null)
+            .timeValue("time", null)
+            .timestampValue("timestamp", null)
+            .timestampTZValue("timestampTZ", null)
             .build();
 
     // Assert
@@ -162,7 +189,7 @@ public class UpdateBuilderTest {
     assertThat(actual.forTable()).hasValue(TABLE_1);
     Assertions.<Key>assertThat(actual.getPartitionKey()).isEqualTo(partitionKey1);
     assertThat(actual.getClusteringKey()).isEmpty();
-    assertThat(actual.getColumns().size()).isEqualTo(8);
+    assertThat(actual.getColumns().size()).isEqualTo(12);
     assertThat(actual.getColumns().get("bigint").hasNullValue()).isTrue();
     assertThat(actual.getColumns().get("blob1").hasNullValue()).isTrue();
     assertThat(actual.getColumns().get("blob2").hasNullValue()).isTrue();
@@ -171,6 +198,10 @@ public class UpdateBuilderTest {
     assertThat(actual.getColumns().get("float").hasNullValue()).isTrue();
     assertThat(actual.getColumns().get("int").hasNullValue()).isTrue();
     assertThat(actual.getColumns().get("text").hasNullValue()).isTrue();
+    assertThat(actual.getColumns().get("date").hasNullValue()).isTrue();
+    assertThat(actual.getColumns().get("time").hasNullValue()).isTrue();
+    assertThat(actual.getColumns().get("timestamp").hasNullValue()).isTrue();
+    assertThat(actual.getColumns().get("timestampTZ").hasNullValue()).isTrue();
     assertThat(actual.getCondition()).isEmpty();
   }
 
@@ -218,7 +249,15 @@ public class UpdateBuilderTest {
             .intValue("int1", Integer.MAX_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .textValue("text", "a_value")
+            .dateValue("date1", ANY_DATE)
+            .timeValue("time1", ANY_TIME)
+            .timestampValue("timestamp1", ANY_TIMESTAMP)
+            .timestampTZValue("timestampTZ1", ANY_TIMESTAMPTZ)
             .value(TextColumn.of("text2", "another_value"))
+            .dateValue("date1", ANY_DATE)
+            .timeValue("time1", ANY_TIME)
+            .timestampValue("timestamp1", ANY_TIMESTAMP)
+            .timestampTZValue("timestampTZ1", ANY_TIMESTAMPTZ)
             .condition(condition1)
             .build();
 
@@ -251,6 +290,10 @@ public class UpdateBuilderTest {
             .intValue("int1", Integer.MAX_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MAX_VALUE))
             .textValue("text", "a_value")
+            .dateValue("date1", DateColumn.MAX_VALUE)
+            .timeValue("time1", TimeColumn.MAX_VALUE)
+            .timestampValue("timestamp1", TimestampColumn.MAX_VALUE)
+            .timestampTZValue("timestampTZ1", TimestampTZColumn.MAX_VALUE)
             .value(TextColumn.of("text2", "another_value"))
             .condition(condition1)
             .attribute("a1", "v1")
@@ -288,6 +331,11 @@ public class UpdateBuilderTest {
             .intValue("int1", Integer.MIN_VALUE)
             .intValue("int2", Integer.valueOf(Integer.MIN_VALUE))
             .textValue("text", "another_value")
+            .dateValue("date1", LocalDate.ofEpochDay(123))
+            .timeValue("time1", LocalTime.ofSecondOfDay(456))
+            .timestampValue(
+                "timestamp1", LocalDateTime.of(LocalDate.ofEpochDay(12354), LocalTime.NOON))
+            .timestampTZValue("timestampTZ1", Instant.ofEpochSecond(-12))
             .value(TextColumn.of("text2", "foo"))
             .condition(condition2)
             .clearAttributes()
@@ -308,7 +356,7 @@ public class UpdateBuilderTest {
     assertThat(newUpdate1.forTable()).hasValue(TABLE_2);
     Assertions.<Key>assertThat(newUpdate1.getPartitionKey()).isEqualTo(partitionKey2);
     assertThat(newUpdate1.getClusteringKey()).hasValue(clusteringKey2);
-    assertThat(newUpdate1.getColumns().size()).isEqualTo(14);
+    assertThat(newUpdate1.getColumns().size()).isEqualTo(18);
     assertThat(newUpdate1.getColumns().get("bigint1").getBigIntValue())
         .isEqualTo(BigIntColumn.MIN_VALUE);
     assertThat(newUpdate1.getColumns().get("bigint2").getBigIntValue())
@@ -329,6 +377,14 @@ public class UpdateBuilderTest {
     assertThat(newUpdate1.getColumns().get("int2").getIntValue())
         .isEqualTo(Integer.valueOf(Integer.MIN_VALUE));
     assertThat(newUpdate1.getColumns().get("text").getTextValue()).isEqualTo("another_value");
+    assertThat(newUpdate1.getColumns().get("date1").getDateValue())
+        .isEqualTo(LocalDate.ofEpochDay(123));
+    assertThat(newUpdate1.getColumns().get("time1").getTimeValue())
+        .isEqualTo(LocalTime.ofSecondOfDay(456));
+    assertThat(newUpdate1.getColumns().get("timestamp1").getTimestampValue())
+        .isEqualTo(LocalDateTime.of(LocalDate.ofEpochDay(12354), LocalTime.NOON));
+    assertThat(newUpdate1.getColumns().get("timestampTZ1").getTimestampTZValue())
+        .isEqualTo(Instant.ofEpochSecond(-12));
     assertThat(newUpdate1.getColumns().get("text2").getTextValue()).isEqualTo("foo");
     assertThat(newUpdate1.getCondition()).hasValue(condition2);
     assertThat(newUpdate1.getAttributes())

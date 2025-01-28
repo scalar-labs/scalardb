@@ -107,7 +107,8 @@ public class CsvProducerTask extends ProducerTask {
 
       return stringBuilder.toString();
     } catch (UnsupportedOperationException e) {
-      LOGGER.error(CoreError.DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED.buildMessage());
+      LOGGER.error(
+          CoreError.DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED.buildMessage(e.getMessage()));
     }
     return "";
   }

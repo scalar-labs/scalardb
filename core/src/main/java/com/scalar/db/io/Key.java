@@ -8,6 +8,10 @@ import com.google.common.collect.Ordering;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -274,6 +278,14 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return BlobColumn.of(name, (byte[]) value);
     } else if (value instanceof ByteBuffer) {
       return BlobColumn.of(name, (ByteBuffer) value);
+    } else if (value instanceof LocalDate) {
+      return DateColumn.of(name, (LocalDate) value);
+    } else if (value instanceof LocalTime) {
+      return TimeColumn.of(name, (LocalTime) value);
+    } else if (value instanceof LocalDateTime) {
+      return TimestampColumn.of(name, (LocalDateTime) value);
+    } else if (value instanceof Instant) {
+      return TimestampTZColumn.of(name, (Instant) value);
     } else {
       throw new IllegalArgumentException(
           CoreError.KEY_BUILD_ERROR_UNSUPPORTED_TYPE.buildMessage(
@@ -415,6 +427,47 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   public byte[] getBlobValueAsBytes(int i) {
     return columns.get(i).getBlobValueAsBytes();
+  }
+
+  /**
+   * Returns the DATE value of the i-th column which this key is composed of.
+   *
+   * @param i the position of the column which this key is composed of
+   * @return the DATE value of the i-th column which this key is composed of as LocalDate type
+   */
+  public LocalDate getDateValue(int i) {
+    return columns.get(i).getDateValue();
+  }
+
+  /**
+   * Returns the TIME value of the i-th column which this key is composed of.
+   *
+   * @param i the position of the column which this key is composed of
+   * @return the TIME value of the i-th column which this key is composed of as LocalTime type
+   */
+  public LocalTime getTimeValue(int i) {
+    return columns.get(i).getTimeValue();
+  }
+
+  /**
+   * Returns the TIMESTAMP value of the i-th column which this key is composed of.
+   *
+   * @param i the position of the column which this key is composed of
+   * @return the TIMESTAMP value of the i-th column which this key is composed of as LocalDateTime
+   *     type
+   */
+  public LocalDateTime getTimestampValue(int i) {
+    return columns.get(i).getTimestampValue();
+  }
+
+  /**
+   * Returns the TIMESTAMPTZ value of the i-th column which this key is composed of.
+   *
+   * @param i the position of the column which this key is composed of
+   * @return the TIMESTAMPTZ value of the i-th column which this key is composed of as Instant type
+   */
+  public Instant getTimestampTZValue(int i) {
+    return columns.get(i).getTimestampTZValue();
   }
 
   /**
@@ -586,6 +639,50 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    */
   public static Key ofBlob(String columnName, ByteBuffer value) {
     return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a DATE type
+   *
+   * @param columnName a column name
+   * @param value a DATE value of the column as LocalDate type
+   * @return a {@code Key} object
+   */
+  public static Key ofDate(String columnName, LocalDate value) {
+    return new Key(Collections.singletonList(DateColumn.of(columnName, value)));
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a TIME type
+   *
+   * @param columnName a column name
+   * @param value a TIME value of the column as LocalTime type
+   * @return a {@code Key} object
+   */
+  public static Key ofTime(String columnName, LocalTime value) {
+    return new Key(Collections.singletonList(TimeColumn.of(columnName, value)));
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a TIMESTAMP type
+   *
+   * @param columnName a column name
+   * @param value a TIMESTAMP value of the column as LocalDateTime type
+   * @return a {@code Key} object
+   */
+  public static Key ofTimestamp(String columnName, LocalDateTime value) {
+    return new Key(Collections.singletonList(TimestampColumn.of(columnName, value)));
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a TIMESTAMPTZ type
+   *
+   * @param columnName a column name
+   * @param value a TIMESTAMPTZ value of the column as LocalDateTime type
+   * @return a {@code Key} object
+   */
+  public static Key ofTimestampTZ(String columnName, Instant value) {
+    return new Key(Collections.singletonList(TimestampTZColumn.of(columnName, value)));
   }
 
   /**
@@ -780,6 +877,53 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
      */
     public Builder addBlob(String columnName, ByteBuffer value) {
       columns.add(BlobColumn.of(columnName, value));
+      return this;
+    }
+
+    /**
+     * Adds DATE value as an element of Key.
+     *
+     * @param columnName a column name to add
+     * @param value a DATE value to add as LocalDate type
+     * @return a builder object
+     */
+    public Builder addDate(String columnName, LocalDate value) {
+      columns.add(DateColumn.of(columnName, value));
+      return this;
+    }
+
+    /**
+     * Adds TIME value as an element of Key.
+     *
+     * @param columnName a column name to add
+     * @param value a TIME value to add as LocalTime type
+     * @return a builder object
+     */
+    public Builder addTime(String columnName, LocalTime value) {
+      columns.add(TimeColumn.of(columnName, value));
+      return this;
+    }
+    /**
+     * Adds TIMESTAMP value as an element of Key.
+     *
+     * @param columnName a column name to add
+     * @param value a TIMESTAMP value to add as LocalDateTime type
+     * @return a builder object
+     */
+    public Builder addTimestamp(String columnName, LocalDateTime value) {
+      columns.add(TimestampColumn.of(columnName, value));
+      return this;
+    }
+
+    /**
+     * Adds TIMESTAMPTZ value as an element of Key.
+     *
+     * @param columnName a column name to add
+     * @param value a TIMESTAMPTZ value to add as Instant type
+     * @return a builder object
+     */
+    public Builder addTimestampTZ(String columnName, Instant value) {
+      columns.add(TimestampTZColumn.of(columnName, value));
       return this;
     }
 
