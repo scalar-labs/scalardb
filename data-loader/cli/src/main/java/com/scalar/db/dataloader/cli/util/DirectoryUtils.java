@@ -1,5 +1,7 @@
 package com.scalar.db.dataloader.cli.util;
 
+import static com.scalar.db.dataloader.cli.ErrorMessage.ERROR_DIRECTORY_WRITE_ACCESS;
+
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import java.io.IOException;
@@ -13,6 +15,22 @@ public final class DirectoryUtils {
 
   private DirectoryUtils() {
     // restrict instantiation
+  }
+
+  /**
+   * Validates the current working directory. Ensures that it is writable.
+   *
+   * @throws DirectoryValidationException if the current working directory is not writable
+   */
+  public static void validateWorkingDirectory() throws DirectoryValidationException {
+    Path workingDirectoryPath = Paths.get(System.getProperty("user.dir"));
+
+    // Check if the current working directory is writable
+    if (!Files.isWritable(workingDirectoryPath)) {
+      // TODO: this error needs to be proper, check and set the label properly
+      throw new DirectoryValidationException(
+          String.format(ERROR_DIRECTORY_WRITE_ACCESS, workingDirectoryPath.toAbsolutePath()));
+    }
   }
 
   /**

@@ -11,4 +11,6 @@ public class ErrorMessage {
       "Failed to create the log directory %s";
   public static final String ERROR_CONTROL_FILE_INVALID_JSON =
       "Not able to parse the %s control file";
+  public static final String ERROR_DIRECTORY_WRITE_ACCESS = "TBD %s";
+  public static final String ERROR_CREATE_DIRECTORY_FAILED = "TBD %s";
 }

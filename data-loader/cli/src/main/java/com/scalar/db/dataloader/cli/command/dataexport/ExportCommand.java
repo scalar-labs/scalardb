@@ -1,70 +1,182 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
-import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
-import java.io.File;
-import java.util.Arrays;
+import com.scalar.db.dataloader.cli.util.FileUtil;
+import com.scalar.db.dataloader.cli.util.InvalidFilePathException;
+import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScanRange;
+import com.scalar.db.dataloader.core.dataexport.ExportManager;
+import com.scalar.db.dataloader.core.dataexport.ExportOptions;
+import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
+import com.scalar.db.dataloader.core.exception.Base64Exception;
+import com.scalar.db.dataloader.core.exception.ColumnParsingException;
+import com.scalar.db.dataloader.core.exception.KeyParsingException;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
+import com.scalar.db.dataloader.core.util.KeyUtils;
+import com.scalar.db.io.Key;
+import com.scalar.db.service.StorageFactory;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
-import javax.annotation.Nullable;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
 
-@CommandLine.Command(name = "export", description = "Export data from a ScalarDB table")
+@CommandLine.Command(name = "export", description = "export data from a ScalarDB table")
 public class ExportCommand extends ExportCommandOptions implements Callable<Integer> {
 
-  private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("csv", "json", "jsonl");
+  private static final String EXPORT_FILE_NAME_FORMAT = "export_%s.%s_%s.%s";
+  private static final Logger LOGGER = LoggerFactory.getLogger(ExportCommand.class);
 
   @Spec CommandSpec spec;
 
   @Override
   public Integer call() throws Exception {
-    validateOutputDirectory(outputFilePath);
+    String scalarDbPropertiesFilePath = getScalarDbPropertiesFilePath();
+
+    try {
+      validateOutputDirectory();
+      FileUtil.validateFilePath(scalarDbPropertiesFilePath);
+
+      StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
+      TableMetadataService metaDataService =
+          new TableMetadataService(storageFactory.getStorageAdmin());
+      ScalarDBDao scalarDBDao = new ScalarDBDao();
+
+      ExportManager exportManager = createExportManager(storageFactory, scalarDBDao);
+
+      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, tableName);
+
+      Key partitionKey =
+          partitionKeyValue != null
+              ? getKey(partitionKeyValue, namespace, tableName, tableMetadata)
+              : null;
+      Key scanStartKey =
+          scanStartKeyValue != null
+              ? getKey(scanStartKeyValue, namespace, tableName, tableMetadata)
+              : null;
+      Key scanEndKey =
+          scanEndKeyValue != null
+              ? getKey(scanEndKeyValue, namespace, tableName, tableMetadata)
+              : null;
+
+      ScanRange scanRange =
+          new ScanRange(scanStartKey, scanEndKey, scanStartInclusive, scanEndInclusive);
+      ExportOptions exportOptions = buildExportOptions(partitionKey, scanRange);
+
+      String filePath =
+          getOutputAbsoluteFilePath(
+              outputDirectory, outputFileName, exportOptions.getOutputFileFormat());
+      LOGGER.info("Exporting data to file: {}", filePath);
+
+      try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
+        exportManager.startExport(exportOptions, tableMetadata, writer);
+      }
+
+    } catch (DirectoryValidationException e) {
+      LOGGER.error("Invalid output directory path: {}", outputDirectory);
+      return 1;
+    } catch (InvalidFilePathException e) {
+      LOGGER.error(
+          "The ScalarDB connection settings file path is invalid or the file is missing: {}",
+          scalarDbPropertiesFilePath);
+      return 1;
+    } catch (TableMetadataException e) {
+      LOGGER.error("Failed to retrieve table metadata: {}", e.getMessage());
+      return 1;
+    }
     return 0;
   }
 
-  private void validateOutputDirectory(@Nullable String path)
-      throws DirectoryValidationException, InvalidFileExtensionException {
-    if (path == null || path.isEmpty()) {
-      // It is ok for the output file path to be null or empty as a default file name will be used
-      // if not provided
-      return;
-    }
+  private String getScalarDbPropertiesFilePath() {
+    return Objects.equals(configFilePath, DEFAULT_CONFIG_FILE_NAME)
+        ? Paths.get("").toAbsolutePath().resolve(DEFAULT_CONFIG_FILE_NAME).toString()
+        : configFilePath;
+  }
 
-    File file = new File(path);
-
-    if (file.isDirectory()) {
-      validateDirectory(path);
+  private void validateOutputDirectory() throws DirectoryValidationException {
+    if (StringUtils.isBlank(outputDirectory)) {
+      DirectoryUtils.validateWorkingDirectory();
     } else {
-      validateFileExtension(file.getName());
-      validateDirectory(file.getParent());
+      DirectoryUtils.validateTargetDirectory(outputDirectory);
     }
   }
 
-  private void validateDirectory(String directoryPath) throws DirectoryValidationException {
-    // If the directory path is null or empty, use the current working directory
-    if (directoryPath == null || directoryPath.isEmpty()) {
-      DirectoryUtils.validateTargetDirectory(DirectoryUtils.getCurrentWorkingDirectory());
+  private ExportManager createExportManager(
+      StorageFactory storageFactory, ScalarDBDao scalarDBDao) {
+    return new ExportManager(
+        storageFactory.getStorage(),
+        scalarDBDao,
+        new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson));
+  }
+
+  private ExportOptions buildExportOptions(Key partitionKey, ScanRange scanRange) {
+    ExportOptions.ExportOptionsBuilder builder =
+        ExportOptions.builder(namespace, tableName, partitionKey, outputFormat)
+            .sortOrders(sortOrders)
+            .excludeHeaderRow(excludeHeader)
+            .includeTransactionMetadata(includeTransactionMetadata)
+            .delimiter(delimiter)
+            .limit(limit)
+            .maxThreadCount(maxThreads)
+            .dataChunkSize(dataChunkSize)
+            .prettyPrintJson(prettyPrintJson)
+            .scanRange(scanRange);
+
+    if (projectionColumns != null) {
+      builder.projectionColumns(projectionColumns);
+    }
+
+    return builder.build();
+  }
+
+  private String getOutputAbsoluteFilePath(
+      String outputDirectory, String outputFileName, FileFormat outputFormat) {
+    String fileName =
+        StringUtils.isBlank(outputFileName)
+            ? String.format(
+                EXPORT_FILE_NAME_FORMAT,
+                namespace,
+                tableName,
+                System.nanoTime(),
+                outputFormat.toString().toLowerCase())
+            : outputFileName;
+
+    if (StringUtils.isBlank(outputDirectory)) {
+      return Paths.get("").toAbsolutePath().resolve(fileName).toAbsolutePath().toString();
     } else {
-      DirectoryUtils.validateTargetDirectory(directoryPath);
+      return Paths.get(outputDirectory).resolve(fileName).toAbsolutePath().toString();
     }
   }
 
-  private void validateFileExtension(String filename) throws InvalidFileExtensionException {
-    String extension = FilenameUtils.getExtension(filename);
-    if (StringUtils.isBlank(extension)) {
-      throw new InvalidFileExtensionException(
-          CoreError.DATA_LOADER_MISSING_FILE_EXTENSION.buildMessage(filename));
-    }
-    if (!ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
-      throw new InvalidFileExtensionException(
-          CoreError.DATA_LOADER_INVALID_FILE_EXTENSION.buildMessage(
-              extension, String.join(", ", ALLOWED_EXTENSIONS)));
-    }
+  /**
+   * *
+   *
+   * @param keyValueList key value list
+   * @param tableMetadata table metadata
+   * @return key
+   * @throws KeyParsingException If any error occur during parsing key
+   * @throws Base64Exception if any error occur during decoding key
+   */
+  private Key getKey(
+      List<ColumnKeyValue> keyValueList,
+      String namespace,
+      String table,
+      TableMetadata tableMetadata)
+      throws Base64Exception, KeyParsingException, ColumnParsingException {
+    if (keyValueList.size() == 1)
+      return KeyUtils.parseKeyValue(partitionKeyValue.get(0), namespace, tableName, tableMetadata);
+    return KeyUtils.parseMultipleKeyValues(keyValueList, tableMetadata);
   }
 }
