@@ -29,8 +29,8 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -66,7 +66,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     LogWriterFactory logWriterFactory = createLogWriterFactory(config);
     Map<String, TableMetadata> tableMetadataMap =
         createTableMetadataMap(controlFile, namespace, tableName);
-    try (BufferedReader reader = new BufferedReader(new FileReader(sourceFilePath))) {
+    try (BufferedReader reader =
+        Files.newBufferedReader(Paths.get(sourceFilePath), Charset.defaultCharset())) {
       ImportManager importManager =
           createImportManager(importOptions, tableMetadataMap, reader, logWriterFactory, config);
       importManager.startImport();
@@ -93,7 +94,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param controlFile control file
    * @param namespace Namespace
    * @param tableName Single table name
-   * @return Map<String, TableMetadata> a table metadata map
+   * @return {@code Map<String, TableMetadata>} a table metadata map
    * @throws ParameterException if one of the argument values is wrong
    */
   private Map<String, TableMetadata> createTableMetadataMap(
@@ -242,7 +243,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * Generate control file from a valid control file path
    *
    * @param controlFilePath control directory path
-   * @return Optional<ControlFile> generated control file object
+   * @return {@code Optional<ControlFile>} generated control file object
    * @throws ParameterException if the path is invalid
    */
   private Optional<ControlFile> parseControlFileFromPath(String controlFilePath) {
