@@ -21,4 +21,9 @@ public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegr
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CassandraAdminTestUtils(getProperties(testName));
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

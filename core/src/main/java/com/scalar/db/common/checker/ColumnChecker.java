@@ -7,10 +7,14 @@ import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.ColumnVisitor;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /** A checker for the columns of a table for the storage abstraction. */
@@ -158,5 +162,61 @@ public class ColumnChecker implements ColumnVisitor {
       }
     }
     isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.BLOB;
+  }
+
+  @Override
+  public void visit(DateColumn column) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.DATE;
+  }
+
+  @Override
+  public void visit(TimeColumn column) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.TIME;
+  }
+
+  @Override
+  public void visit(TimestampColumn column) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.TIMESTAMP;
+  }
+
+  @Override
+  public void visit(TimestampTZColumn column) {
+    if (requireNotNull && column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+    if (requireNull && !column.hasNullValue()) {
+      isValid = false;
+      return;
+    }
+
+    isValid = tableMetadata.getColumnDataType(column.getName()) == DataType.TIMESTAMPTZ;
   }
 }

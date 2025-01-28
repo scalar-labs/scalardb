@@ -718,6 +718,48 @@ public enum CoreError implements ScalarDbError {
       "The provided partition key order does not match the table schema. Required order: %s",
       "",
       ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE(
+      Category.USER_ERROR,
+      "0158",
+      "This DATE column value is out of the valid range. It must be between 1000-01-01 and 9999-12-12. Value: %s",
+      "",
+      ""),
+  SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME(
+      Category.USER_ERROR,
+      "0159",
+      "This TIME column value precision cannot be shorter than one microsecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0160",
+      "This TIMESTAMP column value is out of the valid range. It must be between 1000-01-01T00:00:00.000 and 9999-12-31T23:59:59.999. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0161",
+      "This TIMESTAMP column value precision cannot be shorter than one millisecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0162",
+      "This TIMESTAMPTZ column value is out of the valid range. It must be between 1000-01-01T00:00:00.000Z to 9999-12-31T23:59:59.999Z. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0163",
+      "This TIMESTAMPTZ column value precision cannot be shorter than one millisecond. Value: %s",
+      "",
+      ""),
+  JDBC_IMPORT_DATA_TYPE_OVERRIDE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0164",
+      "The underlying-storage data type %s is not supported as the ScalarDB %s data type: %s",
+      "",
+      ""),
 
   DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
       Category.USER_ERROR,

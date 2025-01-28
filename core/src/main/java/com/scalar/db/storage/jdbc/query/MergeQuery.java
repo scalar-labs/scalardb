@@ -39,9 +39,9 @@ public class MergeQuery implements UpsertQuery {
   @Override
   public String sql() {
     List<String> enclosedKeyNames = new ArrayList<>();
-    partitionKey.forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName())));
+    partitionKey.getColumns().forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName())));
     clusteringKey.ifPresent(
-        k -> k.forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName()))));
+        k -> k.getColumns().forEach(v -> enclosedKeyNames.add(rdbEngine.enclose(v.getName()))));
 
     List<String> enclosedValueNames =
         columns.keySet().stream().map(rdbEngine::enclose).collect(Collectors.toList());
