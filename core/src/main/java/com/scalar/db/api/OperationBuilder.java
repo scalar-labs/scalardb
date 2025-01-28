@@ -3,6 +3,10 @@ package com.scalar.db.api;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -253,6 +257,42 @@ public class OperationBuilder {
      * @return the Put operation builder
      */
     T blobValue(String columnName, @Nullable ByteBuffer value);
+
+    /**
+     * Adds the specified DATE value as a LocalDate to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a DATE value to put as LocalDate type
+     * @return the Put operation builder
+     */
+    T dateValue(String columnName, @Nullable LocalDate value);
+
+    /**
+     * Adds the specified TIME value as a LocalTime to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a TIME value to put as LocalTime type
+     * @return the Put operation builder
+     */
+    T timeValue(String columnName, @Nullable LocalTime value);
+
+    /**
+     * Adds the specified TIMESTAMP value as a LocalDateTime value to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a TIMESTAMP value to put as LocalDateTime type
+     * @return the Put operation builder
+     */
+    T timestampValue(String columnName, @Nullable LocalDateTime value);
+
+    /**
+     * Adds the specified TIMESTAMPTZ value as an Instant to the list of put values.
+     *
+     * @param columnName a column name of the value
+     * @param value a TIMESTAMPTZ value to put as Instant type
+     * @return the Put operation builder
+     */
+    T timestampTZValue(String columnName, @Nullable Instant value);
 
     /**
      * Adds a column to the list of put values.
@@ -584,6 +624,66 @@ public class OperationBuilder {
      * @return the operation builder
      */
     T clearAttribute(String name);
+  }
+
+  public interface AbacReadTagAttribute<T> {
+    /**
+     * Adds a read tag attribute for the specified policy. This is a utility method for
+     * attribute-based access control.
+     *
+     * @param policyName the policy name
+     * @param readTag the read tag
+     * @return the operation builder
+     */
+    T readTag(String policyName, String readTag);
+  }
+
+  public interface AbacWriteTagAttribute<T> {
+    /**
+     * Adds a write tag attribute for the specified policy. This is a utility method for
+     * attribute-based access control.
+     *
+     * @param policyName the policy name
+     * @param writeTag the write tag
+     * @return the operation builder
+     */
+    T writeTag(String policyName, String writeTag);
+  }
+
+  public interface ClearAbacReadTagAttribute<T> {
+    /**
+     * Clear the read tag attribute for the specified policy. This is a utility method for
+     * attribute-based access control.
+     *
+     * @param policyName the policy name
+     * @return the operation builder
+     */
+    T clearReadTag(String policyName);
+
+    /**
+     * Clear all read tags. This is a utility method for attribute-based access control.
+     *
+     * @return the operation builder
+     */
+    T clearReadTags();
+  }
+
+  public interface ClearAbacWriteTagAttribute<T> {
+    /**
+     * Clear the write tag attribute for the specified policy. This is a utility method for
+     * attribute-based access control.
+     *
+     * @param policyName the policy name
+     * @return the operation builder
+     */
+    T clearWriteTag(String policyName);
+
+    /**
+     * Clear all write tags. This is a utility method for attribute-based access control.
+     *
+     * @return the operation builder
+     */
+    T clearWriteTags();
   }
 
   public abstract static class TableBuilder<T> implements Table<T> {
