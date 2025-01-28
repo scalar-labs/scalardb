@@ -134,6 +134,8 @@ public class JsonProducerTask extends ProducerTask {
         byte[] encoded = Base64.getEncoder().encode(result.getBlobAsBytes(columnName));
         objectNode.put(columnName, new String(encoded, Charset.defaultCharset()));
         break;
+      default:
+        break;
     }
   }
 }

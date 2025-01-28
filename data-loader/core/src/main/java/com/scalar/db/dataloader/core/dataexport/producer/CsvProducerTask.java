@@ -149,6 +149,8 @@ public class CsvProducerTask extends ProducerTask {
       case TEXT:
         value = result.getText(columnName);
         break;
+      default:
+        break;
     }
     return value;
   }
