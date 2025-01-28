@@ -53,7 +53,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
   private DistributedStorageAdmin admin;
   private DistributedStorage storage;
   private String namespace;
-  private Set<DataType> clusteringKeyTypes;
+  private List<DataType> clusteringKeyTypes;
 
   private long seed;
 
@@ -79,8 +79,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     return NAMESPACE;
   }
 
-  protected Set<DataType> getClusteringKeyTypes() {
-    return new HashSet<>(Arrays.asList(DataType.values()));
+  protected List<DataType> getClusteringKeyTypes() {
+    return Arrays.asList(DataType.values());
   }
 
   private void createTables() throws ExecutionException {

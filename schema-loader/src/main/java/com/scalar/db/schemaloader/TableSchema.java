@@ -26,7 +26,7 @@ public class TableSchema {
   static final String PARTITION_KEY = "partition-key";
   static final String CLUSTERING_KEY = "clustering-key";
   static final String SECONDARY_INDEX = "secondary-index";
-  private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
+  static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
       ImmutableMap.<String, DataType>builder()
           .put("BOOLEAN", DataType.BOOLEAN)
           .put("INT", DataType.INT)
@@ -35,6 +35,10 @@ public class TableSchema {
           .put("DOUBLE", DataType.DOUBLE)
           .put("TEXT", DataType.TEXT)
           .put("BLOB", DataType.BLOB)
+          .put("DATE", DataType.DATE)
+          .put("TIME", DataType.TIME)
+          .put("TIMESTAMP", DataType.TIMESTAMP)
+          .put("TIMESTAMPTZ", DataType.TIMESTAMPTZ)
           .build();
   private static final ImmutableMap<String, Order> ORDER_MAP =
       ImmutableMap.<String, Order>builder().put("ASC", Order.ASC).put("DESC", Order.DESC).build();

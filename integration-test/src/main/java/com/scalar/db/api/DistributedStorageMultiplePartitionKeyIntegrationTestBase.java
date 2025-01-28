@@ -84,18 +84,8 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
 
   protected ListMultimap<DataType, DataType> getPartitionKeyTypes() {
     ListMultimap<DataType, DataType> partitionKeyTypes = ArrayListMultimap.create();
-    for (DataType firstPartitionKeyType : DataType.values()) {
-      if (!isFloatTypeKeySupported()
-          && (firstPartitionKeyType == DataType.FLOAT
-              || firstPartitionKeyType == DataType.DOUBLE)) {
-        continue;
-      }
-      for (DataType secondPartitionKeyType : DataType.values()) {
-        if (!isFloatTypeKeySupported()
-            && (secondPartitionKeyType == DataType.FLOAT
-                || secondPartitionKeyType == DataType.DOUBLE)) {
-          continue;
-        }
+    for (DataType firstPartitionKeyType : getDataTypes()) {
+      for (DataType secondPartitionKeyType : getDataTypes()) {
         partitionKeyTypes.put(firstPartitionKeyType, secondPartitionKeyType);
       }
     }
@@ -107,10 +97,6 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   }
 
   protected boolean isParallelDdlSupported() {
-    return true;
-  }
-
-  protected boolean isFloatTypeKeySupported() {
     return true;
   }
 
@@ -505,5 +491,9 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
       this.first = first;
       this.second = second;
     }
+  }
+
+  protected List<DataType> getDataTypes() {
+    return Arrays.asList(DataType.values());
   }
 }

@@ -1,6 +1,10 @@
 {
   "sample_namespace1.sample_table1": {
-    "transaction": true
+    "transaction": true,
+    "override-columns-type": {
+      "c3": "TIME",
+      "c5": "TIMESTAMP"
+    }
   },
   "sample_namespace1.sample_table2": {
     "transaction": true

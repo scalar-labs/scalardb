@@ -15,14 +15,10 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** An abstraction for handler classes for mutate statements */
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
-  private static final Logger logger = LoggerFactory.getLogger(MutateStatementHandler.class);
-
   public MutateStatementHandler(Session session) {
     super(session);
   }
@@ -48,7 +44,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
       }
       return results;
     } catch (WriteTimeoutException e) {
-      logger.warn("Write timeout happened during mutate operation", e);
       if (e.getWriteType() == WriteType.CAS) {
         // retry needs to be done if applications need to do the operation exactly
         throw new RetriableExecutionException(
@@ -71,7 +66,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
             CoreError.CASSANDRA_WRITE_TIMEOUT_WITH_OTHER_WRITE_TYPE_IN_MUTATION.buildMessage(), e);
       }
     } catch (RuntimeException e) {
-      logger.warn(e.getMessage(), e);
       throw new RetriableExecutionException(
           CoreError.CASSANDRA_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }

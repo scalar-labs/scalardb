@@ -8,11 +8,19 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -141,6 +149,46 @@ public class MergedResult extends AbstractResult {
 
   @Nullable
   @Override
+  public LocalDate getDate(String columnName) {
+    checkIfExists(columnName);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getDateValue();
+    }
+    return result.map(r -> r.getDate(columnName)).orElse(null);
+  }
+
+  @Nullable
+  @Override
+  public LocalTime getTime(String columnName) {
+    checkIfExists(columnName);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getTimeValue();
+    }
+    return result.map(r -> r.getTime(columnName)).orElse(null);
+  }
+
+  @Nullable
+  @Override
+  public LocalDateTime getTimestamp(String columnName) {
+    checkIfExists(columnName);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getTimestampValue();
+    }
+    return result.map(r -> r.getTimestamp(columnName)).orElse(null);
+  }
+
+  @Nullable
+  @Override
+  public Instant getTimestampTZ(String columnName) {
+    checkIfExists(columnName);
+    if (putColumns.containsKey(columnName)) {
+      return putColumns.get(columnName).getTimestampTZValue();
+    }
+    return result.map(r -> r.getTimestampTZ(columnName)).orElse(null);
+  }
+
+  @Nullable
+  @Override
   public Object getAsObject(String columnName) {
     checkIfExists(columnName);
     if (isNull(columnName)) {
@@ -162,6 +210,14 @@ public class MergedResult extends AbstractResult {
         return getText(columnName);
       case BLOB:
         return getBlob(columnName);
+      case DATE:
+        return getDate(columnName);
+      case TIME:
+        return getTime(columnName);
+      case TIMESTAMP:
+        return getTimestamp(columnName);
+      case TIMESTAMPTZ:
+        return getTimestampTZ(columnName);
       default:
         throw new AssertionError();
     }
@@ -212,6 +268,14 @@ public class MergedResult extends AbstractResult {
         return TextColumn.ofNull(columnName);
       case BLOB:
         return BlobColumn.ofNull(columnName);
+      case DATE:
+        return DateColumn.ofNull(columnName);
+      case TIME:
+        return TimeColumn.ofNull(columnName);
+      case TIMESTAMP:
+        return TimestampColumn.ofNull(columnName);
+      case TIMESTAMPTZ:
+        return TimestampTZColumn.ofNull(columnName);
       default:
         throw new AssertionError();
     }

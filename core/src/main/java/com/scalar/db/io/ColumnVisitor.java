@@ -15,4 +15,12 @@ public interface ColumnVisitor {
   void visit(TextColumn column);
 
   void visit(BlobColumn column);
+
+  void visit(DateColumn column);
+
+  void visit(TimeColumn column);
+
+  void visit(TimestampColumn column);
+
+  void visit(TimestampTZColumn column);
 }

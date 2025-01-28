@@ -11,13 +11,24 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -61,6 +72,14 @@ public final class TestUtils {
         byte[] bytes = new byte[length];
         random.nextBytes(bytes);
         return BlobColumn.of(columnName, bytes);
+      case DATE:
+        return DateColumn.of(columnName, nextDate(random));
+      case TIME:
+        return TimeColumn.of(columnName, nextTime(random));
+      case TIMESTAMP:
+        return TimestampColumn.of(columnName, nextTimestamp(random));
+      case TIMESTAMPTZ:
+        return TimestampTZColumn.of(columnName, nextTimestampTZ(random));
       default:
         throw new AssertionError();
     }
@@ -68,19 +87,76 @@ public final class TestUtils {
 
   public static long nextBigInt(Random random) {
     return random
-        .longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1))
-        .limit(1)
+        .longs(1, BigIntColumn.MIN_VALUE, (BigIntColumn.MAX_VALUE + 1))
         .findFirst()
         .orElse(0);
   }
 
   public static float nextFloat(Random random) {
-    return (float)
-        random.doubles(Float.MIN_VALUE, Float.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
+    return (float) random.doubles(1, Float.MIN_VALUE, Float.MAX_VALUE).findFirst().orElse(0.0d);
   }
 
   public static double nextDouble(Random random) {
-    return random.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
+    return random.doubles(1, Double.MIN_VALUE, Double.MAX_VALUE).findFirst().orElse(0.0d);
+  }
+
+  public static LocalDate nextDate(Random random) {
+    return nextLocalDate(
+        random, DateColumn.MIN_VALUE.toEpochDay(), DateColumn.MAX_VALUE.toEpochDay());
+  }
+
+  public static LocalTime nextTime(Random random) {
+    return nextLocalTime(
+        random,
+        TimeColumn.MIN_VALUE.toNanoOfDay(),
+        TimeColumn.MAX_VALUE.toNanoOfDay(),
+        TimeColumn.FRACTIONAL_SECONDS_PRECISION_IN_NANOSECONDS);
+  }
+
+  public static LocalDateTime nextTimestamp(Random random) {
+    LocalDate date =
+        nextLocalDate(
+            random,
+            TimestampColumn.MIN_VALUE.getLong(ChronoField.EPOCH_DAY),
+            TimestampColumn.MAX_VALUE.getLong(ChronoField.EPOCH_DAY));
+    LocalTime time =
+        nextLocalTime(
+            random,
+            TimestampColumn.MIN_VALUE.getLong(ChronoField.NANO_OF_DAY),
+            TimestampColumn.MAX_VALUE.getLong(ChronoField.NANO_OF_DAY),
+            TimestampColumn.FRACTIONAL_SECONDS_PRECISION_IN_NANOSECONDS);
+
+    return LocalDateTime.of(date, time);
+  }
+
+  public static Instant nextTimestampTZ(Random random) {
+    LocalDate date =
+        nextLocalDate(
+            random,
+            TimestampTZColumn.MIN_VALUE.atOffset(ZoneOffset.UTC).getLong(ChronoField.EPOCH_DAY),
+            TimestampTZColumn.MAX_VALUE.atOffset(ZoneOffset.UTC).getLong(ChronoField.EPOCH_DAY));
+    LocalTime time =
+        nextLocalTime(
+            random,
+            TimestampTZColumn.MIN_VALUE.atOffset(ZoneOffset.UTC).getLong(ChronoField.NANO_OF_DAY),
+            TimestampTZColumn.MAX_VALUE.atOffset(ZoneOffset.UTC).getLong(ChronoField.NANO_OF_DAY),
+            TimestampTZColumn.FRACTIONAL_SECONDS_PRECISION_IN_NANOSECONDS);
+
+    return LocalDateTime.of(date, time).toInstant(ZoneOffset.UTC);
+  }
+
+  private static LocalDate nextLocalDate(Random random, long minEpochDay, long maxEpochDay) {
+    long epochDay = random.longs(1, minEpochDay, maxEpochDay + 1).findFirst().orElse(0);
+    return LocalDate.ofEpochDay(epochDay);
+  }
+
+  @SuppressWarnings("JavaLocalTimeGetNano")
+  public static LocalTime nextLocalTime(
+      Random random, long minNanoOfDay, long maxNanoOfDay, int resolutionInNanos) {
+    long nanoOfDay = random.longs(1, minNanoOfDay, maxNanoOfDay + 1).findFirst().orElse(0);
+    LocalTime time = LocalTime.ofNanoOfDay(nanoOfDay);
+
+    return time.withNano(time.getNano() / resolutionInNanos * resolutionInNanos);
   }
 
   public static Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
@@ -104,6 +180,14 @@ public final class TestUtils {
         return TextColumn.of(columnName, allowEmpty ? "" : "\u0001");
       case BOOLEAN:
         return BooleanColumn.of(columnName, false);
+      case DATE:
+        return DateColumn.of(columnName, DateColumn.MIN_VALUE);
+      case TIME:
+        return TimeColumn.of(columnName, TimeColumn.MIN_VALUE);
+      case TIMESTAMP:
+        return TimestampColumn.of(columnName, TimestampColumn.MIN_VALUE);
+      case TIMESTAMPTZ:
+        return TimestampTZColumn.of(columnName, TimestampTZColumn.MIN_VALUE);
       default:
         throw new AssertionError();
     }
@@ -129,6 +213,14 @@ public final class TestUtils {
         return TextColumn.of(columnName, builder.toString());
       case BOOLEAN:
         return BooleanColumn.of(columnName, true);
+      case DATE:
+        return DateColumn.of(columnName, DateColumn.MAX_VALUE);
+      case TIME:
+        return TimeColumn.of(columnName, TimeColumn.MAX_VALUE);
+      case TIMESTAMP:
+        return TimestampColumn.of(columnName, TimestampColumn.MAX_VALUE);
+      case TIMESTAMPTZ:
+        return TimestampTZColumn.of(columnName, TimestampTZColumn.MAX_VALUE);
       default:
         throw new AssertionError();
     }
@@ -190,7 +282,7 @@ public final class TestUtils {
     for (Result actualResult : actualResults) {
       ExpectedResult matchedExpectedResult = findFirstMatchingResult(actualResult, expectedResults);
       if (matchedExpectedResult == null) {
-        Assertions.fail("The actual result " + actualResult + " is not expected");
+        Assertions.fail("This actual result is not expected: " + actualResult);
       } else {
         expectedResults.remove(matchedExpectedResult);
       }
@@ -265,6 +357,11 @@ public final class TestUtils {
 
       public ExpectedResultBuilder column(Column<?> column) {
         columns.add(column);
+        return this;
+      }
+
+      public ExpectedResultBuilder columns(Collection<Column<?>> columns) {
+        this.columns.addAll(columns);
         return this;
       }
 
