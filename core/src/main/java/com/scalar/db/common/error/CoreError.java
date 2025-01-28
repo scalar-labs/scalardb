@@ -760,6 +760,12 @@ public enum CoreError implements ScalarDbError {
       "The underlying-storage data type %s is not supported as the ScalarDB %s data type: %s",
       "",
       ""),
+  DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
+      Category.USER_ERROR,
+      "0168",
+      "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
+      "",
+      ""),
 
   DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
       Category.USER_ERROR,
