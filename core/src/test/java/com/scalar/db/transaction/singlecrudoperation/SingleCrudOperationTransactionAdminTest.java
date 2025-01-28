@@ -238,12 +238,14 @@ public class SingleCrudOperationTransactionAdminTest {
     // Arrange
     String namespace = "ns";
     String table = "tbl";
+    Map<String, String> options = ImmutableMap.of("a", "b");
+    Map<String, DataType> overrideColumnsType = ImmutableMap.of("c", DataType.TIMESTAMPTZ);
 
     // Act
-    admin.importTable(namespace, table, Collections.emptyMap());
+    admin.importTable(namespace, table, options, overrideColumnsType);
 
     // Assert
-    verify(distributedStorageAdmin).importTable(namespace, table, Collections.emptyMap());
+    verify(distributedStorageAdmin).importTable(namespace, table, options, overrideColumnsType);
   }
 
   @Test

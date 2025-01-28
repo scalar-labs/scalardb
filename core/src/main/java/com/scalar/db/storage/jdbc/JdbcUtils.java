@@ -1,7 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.util.Map.Entry;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
@@ -11,9 +13,14 @@ public final class JdbcUtils {
     return initDataSource(config, rdbEngine, false);
   }
 
+  @VisibleForTesting
+  static BasicDataSource createDataSource() {
+    return new BasicDataSource();
+  }
+
   public static BasicDataSource initDataSource(
       JdbcConfig config, RdbEngineStrategy rdbEngine, boolean transactional) {
-    BasicDataSource dataSource = new BasicDataSource();
+    BasicDataSource dataSource = createDataSource();
 
     /*
      * We need to set the driver class of an underlying database to the dataSource in order
@@ -61,12 +68,16 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
+    for (Entry<String, String> entry : rdbEngine.getConnectionProperties().entrySet()) {
+      dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
+    }
+
     return dataSource;
   }
 
   public static BasicDataSource initDataSourceForTableMetadata(
       JdbcConfig config, RdbEngineStrategy rdbEngine) {
-    BasicDataSource dataSource = new BasicDataSource();
+    BasicDataSource dataSource = createDataSource();
 
     /*
      * We need to set the driver class of an underlying database to the dataSource in order
@@ -86,7 +97,7 @@ public final class JdbcUtils {
 
   public static BasicDataSource initDataSourceForAdmin(
       JdbcConfig config, RdbEngineStrategy rdbEngine) {
-    BasicDataSource dataSource = new BasicDataSource();
+    BasicDataSource dataSource = createDataSource();
 
     /*
      * We need to set the driver class of an underlying database to the dataSource in order

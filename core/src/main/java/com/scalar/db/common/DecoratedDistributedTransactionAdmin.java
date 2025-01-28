@@ -202,6 +202,16 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
+      throws ExecutionException {
+    distributedTransactionAdmin.importTable(namespace, table, options, overrideColumnsType);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return distributedTransactionAdmin.getNamespaceNames();
   }
@@ -325,6 +335,227 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   public Set<Privilege> getPrivileges(String username, String namespaceName, String tableName)
       throws ExecutionException {
     return distributedTransactionAdmin.getPrivileges(username, namespaceName, tableName);
+  }
+
+  @Override
+  public void createPolicy(String policyName, @Nullable String dataTagColumnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.createPolicy(policyName, dataTagColumnName);
+  }
+
+  @Override
+  public void enablePolicy(String policyName) throws ExecutionException {
+    distributedTransactionAdmin.enablePolicy(policyName);
+  }
+
+  @Override
+  public void disablePolicy(String policyName) throws ExecutionException {
+    distributedTransactionAdmin.disablePolicy(policyName);
+  }
+
+  @Override
+  public Optional<Policy> getPolicy(String policyName) throws ExecutionException {
+    return distributedTransactionAdmin.getPolicy(policyName);
+  }
+
+  @Override
+  public List<Policy> getPolicies() throws ExecutionException {
+    return distributedTransactionAdmin.getPolicies();
+  }
+
+  @Override
+  public void createLevel(
+      String policyName, String levelShortName, String levelLongName, int levelNumber)
+      throws ExecutionException {
+    distributedTransactionAdmin.createLevel(policyName, levelShortName, levelLongName, levelNumber);
+  }
+
+  @Override
+  public void dropLevel(String policyName, String levelShortName) throws ExecutionException {
+    distributedTransactionAdmin.dropLevel(policyName, levelShortName);
+  }
+
+  @Override
+  public Optional<Level> getLevel(String policyName, String levelShortName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getLevel(policyName, levelShortName);
+  }
+
+  @Override
+  public List<Level> getLevels(String policyName) throws ExecutionException {
+    return distributedTransactionAdmin.getLevels(policyName);
+  }
+
+  @Override
+  public void createCompartment(
+      String policyName, String compartmentShortName, String compartmentLongName)
+      throws ExecutionException {
+    distributedTransactionAdmin.createCompartment(
+        policyName, compartmentShortName, compartmentLongName);
+  }
+
+  @Override
+  public void dropCompartment(String policyName, String compartmentShortName)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropCompartment(policyName, compartmentShortName);
+  }
+
+  @Override
+  public Optional<Compartment> getCompartment(String policyName, String compartmentShortName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getCompartment(policyName, compartmentShortName);
+  }
+
+  @Override
+  public List<Compartment> getCompartments(String policyName) throws ExecutionException {
+    return distributedTransactionAdmin.getCompartments(policyName);
+  }
+
+  @Override
+  public void createGroup(
+      String policyName,
+      String groupShortName,
+      String groupLongName,
+      @Nullable String parentGroupShortName)
+      throws ExecutionException {
+    distributedTransactionAdmin.createGroup(
+        policyName, groupShortName, groupLongName, parentGroupShortName);
+  }
+
+  @Override
+  public void dropGroup(String policyName, String groupShortName) throws ExecutionException {
+    distributedTransactionAdmin.dropGroup(policyName, groupShortName);
+  }
+
+  @Override
+  public Optional<Group> getGroup(String policyName, String groupShortName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getGroup(policyName, groupShortName);
+  }
+
+  @Override
+  public List<Group> getGroups(String policyName) throws ExecutionException {
+    return distributedTransactionAdmin.getGroups(policyName);
+  }
+
+  @Override
+  public void setLevelsToUser(
+      String policyName,
+      String username,
+      String levelShortName,
+      @Nullable String defaultLevelShortName,
+      @Nullable String rowLevelShortName)
+      throws ExecutionException {
+    distributedTransactionAdmin.setLevelsToUser(
+        policyName, username, levelShortName, defaultLevelShortName, rowLevelShortName);
+  }
+
+  @Override
+  public void addCompartmentToUser(
+      String policyName,
+      String username,
+      String compartmentShortName,
+      AccessMode accessMode,
+      boolean defaultCompartment,
+      boolean rowCompartment)
+      throws ExecutionException {
+    distributedTransactionAdmin.addCompartmentToUser(
+        policyName, username, compartmentShortName, accessMode, defaultCompartment, rowCompartment);
+  }
+
+  @Override
+  public void removeCompartmentFromUser(
+      String policyName, String username, String compartmentShortName) throws ExecutionException {
+    distributedTransactionAdmin.removeCompartmentFromUser(
+        policyName, username, compartmentShortName);
+  }
+
+  @Override
+  public void addGroupToUser(
+      String policyName,
+      String username,
+      String groupShortName,
+      AccessMode accessMode,
+      boolean defaultGroup,
+      boolean rowGroup)
+      throws ExecutionException {
+    distributedTransactionAdmin.addGroupToUser(
+        policyName, username, groupShortName, accessMode, defaultGroup, rowGroup);
+  }
+
+  @Override
+  public void removeGroupFromUser(String policyName, String username, String groupShortName)
+      throws ExecutionException {
+    distributedTransactionAdmin.removeGroupFromUser(policyName, username, groupShortName);
+  }
+
+  @Override
+  public void dropUserTagInfoFromUser(String policyName, String username)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropUserTagInfoFromUser(policyName, username);
+  }
+
+  @Override
+  public Optional<UserTagInfo> getUserTagInfo(String policyName, String username)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getUserTagInfo(policyName, username);
+  }
+
+  @Override
+  public void createNamespacePolicy(
+      String namespacePolicyName, String policyName, String namespaceName)
+      throws ExecutionException {
+    distributedTransactionAdmin.createNamespacePolicy(
+        namespacePolicyName, policyName, namespaceName);
+  }
+
+  @Override
+  public void enableNamespacePolicy(String namespacePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.enableNamespacePolicy(namespacePolicyName);
+  }
+
+  @Override
+  public void disableNamespacePolicy(String namespacePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.disableNamespacePolicy(namespacePolicyName);
+  }
+
+  @Override
+  public Optional<NamespacePolicy> getNamespacePolicy(String namespacePolicyName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getNamespacePolicy(namespacePolicyName);
+  }
+
+  @Override
+  public List<NamespacePolicy> getNamespacePolicies() throws ExecutionException {
+    return distributedTransactionAdmin.getNamespacePolicies();
+  }
+
+  @Override
+  public void createTablePolicy(
+      String tablePolicyName, String policyName, String namespaceName, String tableName)
+      throws ExecutionException {
+    distributedTransactionAdmin.createTablePolicy(
+        tablePolicyName, policyName, namespaceName, tableName);
+  }
+
+  @Override
+  public void enableTablePolicy(String tablePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.enableTablePolicy(tablePolicyName);
+  }
+
+  @Override
+  public void disableTablePolicy(String tablePolicyName) throws ExecutionException {
+    distributedTransactionAdmin.disableTablePolicy(tablePolicyName);
+  }
+
+  @Override
+  public Optional<TablePolicy> getTablePolicy(String tablePolicyName) throws ExecutionException {
+    return distributedTransactionAdmin.getTablePolicy(tablePolicyName);
+  }
+
+  @Override
+  public List<TablePolicy> getTablePolicies() throws ExecutionException {
+    return distributedTransactionAdmin.getTablePolicies();
   }
 
   @Override

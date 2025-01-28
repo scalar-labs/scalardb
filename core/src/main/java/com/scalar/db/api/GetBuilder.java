@@ -4,9 +4,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.OperationBuilder.AbacReadTagAttribute;
 import com.scalar.db.api.OperationBuilder.And;
 import com.scalar.db.api.OperationBuilder.Attribute;
 import com.scalar.db.api.OperationBuilder.Buildable;
+import com.scalar.db.api.OperationBuilder.ClearAbacReadTagAttribute;
 import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearConditions;
@@ -93,7 +95,8 @@ public class GetBuilder extends SelectionBuilder {
       implements ClusteringKey<BuildableGet>,
           Consistency<BuildableGet>,
           Projection<BuildableGet>,
-          Attribute<BuildableGet> {
+          Attribute<BuildableGet>,
+          AbacReadTagAttribute<BuildableGet> {
     final List<String> projections = new ArrayList<>();
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
@@ -155,6 +158,14 @@ public class GetBuilder extends SelectionBuilder {
     public BuildableGet attributes(Map<String, String> attributes) {
       checkNotNull(attributes);
       this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableGet readTag(String policyName, String readTag) {
+      checkNotNull(policyName);
+      checkNotNull(readTag);
+      AbacOperationAttributes.setReadTag(attributes, policyName, readTag);
       return this;
     }
 
@@ -224,6 +235,12 @@ public class GetBuilder extends SelectionBuilder {
     @Override
     public BuildableGetWithPartitionKey attributes(Map<String, String> attributes) {
       super.attributes(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableGet readTag(String policyName, String readTag) {
+      super.readTag(policyName, readTag);
       return this;
     }
 
@@ -390,6 +407,7 @@ public class GetBuilder extends SelectionBuilder {
       implements Consistency<BuildableGetWithIndex>,
           Projection<BuildableGetWithIndex>,
           Attribute<BuildableGetWithIndex>,
+          AbacReadTagAttribute<BuildableGetWithIndex>,
           OperationBuilder.Where<BuildableGetWithIndexOngoingWhere>,
           WhereAnd<BuildableGetWithIndexOngoingWhereAnd>,
           WhereOr<BuildableGetWithIndexOngoingWhereOr> {
@@ -444,6 +462,14 @@ public class GetBuilder extends SelectionBuilder {
     public BuildableGetWithIndex attributes(Map<String, String> attributes) {
       checkNotNull(attributes);
       this.attributes.putAll(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableGetWithIndex readTag(String policyName, String readTag) {
+      checkNotNull(policyName);
+      checkNotNull(readTag);
+      AbacOperationAttributes.setReadTag(attributes, policyName, readTag);
       return this;
     }
 
@@ -602,7 +628,8 @@ public class GetBuilder extends SelectionBuilder {
   public static class BuildableGetWithIndexWhere
       implements Consistency<BuildableGetWithIndexWhere>,
           Projection<BuildableGetWithIndexWhere>,
-          Attribute<BuildableGetWithIndexWhere> {
+          Attribute<BuildableGetWithIndexWhere>,
+          AbacReadTagAttribute<BuildableGetWithIndexWhere> {
 
     BuildableGetWithIndex buildableGetWithIndex;
     final SelectionBuilder.Where where;
@@ -657,6 +684,12 @@ public class GetBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableGetWithIndexWhere readTag(String policyName, String readTag) {
+      buildableGetWithIndex = buildableGetWithIndex.readTag(policyName, readTag);
+      return this;
+    }
+
     public Get build() {
       return buildableGetWithIndex.build(getConjunctions(where));
     }
@@ -674,7 +707,8 @@ public class GetBuilder extends SelectionBuilder {
           ClearProjections<BuildableGetOrGetWithIndexFromExisting>,
           ClearClusteringKey<BuildableGetOrGetWithIndexFromExisting>,
           ClearNamespace<BuildableGetOrGetWithIndexFromExisting>,
-          ClearAttribute<BuildableGetOrGetWithIndexFromExisting> {
+          ClearAttribute<BuildableGetOrGetWithIndexFromExisting>,
+          ClearAbacReadTagAttribute<BuildableGetOrGetWithIndexFromExisting> {
 
     private Key indexKey;
     private final boolean isGetWithIndex;
@@ -771,6 +805,12 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableGet readTag(String policyName, String readTag) {
+      super.readTag(policyName, readTag);
+      return this;
+    }
+
+    @Override
     public BuildableGetFromExistingWithOngoingWhere where(ConditionalExpression condition) {
       checkConditionsEmpty();
       checkNotNull(condition);
@@ -845,6 +885,18 @@ public class GetBuilder extends SelectionBuilder {
       return this;
     }
 
+    @Override
+    public BuildableGetOrGetWithIndexFromExisting clearReadTag(String policyName) {
+      AbacOperationAttributes.clearReadTag(attributes, policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableGetOrGetWithIndexFromExisting clearReadTags() {
+      AbacOperationAttributes.clearReadTags(attributes);
+      return this;
+    }
+
     private void checkNotGet() {
       if (!isGetWithIndex) {
         throw new UnsupportedOperationException(
@@ -910,9 +962,11 @@ public class GetBuilder extends SelectionBuilder {
           Consistency<BuildableGetFromExistingWithWhere>,
           Projection<BuildableGetFromExistingWithWhere>,
           Attribute<BuildableGetFromExistingWithWhere>,
+          AbacReadTagAttribute<BuildableGetFromExistingWithWhere>,
           ClearProjections<BuildableGetFromExistingWithWhere>,
           ClearNamespace<BuildableGetFromExistingWithWhere>,
-          ClearAttribute<BuildableGetFromExistingWithWhere> {
+          ClearAttribute<BuildableGetFromExistingWithWhere>,
+          ClearAbacReadTagAttribute<BuildableGetFromExistingWithWhere> {
 
     private final BuildableGetOrGetWithIndexFromExisting BuildableGetFromExisting;
     final SelectionBuilder.Where where;
@@ -1000,6 +1054,12 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    public BuildableGetFromExistingWithWhere readTag(String policyName, String readTag) {
+      BuildableGetFromExisting.readTag(policyName, readTag);
+      return this;
+    }
+
+    @Override
     public BuildableGetFromExistingWithWhere clearProjections() {
       BuildableGetFromExisting.clearProjections();
       return this;
@@ -1020,6 +1080,18 @@ public class GetBuilder extends SelectionBuilder {
     @Override
     public BuildableGetFromExistingWithWhere clearAttribute(String name) {
       BuildableGetFromExisting.clearAttribute(name);
+      return this;
+    }
+
+    @Override
+    public BuildableGetFromExistingWithWhere clearReadTag(String policyName) {
+      BuildableGetFromExisting.clearReadTag(policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableGetFromExistingWithWhere clearReadTags() {
+      BuildableGetFromExisting.clearReadTags();
       return this;
     }
 
