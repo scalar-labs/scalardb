@@ -60,20 +60,13 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
       ExportManager exportManager = createExportManager(storageFactory, scalarDBDao);
 
-      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, tableName);
+      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
 
       Key partitionKey =
-          partitionKeyValue != null
-              ? getKey(partitionKeyValue, namespace, tableName, tableMetadata)
-              : null;
+          partitionKeyValue != null ? getKey(partitionKeyValue, tableMetadata) : null;
       Key scanStartKey =
-          scanStartKeyValue != null
-              ? getKey(scanStartKeyValue, namespace, tableName, tableMetadata)
-              : null;
-      Key scanEndKey =
-          scanEndKeyValue != null
-              ? getKey(scanEndKeyValue, namespace, tableName, tableMetadata)
-              : null;
+          scanStartKeyValue != null ? getKey(scanStartKeyValue, tableMetadata) : null;
+      Key scanEndKey = scanEndKeyValue != null ? getKey(scanEndKeyValue, tableMetadata) : null;
 
       ScanRange scanRange =
           new ScanRange(scanStartKey, scanEndKey, scanStartInclusive, scanEndInclusive);
@@ -128,7 +121,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   private ExportOptions buildExportOptions(Key partitionKey, ScanRange scanRange) {
     ExportOptions.ExportOptionsBuilder builder =
-        ExportOptions.builder(namespace, tableName, partitionKey, outputFormat)
+        ExportOptions.builder(namespace, table, partitionKey, outputFormat)
             .sortOrders(sortOrders)
             .excludeHeaderRow(excludeHeader)
             .includeTransactionMetadata(includeTransactionMetadata)
@@ -153,7 +146,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
             ? String.format(
                 EXPORT_FILE_NAME_FORMAT,
                 namespace,
-                tableName,
+                table,
                 System.nanoTime(),
                 outputFormat.toString().toLowerCase())
             : outputFileName;
@@ -174,14 +167,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
    * @throws KeyParsingException If any error occur during parsing key
    * @throws Base64Exception if any error occur during decoding key
    */
-  private Key getKey(
-      List<ColumnKeyValue> keyValueList,
-      String namespace,
-      String table,
-      TableMetadata tableMetadata)
+  private Key getKey(List<ColumnKeyValue> keyValueList, TableMetadata tableMetadata)
       throws Base64Exception, KeyParsingException, ColumnParsingException {
     if (keyValueList.size() == 1)
-      return KeyUtils.parseKeyValue(partitionKeyValue.get(0), namespace, tableName, tableMetadata);
+      return KeyUtils.parseKeyValue(partitionKeyValue.get(0), namespace, table, tableMetadata);
     return KeyUtils.parseMultipleKeyValues(keyValueList, tableMetadata);
   }
 }

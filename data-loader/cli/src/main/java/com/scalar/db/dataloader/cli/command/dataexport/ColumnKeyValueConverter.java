@@ -11,8 +11,8 @@ public class ColumnKeyValueConverter implements CommandLine.ITypeConverter<List<
   public List<ColumnKeyValue> convert(String keyValue) {
     List<ColumnKeyValue> columnKeyValueList = new ArrayList<>();
     String[] columnValues = keyValue.split(",");
-    for (int i = 0; i < columnValues.length; i++) {
-      String[] parts = columnValues[i].split("=");
+    for (String columnValue : columnValues) {
+      String[] parts = columnValue.split("=");
 
       if (parts.length != 2) {
         throw new IllegalArgumentException("Invalid key format: " + keyValue);

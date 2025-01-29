@@ -27,10 +27,10 @@ public class ExportCommandOptions {
 
   @CommandLine.Option(
       names = {"--table", "-t"},
-      paramLabel = "<TABLE_NAME>",
+      paramLabel = "<TABLE>",
       required = true,
       description = "Name of the ScalarDB table to export data from")
-  protected String tableName;
+  protected String table;
 
   @CommandLine.Option(
       names = {"--output-file", "-o"},
