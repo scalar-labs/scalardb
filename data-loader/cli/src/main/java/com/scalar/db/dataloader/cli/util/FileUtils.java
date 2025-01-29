@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.util;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class FileUtil {
+public class FileUtils {
 
   /**
    * Validates the provided file path.
