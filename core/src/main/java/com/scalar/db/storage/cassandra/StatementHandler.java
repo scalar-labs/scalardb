@@ -14,13 +14,10 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** A handler class for statements */
 @ThreadSafe
 public abstract class StatementHandler {
-  private static final Logger logger = LoggerFactory.getLogger(StatementHandler.class);
   protected final Session session;
   protected final StatementCache cache;
 
@@ -119,8 +116,7 @@ public abstract class StatementHandler {
           return ConsistencyLevel.QUORUM;
         }
       default:
-        logger.warn("Unsupported consistency is specified. SEQUENTIAL is being used instead");
-        return ConsistencyLevel.QUORUM;
+        throw new AssertionError("Unsupported consistency is specified: " + consistency);
     }
   }
 

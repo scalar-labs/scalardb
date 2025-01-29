@@ -518,6 +518,14 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         return DataType.BOOLEAN;
       case "blob":
         return DataType.BLOB;
+      case "date":
+        return DataType.DATE;
+      case "time":
+        return DataType.TIME;
+      case "timestamp":
+        return DataType.TIMESTAMP;
+      case "timestamptz":
+        return DataType.TIMESTAMPTZ;
       default:
         throw new ExecutionException("Unknown column type: " + columnType);
     }
@@ -628,7 +636,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table) {
+  public TableMetadata getImportTableMetadata(
+      String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
@@ -639,7 +648,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options) {
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 

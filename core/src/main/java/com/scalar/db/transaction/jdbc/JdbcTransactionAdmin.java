@@ -86,9 +86,13 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options)
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
-    jdbcAdmin.importTable(namespace, table, options);
+    jdbcAdmin.importTable(namespace, table, options, overrideColumnsType);
   }
 
   /**

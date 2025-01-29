@@ -30,4 +30,9 @@ public class ConsensusCommitAdminRepairIntegrationTestWithCassandra
     admin = new ConsensusCommitAdmin(storageAdmin, new DatabaseConfig(properties));
     adminTestUtils = new CassandraAdminTestUtils(getProperties(testName), clusterManager);
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

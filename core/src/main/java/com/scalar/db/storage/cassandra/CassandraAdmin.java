@@ -65,6 +65,12 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    for (String column : metadata.getColumnNames()) {
+      if (metadata.getColumnDataTypes().get(column).equals(DataType.TIMESTAMP)) {
+        throw new UnsupportedOperationException(
+            "The TIMESTAMP data type is not supported in Cassandra. column: " + column);
+      }
+    }
     try {
       createNamespacesTableIfNotExists();
       createTableInternal(namespace, table, metadata, false, options);
@@ -269,7 +275,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table) {
+  public TableMetadata getImportTableMetadata(
+      String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(
         CoreError.CASSANDRA_IMPORT_NOT_SUPPORTED.buildMessage());
   }
@@ -282,7 +289,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options) {
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(
         CoreError.CASSANDRA_IMPORT_NOT_SUPPORTED.buildMessage());
   }
@@ -370,6 +381,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
+    if (columnType == DataType.TIMESTAMP) {
+      throw new UnsupportedOperationException(
+          "The TIMESTAMP data type is not supported in Cassandra. column: " + columnName);
+    }
     try {
       String alterTableQuery =
           SchemaBuilder.alterTable(namespace, table)
@@ -583,6 +598,12 @@ public class CassandraAdmin implements DistributedStorageAdmin {
         return DataType.BOOLEAN;
       case BLOB:
         return DataType.BLOB;
+      case DATE:
+        return DataType.DATE;
+      case TIME:
+        return DataType.TIME;
+      case TIMESTAMP:
+        return DataType.TIMESTAMPTZ;
       default:
         throw new ExecutionException(
             String.format("%s is not yet supported", cassandraDataTypeName));
@@ -610,6 +631,12 @@ public class CassandraAdmin implements DistributedStorageAdmin {
         return com.datastax.driver.core.DataType.text();
       case BLOB:
         return com.datastax.driver.core.DataType.blob();
+      case DATE:
+        return com.datastax.driver.core.DataType.date();
+      case TIME:
+        return com.datastax.driver.core.DataType.time();
+      case TIMESTAMPTZ:
+        return com.datastax.driver.core.DataType.timestamp();
       default:
         throw new AssertionError();
     }

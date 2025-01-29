@@ -1,6 +1,10 @@
 package com.scalar.db.io;
 
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -154,6 +158,46 @@ public interface Column<T> extends Comparable<Column<T>> {
   }
 
   /**
+   * Returns the DATE value of this {@code Column} as a Java LocalDate type.
+   *
+   * @return the value of this {@code Column}. if the value is NULL, null
+   */
+  @Nullable
+  default LocalDate getDateValue() {
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
+  }
+
+  /**
+   * Returns the TIME value of this {@code Column} as a Java LocalTime type.
+   *
+   * @return the value of this {@code Column}. if the value is NULL, null
+   */
+  @Nullable
+  default LocalTime getTimeValue() {
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
+  }
+
+  /**
+   * Returns the TIMESTAMP value of this {@code Column} as a Java LocalDateTime type.
+   *
+   * @return the value of this {@code Column}. if the value is NULL, null
+   */
+  @Nullable
+  default LocalDateTime getTimestampValue() {
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
+  }
+
+  /**
+   * Returns the TIMESTAMPTZ value of this {@code Column} as a Java Instant type.
+   *
+   * @return the value of this {@code Column}. if the value is NULL, null
+   */
+  @Nullable
+  default Instant getTimestampTZValue() {
+    throw new UnsupportedOperationException("The data type of this column is " + getDataType());
+  }
+
+  /**
    * Returns the value of this {@code Column} as a Java object type.
    *
    * <p>If the columns is a BOOLEAN type, it returns a {@code Boolean} object. If the columns is an
@@ -161,7 +205,10 @@ public interface Column<T> extends Comparable<Column<T>> {
    * {@code LONG} object. If the columns is a FLOAT type, it returns a {@code FLOAT} object. If the
    * columns is a DOUBLE type, it returns a {@code DOUBLE} object. If the columns is a TEXT type, it
    * returns a {@code String} object. If the columns is a BLOB type, it returns a {@code ByteBuffer}
-   * object.
+   * object. If the columns is a DATE type, it returns a {@code LocalDate} object. If the columns is
+   * a TIME type, it returns a {@code LocalTime} object. If the columns is a TIMESTAMP type, it
+   * returns a {@code LocalDateTime} object. If the columns is a TIMESTAMPTZ type, it returns a
+   * {@code Instant} object.
    *
    * @return the value of this {@code Column}. if the value is NULL, null
    */

@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -15,11 +15,15 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.TestUtils;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -31,10 +35,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,19 +65,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   private static final String COL_NAME5 = "c5";
   private static final String COL_NAME6 = "c6";
   private static final String COL_NAME7 = "c7";
-
-  private static final TableMetadata TABLE_METADATA =
-      TableMetadata.newBuilder()
-          .addColumn(PARTITION_KEY, DataType.TEXT)
-          .addColumn(COL_NAME1, DataType.BOOLEAN)
-          .addColumn(COL_NAME2, DataType.INT)
-          .addColumn(COL_NAME3, DataType.BIGINT)
-          .addColumn(COL_NAME4, DataType.FLOAT)
-          .addColumn(COL_NAME5, DataType.DOUBLE)
-          .addColumn(COL_NAME6, DataType.TEXT)
-          .addColumn(COL_NAME7, DataType.BLOB)
-          .addPartitionKey(PARTITION_KEY)
-          .build();
+  private static final String COL_NAME8 = "c8";
+  private static final String COL_NAME9 = "c9";
+  private static final String COL_NAME10 = "c10";
+  private static final String COL_NAME11 = "c11";
 
   private static final int ATTEMPT_COUNT = 5;
   private static final int THREAD_NUM = 10;
@@ -115,9 +112,27 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   }
 
   private void createTable() throws ExecutionException {
+    TableMetadata.Builder tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(PARTITION_KEY, DataType.TEXT)
+            .addColumn(COL_NAME1, DataType.BOOLEAN)
+            .addColumn(COL_NAME2, DataType.INT)
+            .addColumn(COL_NAME3, DataType.BIGINT)
+            .addColumn(COL_NAME4, DataType.FLOAT)
+            .addColumn(COL_NAME5, DataType.DOUBLE)
+            .addColumn(COL_NAME6, DataType.TEXT)
+            .addColumn(COL_NAME7, DataType.BLOB)
+            .addColumn(COL_NAME8, DataType.DATE)
+            .addColumn(COL_NAME9, DataType.TIME)
+            .addColumn(COL_NAME10, DataType.TIMESTAMPTZ)
+            .addPartitionKey(PARTITION_KEY);
+    if (isTimestampTypeSupported()) {
+      tableMetadata.addColumn(COL_NAME11, DataType.TIMESTAMP);
+    }
+
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
-    admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
+    admin.createTable(namespace, TABLE, tableMetadata.build(), true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -160,10 +175,15 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   }
 
   protected List<OperatorAndDataType> getOperatorAndDataTypeListForTest() {
+    List<DataType> dataTypes = Lists.newArrayList(DataType.values());
+    if (!isTimestampTypeSupported()) {
+      dataTypes.remove(DataType.TIMESTAMP);
+    }
+
     List<OperatorAndDataType> ret = new ArrayList<>();
     for (Operator operator : Operator.values()) {
       if (operator != Operator.LIKE && operator != Operator.NOT_LIKE) {
-        for (DataType dataType : DataType.values()) {
+        for (DataType dataType : dataTypes) {
           ret.add(new OperatorAndDataType(operator, dataType));
         }
       }
@@ -497,18 +517,25 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     Optional<Result> result = storage.get(get);
     assertThat(result).describedAs(description).isPresent();
+    Set<String> columnNames =
+        Sets.newHashSet(
+            PARTITION_KEY,
+            COL_NAME1,
+            COL_NAME2,
+            COL_NAME3,
+            COL_NAME4,
+            COL_NAME5,
+            COL_NAME6,
+            COL_NAME7,
+            COL_NAME8,
+            COL_NAME9,
+            COL_NAME10);
+    if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME11);
+    }
     assertThat(result.get().getContainedColumnNames())
         .describedAs(description)
-        .isEqualTo(
-            ImmutableSet.of(
-                PARTITION_KEY,
-                COL_NAME1,
-                COL_NAME2,
-                COL_NAME3,
-                COL_NAME4,
-                COL_NAME5,
-                COL_NAME6,
-                COL_NAME7));
+        .isEqualTo(columnNames);
 
     Map<String, Column<?>> expected = shouldMutate ? put.getColumns() : initialData;
     assertThat(result.get().isNull(COL_NAME1))
@@ -547,6 +574,20 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     assertThat(result.get().getBlob(COL_NAME7))
         .describedAs(description)
         .isEqualTo(expected.get(COL_NAME7).getBlobValue());
+    assertThat(result.get().getDate(COL_NAME8))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME8).getDateValue());
+    assertThat(result.get().getTime(COL_NAME9))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME9).getTimeValue());
+    assertThat(result.get().getTimestampTZ(COL_NAME10))
+        .describedAs(description)
+        .isEqualTo(expected.get(COL_NAME10).getTimestampTZValue());
+    if (isTimestampTypeSupported()) {
+      assertThat(result.get().getTimestamp(COL_NAME11))
+          .describedAs(description)
+          .isEqualTo(expected.get(COL_NAME11).getTimestampValue());
+    }
   }
 
   @Test
@@ -564,17 +605,23 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     // Assert
     Optional<Result> result = storage.get(prepareGet());
     assertThat(result).isPresent();
-    assertThat(result.get().getContainedColumnNames())
-        .isEqualTo(
-            ImmutableSet.of(
-                PARTITION_KEY,
-                COL_NAME1,
-                COL_NAME2,
-                COL_NAME3,
-                COL_NAME4,
-                COL_NAME5,
-                COL_NAME6,
-                COL_NAME7));
+    Set<String> columnNames =
+        Sets.newHashSet(
+            PARTITION_KEY,
+            COL_NAME1,
+            COL_NAME2,
+            COL_NAME3,
+            COL_NAME4,
+            COL_NAME5,
+            COL_NAME6,
+            COL_NAME7,
+            COL_NAME8,
+            COL_NAME9,
+            COL_NAME10);
+    if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME11);
+    }
+    assertThat(result.get().getContainedColumnNames()).isEqualTo(columnNames);
     assertThat(result.get().getBoolean(COL_NAME1)).isEqualTo(put.getBooleanValue(COL_NAME1));
     assertThat(result.get().getInt(COL_NAME2)).isEqualTo(put.getIntValue(COL_NAME2));
     assertThat(result.get().getBigInt(COL_NAME3)).isEqualTo(put.getBigIntValue(COL_NAME3));
@@ -582,6 +629,14 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     assertThat(result.get().getDouble(COL_NAME5)).isEqualTo(put.getDoubleValue(COL_NAME5));
     assertThat(result.get().getText(COL_NAME6)).isEqualTo(put.getTextValue(COL_NAME6));
     assertThat(result.get().getBlob(COL_NAME7)).isEqualTo(put.getBlobValue(COL_NAME7));
+    assertThat(result.get().getDate(COL_NAME8)).isEqualTo(put.getDateValue(COL_NAME8));
+    assertThat(result.get().getTime(COL_NAME9)).isEqualTo(put.getTimeValue(COL_NAME9));
+    assertThat(result.get().getTimestampTZ(COL_NAME10))
+        .isEqualTo(put.getTimestampTZValue(COL_NAME10));
+    if (isTimestampTypeSupported()) {
+      assertThat(result.get().getTimestamp(COL_NAME11))
+          .isEqualTo(put.getTimestampValue(COL_NAME11));
+    }
   }
 
   @Test
@@ -613,17 +668,23 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     // Assert
     Optional<Result> result = storage.get(prepareGet());
     assertThat(result).isPresent();
-    assertThat(result.get().getContainedColumnNames())
-        .isEqualTo(
-            ImmutableSet.of(
-                PARTITION_KEY,
-                COL_NAME1,
-                COL_NAME2,
-                COL_NAME3,
-                COL_NAME4,
-                COL_NAME5,
-                COL_NAME6,
-                COL_NAME7));
+    Set<String> columnNames =
+        Sets.newHashSet(
+            PARTITION_KEY,
+            COL_NAME1,
+            COL_NAME2,
+            COL_NAME3,
+            COL_NAME4,
+            COL_NAME5,
+            COL_NAME6,
+            COL_NAME7,
+            COL_NAME8,
+            COL_NAME9,
+            COL_NAME10);
+    if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME11);
+    }
+    assertThat(result.get().getContainedColumnNames()).isEqualTo(columnNames);
     assertThat(result.get().getBoolean(COL_NAME1)).isEqualTo(put.getBooleanValue(COL_NAME1));
     assertThat(result.get().getInt(COL_NAME2)).isEqualTo(put.getIntValue(COL_NAME2));
     assertThat(result.get().getBigInt(COL_NAME3)).isEqualTo(put.getBigIntValue(COL_NAME3));
@@ -631,6 +692,14 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     assertThat(result.get().getDouble(COL_NAME5)).isEqualTo(put.getDoubleValue(COL_NAME5));
     assertThat(result.get().getText(COL_NAME6)).isEqualTo(put.getTextValue(COL_NAME6));
     assertThat(result.get().getBlob(COL_NAME7)).isEqualTo(put.getBlobValue(COL_NAME7));
+    assertThat(result.get().getDate(COL_NAME8)).isEqualTo(put.getDateValue(COL_NAME8));
+    assertThat(result.get().getTime(COL_NAME9)).isEqualTo(put.getTimeValue(COL_NAME9));
+    assertThat(result.get().getTimestampTZ(COL_NAME10))
+        .isEqualTo(put.getTimestampTZValue(COL_NAME10));
+    if (isTimestampTypeSupported()) {
+      assertThat(result.get().getTimestamp(COL_NAME11))
+          .isEqualTo(put.getTimestampValue(COL_NAME11));
+    }
   }
 
   @Test
@@ -648,17 +717,23 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     Optional<Result> result = storage.get(prepareGet());
     assertThat(result).isPresent();
-    assertThat(result.get().getContainedColumnNames())
-        .isEqualTo(
-            ImmutableSet.of(
-                PARTITION_KEY,
-                COL_NAME1,
-                COL_NAME2,
-                COL_NAME3,
-                COL_NAME4,
-                COL_NAME5,
-                COL_NAME6,
-                COL_NAME7));
+    Set<String> columnNames =
+        Sets.newHashSet(
+            PARTITION_KEY,
+            COL_NAME1,
+            COL_NAME2,
+            COL_NAME3,
+            COL_NAME4,
+            COL_NAME5,
+            COL_NAME6,
+            COL_NAME7,
+            COL_NAME8,
+            COL_NAME9,
+            COL_NAME10);
+    if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME11);
+    }
+    assertThat(result.get().getContainedColumnNames()).isEqualTo(columnNames);
     assertThat(result.get().getBoolean(COL_NAME1))
         .isEqualTo(initialData.get(COL_NAME1).getBooleanValue());
     assertThat(result.get().getInt(COL_NAME2)).isEqualTo(initialData.get(COL_NAME2).getIntValue());
@@ -672,6 +747,16 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
         .isEqualTo(initialData.get(COL_NAME6).getTextValue());
     assertThat(result.get().getBlob(COL_NAME7))
         .isEqualTo(initialData.get(COL_NAME7).getBlobValue());
+    assertThat(result.get().getDate(COL_NAME8))
+        .isEqualTo(initialData.get(COL_NAME8).getDateValue());
+    assertThat(result.get().getTime(COL_NAME9))
+        .isEqualTo(initialData.get(COL_NAME9).getTimeValue());
+    assertThat(result.get().getTimestampTZ(COL_NAME10))
+        .isEqualTo(initialData.get(COL_NAME10).getTimestampTZValue());
+    if (isTimestampTypeSupported()) {
+      assertThat(result.get().getTimestamp(COL_NAME11))
+          .isEqualTo(initialData.get(COL_NAME11).getTimestampValue());
+    }
   }
 
   @Test
@@ -1009,18 +1094,25 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
       Optional<Result> result = storage.get(get);
       assertThat(result).describedAs(description).isPresent();
+      Set<String> columnNames =
+          Sets.newHashSet(
+              PARTITION_KEY,
+              COL_NAME1,
+              COL_NAME2,
+              COL_NAME3,
+              COL_NAME4,
+              COL_NAME5,
+              COL_NAME6,
+              COL_NAME7,
+              COL_NAME8,
+              COL_NAME9,
+              COL_NAME10);
+      if (isTimestampTypeSupported()) {
+        columnNames.add(COL_NAME11);
+      }
       assertThat(result.get().getContainedColumnNames())
           .describedAs(description)
-          .isEqualTo(
-              ImmutableSet.of(
-                  PARTITION_KEY,
-                  COL_NAME1,
-                  COL_NAME2,
-                  COL_NAME3,
-                  COL_NAME4,
-                  COL_NAME5,
-                  COL_NAME6,
-                  COL_NAME7));
+          .isEqualTo(columnNames);
 
       assertThat(result.get().isNull(COL_NAME1))
           .describedAs(description)
@@ -1058,6 +1150,20 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       assertThat(result.get().getBlob(COL_NAME7))
           .describedAs(description)
           .isEqualTo(initialData.get(COL_NAME7).getBlobValue());
+      assertThat(result.get().getDate(COL_NAME8))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME8).getDateValue());
+      assertThat(result.get().getTime(COL_NAME9))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME9).getTimeValue());
+      assertThat(result.get().getTimestampTZ(COL_NAME10))
+          .describedAs(description)
+          .isEqualTo(initialData.get(COL_NAME10).getTimestampTZValue());
+      if (isTimestampTypeSupported()) {
+        assertThat(result.get().getTimestamp(COL_NAME11))
+            .describedAs(description)
+            .isEqualTo(initialData.get(COL_NAME11).getTimestampValue());
+      }
     }
   }
 
@@ -1129,22 +1235,31 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       DataType firstDataType,
       @Nullable Operator secondOperator,
       @Nullable DataType secondDataType) {
-    return Put.newBuilder()
-        .namespace(namespace)
-        .table(TABLE)
-        .partitionKey(
-            Key.ofText(
-                PARTITION_KEY,
-                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .value(getColumnWithRandomValue(random.get(), COL_NAME1, DataType.BOOLEAN))
-        .value(getColumnWithRandomValue(random.get(), COL_NAME2, DataType.INT))
-        .value(getColumnWithRandomValue(random.get(), COL_NAME3, DataType.BIGINT))
-        .value(getColumnWithRandomValue(random.get(), COL_NAME4, DataType.FLOAT))
-        .value(getColumnWithRandomValue(random.get(), COL_NAME5, DataType.DOUBLE))
-        .value(getColumnWithRandomValue(random.get(), COL_NAME6, DataType.TEXT))
-        .value(getColumnWithRandomValue(random.get(), COL_NAME7, DataType.BLOB))
-        .consistency(Consistency.LINEARIZABLE)
-        .build();
+    PutBuilder.Buildable put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(
+                Key.ofText(
+                    PARTITION_KEY,
+                    getPartitionKeyValue(
+                        firstOperator, firstDataType, secondOperator, secondDataType)))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME1, DataType.BOOLEAN))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME2, DataType.INT))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME3, DataType.BIGINT))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME4, DataType.FLOAT))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME5, DataType.DOUBLE))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME6, DataType.TEXT))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME7, DataType.BLOB))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME8, DataType.DATE))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME9, DataType.TIME))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME10, DataType.TIMESTAMPTZ))
+            .consistency(Consistency.LINEARIZABLE);
+    if (isTimestampTypeSupported()) {
+      put.value(getColumnWithRandomValue(random.get(), COL_NAME11, DataType.TIMESTAMP));
+    }
+
+    return put.build();
   }
 
   private Delete prepareDelete() {
@@ -1230,20 +1345,32 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       DataType firstDataType,
       @Nullable Operator secondOperator,
       @Nullable DataType secondDataType) {
-    return new Put(
-            Key.ofText(
-                PARTITION_KEY,
-                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .withBooleanValue(COL_NAME1, null)
-        .withIntValue(COL_NAME2, null)
-        .withBigIntValue(COL_NAME3, null)
-        .withFloatValue(COL_NAME4, null)
-        .withDoubleValue(COL_NAME5, null)
-        .withTextValue(COL_NAME6, null)
-        .withBlobValue(COL_NAME7, (ByteBuffer) null)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(namespace)
-        .forTable(TABLE);
+    PutBuilder.Buildable put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(
+                Key.ofText(
+                    PARTITION_KEY,
+                    getPartitionKeyValue(
+                        firstOperator, firstDataType, secondOperator, secondDataType)))
+            .booleanValue(COL_NAME1, null)
+            .intValue(COL_NAME2, null)
+            .bigIntValue(COL_NAME3, null)
+            .floatValue(COL_NAME4, null)
+            .doubleValue(COL_NAME5, null)
+            .textValue(COL_NAME6, null)
+            .blobValue(COL_NAME7, (ByteBuffer) null)
+            .dateValue(COL_NAME8, null)
+            .timeValue(COL_NAME9, null)
+            .timestampTZValue(COL_NAME10, null)
+            .consistency(Consistency.LINEARIZABLE);
+
+    if (isTimestampTypeSupported()) {
+      put.timestampValue(COL_NAME11, null);
+    }
+
+    return put.build();
   }
 
   private Map<String, Column<?>> putInitialDataWithoutValues(Operator operator, DataType dataType)
@@ -1269,20 +1396,29 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
         preparePutWithoutValues(firstOperator, firstDataType, secondOperator, secondDataType)
             .withCondition(ConditionBuilder.putIfNotExists());
     storage.put(initialPut);
-    return ImmutableMap.<String, Column<?>>builder()
-        .put(
-            PARTITION_KEY,
-            TextColumn.of(
+    ImmutableMap.Builder<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(
                 PARTITION_KEY,
-                getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .put(COL_NAME1, BooleanColumn.ofNull(COL_NAME1))
-        .put(COL_NAME2, IntColumn.ofNull(COL_NAME2))
-        .put(COL_NAME3, BigIntColumn.ofNull(COL_NAME3))
-        .put(COL_NAME4, FloatColumn.ofNull(COL_NAME4))
-        .put(COL_NAME5, DoubleColumn.ofNull(COL_NAME5))
-        .put(COL_NAME6, TextColumn.ofNull(COL_NAME6))
-        .put(COL_NAME7, BlobColumn.ofNull(COL_NAME7))
-        .build();
+                TextColumn.of(
+                    PARTITION_KEY,
+                    getPartitionKeyValue(
+                        firstOperator, firstDataType, secondOperator, secondDataType)))
+            .put(COL_NAME1, BooleanColumn.ofNull(COL_NAME1))
+            .put(COL_NAME2, IntColumn.ofNull(COL_NAME2))
+            .put(COL_NAME3, BigIntColumn.ofNull(COL_NAME3))
+            .put(COL_NAME4, FloatColumn.ofNull(COL_NAME4))
+            .put(COL_NAME5, DoubleColumn.ofNull(COL_NAME5))
+            .put(COL_NAME6, TextColumn.ofNull(COL_NAME6))
+            .put(COL_NAME7, BlobColumn.ofNull(COL_NAME7))
+            .put(COL_NAME8, DateColumn.ofNull(COL_NAME8))
+            .put(COL_NAME9, TimeColumn.ofNull(COL_NAME9))
+            .put(COL_NAME10, TimestampTZColumn.ofNull(COL_NAME10));
+    if (isTimestampTypeSupported()) {
+      columns.put(COL_NAME11, TimestampColumn.ofNull(COL_NAME11));
+    }
+
+    return columns.build();
   }
 
   private Put preparePutWithoutValues(
@@ -1327,6 +1463,14 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
         return COL_NAME6;
       case BLOB:
         return COL_NAME7;
+      case DATE:
+        return COL_NAME8;
+      case TIME:
+        return COL_NAME9;
+      case TIMESTAMPTZ:
+        return COL_NAME10;
+      case TIMESTAMP:
+        return COL_NAME11;
       default:
         throw new AssertionError();
     }
@@ -1357,6 +1501,18 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
         case BLOB:
           return ConditionBuilder.buildConditionalExpression(
               BlobColumn.ofNull(columnToCompare.getName()), operator);
+        case DATE:
+          return ConditionBuilder.buildConditionalExpression(
+              DateColumn.ofNull(columnToCompare.getName()), operator);
+        case TIME:
+          return ConditionBuilder.buildConditionalExpression(
+              TimeColumn.ofNull(columnToCompare.getName()), operator);
+        case TIMESTAMPTZ:
+          return ConditionBuilder.buildConditionalExpression(
+              TimestampTZColumn.ofNull(columnToCompare.getName()), operator);
+        case TIMESTAMP:
+          return ConditionBuilder.buildConditionalExpression(
+              TimestampColumn.ofNull(columnToCompare.getName()), operator);
         default:
           throw new AssertionError();
       }
@@ -1502,5 +1658,9 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     public DataType getDataType() {
       return dataType;
     }
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

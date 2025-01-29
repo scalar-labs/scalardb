@@ -42,31 +42,45 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
   protected static final String COL_NAME9 = "c9";
   protected static final String COL_NAME10 = "c10";
   protected static final String COL_NAME11 = "c11";
-
-  protected static final TableMetadata TABLE_METADATA =
-      TableMetadata.newBuilder()
-          .addColumn(COL_NAME1, DataType.INT)
-          .addColumn(COL_NAME2, DataType.TEXT)
-          .addColumn(COL_NAME3, DataType.TEXT)
-          .addColumn(COL_NAME4, DataType.INT)
-          .addColumn(COL_NAME5, DataType.INT)
-          .addColumn(COL_NAME6, DataType.TEXT)
-          .addColumn(COL_NAME7, DataType.BIGINT)
-          .addColumn(COL_NAME8, DataType.FLOAT)
-          .addColumn(COL_NAME9, DataType.DOUBLE)
-          .addColumn(COL_NAME10, DataType.BOOLEAN)
-          .addColumn(COL_NAME11, DataType.BLOB)
-          .addPartitionKey(COL_NAME2)
-          .addPartitionKey(COL_NAME1)
-          .addClusteringKey(COL_NAME4, Scan.Ordering.Order.ASC)
-          .addClusteringKey(COL_NAME3, Scan.Ordering.Order.DESC)
-          .addSecondaryIndex(COL_NAME5)
-          .addSecondaryIndex(COL_NAME6)
-          .build();
+  private static final String COL_NAME12 = "c12";
+  private static final String COL_NAME13 = "c13";
+  private static final String COL_NAME14 = "c14";
+  private static final String COL_NAME15 = "c15";
 
   protected DistributedTransactionAdmin admin;
   protected DistributedStorageAdmin storageAdmin;
   protected AdminTestUtils adminTestUtils = null;
+
+  protected TableMetadata getTableMetadata() {
+    TableMetadata.Builder builder =
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.TEXT)
+            .addColumn(COL_NAME3, DataType.TEXT)
+            .addColumn(COL_NAME4, DataType.INT)
+            .addColumn(COL_NAME5, DataType.INT)
+            .addColumn(COL_NAME6, DataType.TEXT)
+            .addColumn(COL_NAME7, DataType.BIGINT)
+            .addColumn(COL_NAME8, DataType.FLOAT)
+            .addColumn(COL_NAME9, DataType.DOUBLE)
+            .addColumn(COL_NAME10, DataType.BOOLEAN)
+            .addColumn(COL_NAME11, DataType.BLOB)
+            .addColumn(COL_NAME12, DataType.DATE)
+            .addColumn(COL_NAME13, DataType.TIME)
+            .addColumn(COL_NAME14, DataType.TIMESTAMPTZ);
+    if (isTimestampTypeSupported()) {
+      builder.addColumn(COL_NAME15, DataType.TIMESTAMP);
+    }
+    builder
+        .addPartitionKey(COL_NAME2)
+        .addPartitionKey(COL_NAME1)
+        .addClusteringKey(COL_NAME4, Scan.Ordering.Order.ASC)
+        .addClusteringKey(COL_NAME3, Scan.Ordering.Order.DESC)
+        .addSecondaryIndex(COL_NAME5)
+        .addSecondaryIndex(COL_NAME6)
+        .build();
+    return builder.build();
+  }
 
   @BeforeAll
   public void beforeAll() throws Exception {
@@ -126,7 +140,7 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     Map<String, String> options = getCreationOptions();
     admin.createCoordinatorTables(options);
     admin.createNamespace(getNamespace(), options);
-    admin.createTable(getNamespace(), getTable(), TABLE_METADATA, options);
+    admin.createTable(getNamespace(), getTable(), getTableMetadata(), options);
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -152,11 +166,11 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
   @Test
   public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
 
     // Assert
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
   }
 
   @Test
@@ -167,13 +181,13 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
 
     // Act
     waitForDifferentSessionDdl();
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
     waitForDifferentSessionDdl();
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
+    assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(getTableMetadata());
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
@@ -184,12 +198,12 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     adminTestUtils.truncateMetadataTable();
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
     admin.repairCoordinatorTables(getCreationOptions());
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), TABLE)).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(TABLE_METADATA);
+    assertThat(admin.getTableMetadata(getNamespace(), TABLE)).isEqualTo(getTableMetadata());
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
@@ -199,11 +213,11 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     adminTestUtils.corruptMetadata(getNamespace(), getTable());
 
     // Act
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
 
     // Assert
     assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
@@ -239,12 +253,12 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
 
     // Act
     waitForDifferentSessionDdl();
-    admin.repairTable(getNamespace(), getTable(), TABLE_METADATA, getCreationOptions());
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
 
     // Assert
     waitForDifferentSessionDdl();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(TABLE_METADATA);
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
@@ -316,5 +330,9 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
             .getCoordinatorNamespace()
             .orElse(Coordinator.NAMESPACE);
     return storageAdmin.namespaceExists(coordinatorNamespace);
+  }
+
+  protected boolean isTimestampTypeSupported() {
+    return true;
   }
 }

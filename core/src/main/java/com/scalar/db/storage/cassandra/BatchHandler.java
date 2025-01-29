@@ -73,7 +73,6 @@ public class BatchHandler {
             CoreError.CASSANDRA_OPERATION_FAILED_IN_BATCH.buildMessage(writeType), e);
       }
     } catch (RuntimeException e) {
-      logger.warn(e.getMessage(), e);
       throw new RetriableExecutionException(
           CoreError.CASSANDRA_ERROR_OCCURRED_IN_BATCH.buildMessage(e.getMessage()), e);
     }

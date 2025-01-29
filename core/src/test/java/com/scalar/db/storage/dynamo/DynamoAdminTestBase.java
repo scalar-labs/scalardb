@@ -314,6 +314,10 @@ public abstract class DynamoAdminTestBase {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
 
@@ -453,6 +457,10 @@ public abstract class DynamoAdminTestBase {
     columns.put("c5", AttributeValue.builder().s("int").build());
     columns.put("c6", AttributeValue.builder().s("double").build());
     columns.put("c7", AttributeValue.builder().s("float").build());
+    columns.put("c8", AttributeValue.builder().s("date").build());
+    columns.put("c9", AttributeValue.builder().s("time").build());
+    columns.put("c10", AttributeValue.builder().s("timestamp").build());
+    columns.put("c11", AttributeValue.builder().s("timestamptz").build());
     itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
     itemValues.put(
         DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
@@ -505,6 +513,10 @@ public abstract class DynamoAdminTestBase {
             .addColumn("c5", DataType.BLOB)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
 
@@ -606,6 +618,10 @@ public abstract class DynamoAdminTestBase {
     columns.put("c5", AttributeValue.builder().s("blob").build());
     columns.put("c6", AttributeValue.builder().s("double").build());
     columns.put("c7", AttributeValue.builder().s("float").build());
+    columns.put("c8", AttributeValue.builder().s("date").build());
+    columns.put("c9", AttributeValue.builder().s("time").build());
+    columns.put("c10", AttributeValue.builder().s("timestamp").build());
+    columns.put("c11", AttributeValue.builder().s("timestamptz").build());
     itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
     itemValues.put(
         DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
@@ -1579,11 +1595,16 @@ public abstract class DynamoAdminTestBase {
   @Test
   public void unsupportedOperations_ShouldThrowUnsupportedException() {
     // Arrange Act
-    Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(NAMESPACE, TABLE));
+    Throwable thrown1 =
+        catchThrowable(
+            () -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()));
     Throwable thrown2 =
         catchThrowable(() -> admin.addRawColumnToTable(NAMESPACE, TABLE, "c1", DataType.INT));
     Throwable thrown3 =
-        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
+        catchThrowable(
+            () ->
+                admin.importTable(
+                    NAMESPACE, TABLE, Collections.emptyMap(), Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);

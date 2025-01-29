@@ -494,7 +494,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(String namespace, String table)
+  public TableMetadata getImportTableMetadata(
+      String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean primaryKeyExists = false;
@@ -530,14 +531,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
       while (resultSet.next()) {
         String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        builder.addColumn(
-            columnName,
+        DataType overrideDataType = overrideColumnsType.get(columnName);
+        DataType dataType =
             rdbEngine.getDataTypeForScalarDb(
                 getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE)),
                 resultSet.getString(JDBC_COL_TYPE_NAME),
                 resultSet.getInt(JDBC_COL_COLUMN_SIZE),
                 resultSet.getInt(JDBC_COL_DECIMAL_DIGITS),
-                getFullTableName(namespace, table) + " " + columnName));
+                getFullTableName(namespace, table) + " " + columnName,
+                overrideDataType);
+        builder.addColumn(columnName, dataType);
       }
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -551,10 +554,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void importTable(String namespace, String table, Map<String, String> options)
+  public void importTable(
+      String namespace,
+      String table,
+      Map<String, String> options,
+      Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      TableMetadata tableMetadata = getImportTableMetadata(namespace, table);
+      TableMetadata tableMetadata = getImportTableMetadata(namespace, table, overrideColumnsType);
       createNamespacesTableIfNotExists(connection);
       upsertIntoNamespacesTable(connection, namespace);
       addTableMetadata(connection, namespace, table, tableMetadata, true, false);

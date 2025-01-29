@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
+import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -102,6 +103,7 @@ public class ScanBuilderTest {
             .consistency(Consistency.EVENTUAL)
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
             .build();
 
     // Assert
@@ -112,7 +114,15 @@ public class ScanBuilderTest {
                 TABLE_1,
                 partitionKey1,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                ImmutableMap.of(
+                    "a1",
+                    "v1",
+                    "a2",
+                    "v2",
+                    "a3",
+                    "v3",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(),
                 startClusteringKey1,
@@ -201,7 +211,7 @@ public class ScanBuilderTest {
   @Test
   public void buildScan_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
-    Scan existingScan =
+    Scan existingScan1 =
         new Scan(
             NAMESPACE_1,
             TABLE_1,
@@ -216,10 +226,25 @@ public class ScanBuilderTest {
             true,
             Arrays.asList(ordering1, ordering2),
             10);
+    Scan existingScan2 =
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of(AbacOperationAttributes.READ_TAG_PREFIX + "policyName1", "readTag"),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            startClusteringKey1,
+            false,
+            endClusteringKey1,
+            false,
+            Arrays.asList(ordering1, ordering2),
+            10);
 
     // Act
-    Scan newScan =
-        Scan.newBuilder(existingScan)
+    Scan newScan1 =
+        Scan.newBuilder(existingScan1)
             .namespace(NAMESPACE_2)
             .table(TABLE_2)
             .partitionKey(partitionKey2)
@@ -239,17 +264,27 @@ public class ScanBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
             .build();
+    Scan newScan2 = Scan.newBuilder(existingScan2).clearReadTag("policyName1").build();
 
     // Assert
-    assertThat(newScan)
+    assertThat(newScan1)
         .isEqualTo(
             new Scan(
                 NAMESPACE_2,
                 TABLE_2,
                 partitionKey2,
                 Consistency.LINEARIZABLE,
-                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                ImmutableMap.of(
+                    "a4",
+                    "v4",
+                    "a5",
+                    "v5",
+                    "a6",
+                    "v6",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"),
                 ImmutableSet.of(),
                 startClusteringKey2,
@@ -258,6 +293,22 @@ public class ScanBuilderTest {
                 false,
                 Arrays.asList(ordering3, ordering4, ordering5, ordering1, ordering2),
                 5));
+    assertThat(newScan2)
+        .isEqualTo(
+            new Scan(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                startClusteringKey1,
+                false,
+                endClusteringKey1,
+                false,
+                Arrays.asList(ordering1, ordering2),
+                10));
   }
 
   @Test
@@ -329,6 +380,7 @@ public class ScanBuilderTest {
             .where(ConditionBuilder.column("ck1").isGreaterThanInt(10))
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
             .build();
 
     // Assert
@@ -338,7 +390,15 @@ public class ScanBuilderTest {
                 NAMESPACE_1,
                 TABLE_1,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                ImmutableMap.of(
+                    "a1",
+                    "v1",
+                    "a2",
+                    "v2",
+                    "a3",
+                    "v3",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("ck1").isGreaterThanInt(10))),
@@ -368,7 +428,7 @@ public class ScanBuilderTest {
   public void
       buildScanAll_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
-    Scan existingScan =
+    Scan existingScan1 =
         new ScanAll(
             NAMESPACE_1,
             TABLE_1,
@@ -378,10 +438,20 @@ public class ScanBuilderTest {
             ImmutableSet.of(),
             ImmutableList.of(ordering1, ordering2),
             10);
+    Scan existingScan2 =
+        new ScanAll(
+            NAMESPACE_1,
+            TABLE_1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of(AbacOperationAttributes.READ_TAG_PREFIX + "policyName1", "readTag"),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            ImmutableList.of(ordering1, ordering2),
+            10);
 
     // Act
-    Scan newScan =
-        Scan.newBuilder(existingScan)
+    Scan newScan1 =
+        Scan.newBuilder(existingScan1)
             .namespace(NAMESPACE_2)
             .table(TABLE_2)
             .limit(5)
@@ -398,20 +468,41 @@ public class ScanBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
             .build();
+    Scan newScan2 = Scan.newBuilder(existingScan2).clearReadTag("policyName1").build();
 
     // Assert
-    assertThat(newScan)
+    assertThat(newScan1)
         .isEqualTo(
             new ScanAll(
                 NAMESPACE_2,
                 TABLE_2,
                 Consistency.LINEARIZABLE,
-                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                ImmutableMap.of(
+                    "a4",
+                    "v4",
+                    "a5",
+                    "v5",
+                    "a6",
+                    "v6",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"),
                 ImmutableSet.of(),
                 ImmutableList.of(ordering3, ordering4, ordering5, ordering1, ordering2),
                 5));
+    assertThat(newScan2)
+        .isEqualTo(
+            new ScanAll(
+                NAMESPACE_1,
+                TABLE_1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                ImmutableList.of(ordering1, ordering2),
+                10));
   }
 
   @Test
@@ -475,6 +566,7 @@ public class ScanBuilderTest {
             .consistency(Consistency.EVENTUAL)
             .attribute("a1", "v1")
             .attributes(ImmutableMap.of("a2", "v2", "a3", "v3"))
+            .readTag("policyName1", "readTag")
             .build();
 
     // Assert
@@ -485,7 +577,15 @@ public class ScanBuilderTest {
                 TABLE_1,
                 indexKey1,
                 Consistency.EVENTUAL,
-                ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
+                ImmutableMap.of(
+                    "a1",
+                    "v1",
+                    "a2",
+                    "v2",
+                    "a3",
+                    "v3",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("pk1", "ck1", "ck2", "ck3", "ck4"),
                 ImmutableSet.of(),
                 10));
@@ -513,7 +613,7 @@ public class ScanBuilderTest {
   public void
       buildScanWithIndex_FromExistingAndUpdateAllParameters_ShouldBuildScanWithUpdatedParameters() {
     // Arrange
-    Scan existingScan =
+    Scan existingScan1 =
         new ScanWithIndex(
             NAMESPACE_1,
             TABLE_1,
@@ -523,10 +623,20 @@ public class ScanBuilderTest {
             Arrays.asList("pk1", "ck1"),
             ImmutableSet.of(),
             10);
+    Scan existingScan2 =
+        new ScanWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of(AbacOperationAttributes.READ_TAG_PREFIX + "policyName1", "readTag"),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            10);
 
     // Act
-    Scan newScan =
-        Scan.newBuilder(existingScan)
+    Scan newScan1 =
+        Scan.newBuilder(existingScan1)
             .namespace(NAMESPACE_2)
             .table(TABLE_2)
             .indexKey(indexKey2)
@@ -540,20 +650,41 @@ public class ScanBuilderTest {
             .attribute("a4", "v4")
             .attributes(ImmutableMap.of("a5", "v5", "a6", "v6", "a7", "v7"))
             .clearAttribute("a7")
+            .readTag("policyName1", "readTag")
             .build();
+    Scan newScan2 = Scan.newBuilder(existingScan2).clearReadTag("policyName1").build();
 
     // Assert
-    assertThat(newScan)
+    assertThat(newScan1)
         .isEqualTo(
             new ScanWithIndex(
                 NAMESPACE_2,
                 TABLE_2,
                 indexKey2,
                 Consistency.LINEARIZABLE,
-                ImmutableMap.of("a4", "v4", "a5", "v5", "a6", "v6"),
+                ImmutableMap.of(
+                    "a4",
+                    "v4",
+                    "a5",
+                    "v5",
+                    "a6",
+                    "v6",
+                    AbacOperationAttributes.READ_TAG_PREFIX + "policyName1",
+                    "readTag"),
                 Arrays.asList("pk2", "ck2", "ck3", "ck4", "ck5"),
                 ImmutableSet.of(),
                 5));
+    assertThat(newScan2)
+        .isEqualTo(
+            new ScanWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                Consistency.EVENTUAL,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                10));
   }
 
   @Test

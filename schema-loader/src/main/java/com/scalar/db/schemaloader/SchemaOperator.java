@@ -404,9 +404,13 @@ public class SchemaOperator implements AutoCloseable {
       String table = tableSchema.getTable();
       try {
         if (tableSchema.isTransactionTable()) {
-          transactionAdmin.get().importTable(namespace, table, options);
+          transactionAdmin
+              .get()
+              .importTable(namespace, table, options, tableSchema.getOverrideColumnsType());
         } else {
-          storageAdmin.get().importTable(namespace, table, options);
+          storageAdmin
+              .get()
+              .importTable(namespace, table, options, tableSchema.getOverrideColumnsType());
         }
         logger.info("Importing the table {} in the namespace {} succeeded", table, namespace);
       } catch (ExecutionException e) {

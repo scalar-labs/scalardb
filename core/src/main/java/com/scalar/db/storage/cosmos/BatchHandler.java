@@ -12,8 +12,6 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A handler for a batch
@@ -22,7 +20,6 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class BatchHandler {
-  private static final Logger logger = LoggerFactory.getLogger(BatchHandler.class);
   private static final String MUTATION_STORED_PROCEDURE = "mutate.js";
   private final CosmosClient client;
   private final TableMetadataManager metadataManager;
@@ -88,7 +85,6 @@ public class BatchHandler {
   }
 
   private void throwException(CosmosException exception) throws ExecutionException {
-    logger.error(exception.getMessage(), exception);
     int statusCode = exception.getSubStatusCode();
 
     if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {

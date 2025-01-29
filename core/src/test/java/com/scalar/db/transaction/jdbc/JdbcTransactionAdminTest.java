@@ -235,10 +235,10 @@ public class JdbcTransactionAdminTest {
     String table = "tbl";
 
     // Act
-    admin.importTable(namespace, table, Collections.emptyMap());
+    admin.importTable(namespace, table, Collections.emptyMap(), Collections.emptyMap());
 
     // Assert
-    verify(jdbcAdmin).importTable(namespace, table, Collections.emptyMap());
+    verify(jdbcAdmin).importTable(namespace, table, Collections.emptyMap(), Collections.emptyMap());
   }
 
   @Test

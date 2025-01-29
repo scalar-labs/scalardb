@@ -617,4 +617,34 @@ public class MultiStorageAdminTest {
     verify(admin1).upgrade(options);
     verify(admin2).upgrade(options);
   }
+
+  @Test
+  public void importTable_ForTable1InNamespace1_ShouldCallAdmin1() throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    Map<String, String> options = ImmutableMap.of("a", "b");
+    Map<String, DataType> overrideColumnsType = ImmutableMap.of("c", DataType.TIMESTAMPTZ);
+
+    // Act
+    multiStorageAdmin.importTable(namespace, table, options, overrideColumnsType);
+
+    // Assert
+    verify(admin1).importTable(namespace, table, options, overrideColumnsType);
+  }
+
+  @Test
+  public void getImportTableMetadata_ForTable1InNamespace1_ShouldCallAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    Map<String, DataType> overrideColumnsType = ImmutableMap.of("c", DataType.TIMESTAMPTZ);
+
+    // Act
+    multiStorageAdmin.getImportTableMetadata(namespace, table, overrideColumnsType);
+
+    // Assert
+    verify(admin1).getImportTableMetadata(namespace, table, overrideColumnsType);
+  }
 }

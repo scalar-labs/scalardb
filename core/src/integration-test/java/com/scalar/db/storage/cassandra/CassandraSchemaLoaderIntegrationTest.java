@@ -54,4 +54,9 @@ public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegratio
         .add("--replication-factor=1")
         .build();
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

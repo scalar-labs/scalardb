@@ -22,4 +22,9 @@ public class ConsensusCommitAdminIntegrationTestWithCassandra
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CassandraAdminTestUtils(getProperties(testName));
   }
+
+  @Override
+  protected boolean isTimestampTypeSupported() {
+    return false;
+  }
 }

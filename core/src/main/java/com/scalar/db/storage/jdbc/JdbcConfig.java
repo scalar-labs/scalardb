@@ -6,6 +6,8 @@ import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -51,7 +53,8 @@ public class JdbcConfig {
       PREFIX + "mysql.variable_key_column_size";
   public static final String ORACLE_VARIABLE_KEY_COLUMN_SIZE =
       PREFIX + "oracle.variable_key_column_size";
-
+  public static final String ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
+      PREFIX + "oracle.time_column.default_date_component";
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
@@ -85,6 +88,11 @@ public class JdbcConfig {
   // 25-byte prefix for the group commit feature; thus, we set 64 bytes as the minimum.
   public static final int MINIMUM_VARIABLE_KEY_COLUMN_SIZE = 64;
 
+  // In Oracle, there is no data type to only store a time component without a date. So ScalarDB
+  // stores every value of the TIME type with the same date component columns for ease of
+  // comparison and sorting. The default date component is 1970-01-01.
+  public static final String DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
+
   private final String jdbcUrl;
   @Nullable private final String username;
   @Nullable private final String password;
@@ -108,6 +116,8 @@ public class JdbcConfig {
 
   private final int mysqlVariableKeyColumnSize;
   private final int oracleVariableKeyColumnSize;
+
+  private final LocalDate oracleTimeColumnDefaultDateComponent;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -211,6 +221,16 @@ public class JdbcConfig {
       throw new IllegalArgumentException(CoreError.INVALID_VARIABLE_KEY_COLUMN_SIZE.buildMessage());
     }
 
+    String oracleTimeColumnDefaultDateComponentString =
+        getString(
+            databaseConfig.getProperties(),
+            ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT,
+            DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
+    assert oracleTimeColumnDefaultDateComponentString != null;
+    oracleTimeColumnDefaultDateComponent =
+        LocalDate.parse(
+            oracleTimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
+
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
           "The configuration property \""
@@ -297,5 +317,9 @@ public class JdbcConfig {
 
   public int getOracleVariableKeyColumnSize() {
     return oracleVariableKeyColumnSize;
+  }
+
+  public LocalDate getOracleTimeColumnDefaultDateComponent() {
+    return oracleTimeColumnDefaultDateComponent;
   }
 }

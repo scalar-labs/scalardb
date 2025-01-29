@@ -11,7 +11,8 @@ public enum RdbEngine {
   ORACLE,
   SQL_SERVER,
   SQLITE,
-  YUGABYTE;
+  YUGABYTE,
+  MARIADB;
 
   public static RdbEngineStrategy createRdbEngineStrategy(RdbEngine rdbEngine) {
     switch (rdbEngine) {
@@ -27,6 +28,8 @@ public enum RdbEngine {
         return new RdbEngineSqlite();
       case YUGABYTE:
         return new RdbEngineYugabyte();
+      case MARIADB:
+        return new RdbEngineMariaDB();
       default:
         throw new AssertionError();
     }

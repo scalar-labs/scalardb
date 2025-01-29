@@ -48,8 +48,8 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
   private String makeValuesSqlString() {
     List<String> names = new ArrayList<>();
-    partitionKey.forEach(v -> names.add(v.getName()));
-    clusteringKey.ifPresent(k -> k.forEach(v -> names.add(v.getName())));
+    partitionKey.getColumns().forEach(v -> names.add(v.getName()));
+    clusteringKey.ifPresent(k -> k.getColumns().forEach(v -> names.add(v.getName())));
     names.addAll(columns.keySet());
 
     return "("
@@ -61,8 +61,8 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
   private String makeOnConflictDoUpdateSqlString() {
     List<String> primaryKeys = new ArrayList<>();
-    partitionKey.forEach(v -> primaryKeys.add(v.getName()));
-    clusteringKey.ifPresent(k -> k.forEach(v -> primaryKeys.add(v.getName())));
+    partitionKey.getColumns().forEach(v -> primaryKeys.add(v.getName()));
+    clusteringKey.ifPresent(k -> k.getColumns().forEach(v -> primaryKeys.add(v.getName())));
 
     StringBuilder sql = new StringBuilder();
     sql.append("ON CONFLICT (")

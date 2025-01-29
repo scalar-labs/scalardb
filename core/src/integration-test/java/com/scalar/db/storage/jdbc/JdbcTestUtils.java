@@ -1,10 +1,15 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.TestUtils;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public final class JdbcTestUtils {
@@ -24,8 +29,7 @@ public final class JdbcTestUtils {
 
   public static double nextOracleDouble(Random random) {
     return random
-        .doubles(MIN_ORACLE_DOUBLE_VALUE, MAX_ORACLE_DOUBLE_VALUE)
-        .limit(1)
+        .doubles(1, MIN_ORACLE_DOUBLE_VALUE, MAX_ORACLE_DOUBLE_VALUE)
         .findFirst()
         .orElse(0.0d);
   }
@@ -67,5 +71,32 @@ public final class JdbcTestUtils {
 
   public static boolean isYugabyte(RdbEngineStrategy rdbEngine) {
     return rdbEngine instanceof RdbEngineYugabyte;
+  }
+
+  /**
+   * Filters the data types based on the RDB engine and the excluded data types.
+   *
+   * @param typesToBeFiltered the data types to be filtered
+   * @param currentRdbEngine the current {@code RdbEngine} used in the test
+   * @param excludedDataTypesByRdbEngine a list of data types to be excluded by {@code RdbEngine}
+   * @return the data types that are not excluded
+   */
+  public static List<DataType> filterDataTypes(
+      List<DataType> typesToBeFiltered,
+      RdbEngineStrategy currentRdbEngine,
+      Map<Class<? extends RdbEngineStrategy>, List<DataType>> excludedDataTypesByRdbEngine) {
+    return typesToBeFiltered.stream()
+        .filter(
+            type -> {
+              for (Entry<Class<? extends RdbEngineStrategy>, List<DataType>> excludedTypesByEngine :
+                  excludedDataTypesByRdbEngine.entrySet()) {
+                if (excludedTypesByEngine.getKey().equals(currentRdbEngine.getClass())
+                    && excludedTypesByEngine.getValue().contains(type)) {
+                  return false;
+                }
+              }
+              return true;
+            })
+        .collect(Collectors.toList());
   }
 }

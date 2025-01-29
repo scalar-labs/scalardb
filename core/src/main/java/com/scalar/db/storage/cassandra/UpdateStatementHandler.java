@@ -68,12 +68,16 @@ public class UpdateStatementHandler extends MutateStatementHandler {
     put.getColumns().keySet().forEach(n -> assignments.and(set(quoteIfNecessary(n), bindMarker())));
     Update.Where where = update.where();
     put.getPartitionKey()
+        .getColumns()
         .forEach(v -> where.and(QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker())));
     put.getClusteringKey()
         .ifPresent(
             k ->
-                k.forEach(
-                    v -> where.and(QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker()))));
+                k.getColumns()
+                    .forEach(
+                        v ->
+                            where.and(
+                                QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker()))));
 
     setCondition(where, put);
 

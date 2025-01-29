@@ -3,9 +3,9 @@ package com.scalar.db.common;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
@@ -20,19 +20,9 @@ import java.util.stream.Collectors;
 
 public abstract class AbstractResult implements Result {
 
-  private final Supplier<Map<String, Value<?>>> valuesWithDefaultValues;
   private final Supplier<Integer> hashCode;
 
   public AbstractResult() {
-    valuesWithDefaultValues =
-        Suppliers.memoize(
-            () ->
-                ImmutableMap.copyOf(
-                    getColumns().entrySet().stream()
-                        .collect(
-                            Collectors.toMap(
-                                Entry::getKey, e -> ScalarDbUtils.toValue(e.getValue())))));
-
     hashCode =
         Suppliers.memoize(
             () -> {
@@ -56,14 +46,20 @@ public abstract class AbstractResult implements Result {
   @Deprecated
   @Override
   public Optional<Value<?>> getValue(String columnName) {
-    return Optional.ofNullable(valuesWithDefaultValues.get().get(columnName));
+    Column<?> column = getColumns().get(columnName);
+    if (column == null) {
+      return Optional.empty();
+    } else {
+      return Optional.of(ScalarDbUtils.toValue(column));
+    }
   }
 
   /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
   @Deprecated
   @Override
   public Map<String, Value<?>> getValues() {
-    return valuesWithDefaultValues.get();
+    return getColumns().entrySet().stream()
+        .collect(Collectors.toMap(Entry::getKey, e -> ScalarDbUtils.toValue(e.getValue())));
   }
 
   @Override

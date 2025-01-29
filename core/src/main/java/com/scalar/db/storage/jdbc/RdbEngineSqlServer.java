@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
@@ -13,13 +14,21 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalTime;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineSqlServer implements RdbEngineStrategy {
+class RdbEngineSqlServer extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineSqlServer.class);
+  private final RdbEngineTimeTypeSqlServer timeTypeEngine;
+
+  RdbEngineSqlServer() {
+    timeTypeEngine = new RdbEngineTimeTypeSqlServer();
+  }
 
   @Override
   public String[] createSchemaSqls(String fullSchema) {
@@ -177,6 +186,14 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return "INT";
       case TEXT:
         return "VARCHAR(8000)";
+      case DATE:
+        return "DATE";
+      case TIME:
+        return "TIME(6)";
+      case TIMESTAMP:
+        return "DATETIME2(3)";
+      case TIMESTAMPTZ:
+        return "DATETIMEOFFSET(3)";
       default:
         throw new AssertionError();
     }
@@ -189,8 +206,13 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      DataType overrideDataType) {
     switch (type) {
       case BIT:
         if (columnSize != 1) {
@@ -256,6 +278,19 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return DataType.BLOB;
       case LONGVARBINARY:
         return DataType.BLOB;
+      case DATE:
+        return DataType.DATE;
+      case TIME:
+        return DataType.TIME;
+      case TIMESTAMP:
+        return DataType.TIMESTAMP;
+      case OTHER:
+        if (!typeName.equalsIgnoreCase("datetimeoffset")) {
+          throw new IllegalArgumentException(
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
+        }
+        return DataType.TIMESTAMPTZ;
       default:
         throw new IllegalArgumentException(
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -280,6 +315,14 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
         return Types.VARCHAR;
       case BLOB:
         return Types.BLOB;
+      case DATE:
+        return Types.DATE;
+      case TIME:
+        return Types.TIME;
+      case TIMESTAMP:
+        return Types.TIMESTAMP;
+      case TIMESTAMPTZ:
+        return microsoft.sql.Types.DATETIMEOFFSET;
       default:
         throw new AssertionError();
     }
@@ -327,5 +370,18 @@ class RdbEngineSqlServer implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties() {
+    // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
+    // It is being considered setting to it to false by default in a future driver release.
+    return ImmutableMap.of("sendTimeAsDatetime", "false");
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<String, LocalTime, String, DateTimeOffset>
+      getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

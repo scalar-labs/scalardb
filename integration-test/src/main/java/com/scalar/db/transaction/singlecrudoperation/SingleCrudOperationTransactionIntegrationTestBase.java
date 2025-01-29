@@ -2,6 +2,7 @@ package com.scalar.db.transaction.singlecrudoperation;
 
 import com.scalar.db.api.DistributedTransactionIntegrationTestBase;
 import com.scalar.db.api.Insert;
+import com.scalar.db.api.InsertBuilder;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
@@ -35,16 +36,14 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
       for (int j = 0; j < NUM_TYPES; j++) {
         Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
         Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
-        Insert insert =
+        InsertBuilder.Buildable insert =
             Insert.newBuilder()
                 .namespace(namespace)
                 .table(TABLE)
                 .partitionKey(partitionKey)
-                .clusteringKey(clusteringKey)
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .intValue(SOME_COLUMN, i * j)
-                .build();
-        manager.insert(insert);
+                .clusteringKey(clusteringKey);
+        prepareNonKeyColumns(i, j).forEach(insert::value);
+        manager.insert(insert.build());
       }
     }
   }

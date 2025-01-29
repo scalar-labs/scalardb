@@ -1,10 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.sql.SQLException;
-import java.util.Map;
+import java.util.List;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -44,8 +43,7 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @Override
-  protected Map<String, TableMetadata> createExistingDatabaseWithAllDataTypes()
-      throws SQLException {
+  protected List<TestData> createExistingDatabaseWithAllDataTypes() throws SQLException {
     return testUtils.createExistingDatabaseWithAllDataTypes(getNamespace());
   }
 

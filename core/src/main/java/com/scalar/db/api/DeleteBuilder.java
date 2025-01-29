@@ -3,7 +3,11 @@ package com.scalar.db.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.OperationBuilder.AbacReadTagAttribute;
+import com.scalar.db.api.OperationBuilder.AbacWriteTagAttribute;
 import com.scalar.db.api.OperationBuilder.Attribute;
+import com.scalar.db.api.OperationBuilder.ClearAbacReadTagAttribute;
+import com.scalar.db.api.OperationBuilder.ClearAbacWriteTagAttribute;
 import com.scalar.db.api.OperationBuilder.ClearAttribute;
 import com.scalar.db.api.OperationBuilder.ClearClusteringKey;
 import com.scalar.db.api.OperationBuilder.ClearCondition;
@@ -68,7 +72,9 @@ public class DeleteBuilder {
       implements ClusteringKey<Buildable>,
           Consistency<Buildable>,
           Condition<Buildable>,
-          Attribute<Buildable> {
+          Attribute<Buildable>,
+          AbacReadTagAttribute<Buildable>,
+          AbacWriteTagAttribute<Buildable> {
     @Nullable Key clusteringKey;
     @Nullable com.scalar.db.api.Consistency consistency;
     @Nullable MutationCondition condition;
@@ -115,6 +121,22 @@ public class DeleteBuilder {
     }
 
     @Override
+    public Buildable readTag(String policyName, String readTag) {
+      checkNotNull(policyName);
+      checkNotNull(readTag);
+      AbacOperationAttributes.setReadTag(attributes, policyName, readTag);
+      return this;
+    }
+
+    @Override
+    public Buildable writeTag(String policyName, String writeTag) {
+      checkNotNull(policyName);
+      checkNotNull(writeTag);
+      AbacOperationAttributes.setWriteTag(attributes, policyName, writeTag);
+      return this;
+    }
+
+    @Override
     public Delete build() {
       return new Delete(
           namespaceName,
@@ -134,7 +156,9 @@ public class DeleteBuilder {
           ClearCondition<BuildableFromExisting>,
           ClearClusteringKey<BuildableFromExisting>,
           ClearNamespace<BuildableFromExisting>,
-          ClearAttribute<BuildableFromExisting> {
+          ClearAttribute<BuildableFromExisting>,
+          ClearAbacReadTagAttribute<BuildableFromExisting>,
+          ClearAbacWriteTagAttribute<BuildableFromExisting> {
 
     BuildableFromExisting(Delete delete) {
       super(
@@ -193,6 +217,18 @@ public class DeleteBuilder {
     }
 
     @Override
+    public Buildable readTag(String policyName, String readTag) {
+      super.readTag(policyName, readTag);
+      return this;
+    }
+
+    @Override
+    public Buildable writeTag(String policyName, String writeTag) {
+      super.writeTag(policyName, writeTag);
+      return this;
+    }
+
+    @Override
     public BuildableFromExisting condition(MutationCondition condition) {
       super.condition(condition);
       return this;
@@ -225,6 +261,30 @@ public class DeleteBuilder {
     @Override
     public BuildableFromExisting clearAttribute(String name) {
       this.attributes.remove(name);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearReadTag(String policyName) {
+      AbacOperationAttributes.clearReadTag(attributes, policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearReadTags() {
+      AbacOperationAttributes.clearReadTags(attributes);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearWriteTag(String policyName) {
+      AbacOperationAttributes.clearWriteTag(attributes, policyName);
+      return this;
+    }
+
+    @Override
+    public BuildableFromExisting clearWriteTags() {
+      AbacOperationAttributes.clearWriteTags(attributes);
       return this;
     }
   }

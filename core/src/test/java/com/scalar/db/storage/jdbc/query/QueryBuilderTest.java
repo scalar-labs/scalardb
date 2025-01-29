@@ -334,6 +334,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case YUGABYTE:
+      case MARIADB:
         expectedQuery =
             "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
@@ -1300,6 +1301,7 @@ public class QueryBuilderTest {
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
       case MYSQL:
+      case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
@@ -1340,6 +1342,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "v1Value");
         verify(preparedStatement).setString(3, "v2Value");
@@ -1364,6 +1367,7 @@ public class QueryBuilderTest {
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
       case MYSQL:
+      case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
@@ -1406,6 +1410,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         verify(preparedStatement).setString(3, "v1Value");
@@ -1434,6 +1439,7 @@ public class QueryBuilderTest {
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
       case MYSQL:
+      case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)"
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?";
@@ -1480,6 +1486,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1518,6 +1525,7 @@ public class QueryBuilderTest {
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
       case MYSQL:
+      case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?)"
                 + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?,v5=?";
@@ -1565,6 +1573,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1617,6 +1626,7 @@ public class QueryBuilderTest {
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
       case MYSQL:
+      case MARIADB:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1) VALUES (?)";
         break;
       case POSTGRESQL:
@@ -1649,6 +1659,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         break;
       case ORACLE:
@@ -1661,6 +1672,7 @@ public class QueryBuilderTest {
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
       case MYSQL:
+      case MARIADB:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,c1) VALUES (?,?)";
         break;
       case POSTGRESQL:
@@ -1698,6 +1710,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         break;
@@ -1713,6 +1726,7 @@ public class QueryBuilderTest {
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
       case MYSQL:
+      case MARIADB:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?)";
         break;
       case POSTGRESQL:
@@ -1754,6 +1768,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");

@@ -12,6 +12,10 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -50,6 +54,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String COL_NAME9 = "c9";
   private static final String COL_NAME10 = "c10";
   private static final String COL_NAME11 = "c11";
+  private static final String COL_NAME12 = "c12";
+  private static final String COL_NAME13 = "c13";
+  private static final String COL_NAME14 = "c14";
+  private static final String COL_NAME15 = "c15";
 
   private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
@@ -64,6 +72,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
           .addColumn(COL_NAME9, DataType.DOUBLE)
           .addColumn(COL_NAME10, DataType.BOOLEAN)
           .addColumn(COL_NAME11, DataType.BLOB)
+          .addColumn(COL_NAME12, DataType.DATE)
+          .addColumn(COL_NAME13, DataType.TIME)
+          .addColumn(COL_NAME14, DataType.TIMESTAMPTZ)
           .addPartitionKey(COL_NAME2)
           .addPartitionKey(COL_NAME1)
           .addClusteringKey(COL_NAME4, Scan.Ordering.Order.ASC)
@@ -153,6 +164,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectMetadata()
       throws ExecutionException {
     // Arrange
+    if (isTimestampTypeSupported()) {
+      admin.addNewColumnToTable(namespace1, TABLE1, COL_NAME15, DataType.TIMESTAMP);
+    }
 
     // Act
     TableMetadata tableMetadata = admin.getTableMetadata(namespace1, TABLE1);
@@ -170,7 +184,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThat(iterator.next()).isEqualTo(COL_NAME4);
     assertThat(iterator.next()).isEqualTo(COL_NAME3);
 
-    assertThat(tableMetadata.getColumnNames().size()).isEqualTo(11);
+    if (isTimestampTypeSupported()) {
+      assertThat(tableMetadata.getColumnNames().size()).isEqualTo(15);
+    } else {
+      assertThat(tableMetadata.getColumnNames().size()).isEqualTo(14);
+    }
+
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME1)).isTrue();
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME2)).isTrue();
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME3)).isTrue();
@@ -182,6 +201,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME9)).isTrue();
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME10)).isTrue();
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME11)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME12)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME13)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME14)).isTrue();
+    if (isTimestampTypeSupported()) {
+      assertThat(tableMetadata.getColumnNames().contains(COL_NAME15)).isTrue();
+    }
 
     assertThat(tableMetadata.getColumnDataType(COL_NAME1)).isEqualTo(DataType.INT);
     assertThat(tableMetadata.getColumnDataType(COL_NAME2)).isEqualTo(DataType.TEXT);
@@ -194,6 +219,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThat(tableMetadata.getColumnDataType(COL_NAME9)).isEqualTo(DataType.DOUBLE);
     assertThat(tableMetadata.getColumnDataType(COL_NAME10)).isEqualTo(DataType.BOOLEAN);
     assertThat(tableMetadata.getColumnDataType(COL_NAME11)).isEqualTo(DataType.BLOB);
+    assertThat(tableMetadata.getColumnDataType(COL_NAME12)).isEqualTo(DataType.DATE);
+    assertThat(tableMetadata.getColumnDataType(COL_NAME13)).isEqualTo(DataType.TIME);
+    assertThat(tableMetadata.getColumnDataType(COL_NAME14)).isEqualTo(DataType.TIMESTAMPTZ);
+    if (isTimestampTypeSupported()) {
+      assertThat(tableMetadata.getColumnDataType(COL_NAME15)).isEqualTo(DataType.TIMESTAMP);
+    }
 
     assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
@@ -206,6 +237,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThat(tableMetadata.getClusteringOrder(COL_NAME9)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME10)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME11)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME12)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME13)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME14)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME15)).isNull();
 
     assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
     assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isTrue();
@@ -472,7 +507,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata metadata =
+      TableMetadata.Builder metadataBuilder =
           TableMetadata.newBuilder()
               .addColumn(COL_NAME1, DataType.INT)
               .addColumn(COL_NAME2, DataType.INT)
@@ -483,12 +518,18 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(COL_NAME7, DataType.BOOLEAN)
               .addColumn(COL_NAME8, DataType.BLOB)
               .addColumn(COL_NAME9, DataType.TEXT)
+              .addColumn(COL_NAME10, DataType.DATE)
+              .addColumn(COL_NAME11, DataType.TIME)
+              .addColumn(COL_NAME12, DataType.TIMESTAMPTZ)
               .addPartitionKey(COL_NAME1)
-              .addSecondaryIndex(COL_NAME9)
-              .build();
+              .addSecondaryIndex(COL_NAME9);
+      if (isTimestampTypeSupported()) {
+        metadataBuilder = metadataBuilder.addColumn(COL_NAME13, DataType.TIMESTAMP);
+      }
+      TableMetadata metadata = metadataBuilder.build();
       admin.createTable(namespace1, TABLE4, metadata, options);
       storage = storageFactory.getStorage();
-      storage.put(
+      PutBuilder.Buildable put =
           Put.newBuilder()
               .namespace(namespace1)
               .table(TABLE4)
@@ -501,7 +542,19 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .booleanValue(COL_NAME7, true)
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
-              .build());
+              .dateValue(COL_NAME10, LocalDate.of(2020, 6, 2))
+              .timeValue(COL_NAME11, LocalTime.of(12, 2, 6, 123_456_000))
+              .timestampTZValue(
+                  COL_NAME12,
+                  LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000))
+                      .toInstant(ZoneOffset.UTC));
+      if (isTimestampTypeSupported()) {
+        put.timestampValue(
+            COL_NAME13,
+            LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000)));
+      }
+      storage.put(put.build());
+
       // Act
       admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
@@ -512,6 +565,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
       }
       admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME10, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME11, options);
+      admin.createIndex(namespace1, TABLE4, COL_NAME12, options);
+      if (isTimestampTypeSupported()) {
+        admin.createIndex(namespace1, TABLE4, COL_NAME13, options);
+      }
 
       // Assert
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
@@ -523,16 +582,39 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
       }
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
-      if (isIndexOnBooleanColumnSupported()) {
-        assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
-            .containsOnly(
-                COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5, COL_NAME6, COL_NAME7, COL_NAME8,
-                COL_NAME9);
-      } else {
-        assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
-            .containsOnly(
-                COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5, COL_NAME6, COL_NAME8, COL_NAME9);
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME9)).isTrue();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME10)).isTrue();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME11)).isTrue();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME12)).isTrue();
+      if (isTimestampTypeSupported()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME13)).isTrue();
       }
+
+      Set<String> actualSecondaryIndexNames =
+          admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames();
+      assertThat(actualSecondaryIndexNames)
+          .contains(
+              COL_NAME2,
+              COL_NAME3,
+              COL_NAME4,
+              COL_NAME5,
+              COL_NAME6,
+              COL_NAME8,
+              COL_NAME9,
+              COL_NAME10,
+              COL_NAME11,
+              COL_NAME12);
+      int indexCount = 10;
+      if (isIndexOnBooleanColumnSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME7);
+        indexCount++;
+      }
+      if (isTimestampTypeSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME13);
+        indexCount++;
+      }
+      assertThat(actualSecondaryIndexNames).hasSize(indexCount);
+
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
       if (storage != null) {
@@ -808,6 +890,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   protected boolean isIndexOnBooleanColumnSupported() {
+    return true;
+  }
+
+  protected boolean isTimestampTypeSupported() {
     return true;
   }
 }
