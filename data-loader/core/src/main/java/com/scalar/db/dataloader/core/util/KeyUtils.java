@@ -152,4 +152,27 @@ public final class KeyUtils {
       return Optional.empty();
     }
   }
+
+  /**
+   * Convert a keyValue, in the format of <key>=<value>, to a ScalarDB Key instance.
+   *
+   * @param keyValues A list of key values in the format of <key>=<value>
+   * @param tableMetadata Metadata for one ScalarDB table
+   * @return A new ScalarDB Key instance formatted by data type
+   * @throws Base64Exception if there is an error parsing the key value
+   */
+  public static Key parseMultipleKeyValues(
+      List<ColumnKeyValue> keyValues, TableMetadata tableMetadata)
+      throws Base64Exception, ColumnParsingException {
+    Key.Builder builder = Key.newBuilder();
+    for (ColumnKeyValue keyValue : keyValues) {
+      String columnName = keyValue.getColumnName();
+      String value = keyValue.getColumnValue();
+      DataType columnDataType = tableMetadata.getColumnDataType(columnName);
+      ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
+      Column<?> keyValueCol = ColumnUtils.createColumnFromValue(columnDataType, columnInfo, value);
+      builder.add(keyValueCol);
+    }
+    return builder.build();
+  }
 }
