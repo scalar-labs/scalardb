@@ -17,7 +17,6 @@ import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
-import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
@@ -164,13 +163,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
    * @param keyValueList key value list
    * @param tableMetadata table metadata
    * @return key
-   * @throws KeyParsingException If any error occur during parsing key
    * @throws Base64Exception if any error occur during decoding key
    */
   private Key getKey(List<ColumnKeyValue> keyValueList, TableMetadata tableMetadata)
-      throws Base64Exception, KeyParsingException, ColumnParsingException {
-    if (keyValueList.size() == 1)
-      return KeyUtils.parseKeyValue(partitionKeyValue.get(0), namespace, table, tableMetadata);
+      throws Base64Exception, ColumnParsingException {
     return KeyUtils.parseMultipleKeyValues(keyValueList, tableMetadata);
   }
 }
