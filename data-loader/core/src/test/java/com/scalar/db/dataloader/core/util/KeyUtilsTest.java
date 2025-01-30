@@ -3,10 +3,12 @@ package com.scalar.db.dataloader.core.util;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -18,7 +20,8 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import java.util.*;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -28,6 +31,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class KeyUtilsTest {
 
   @Mock private TableMetadata tableMetadata;
+  private static final Map<String, DataType> dataTypeByColumnName = UnitTestUtils.getColumnData();
+  private static final ObjectNode sourceRecord = UnitTestUtils.getOutputDataWithMetadata();
 
   @Test
   void parseKeyValue_nullKeyValue_returnsNull() throws KeyParsingException {
@@ -145,5 +150,43 @@ class KeyUtilsTest {
     ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
     assertThrows(
         KeyParsingException.class, () -> KeyUtils.createKey(DataType.BLOB, columnInfo, value));
+  }
+
+  @Test
+  void createClusteringKeyFromSource_withEmptyClusteringKeySet_shouldReturnEmpty() {
+    Optional<Key> key = KeyUtils.createClusteringKeyFromSource(Collections.EMPTY_SET, null, null);
+    Assertions.assertEquals(Optional.empty(), key);
+  }
+
+  @Test
+  void createClusteringKeyFromSource_withValidClusteringKeySet_shouldReturnValidKey() {
+    Set<String> clusterKeySet = new HashSet<>();
+    clusterKeySet.add(UnitTestUtils.TEST_COLUMN_2_CK);
+    clusterKeySet.add(UnitTestUtils.TEST_COLUMN_3_CK);
+    Optional<Key> key =
+        KeyUtils.createClusteringKeyFromSource(clusterKeySet, dataTypeByColumnName, sourceRecord);
+    Assertions.assertEquals(
+        "Optional[Key{IntColumn{name=col2, value=2147483647, hasNullValue=false}, BooleanColumn{name=col3, value=true, hasNullValue=false}}]",
+        key.toString());
+  }
+
+  @Test
+  void createPartitionKeyFromSource_withInvalidData_shouldReturnEmpty() {
+    Set<String> partitionKeySet = new HashSet<>();
+    partitionKeySet.add("id1");
+    Optional<Key> key =
+        KeyUtils.createPartitionKeyFromSource(partitionKeySet, dataTypeByColumnName, sourceRecord);
+    Assertions.assertEquals(Optional.empty(), key);
+  }
+
+  @Test
+  void createPartitionKeyFromSource_withValidData_shouldReturnValidKey() {
+    Set<String> partitionKeySet = new HashSet<>();
+    partitionKeySet.add(UnitTestUtils.TEST_COLUMN_1_PK);
+    Optional<Key> key =
+        KeyUtils.createPartitionKeyFromSource(partitionKeySet, dataTypeByColumnName, sourceRecord);
+    Assertions.assertEquals(
+        "Optional[Key{BigIntColumn{name=col1, value=9007199254740992, hasNullValue=false}}]",
+        key.toString());
   }
 }
