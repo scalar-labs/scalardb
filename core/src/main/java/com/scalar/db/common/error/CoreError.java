@@ -761,6 +761,50 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
 
+  DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
+      Category.USER_ERROR,
+      "0158",
+      "Duplicate data mappings found for table '%s' in the control file",
+      "",
+      ""),
+  DATA_LOADER_MISSING_COLUMN_MAPPING(
+      Category.USER_ERROR,
+      "0159",
+      "No mapping found for column '%s' in table '%s' in the control file. Control file validation set at 'FULL'. All columns need to be mapped.",
+      "",
+      ""),
+  DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS(
+      Category.USER_ERROR, "0160", "The control file is missing data mappings", "", ""),
+  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
+      Category.USER_ERROR,
+      "0161",
+      "The provided namespace '%s' and/or table name '%s' is incorrect and could not be found",
+      "",
+      ""),
+  DATA_LOADER_TARGET_COLUMN_NOT_FOUND(
+      Category.USER_ERROR,
+      "0162",
+      "The target column '%s' for source field '%s' could not be found in table '%s'",
+      "",
+      ""),
+  DATA_LOADER_MISSING_PARTITION_KEY(
+      Category.USER_ERROR,
+      "0163",
+      "The required partition key '%s' is missing in the control file mapping for table '%s'",
+      "",
+      ""),
+  DATA_LOADER_MISSING_CLUSTERING_KEY(
+      Category.USER_ERROR,
+      "0164",
+      "The required clustering key '%s' is missing in the control file mapping for table '%s'",
+      "",
+      ""),
+  DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND(
+      Category.USER_ERROR,
+      "0165",
+      "Duplicated data mappings found for column '%s' in table '%s'",
+      "",
+      ""),
   //
   // Errors for the concurrency error category
   //
@@ -1009,6 +1053,18 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0046",
       "Handling the before-preparation snapshot hook failed. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_ERROR_CRUD_EXCEPTION(
+      Category.INTERNAL_ERROR,
+      "0047",
+      "Something went wrong while trying to save the data. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_ERROR_SCAN(
+      Category.INTERNAL_ERROR,
+      "0048",
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
 
