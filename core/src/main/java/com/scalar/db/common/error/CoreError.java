@@ -945,6 +945,18 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
+  DATA_LOADER_ERROR_CRUD_EXCEPTION(
+      Category.INTERNAL_ERROR,
+      "0047",
+      "Something went wrong while trying to save the data. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_ERROR_SCAN(
+      Category.INTERNAL_ERROR,
+      "0048",
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
