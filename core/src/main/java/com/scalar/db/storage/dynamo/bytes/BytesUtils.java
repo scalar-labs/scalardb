@@ -112,12 +112,20 @@ public final class BytesUtils {
   }
 
   static void encodeLong(long value, Order order, ByteBuffer dst) {
-    dst.put(
-        mask((byte) ((value >> 56) ^ 0x80), order)); // Flip a sign bit to make it binary comparable
+    // Flip a sign bit to make it binary comparable
+    dst.put(mask((byte) ((value >> 56) ^ 0x80), order));
     dst.put(mask((byte) (value >> 48), order));
     dst.put(mask((byte) (value >> 40), order));
     dst.put(mask((byte) (value >> 32), order));
     dst.put(mask((byte) (value >> 24), order));
+    dst.put(mask((byte) (value >> 16), order));
+    dst.put(mask((byte) (value >> 8), order));
+    dst.put(mask((byte) value, order));
+  }
+
+  static void encodeInt(int value, Order order, ByteBuffer dst) {
+    // Flip a sign bit to make it binary comparable
+    dst.put(mask((byte) ((value >> 24) ^ 0x80), order));
     dst.put(mask((byte) (value >> 16), order));
     dst.put(mask((byte) (value >> 8), order));
     dst.put(mask((byte) value, order));
