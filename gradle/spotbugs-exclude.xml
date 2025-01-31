@@ -37,7 +37,7 @@
   </Match>
   <!-- Ignore mutable object exposure warnings(caused by Lombok) for all classes in dataloader.core -->
   <Match>
-    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,CT_CONSTRUCTOR_THROW"/>
     <Package name="~com.scalar.db.dataloader.core.*"/>
   </Match>
 </FindBugsFilter>
