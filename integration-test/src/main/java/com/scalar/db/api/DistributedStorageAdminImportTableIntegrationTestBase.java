@@ -262,7 +262,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
      * @param namespace the namespace of the table
      * @param table the table name
      * @return a Get operation to retrieve the record inserted with {@link #getPut(String, String)}
-     *     * or {@link #getInsert(String, String)}
+     *     or {@link #getInsert(String, String)}
      */
     Get getGet(String namespace, String table);
   }
