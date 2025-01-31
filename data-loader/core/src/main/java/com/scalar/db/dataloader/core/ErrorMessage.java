@@ -17,4 +17,7 @@ public class ErrorMessage {
   public static final String CLUSTERING_KEY_NOT_FOUND =
       "The provided clustering key %s was not found";
   public static final String INVALID_PROJECTION = "The column '%s' was not found";
+  public static final String MISSING_NAMESPACE_OR_TABLE = "Missing namespace or table: %s, %s";
+  public static final String TABLE_METADATA_RETRIEVAL_FAILED =
+      "Failed to retrieve table metadata. Details: %s";
 }
