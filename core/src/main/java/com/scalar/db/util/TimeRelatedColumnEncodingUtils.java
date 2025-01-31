@@ -17,16 +17,16 @@ import java.time.ZoneOffset;
 public final class TimeRelatedColumnEncodingUtils {
   private TimeRelatedColumnEncodingUtils() {}
 
-  public static long encode(DateColumn column) {
+  public static int encode(DateColumn column) {
     assert column.getDateValue() != null;
     return encode(column.getDateValue());
   }
 
-  public static long encode(LocalDate date) {
-    return date.toEpochDay();
+  public static int encode(LocalDate date) {
+    return Math.toIntExact(date.toEpochDay());
   }
 
-  public static LocalDate decodeDate(long epochDay) {
+  public static LocalDate decodeDate(int epochDay) {
     return LocalDate.ofEpochDay(epochDay);
   }
 
