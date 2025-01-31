@@ -6,10 +6,11 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
-public class RdbEngineTimeTypeSqlite implements RdbEngineTimeTypeStrategy<Long, Long, Long, Long> {
+public class RdbEngineTimeTypeSqlite
+    implements RdbEngineTimeTypeStrategy<Integer, Long, Long, Long> {
 
   @Override
-  public Long convert(LocalDate date) {
+  public Integer convert(LocalDate date) {
     return TimeRelatedColumnEncodingUtils.encode(date);
   }
 

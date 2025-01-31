@@ -26,10 +26,25 @@ class TimeRelatedColumnEncodingUtilsTest {
     DateColumn column = DateColumn.of("date", LocalDate.of(2023, 10, 1));
 
     // Act
-    long encoded = TimeRelatedColumnEncodingUtils.encode(column);
+    int encoded = TimeRelatedColumnEncodingUtils.encode(column);
 
     // Assert
     assertThat(encoded).isEqualTo(LocalDate.of(2023, 10, 1).toEpochDay());
+  }
+
+  @Test
+  public void encodeThenDecodeDate_ShouldPreserveDataIntegrity() {
+    // Arrange
+    DateColumn min = DateColumn.of("date", DateColumn.MIN_VALUE);
+    DateColumn max = DateColumn.of("date", DateColumn.MAX_VALUE);
+
+    // Act Assert
+    assertThat(
+            TimeRelatedColumnEncodingUtils.decodeDate(TimeRelatedColumnEncodingUtils.encode(min)))
+        .isEqualTo(min.getDateValue());
+    assertThat(
+            TimeRelatedColumnEncodingUtils.decodeDate(TimeRelatedColumnEncodingUtils.encode(max)))
+        .isEqualTo(max.getDateValue());
   }
 
   @Test
@@ -42,6 +57,21 @@ class TimeRelatedColumnEncodingUtilsTest {
 
     // Assert
     assertThat(encoded).isEqualTo(LocalTime.of(12, 34, 56, 123_456_000).toNanoOfDay());
+  }
+
+  @Test
+  public void encodeThenDecodeTime_ShouldPreserveDataIntegrity() {
+    // Arrange
+    TimeColumn min = TimeColumn.of("time", TimeColumn.MIN_VALUE);
+    TimeColumn max = TimeColumn.of("time", TimeColumn.MAX_VALUE);
+
+    // Act Assert
+    assertThat(
+            TimeRelatedColumnEncodingUtils.decodeTime(TimeRelatedColumnEncodingUtils.encode(min)))
+        .isEqualTo(min.getTimeValue());
+    assertThat(
+            TimeRelatedColumnEncodingUtils.decodeTime(TimeRelatedColumnEncodingUtils.encode(max)))
+        .isEqualTo(max.getTimeValue());
   }
 
   @Test
@@ -124,7 +154,7 @@ class TimeRelatedColumnEncodingUtilsTest {
   public void decodeDate_ShouldWorkProperly() {
     // Arrange Act
     LocalDate date =
-        TimeRelatedColumnEncodingUtils.decodeDate(LocalDate.of(2023, 10, 1).toEpochDay());
+        TimeRelatedColumnEncodingUtils.decodeDate((int) LocalDate.of(2023, 10, 1).toEpochDay());
 
     // Assert
     assertThat(date).isEqualTo(LocalDate.of(2023, 10, 1));
