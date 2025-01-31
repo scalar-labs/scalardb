@@ -17,4 +17,8 @@ public class ErrorMessage {
   public static final String CLUSTERING_KEY_NOT_FOUND =
       "The provided clustering key %s was not found";
   public static final String INVALID_PROJECTION = "The column '%s' was not found";
+  public static final String ERROR_CRUD_EXCEPTION =
+      "Something went wrong while trying to save the data. Details: %s";
+  public static final String ERROR_SCAN =
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s";
 }
