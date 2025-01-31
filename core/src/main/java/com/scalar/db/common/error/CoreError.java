@@ -760,6 +760,12 @@ public enum CoreError implements ScalarDbError {
       "The underlying-storage data type %s is not supported as the ScalarDB %s data type: %s",
       "",
       ""),
+  DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
+      Category.USER_ERROR,
+      "0168",
+      "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1009,6 +1015,18 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0046",
       "Handling the before-preparation snapshot hook failed. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_ERROR_CRUD_EXCEPTION(
+      Category.INTERNAL_ERROR,
+      "0047",
+      "Something went wrong while trying to save the data. Details %s",
+      "",
+      ""),
+  DATA_LOADER_ERROR_SCAN(
+      Category.INTERNAL_ERROR,
+      "0048",
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details %s",
       "",
       ""),
 
