@@ -89,9 +89,9 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
       case BOOLEAN:
         return "BOOLEAN";
       case INT:
+      case DATE:
         return "INT";
       case BIGINT:
-      case DATE:
       case TIME:
       case TIMESTAMP:
       case TIMESTAMPTZ:
@@ -120,8 +120,8 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
       case BOOLEAN:
         return Types.BOOLEAN;
       case INT:
-        return Types.INTEGER;
       case DATE:
+        return Types.INTEGER;
       case TIME:
       case TIMESTAMP:
       case TIMESTAMPTZ:
@@ -306,7 +306,7 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   @Override
   public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
     return DateColumn.of(
-        columnName, TimeRelatedColumnEncodingUtils.decodeDate(resultSet.getLong(columnName)));
+        columnName, TimeRelatedColumnEncodingUtils.decodeDate(resultSet.getInt(columnName)));
   }
 
   @Override
@@ -331,7 +331,7 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public RdbEngineTimeTypeStrategy<Long, Long, Long, Long> getTimeTypeStrategy() {
+  public RdbEngineTimeTypeStrategy<Integer, Long, Long, Long> getTimeTypeStrategy() {
     return timeTypeEngine;
   }
 }
