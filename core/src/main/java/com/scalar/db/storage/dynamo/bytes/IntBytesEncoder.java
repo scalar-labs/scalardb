@@ -1,6 +1,6 @@
 package com.scalar.db.storage.dynamo.bytes;
 
-import static com.scalar.db.storage.dynamo.bytes.BytesUtils.mask;
+import static com.scalar.db.storage.dynamo.bytes.BytesUtils.encodeInt;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.IntColumn;
@@ -22,9 +22,6 @@ public class IntBytesEncoder implements BytesEncoder<IntColumn> {
     assert !column.hasNullValue();
 
     int v = column.getIntValue();
-    dst.put(mask((byte) ((v >> 24) ^ 0x80), order)); // Flip a sign bit to make it binary comparable
-    dst.put(mask((byte) (v >> 16), order));
-    dst.put(mask((byte) (v >> 8), order));
-    dst.put(mask((byte) v, order));
+    encodeInt(v, order, dst);
   }
 }
