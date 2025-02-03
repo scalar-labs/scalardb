@@ -21,7 +21,7 @@ public class ControlFileTable {
   private String namespace;
 
   /** The name of the table in ScalarDB. */
-  @JsonProperty("table_name")
+  @JsonProperty("table")
   private String table;
 
   /**
@@ -55,7 +55,7 @@ public class ControlFileTable {
   @JsonCreator
   public ControlFileTable(
       @JsonProperty("namespace") String namespace,
-      @JsonProperty("table_name") String table,
+      @JsonProperty("table") String table,
       @JsonProperty("mappings") List<ControlFileTableFieldMapping> mappings) {
     this.namespace = namespace;
     this.table = table;
