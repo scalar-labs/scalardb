@@ -14,6 +14,7 @@ import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
 import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -51,8 +52,7 @@ public class ExportManager {
     ExportReport exportReport = new ExportReport();
     try {
       validateExportOptions(exportOptions, tableMetadata);
-      Map<String, DataType> dataTypeByColumnName =
-          TableMetadataUtil.extractColumnDataTypes(tableMetadata);
+      Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
       handleTransactionMetadata(exportOptions, tableMetadata);
 
       if (exportOptions.getOutputFileFormat() == FileFormat.CSV
@@ -217,7 +217,7 @@ public class ExportManager {
             exportOptions,
             tableMetadata,
             dataTypeByColumnName,
-            TableMetadataUtil.getMetadataColumns());
+            ConsensusCommitUtils.getTransactionMetaColumns().keySet());
     writer.append(header);
     writer.flush();
   }
@@ -275,11 +275,7 @@ public class ExportManager {
     while (iterator.hasNext()) {
       String columnName = iterator.next();
       if (shouldIgnoreColumn(
-          exportOptions.isIncludeTransactionMetadata(),
-          columnName,
-          columnsToIgnore,
-          dataTypeByColumnName.keySet(),
-          projections)) {
+          exportOptions.isIncludeTransactionMetadata(), columnName, tableMetadata, projections)) {
         continue;
       }
       headerRow.append(columnName);
@@ -298,19 +294,17 @@ public class ExportManager {
    *
    * @param isIncludeTransactionMetadata to include transaction metadata or not
    * @param columnName column name
-   * @param columnsToIgnore set of columns to ignore
-   * @param dataTypeColumnNames data types of columns
+   * @param tableMetadata table metadata
    * @param projections selected columns for projection
    * @return ignore the column or not
    */
   private boolean shouldIgnoreColumn(
       boolean isIncludeTransactionMetadata,
       String columnName,
-      Set<String> columnsToIgnore,
-      Set<String> dataTypeColumnNames,
+      TableMetadata tableMetadata,
       List<String> projections) {
     return (!isIncludeTransactionMetadata
-            && TableMetadataUtil.isMetadataColumn(columnName, columnsToIgnore, dataTypeColumnNames))
+            && ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata))
         || (!projections.isEmpty() && !projections.contains(columnName));
   }
 }

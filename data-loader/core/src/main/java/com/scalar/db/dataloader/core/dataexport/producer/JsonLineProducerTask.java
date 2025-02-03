@@ -5,14 +5,13 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataexport.ExportReport;
-import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class JsonLineProducerTask extends ProducerTask {
 
@@ -64,15 +63,12 @@ public class JsonLineProducerTask extends ProducerTask {
 
     ObjectNode objectNode = objectMapper.createObjectNode();
 
-    // Columns to ignore in the export
-    Set<String> columnsToIgnore = TableMetadataUtil.getMetadataColumns();
-
     // Loop through all the columns and to the json object
     for (String columnName : tableColumns) {
       // Skip the field if it can be ignored based on check
       boolean columnNotProjected = !projectedColumnsSet.contains(columnName);
       boolean isMetadataColumn =
-          TableMetadataUtil.isMetadataColumn(columnName, columnsToIgnore, tableColumns);
+          ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata);
       if (columnNotProjected || (!includeMetadata && isMetadataColumn)) {
         continue;
       }

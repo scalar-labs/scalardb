@@ -766,6 +766,10 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
       "",
       ""),
+  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
+      Category.USER_ERROR, "0165", "Missing namespace or table: %s, %s", "", ""),
+  DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED(
+      Category.USER_ERROR, "0166", "Failed to retrieve table metadata. Details: %s", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -1020,13 +1024,13 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_ERROR_CRUD_EXCEPTION(
       Category.INTERNAL_ERROR,
       "0047",
-      "Something went wrong while trying to save the data. Details %s",
+      "Something went wrong while trying to save the data. Details: %s",
       "",
       ""),
   DATA_LOADER_ERROR_SCAN(
       Category.INTERNAL_ERROR,
       "0048",
-      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details %s",
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
 
