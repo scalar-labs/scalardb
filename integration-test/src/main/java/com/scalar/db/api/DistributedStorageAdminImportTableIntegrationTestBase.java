@@ -209,29 +209,59 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   /** This interface defines test data for running import table related integration tests. */
   public interface TestData {
 
-    /** Returns true if the table is supported for import, false otherwise */
+    /**
+     * Returns true if the table is supported for import, false otherwise
+     *
+     * @return true if the table is supported for import, false otherwise
+     */
     boolean isImportableTable();
 
-    /** Returns the table name */
+    /**
+     * Returns the table name
+     *
+     * @return the table name
+     */
     String getTableName();
 
-    /** Returns the columns for which the data type should be overridden when importing the table */
+    /**
+     * Returns the columns for which the data type should be overridden when importing the table
+     *
+     * @return the columns for which the data type should be overridden when importing the table
+     */
     Map<String, DataType> getOverrideColumnsType();
 
     /*
      * Returns the expected table metadata of the imported table
+     * @return the expected table metadata of the imported table
      */
     TableMetadata getTableMetadata();
 
-    /** Returns a sample Insert operation for the table */
+    /**
+     * Returns a sample Insert operation for the table
+     *
+     * @param namespace the namespace of the table
+     * @param table the table name
+     * @return a sample Insert operation
+     */
     Insert getInsert(String namespace, String table);
 
-    /** Returns a sample Put operation for the table */
+    /**
+     * Returns a sample Put operation for the table
+     *
+     * @param namespace the namespace of the table
+     * @param table the table name
+     * @return a sample Put operation
+     */
     Put getPut(String namespace, String table);
 
     /**
      * Returns a Get operation to retrieve the record inserted with {@link #getPut(String, String)}
      * or {@link #getInsert(String, String)}
+     *
+     * @param namespace the namespace of the table
+     * @param table the table name
+     * @return a Get operation to retrieve the record inserted with {@link #getPut(String, String)}
+     *     or {@link #getInsert(String, String)}
      */
     Get getGet(String namespace, String table);
   }
