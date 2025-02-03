@@ -21,4 +21,7 @@ public class ErrorMessage {
       "Something went wrong while trying to save the data. Details: %s";
   public static final String ERROR_SCAN =
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s";
+  public static final String MISSING_NAMESPACE_OR_TABLE = "Missing namespace or table: %s, %s";
+  public static final String TABLE_METADATA_RETRIEVAL_FAILED =
+      "Failed to retrieve table metadata. Details: %s";
 }
