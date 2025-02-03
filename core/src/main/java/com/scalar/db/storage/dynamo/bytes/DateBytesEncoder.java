@@ -1,6 +1,6 @@
 package com.scalar.db.storage.dynamo.bytes;
 
-import static com.scalar.db.storage.dynamo.bytes.BytesUtils.encodeLong;
+import static com.scalar.db.storage.dynamo.bytes.BytesUtils.encodeInt;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.DateColumn;
@@ -17,14 +17,14 @@ public class DateBytesEncoder implements BytesEncoder<DateColumn> {
   public int encodedLength(DateColumn column, Order order) {
     assert column.getValue().isPresent();
 
-    return 8;
+    return 4;
   }
 
   @Override
   public void encode(DateColumn column, Order order, ByteBuffer dst) {
     assert column.getValue().isPresent();
 
-    long value = TimeRelatedColumnEncodingUtils.encode(column);
-    encodeLong(value, order, dst);
+    int value = TimeRelatedColumnEncodingUtils.encode(column);
+    encodeInt(value, order, dst);
   }
 }

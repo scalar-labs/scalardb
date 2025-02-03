@@ -1,7 +1,15 @@
 package com.scalar.db.dataloader.core.dataimport.dao;
 
-import com.scalar.db.api.*;
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder.Buildable;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanBuilder;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -13,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -178,11 +187,11 @@ public class ScalarDBDao {
     // scan data
     try {
       logger.info(SCAN_START_MSG);
-      Scanner scanner = storage.scan(scan);
-      List<Result> allResults = scanner.all();
-      scanner.close();
-      logger.info(SCAN_END_MSG);
-      return allResults;
+      try (Scanner scanner = storage.scan(scan)) {
+        List<Result> allResults = scanner.all();
+        logger.info(SCAN_END_MSG);
+        return allResults;
+      }
     } catch (ExecutionException | IOException e) {
       throw new ScalarDBDaoException(
           CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
@@ -277,10 +286,10 @@ public class ScalarDBDao {
   public Scanner createScanner(
       String namespace,
       String table,
-      Key partitionKey,
-      ScanRange scanRange,
-      List<Scan.Ordering> sortOrders,
-      List<String> projectionColumns,
+      @Nullable Key partitionKey,
+      @Nullable ScanRange scanRange,
+      @Nullable List<Scan.Ordering> sortOrders,
+      @Nullable List<String> projectionColumns,
       int limit,
       DistributedStorage storage)
       throws ScalarDBDaoException {
@@ -309,10 +318,10 @@ public class ScalarDBDao {
   Scan createScan(
       String namespace,
       String table,
-      Key partitionKey,
-      ScanRange scanRange,
-      List<Scan.Ordering> sortOrders,
-      List<String> projectionColumns,
+      @Nullable Key partitionKey,
+      @Nullable ScanRange scanRange,
+      @Nullable List<Scan.Ordering> sortOrders,
+      @Nullable List<String> projectionColumns,
       int limit) {
     // If no partition key is provided a scan all is created
     if (partitionKey == null) {
@@ -324,6 +333,11 @@ public class ScalarDBDao {
         buildableScanAll.projections(projectionColumns);
       }
 
+      if (sortOrders != null && !sortOrders.isEmpty()) {
+        for (Scan.Ordering sort : sortOrders) {
+          buildableScanAll.ordering(sort);
+        }
+      }
       // limit
       if (limit > 0) {
         buildableScanAll.limit(limit);
@@ -349,8 +363,10 @@ public class ScalarDBDao {
     }
 
     // clustering order
-    for (Scan.Ordering sort : sortOrders) {
-      buildableScan.ordering(sort);
+    if (sortOrders != null && !sortOrders.isEmpty()) {
+      for (Scan.Ordering sort : sortOrders) {
+        buildableScan.ordering(sort);
+      }
     }
 
     // projections
@@ -374,7 +390,8 @@ public class ScalarDBDao {
    * @param clusteringKey Optional clustering key for get
    * @return ScalarDB Get instance
    */
-  private Get createGetWith(String namespace, String table, Key partitionKey, Key clusteringKey) {
+  private Get createGetWith(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
     GetBuilder.BuildableGetWithPartitionKey buildable =
         Get.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey);
     if (clusteringKey != null) {
@@ -397,7 +414,7 @@ public class ScalarDBDao {
       String namespace,
       String table,
       Key partitionKey,
-      Key clusteringKey,
+      @Nullable Key clusteringKey,
       List<Column<?>> columns) {
     Buildable buildable =
         Put.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey);
