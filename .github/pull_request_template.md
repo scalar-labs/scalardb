@@ -16,6 +16,7 @@
 
 - [ ] I have commented my code, particularly in hard-to-understand areas.
 - [ ] I have updated the documentation to reflect the changes.
+- [ ] I have considered whether similar issues could occur in other products, components, or modules if this PR is for bug fixes.
 - [ ] Any remaining open issues linked to this PR are documented and up-to-date (Jira, GitHub, etc.).
 - [ ] Tests (unit, integration, etc.) have been added for the changes.
 - [ ] My changes generate no new warnings.

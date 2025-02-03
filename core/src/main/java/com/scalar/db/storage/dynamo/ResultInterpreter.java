@@ -81,7 +81,7 @@ public class ResultInterpreter {
         return isNull
             ? DateColumn.ofNull(name)
             : DateColumn.of(
-                name, TimeRelatedColumnEncodingUtils.decodeDate(Long.parseLong(itemValue.n())));
+                name, TimeRelatedColumnEncodingUtils.decodeDate(Integer.parseInt(itemValue.n())));
       case TIME:
         return isNull
             ? TimeColumn.ofNull(name)

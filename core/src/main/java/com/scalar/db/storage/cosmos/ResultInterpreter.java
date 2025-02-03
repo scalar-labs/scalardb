@@ -98,8 +98,7 @@ public class ResultInterpreter {
         return recordValue == null
             ? DateColumn.ofNull(name)
             : DateColumn.of(
-                name,
-                TimeRelatedColumnEncodingUtils.decodeDate(((Number) recordValue).longValue()));
+                name, TimeRelatedColumnEncodingUtils.decodeDate(((Number) recordValue).intValue()));
       case TIME:
         return recordValue == null
             ? TimeColumn.ofNull(name)
