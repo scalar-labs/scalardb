@@ -393,7 +393,7 @@ public class ScalarDBDao {
    */
   private Get createGetWith(
       String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
-    GetBuilder.BuildableGetWithPartitionKey buildable =
+    GetBuilder.BuildableGet buildable =
         Get.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey);
     if (clusteringKey != null) {
       buildable.clusteringKey(clusteringKey);
