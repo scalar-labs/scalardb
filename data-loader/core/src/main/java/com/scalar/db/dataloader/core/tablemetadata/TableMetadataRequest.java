@@ -7,16 +7,16 @@ import lombok.Getter;
 public class TableMetadataRequest {
 
   private final String namespace;
-  private final String tableName;
+  private final String table;
 
   /**
    * Class constructor
    *
    * @param namespace ScalarDB namespace
-   * @param tableName ScalarDB table name
+   * @param table ScalarDB table name
    */
-  public TableMetadataRequest(String namespace, String tableName) {
+  public TableMetadataRequest(String namespace, String table) {
     this.namespace = namespace;
-    this.tableName = tableName;
+    this.table = table;
   }
 }

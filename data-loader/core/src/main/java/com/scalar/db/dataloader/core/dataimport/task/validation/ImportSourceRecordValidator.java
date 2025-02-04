@@ -1,9 +1,10 @@
 package com.scalar.db.dataloader.core.dataimport.task.validation;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.DatabaseKeyType;
-import com.scalar.db.dataloader.core.util.TableMetadataUtil;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -27,7 +28,8 @@ public class ImportSourceRecordValidator {
       Set<String> clusteringKeyNames,
       Set<String> columnNames,
       JsonNode sourceRecord,
-      boolean allColumnsRequired) {
+      boolean allColumnsRequired,
+      TableMetadata tableMetadata) {
     ImportSourceRecordValidationResult validationResult = new ImportSourceRecordValidationResult();
 
     // check if partition keys are found
@@ -40,7 +42,11 @@ public class ImportSourceRecordValidator {
     // Check if the record is missing any columns
     if (allColumnsRequired) {
       checkMissingColumns(
-          sourceRecord, columnNames, validationResult, validationResult.getColumnsWithErrors());
+          sourceRecord,
+          columnNames,
+          validationResult,
+          validationResult.getColumnsWithErrors(),
+          tableMetadata);
     }
 
     return validationResult;
@@ -82,12 +88,12 @@ public class ImportSourceRecordValidator {
       JsonNode sourceRecord,
       Set<String> columnNames,
       ImportSourceRecordValidationResult validationResult,
-      Set<String> ignoreColumns) {
-    Set<String> metadataColumns = TableMetadataUtil.getMetadataColumns();
+      Set<String> ignoreColumns,
+      TableMetadata tableMetadata) {
     for (String columnName : columnNames) {
       // If the field is not a metadata column and is missing and should not be ignored
       if ((ignoreColumns == null || !ignoreColumns.contains(columnName))
-          && !TableMetadataUtil.isMetadataColumn(columnName, metadataColumns, columnNames)
+          && !ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata)
           && !sourceRecord.has(columnName)) {
         validationResult.addErrorMessage(
             columnName, CoreError.DATA_LOADER_MISSING_COLUMN.buildMessage(columnName));
@@ -105,8 +111,9 @@ public class ImportSourceRecordValidator {
   public static void checkMissingColumns(
       JsonNode sourceRecord,
       Set<String> columnNames,
-      ImportSourceRecordValidationResult validationResult) {
+      ImportSourceRecordValidationResult validationResult,
+      TableMetadata tableMetadata) {
     ImportSourceRecordValidator.checkMissingColumns(
-        sourceRecord, columnNames, validationResult, null);
+        sourceRecord, columnNames, validationResult, null, tableMetadata);
   }
 }
