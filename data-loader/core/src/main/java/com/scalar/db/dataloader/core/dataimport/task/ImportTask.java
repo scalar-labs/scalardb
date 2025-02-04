@@ -101,12 +101,12 @@ public abstract class ImportTask {
             && !mutableSourceRecord.has(mapping.getTargetColumn())) {
           String errorMessage =
               CoreError.DATA_LOADER_MISSING_SOURCE_FIELD.buildMessage(
-                  mapping.getSourceField(), controlFileTable.getTableName());
+                  mapping.getSourceField(), controlFileTable.getTable());
 
           ImportTargetResult targetResult =
               ImportTargetResult.builder()
                   .namespace(controlFileTable.getNamespace())
-                  .tableName(controlFileTable.getTableName())
+                  .tableName(controlFileTable.getTable())
                   .errors(Collections.singletonList(errorMessage))
                   .status(ImportTargetResultStatus.VALIDATION_FAILED)
                   .build();
@@ -125,7 +125,7 @@ public abstract class ImportTask {
       ImportTargetResult result =
           importIntoSingleTable(
               controlFileTable.getNamespace(),
-              controlFileTable.getTableName(),
+              controlFileTable.getTable(),
               tableMetadata,
               dataTypesByColumns,
               controlFileTable,
@@ -168,7 +168,8 @@ public abstract class ImportTask {
             clusteringKeyNames,
             columnNames,
             mutableSourceRecord,
-            checkForMissingColumns);
+            checkForMissingColumns,
+            tableMetadata);
 
     if (!validationResult.isValid()) {
       return ImportTargetResult.builder()
@@ -227,7 +228,7 @@ public abstract class ImportTask {
       ImportSourceRecordValidationResult validationResultForMissingColumns =
           new ImportSourceRecordValidationResult();
       ImportSourceRecordValidator.checkMissingColumns(
-          mutableSourceRecord, columnNames, validationResultForMissingColumns);
+          mutableSourceRecord, columnNames, validationResultForMissingColumns, tableMetadata);
       if (!validationResultForMissingColumns.isValid()) {
         return ImportTargetResult.builder()
             .namespace(namespace)
@@ -268,10 +269,7 @@ public abstract class ImportTask {
               optionalScalarDBResult.orElse(null),
               mutableSourceRecord,
               importOptions.isIgnoreNullValues(),
-              partitionKeyNames,
-              clusteringKeyNames,
-              columnNames,
-              dataTypeByColumnName);
+              tableMetadata);
     } catch (Base64Exception | ColumnParsingException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
@@ -325,13 +323,15 @@ public abstract class ImportTask {
       LinkedHashSet<String> clusteringKeyNames,
       LinkedHashSet<String> columnNames,
       ObjectNode mutableSourceRecord,
-      boolean checkForMissingColumns) {
+      boolean checkForMissingColumns,
+      TableMetadata tableMetadata) {
     return ImportSourceRecordValidator.validateSourceRecord(
         partitionKeyNames,
         clusteringKeyNames,
         columnNames,
         mutableSourceRecord,
-        checkForMissingColumns);
+        checkForMissingColumns,
+        tableMetadata);
   }
 
   private boolean shouldRevalidateMissingColumns(
