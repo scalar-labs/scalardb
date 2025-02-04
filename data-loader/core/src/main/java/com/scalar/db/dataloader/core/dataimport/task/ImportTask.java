@@ -1,6 +1,11 @@
 package com.scalar.db.dataloader.core.dataimport.task;
 
-import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.*;
+import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_COULD_NOT_FIND_CLUSTERING_KEY;
+import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_COULD_NOT_FIND_PARTITION_KEY;
+import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_DATA_ALREADY_EXISTS;
+import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_DATA_NOT_FOUND;
+import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_TABLE_METADATA_MISSING;
+import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_UPSERT_INSERT_MISSING_COLUMNS;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;

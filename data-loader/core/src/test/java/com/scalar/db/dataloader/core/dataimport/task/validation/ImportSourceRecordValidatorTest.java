@@ -22,7 +22,7 @@ class ImportSourceRecordValidatorTest {
     JsonNode sourceRecord = UnitTestUtils.getOutputDataWithoutMetadata();
     ImportSourceRecordValidationResult result =
         ImportSourceRecordValidator.validateSourceRecord(
-            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false);
+            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false, mockMetadata);
     Assertions.assertTrue(result.getColumnsWithErrors().isEmpty());
   }
 
@@ -35,7 +35,7 @@ class ImportSourceRecordValidatorTest {
     JsonNode sourceRecord = UnitTestUtils.getOutputDataWithoutMetadata();
     ImportSourceRecordValidationResult result =
         ImportSourceRecordValidator.validateSourceRecord(
-            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, true);
+            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, true, mockMetadata);
     Assertions.assertTrue(result.getColumnsWithErrors().isEmpty());
   }
 
@@ -49,7 +49,7 @@ class ImportSourceRecordValidatorTest {
     JsonNode sourceRecord = UnitTestUtils.getOutputDataWithoutMetadata();
     ImportSourceRecordValidationResult result =
         ImportSourceRecordValidator.validateSourceRecord(
-            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false);
+            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false, mockMetadata);
     Assertions.assertFalse(result.getColumnsWithErrors().isEmpty());
   }
 
@@ -63,7 +63,7 @@ class ImportSourceRecordValidatorTest {
     JsonNode sourceRecord = UnitTestUtils.getOutputDataWithoutMetadata();
     ImportSourceRecordValidationResult result =
         ImportSourceRecordValidator.validateSourceRecord(
-            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, true);
+            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, true, mockMetadata);
     Assertions.assertFalse(result.getColumnsWithErrors().isEmpty());
     Assertions.assertEquals(1, result.getErrorMessages().size());
   }
@@ -78,7 +78,7 @@ class ImportSourceRecordValidatorTest {
     JsonNode sourceRecord = UnitTestUtils.getOutputDataWithoutMetadata();
     ImportSourceRecordValidationResult result =
         ImportSourceRecordValidator.validateSourceRecord(
-            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false);
+            partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false, mockMetadata);
     Assertions.assertFalse(result.getColumnsWithErrors().isEmpty());
     Assertions.assertEquals(
         CoreError.DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN.buildMessage("id1"),

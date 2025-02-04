@@ -1,6 +1,8 @@
 package com.scalar.db.dataloader.core.dataimport;
 
-import com.scalar.db.api.*;
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDBMode;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;

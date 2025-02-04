@@ -766,49 +766,47 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
       "",
       ""),
+  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
+      Category.USER_ERROR, "0165", "Missing namespace or table: %s, %s", "", ""),
+  DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED(
+      Category.USER_ERROR, "0166", "Failed to retrieve table metadata. Details: %s", "", ""),
 
   DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
       Category.USER_ERROR,
-      "0158",
+      "0167",
       "Duplicate data mappings found for table '%s' in the control file",
       "",
       ""),
   DATA_LOADER_MISSING_COLUMN_MAPPING(
       Category.USER_ERROR,
-      "0159",
-      "No mapping found for column '%s' in table '%s' in the control file. \\nControl file validation set at 'FULL'. All columns need to be mapped.",
+      "0168",
+      "No mapping found for column '%s' in table '%s' in the control file. Control file validation set at 'FULL'. All columns need to be mapped.",
       "",
       ""),
   DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS(
-      Category.USER_ERROR, "0160", "The control file is missing data mappings", "", ""),
-  DATA_LOADER__MISSING_NAMESPACE_OR_TABLE(
-      Category.USER_ERROR,
-      "0161",
-      "The provided namespace '%s' and/or table name '%s' is incorrect and could not be found",
-      "",
-      ""),
+      Category.USER_ERROR, "0169", "The control file is missing data mappings", "", ""),
   DATA_LOADER_TARGET_COLUMN_NOT_FOUND(
       Category.USER_ERROR,
-      "0162",
+      "0170",
       "The target column '%s' for source field '%s' could not be found in table '%s'",
       "",
       ""),
   DATA_LOADER_MISSING_PARTITION_KEY(
       Category.USER_ERROR,
-      "0163",
+      "0171",
       "The required partition key '%s' is missing in the control file mapping for table '%s'",
       "",
       ""),
   DATA_LOADER_MISSING_CLUSTERING_KEY(
       Category.USER_ERROR,
-      "0164",
+      "0172",
       "The required clustering key '%s' is missing in the control file mapping for table '%s'",
       "",
       ""),
   DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND(
       Category.USER_ERROR,
-      "0165",
-      "Multiple data mappings found for column '%s' in table '%s'",
+      "0173",
+      "Duplicated data mappings found for column '%s' in table '%s'",
       "",
       ""),
   DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN(
