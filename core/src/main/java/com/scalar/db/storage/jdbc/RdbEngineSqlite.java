@@ -3,13 +3,19 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
@@ -29,8 +35,13 @@ import org.sqlite.SQLiteException;
  * native SQLite library in JAR</a>, we should assure the real error messages in
  * RdbEngineStrategyTest.
  */
-class RdbEngineSqlite implements RdbEngineStrategy {
+class RdbEngineSqlite extends AbstractRdbEngine {
   private static final String NAMESPACE_SEPARATOR = "$";
+  private final RdbEngineTimeTypeSqlite timeTypeEngine;
+
+  public RdbEngineSqlite() {
+    timeTypeEngine = new RdbEngineTimeTypeSqlite();
+  }
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
@@ -84,8 +95,12 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       case BOOLEAN:
         return "BOOLEAN";
       case INT:
+      case DATE:
         return "INT";
       case BIGINT:
+      case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
         return "BIGINT";
       case FLOAT:
         return "FLOAT";
@@ -111,7 +126,11 @@ class RdbEngineSqlite implements RdbEngineStrategy {
       case BOOLEAN:
         return Types.BOOLEAN;
       case INT:
+      case DATE:
         return Types.INTEGER;
+      case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
       case BIGINT:
         return Types.BIGINT;
       case FLOAT:
@@ -133,8 +152,13 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   }
 
   @Override
-  public DataType getDataTypeForScalarDb(
-      JDBCType type, String typeName, int columnSize, int digits, String columnDescription) {
+  public DataType getDataTypeForScalarDbInternal(
+      JDBCType type,
+      String typeName,
+      int columnSize,
+      int digits,
+      String columnDescription,
+      DataType overrideDataType) {
     throw new AssertionError("SQLite is not supported");
   }
 
@@ -278,5 +302,37 @@ class RdbEngineSqlite implements RdbEngineStrategy {
   @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
+  }
+
+  @Override
+  public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
+    return DateColumn.of(
+        columnName, TimeRelatedColumnEncodingUtils.decodeDate(resultSet.getInt(columnName)));
+  }
+
+  @Override
+  public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
+    return TimeColumn.of(
+        columnName, TimeRelatedColumnEncodingUtils.decodeTime(resultSet.getLong(columnName)));
+  }
+
+  @Override
+  public TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    return TimestampColumn.of(
+        columnName, TimeRelatedColumnEncodingUtils.decodeTimestamp(resultSet.getLong(columnName)));
+  }
+
+  @Override
+  public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    return TimestampTZColumn.of(
+        columnName,
+        TimeRelatedColumnEncodingUtils.decodeTimestampTZ(resultSet.getLong(columnName)));
+  }
+
+  @Override
+  public RdbEngineTimeTypeStrategy<Integer, Long, Long, Long> getTimeTypeStrategy() {
+    return timeTypeEngine;
   }
 }

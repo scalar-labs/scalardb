@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.tablemetadata;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Collection;
@@ -15,9 +16,6 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 public class TableMetadataService {
-
-  private static final String ERROR_MISSING_NAMESPACE_OR_TABLE =
-      "Missing namespace or table: %s, %s";
 
   private final DistributedStorageAdmin storageAdmin;
 
@@ -36,12 +34,12 @@ public class TableMetadataService {
       TableMetadata tableMetadata = storageAdmin.getTableMetadata(namespace, tableName);
       if (tableMetadata == null) {
         throw new TableMetadataException(
-            String.format(ERROR_MISSING_NAMESPACE_OR_TABLE, namespace, tableName));
+            CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
       }
       return tableMetadata;
     } catch (ExecutionException e) {
       throw new TableMetadataException(
-          String.format(ERROR_MISSING_NAMESPACE_OR_TABLE, namespace, tableName), e.getCause());
+          CoreError.DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -64,7 +62,7 @@ public class TableMetadataService {
 
     for (TableMetadataRequest request : requests) {
       String namespace = request.getNamespace();
-      String tableName = request.getTableName();
+      String tableName = request.getTable();
       TableMetadata tableMetadata = getTableMetadata(namespace, tableName);
       String key = TableMetadataUtil.getTableLookupKey(namespace, tableName);
       metadataMap.put(key, tableMetadata);

@@ -690,49 +690,117 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
       Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
+  ABAC_NOT_ENABLED(
+      Category.USER_ERROR,
+      "0152",
+      "The attribute-based access control feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "",
+      ""),
+  DATA_LOADER_CLUSTERING_KEY_NOT_FOUND(
+      Category.USER_ERROR, "0153", "The provided clustering key %s was not found", "", ""),
+  DATA_LOADER_INVALID_PROJECTION(
+      Category.USER_ERROR, "0154", "The column '%s' was not found", "", ""),
+  DATA_LOADER_INCOMPLETE_PARTITION_KEY(
+      Category.USER_ERROR,
+      "0155",
+      "The provided partition key is incomplete. Required key: %s",
+      "",
+      ""),
+  DATA_LOADER_CLUSTERING_KEY_ORDER_MISMATCH(
+      Category.USER_ERROR,
+      "0156",
+      "The provided clustering key order does not match the table schema. Required order: %s",
+      "",
+      ""),
+  DATA_LOADER_PARTITION_KEY_ORDER_MISMATCH(
+      Category.USER_ERROR,
+      "0157",
+      "The provided partition key order does not match the table schema. Required order: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE(
+      Category.USER_ERROR,
+      "0158",
+      "This DATE column value is out of the valid range. It must be between 1000-01-01 and 9999-12-12. Value: %s",
+      "",
+      ""),
+  SUBMICROSECOND_PRECISION_NOT_SUPPORTED_FOR_TIME(
+      Category.USER_ERROR,
+      "0159",
+      "This TIME column value precision cannot be shorter than one microsecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0160",
+      "This TIMESTAMP column value is out of the valid range. It must be between 1000-01-01T00:00:00.000 and 9999-12-31T23:59:59.999. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
+      Category.USER_ERROR,
+      "0161",
+      "This TIMESTAMP column value precision cannot be shorter than one millisecond. Value: %s",
+      "",
+      ""),
+  OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0162",
+      "This TIMESTAMPTZ column value is out of the valid range. It must be between 1000-01-01T00:00:00.000Z to 9999-12-31T23:59:59.999Z. Value: %s",
+      "",
+      ""),
+  SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
+      Category.USER_ERROR,
+      "0163",
+      "This TIMESTAMPTZ column value precision cannot be shorter than one millisecond. Value: %s",
+      "",
+      ""),
+  JDBC_IMPORT_DATA_TYPE_OVERRIDE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0164",
+      "The underlying-storage data type %s is not supported as the ScalarDB %s data type: %s",
+      "",
+      ""),
+  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
+      Category.USER_ERROR, "0165", "Missing namespace or table: %s, %s", "", ""),
+  DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED(
+      Category.USER_ERROR, "0166", "Failed to retrieve table metadata. Details: %s", "", ""),
 
   DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
       Category.USER_ERROR,
-      "0158",
+      "0167",
       "Duplicate data mappings found for table '%s' in the control file",
       "",
       ""),
   DATA_LOADER_MISSING_COLUMN_MAPPING(
       Category.USER_ERROR,
-      "0159",
-      "No mapping found for column '%s' in table '%s' in the control file. \\nControl file validation set at 'FULL'. All columns need to be mapped.",
+      "0168",
+      "No mapping found for column '%s' in table '%s' in the control file. Control file validation set at 'FULL'. All columns need to be mapped.",
       "",
       ""),
   DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS(
-      Category.USER_ERROR, "0160", "The control file is missing data mappings", "", ""),
-  DATA_LOADER__MISSING_NAMESPACE_OR_TABLE(
-      Category.USER_ERROR,
-      "0161",
-      "The provided namespace '%s' and/or table name '%s' is incorrect and could not be found",
-      "",
-      ""),
+      Category.USER_ERROR, "0169", "The control file is missing data mappings", "", ""),
   DATA_LOADER_TARGET_COLUMN_NOT_FOUND(
       Category.USER_ERROR,
-      "0162",
+      "0170",
       "The target column '%s' for source field '%s' could not be found in table '%s'",
       "",
       ""),
   DATA_LOADER_MISSING_PARTITION_KEY(
       Category.USER_ERROR,
-      "0163",
+      "0171",
       "The required partition key '%s' is missing in the control file mapping for table '%s'",
       "",
       ""),
   DATA_LOADER_MISSING_CLUSTERING_KEY(
       Category.USER_ERROR,
-      "0164",
+      "0172",
       "The required clustering key '%s' is missing in the control file mapping for table '%s'",
       "",
       ""),
   DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND(
       Category.USER_ERROR,
-      "0165",
-      "Multiple data mappings found for column '%s' in table '%s'",
+      "0173",
+      "Duplicated data mappings found for column '%s' in table '%s'",
       "",
       ""),
   DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN(
@@ -1009,13 +1077,13 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_ERROR_CRUD_EXCEPTION(
       Category.INTERNAL_ERROR,
       "0047",
-      "Something went wrong while trying to save the data. Details %s",
+      "Something went wrong while trying to save the data. Details: %s",
       "",
       ""),
   DATA_LOADER_ERROR_SCAN(
       Category.INTERNAL_ERROR,
       "0048",
-      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details %s",
+      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
 
@@ -1050,7 +1118,7 @@ public enum CoreError implements ScalarDbError {
       ""),
   ;
 
-  private static final String COMPONENT_NAME = "CORE";
+  private static final String COMPONENT_NAME = "DB-CORE";
 
   private final Category category;
   private final String id;

@@ -20,8 +20,7 @@ public final class DynamoTestUtils {
 
   public static double nextDynamoDouble(Random random) {
     return random
-        .doubles(MIN_DYNAMO_DOUBLE_VALUE, MAX_DYNAMO_DOUBLE_VALUE)
-        .limit(1)
+        .doubles(1, MIN_DYNAMO_DOUBLE_VALUE, MAX_DYNAMO_DOUBLE_VALUE)
         .findFirst()
         .orElse(0.0d);
   }

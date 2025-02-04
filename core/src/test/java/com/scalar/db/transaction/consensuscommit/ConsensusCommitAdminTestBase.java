@@ -606,6 +606,7 @@ public abstract class ConsensusCommitAdminTestBase {
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
+    Map<String, DataType> overrideColumnsType = ImmutableMap.of("col", DataType.TEXT);
     String primaryKeyColumn = "pk";
     String column = "col";
     TableMetadata metadata =
@@ -615,17 +616,18 @@ public abstract class ConsensusCommitAdminTestBase {
             .addPartitionKey(primaryKeyColumn)
             .build();
     when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(null);
-    when(distributedStorageAdmin.getImportTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
+    when(distributedStorageAdmin.getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType))
+        .thenReturn(metadata);
     doNothing()
         .when(distributedStorageAdmin)
         .addRawColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
 
     // Act
-    admin.importTable(NAMESPACE, TABLE, options);
+    admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType);
 
     // Assert
     verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
-    verify(distributedStorageAdmin).getImportTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType);
     for (Entry<String, DataType> entry :
         ConsensusCommitUtils.getTransactionMetaColumns().entrySet()) {
       verify(distributedStorageAdmin)

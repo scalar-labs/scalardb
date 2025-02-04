@@ -41,6 +41,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -92,11 +93,27 @@ public class CosmosAdminTest {
             any(PartitionKey.class),
             ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
         .thenReturn(response);
-
+    Map<String, String> columnsMap =
+        new ImmutableMap.Builder<String, String>()
+            .put("c1", "int")
+            .put("c2", "text")
+            .put("c3", "bigint")
+            .put("c4", "boolean")
+            .put("c5", "blob")
+            .put("c6", "float")
+            .put("c7", "double")
+            .put("c8", "date")
+            .put("c9", "time")
+            .put("c10", "timestamp")
+            .put("c11", "timestamptz")
+            .build();
     CosmosTableMetadata cosmosTableMetadata =
         CosmosTableMetadata.newBuilder()
             .partitionKeyNames(Sets.newLinkedHashSet("c1"))
-            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .clusteringKeyNames(Sets.newLinkedHashSet("c2", "c3"))
+            .clusteringOrders(ImmutableMap.of("c2", "ASC", "c3", "DESC"))
+            .secondaryIndexNames(ImmutableSet.of("c4", "c9"))
+            .columns(columnsMap)
             .build();
 
     when(response.getItem()).thenReturn(cosmosTableMetadata);
@@ -108,10 +125,22 @@ public class CosmosAdminTest {
     assertThat(actual)
         .isEqualTo(
             TableMetadata.newBuilder()
+                .addPartitionKey("c1")
+                .addClusteringKey("c2", Order.ASC)
+                .addClusteringKey("c3", Order.DESC)
+                .addSecondaryIndex("c4")
+                .addSecondaryIndex("c9")
                 .addColumn("c1", DataType.INT)
                 .addColumn("c2", DataType.TEXT)
                 .addColumn("c3", DataType.BIGINT)
-                .addPartitionKey("c1")
+                .addColumn("c4", DataType.BOOLEAN)
+                .addColumn("c5", DataType.BLOB)
+                .addColumn("c6", DataType.FLOAT)
+                .addColumn("c7", DataType.DOUBLE)
+                .addColumn("c8", DataType.DATE)
+                .addColumn("c9", DataType.TIME)
+                .addColumn("c10", DataType.TIMESTAMP)
+                .addColumn("c11", DataType.TIMESTAMPTZ)
                 .build());
 
     verify(client).getDatabase(METADATA_DATABASE);
@@ -242,6 +271,10 @@ public class CosmosAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
 
@@ -318,6 +351,10 @@ public class CosmosAdminTest {
                     .put("c5", "int")
                     .put("c6", "double")
                     .put("c7", "float")
+                    .put("c8", "date")
+                    .put("c9", "time")
+                    .put("c10", "timestamp")
+                    .put("c11", "timestamptz")
                     .build())
             .secondaryIndexNames(ImmutableSet.of("c4"))
             .build();
@@ -340,6 +377,9 @@ public class CosmosAdminTest {
             .addColumn("c5", DataType.INT)
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c4")
             .build();
 
@@ -404,6 +444,9 @@ public class CosmosAdminTest {
                     .put("c5", "int")
                     .put("c6", "double")
                     .put("c7", "float")
+                    .put("c8", "date")
+                    .put("c9", "time")
+                    .put("c10", "timestamptz")
                     .build())
             .build();
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
@@ -1032,11 +1075,16 @@ public class CosmosAdminTest {
     String column = "col";
 
     // Act
-    Throwable thrown1 = catchThrowable(() -> admin.getImportTableMetadata(namespace, table));
+    Throwable thrown1 =
+        catchThrowable(
+            () -> admin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
     Throwable thrown2 =
         catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
     Throwable thrown3 =
-        catchThrowable(() -> admin.importTable(namespace, table, Collections.emptyMap()));
+        catchThrowable(
+            () ->
+                admin.importTable(
+                    namespace, table, Collections.emptyMap(), Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);

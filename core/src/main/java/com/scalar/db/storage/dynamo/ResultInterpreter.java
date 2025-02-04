@@ -8,10 +8,15 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +77,28 @@ public class ResultInterpreter {
         return isNull ? TextColumn.ofNull(name) : TextColumn.of(name, itemValue.s());
       case BLOB:
         return isNull ? BlobColumn.ofNull(name) : BlobColumn.of(name, itemValue.b().asByteArray());
+      case DATE:
+        return isNull
+            ? DateColumn.ofNull(name)
+            : DateColumn.of(
+                name, TimeRelatedColumnEncodingUtils.decodeDate(Integer.parseInt(itemValue.n())));
+      case TIME:
+        return isNull
+            ? TimeColumn.ofNull(name)
+            : TimeColumn.of(
+                name, TimeRelatedColumnEncodingUtils.decodeTime(Long.parseLong(itemValue.n())));
+      case TIMESTAMP:
+        return isNull
+            ? TimestampColumn.ofNull(name)
+            : TimestampColumn.of(
+                name,
+                TimeRelatedColumnEncodingUtils.decodeTimestamp(Long.parseLong(itemValue.n())));
+      case TIMESTAMPTZ:
+        return isNull
+            ? TimestampTZColumn.ofNull(name)
+            : TimestampTZColumn.of(
+                name,
+                TimeRelatedColumnEncodingUtils.decodeTimestampTZ(Long.parseLong(itemValue.n())));
       default:
         throw new AssertionError();
     }
