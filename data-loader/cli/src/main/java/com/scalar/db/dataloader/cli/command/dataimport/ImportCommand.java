@@ -108,8 +108,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     if (controlFile != null) {
       for (ControlFileTable table : controlFile.getTables()) {
         tableMetadataMap.put(
-            TableMetadataUtil.getTableLookupKey(table.getNamespace(), table.getTableName()),
-            tableMetadataService.getTableMetadata(table.getNamespace(), table.getTableName()));
+            TableMetadataUtil.getTableLookupKey(table.getNamespace(), table.getTable()),
+            tableMetadataService.getTableMetadata(table.getNamespace(), table.getTable()));
       }
     } else {
       tableMetadataMap.put(
