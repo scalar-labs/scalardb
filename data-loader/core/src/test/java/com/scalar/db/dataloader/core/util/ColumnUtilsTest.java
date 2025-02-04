@@ -36,7 +36,6 @@ class ColumnUtilsTest {
   private static final float FLOAT_VALUE = 2.78f;
   private static final TableMetadata mockMetadata = UnitTestUtils.createTestTableMetadata();
   private static final ObjectNode sourceRecord = UnitTestUtils.getOutputDataWithMetadata();
-  private static final Map<String, DataType> dataTypesByColumns = UnitTestUtils.getColumnData();
   private static final Map<String, Column<?>> values = UnitTestUtils.createTestValues();
   private static final Result scalarDBResult = new ResultImpl(values, mockMetadata);
 
@@ -124,14 +123,7 @@ class ColumnUtilsTest {
   void getColumnsFromResult_withValidData_shouldReturnColumns()
       throws Base64Exception, ColumnParsingException {
     List<Column<?>> columns =
-        ColumnUtils.getColumnsFromResult(
-            scalarDBResult,
-            sourceRecord,
-            false,
-            mockMetadata.getPartitionKeyNames(),
-            mockMetadata.getClusteringKeyNames(),
-            mockMetadata.getColumnNames(),
-            dataTypesByColumns);
-    Assertions.assertEquals(4, columns.size());
+        ColumnUtils.getColumnsFromResult(scalarDBResult, sourceRecord, false, mockMetadata);
+    Assertions.assertEquals(7, columns.size());
   }
 }
