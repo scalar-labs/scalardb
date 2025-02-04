@@ -6,15 +6,14 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
-import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +72,6 @@ public class CsvProducerTask extends ProducerTask {
   private String convertResultToCsv(Result result) {
     // Initialization
     StringBuilder stringBuilder = new StringBuilder();
-    Set<String> columnsToIgnore = TableMetadataUtil.getMetadataColumns();
     LinkedHashSet<String> tableColumnNames = tableMetadata.getColumnNames();
     Iterator<String> iterator = tableColumnNames.iterator();
 
@@ -85,7 +83,7 @@ public class CsvProducerTask extends ProducerTask {
         // Skip the field if it can be ignored based on check
         boolean columnNotProjected = !projectedColumnsSet.contains(columnName);
         boolean isMetadataColumn =
-            TableMetadataUtil.isMetadataColumn(columnName, columnsToIgnore, tableColumnNames);
+            ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata);
         if (columnNotProjected || (!includeMetadata && isMetadataColumn)) {
           continue;
         }
