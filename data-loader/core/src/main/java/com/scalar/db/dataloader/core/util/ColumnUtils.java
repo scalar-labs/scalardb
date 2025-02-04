@@ -1,9 +1,8 @@
 package com.scalar.db.dataloader.core.util;
 
-import static com.scalar.db.dataloader.core.util.TableMetadataUtil.isMetadataColumn;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
@@ -17,6 +16,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.*;
 import javax.annotation.Nullable;
 
@@ -100,10 +100,6 @@ public final class ColumnUtils {
    * @param scalarDBResult result record
    * @param sourceRecord source data
    * @param ignoreNullValues ignore null values or not
-   * @param partitionKeyNames partition key names
-   * @param clusteringKeyNames clustering key names
-   * @param columnNames column names
-   * @param dataTypesByColumns data types of columns
    * @return list of columns
    * @throws Base64Exception if an error occurs while base64 decoding
    */
@@ -111,22 +107,22 @@ public final class ColumnUtils {
       Result scalarDBResult,
       JsonNode sourceRecord,
       boolean ignoreNullValues,
-      Set<String> partitionKeyNames,
-      Set<String> clusteringKeyNames,
-      Set<String> columnNames,
-      Map<String, DataType> dataTypesByColumns)
+      TableMetadata tableMetadata)
       throws Base64Exception, ColumnParsingException {
 
     List<Column<?>> columns = new ArrayList<>();
-    Set<String> columnsToIgnore = getColumnsToIgnore(partitionKeyNames, clusteringKeyNames);
-
-    for (String columnName : columnNames) {
-      if (isMetadataColumn(columnName, columnsToIgnore, columnNames)) {
+    for (String columnName : tableMetadata.getColumnNames()) {
+      if (ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata)) {
         continue;
       }
 
       Column<?> column =
-          getColumn(scalarDBResult, sourceRecord, columnName, ignoreNullValues, dataTypesByColumns);
+          getColumn(
+              scalarDBResult,
+              sourceRecord,
+              columnName,
+              ignoreNullValues,
+              tableMetadata.getColumnDataTypes());
 
       if (column != null) {
         columns.add(column);
@@ -145,23 +141,11 @@ public final class ColumnUtils {
    */
   private static Set<String> getColumnsToIgnore(
       Set<String> partitionKeyNames, Set<String> clusteringKeyNames) {
-    Set<String> columnsToIgnore = new HashSet<>(TableMetadataUtil.getMetadataColumns());
+    Set<String> columnsToIgnore =
+        new HashSet<>(ConsensusCommitUtils.getTransactionMetaColumns().keySet());
     columnsToIgnore.addAll(partitionKeyNames);
     columnsToIgnore.addAll(clusteringKeyNames);
     return columnsToIgnore;
-  }
-
-  /**
-   * Checks if a column is a metadata column
-   *
-   * @param columnName column name
-   * @param columnsToIgnore set of columns to ignore
-   * @param columnNames set of column names
-   * @return if column is a metadata column or not
-   */
-  private static boolean isMetadataColumn(
-      String columnName, Set<String> columnsToIgnore, Set<String> columnNames) {
-    return TableMetadataUtil.isMetadataColumn(columnName, columnsToIgnore, columnNames);
   }
 
   /**
