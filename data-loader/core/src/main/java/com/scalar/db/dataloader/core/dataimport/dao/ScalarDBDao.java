@@ -338,6 +338,7 @@ public class ScalarDBDao {
           buildableScanAll.ordering(sort);
         }
       }
+
       // limit
       if (limit > 0) {
         buildableScanAll.limit(limit);
