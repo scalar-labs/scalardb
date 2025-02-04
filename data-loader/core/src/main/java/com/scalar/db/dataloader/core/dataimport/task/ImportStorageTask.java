@@ -5,7 +5,8 @@ import com.scalar.db.api.Result;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 public class ImportStorageTask extends ImportTask {
 

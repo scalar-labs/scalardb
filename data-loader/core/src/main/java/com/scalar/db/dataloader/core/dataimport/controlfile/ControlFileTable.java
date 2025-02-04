@@ -21,8 +21,8 @@ public class ControlFileTable {
   private String namespace;
 
   /** The name of the table in ScalarDB. */
-  @JsonProperty("table_name")
-  private String tableName;
+  @JsonProperty("table")
+  private String table;
 
   /**
    * A list of mappings defining the correspondence between control file fields and table columns.
@@ -35,11 +35,11 @@ public class ControlFileTable {
    * The mappings list is initialized as an empty list.
    *
    * @param namespace The namespace of the table in ScalarDB.
-   * @param tableName The name of the table in ScalarDB.
+   * @param table The name of the table in ScalarDB.
    */
-  public ControlFileTable(String namespace, String tableName) {
+  public ControlFileTable(String namespace, String table) {
     this.namespace = namespace;
-    this.tableName = tableName;
+    this.table = table;
     this.mappings = new ArrayList<>();
   }
 
@@ -48,17 +48,17 @@ public class ControlFileTable {
    * constructor is used for deserialization of API requests or control files.
    *
    * @param namespace The namespace of the table in ScalarDB.
-   * @param tableName The name of the table in ScalarDB.
+   * @param table The name of the table in ScalarDB.
    * @param mappings A list of mappings that define the relationship between control file fields and
    *     table columns.
    */
   @JsonCreator
   public ControlFileTable(
       @JsonProperty("namespace") String namespace,
-      @JsonProperty("table_name") String tableName,
+      @JsonProperty("table") String table,
       @JsonProperty("mappings") List<ControlFileTableFieldMapping> mappings) {
     this.namespace = namespace;
-    this.tableName = tableName;
+    this.table = table;
     this.mappings = mappings;
   }
 }

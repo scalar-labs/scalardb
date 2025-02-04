@@ -50,9 +50,10 @@ public class ControlFileValidator {
       // Make sure table metadata is provided for each table mentioned in the data mappings
       checkMultiTableMetadata(tableMetadataMap, controlFileTable);
 
-      // Make sure the specified target columns in the mappings actually exist
-      checkIfTargetColumnExist(tableMetadataMap, controlFileTable);
       TableMetadata tableMetadata = tableMetadataMap.get(lookupKey);
+
+      // Make sure the specified target columns in the mappings actually exist
+      checkIfTargetColumnExist(tableMetadata, controlFileTable);
 
       // Make sure all table columns are mapped
       if (controlFileValidationMode == ControlFileValidationLevel.FULL) {
@@ -102,7 +103,7 @@ public class ControlFileValidator {
   private static void checkEmptyMappings(ControlFile controlFile)
       throws ControlFileValidationException {
     // Make sure data mapping for at least one table is provided
-    if (controlFile.getTables() == null || controlFile.getTables().isEmpty()) {
+    if (controlFile.getTables().isEmpty()) {
       throw new ControlFileValidationException(
           CoreError.DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS.buildMessage());
     }
@@ -123,25 +124,23 @@ public class ControlFileValidator {
     String lookupKey = TableMetadataUtil.getTableLookupKey(controlFileTable);
     if (!tableMetadataMap.containsKey(lookupKey)) {
       throw new ControlFileValidationException(
-          CoreError.DATA_LOADER__MISSING_NAMESPACE_OR_TABLE.buildMessage(
-              controlFileTable.getNamespace(), controlFileTable.getTableName()));
+          CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(
+              controlFileTable.getNamespace(), controlFileTable.getTable()));
     }
   }
 
   /**
    * Check that the mapped target column exists in the provided table metadata.
    *
-   * @param tableMetadataMap Metadata for one or more ScalarDB tables
+   * @param tableMetadata Metadata for the table
    * @param controlFileTable Control file entry for one ScalarDB table
    * @throws ControlFileValidationException when the target column does not exist
    */
   private static void checkIfTargetColumnExist(
-      Map<String, TableMetadata> tableMetadataMap, ControlFileTable controlFileTable)
+      TableMetadata tableMetadata, ControlFileTable controlFileTable)
       throws ControlFileValidationException {
 
     String lookupKey = TableMetadataUtil.getTableLookupKey(controlFileTable);
-    TableMetadata tableMetadata =
-        tableMetadataMap.get(TableMetadataUtil.getTableLookupKey(controlFileTable));
     LinkedHashSet<String> columnNames = tableMetadata.getColumnNames();
 
     for (ControlFileTableFieldMapping mapping : controlFileTable.getMappings()) {

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Collections;
@@ -46,6 +47,7 @@ class TableMetadataServiceTest {
             () ->
                 tableMetadataService.getTableMetadata(Collections.singleton(tableMetadataRequest)))
         .isInstanceOf(TableMetadataException.class)
-        .hasMessage("Missing namespace or table: namespace2, table2");
+        .hasMessage(
+            CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage("namespace2", "table2"));
   }
 }
