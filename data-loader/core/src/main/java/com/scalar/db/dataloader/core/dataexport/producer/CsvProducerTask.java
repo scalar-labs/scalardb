@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CsvProducerTask extends ProducerTask {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CsvProducerTask.class);
+  private static final Logger logger = LoggerFactory.getLogger(CsvProducerTask.class);
 
   private final String delimiter;
 
@@ -46,7 +46,7 @@ public class CsvProducerTask extends ProducerTask {
   }
 
   /**
-   * * Process scalardb scan result data and returns CSV data
+   * Process scalarDB scan result data and returns CSV data
    *
    * @param dataChunk list of results
    * @param exportReport export report
@@ -105,16 +105,16 @@ public class CsvProducerTask extends ProducerTask {
 
       return stringBuilder.toString();
     } catch (UnsupportedOperationException e) {
-      LOGGER.error(
+      logger.error(
           CoreError.DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED.buildMessage(e.getMessage()));
     }
     return "";
   }
 
   /**
-   * * Convert result column value to string
+   * Convert result column value to string
    *
-   * @param result scalardb result
+   * @param result ScalarDB result
    * @param columnName column name
    * @param dataType datatype of the column
    * @return value of result converted to string
@@ -148,6 +148,8 @@ public class CsvProducerTask extends ProducerTask {
         value = result.getText(columnName);
         break;
       default:
+        logger.error(
+            CoreError.DATA_LOADER_CONVERT_TO_STRING_FAILED.buildMessage(dataType.toString()));
         break;
     }
     return value;

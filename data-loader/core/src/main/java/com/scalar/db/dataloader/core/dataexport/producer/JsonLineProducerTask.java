@@ -3,6 +3,7 @@ package com.scalar.db.dataloader.core.dataexport.producer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.io.DataType;
@@ -12,10 +13,13 @@ import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JsonLineProducerTask extends ProducerTask {
 
   private final DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
+  private static final Logger logger = LoggerFactory.getLogger(JsonLineProducerTask.class);
 
   /**
    * Class constructor
@@ -33,7 +37,7 @@ public class JsonLineProducerTask extends ProducerTask {
   }
 
   /**
-   * * Process scalardb scan result data and returns CSV data
+   * * Process ScalarDB scan result data and returns CSV data
    *
    * @param dataChunk list of results
    * @param exportReport export report
@@ -82,15 +86,13 @@ public class JsonLineProducerTask extends ProducerTask {
   /**
    * * Add result column name and value to json object node
    *
-   * @param result scalardb result
+   * @param result ScalarDB result
    * @param columnName column name
    * @param dataType datatype of the column
    */
   private void addToObjectNode(
       ObjectNode objectNode, Result result, String columnName, DataType dataType) {
 
-    // Using add and not addProperty to be able to add a null value. addProperty does not
-    // support null values.
     if (result.isNull(columnName)) {
       return;
     }
@@ -120,6 +122,8 @@ public class JsonLineProducerTask extends ProducerTask {
         objectNode.put(columnName, new String(encoded, Charset.defaultCharset()));
         break;
       default:
+        logger.error(
+            CoreError.DATA_LOADER_CONVERT_TO_STRING_FAILED.buildMessage(dataType.toString()));
         break;
     }
   }

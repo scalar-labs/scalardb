@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport.producer;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.io.DataType;
 import java.util.List;
@@ -50,7 +51,8 @@ public class ProducerTaskFactory {
                 includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, delimiter);
         break;
       default:
-        producerTask = null;
+        throw new IllegalArgumentException(
+            CoreError.DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED.buildMessage(fileFormat.toString()));
     }
     return producerTask;
   }

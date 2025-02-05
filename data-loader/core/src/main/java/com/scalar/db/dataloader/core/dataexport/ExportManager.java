@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -57,7 +56,7 @@ public class ExportManager {
 
       if (exportOptions.getOutputFileFormat() == FileFormat.CSV
           && !exportOptions.isExcludeHeaderRow()) {
-        writeCsvHeaderRow(exportOptions, tableMetadata, dataTypeByColumnName, writer);
+        writeCsvHeaderRow(exportOptions, tableMetadata, writer);
       }
 
       int maxThreadCount =
@@ -202,22 +201,12 @@ public class ExportManager {
    *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
-   * @param dataTypeByColumnName map of columns and their data types
    * @param writer writer object
    * @throws IOException throws if any exception occur in file operations
    */
   private void writeCsvHeaderRow(
-      ExportOptions exportOptions,
-      TableMetadata tableMetadata,
-      Map<String, DataType> dataTypeByColumnName,
-      Writer writer)
-      throws IOException {
-    String header =
-        createCsvHeaderRow(
-            exportOptions,
-            tableMetadata,
-            dataTypeByColumnName,
-            ConsensusCommitUtils.getTransactionMetaColumns().keySet());
+      ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer) throws IOException {
+    String header = createCsvHeaderRow(exportOptions, tableMetadata);
     writer.append(header);
     writer.flush();
   }
@@ -260,15 +249,9 @@ public class ExportManager {
    *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
-   * @param dataTypeByColumnName map of columns and their data types
-   * @param columnsToIgnore set of columns to ignore
    * @return generated CSV header row
    */
-  private String createCsvHeaderRow(
-      ExportOptions exportOptions,
-      TableMetadata tableMetadata,
-      Map<String, DataType> dataTypeByColumnName,
-      Set<String> columnsToIgnore) {
+  private String createCsvHeaderRow(ExportOptions exportOptions, TableMetadata tableMetadata) {
     StringBuilder headerRow = new StringBuilder();
     List<String> projections = exportOptions.getProjectionColumns();
     Iterator<String> iterator = tableMetadata.getColumnNames().iterator();

@@ -770,6 +770,8 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0165", "Missing namespace or table: %s, %s", "", ""),
   DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED(
       Category.USER_ERROR, "0166", "Failed to retrieve table metadata. Details: %s", "", ""),
+  DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0167", "The provided file format is not supported : %s", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -1031,6 +1033,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0048",
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
+      "",
+      ""),
+  DATA_LOADER_CONVERT_TO_STRING_FAILED(
+      Category.INTERNAL_ERROR,
+      "0049",
+      "Unable to convert value to string from data format: %s",
       "",
       ""),
 
