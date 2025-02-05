@@ -45,7 +45,7 @@ public class ControlFileValidator {
       uniqueTables.add(lookupKey);
 
       // Make sure no column is mapped multiple times
-      Set<String> mappedTargetColumns = checkDuplicateColumnMappings(controlFileTable);
+      Set<String> mappedTargetColumns = getTargetColumnSet(controlFileTable);
 
       // Make sure table metadata is provided for each table mentioned in the data mappings
       checkMultiTableMetadata(tableMetadataMap, controlFileTable);
@@ -203,22 +203,21 @@ public class ControlFileValidator {
 
   /**
    * Check that a control file table mapping does not contain duplicate mappings for the same target
-   * column
+   * column and creates a set of unique mappings
    *
    * @param controlFileTable Control file entry for one ScalarDB table
    * @return Set of uniquely mapped target columns
    * @throws ControlFileValidationException when a duplicate mapping is found
    */
-  private static Set<String> checkDuplicateColumnMappings(ControlFileTable controlFileTable)
+  private static Set<String> getTargetColumnSet(ControlFileTable controlFileTable)
       throws ControlFileValidationException {
     Set<String> mappedTargetColumns = new HashSet<>();
     for (ControlFileTableFieldMapping mapping : controlFileTable.getMappings()) {
-      if (mappedTargetColumns.contains(mapping.getTargetColumn())) {
+      if (!mappedTargetColumns.add(mapping.getTargetColumn())) {
         throw new ControlFileValidationException(
             CoreError.DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND.buildMessage(
                 mapping.getTargetColumn(), TableMetadataUtil.getTableLookupKey(controlFileTable)));
       }
-      mappedTargetColumns.add(mapping.getTargetColumn());
     }
     return mappedTargetColumns;
   }
