@@ -802,6 +802,7 @@ public enum CoreError implements ScalarDbError {
       "Duplicated data mappings found for column '%s' in table '%s'",
       "",
       ""),
+
   //
   // Errors for the concurrency error category
   //
