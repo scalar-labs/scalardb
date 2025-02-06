@@ -6,7 +6,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
-import com.scalar.db.dataloader.cli.util.FileUtil;
+import com.scalar.db.dataloader.cli.util.FileUtils;
 import com.scalar.db.dataloader.cli.util.InvalidFilePathException;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import com.scalar.db.dataloader.core.FileFormat;
@@ -50,7 +50,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
     try {
       validateOutputDirectory();
-      FileUtil.validateFilePath(scalarDbPropertiesFilePath);
+      FileUtils.validateFilePath(scalarDbPropertiesFilePath);
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =

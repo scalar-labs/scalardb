@@ -103,7 +103,8 @@ public class ExportCommandOptions {
   @CommandLine.Option(
       names = {"--sort-by", "-s"},
       paramLabel = "<SORT_ORDER>",
-      description = "Clustering key sorting order (asc, desc)")
+      description = "Clustering key sorting order (asc, desc)",
+      converter = ScanOrderingConverter.class)
   protected List<Scan.Ordering> sortOrders = new ArrayList<>();
 
   @CommandLine.Option(
