@@ -1,6 +1,19 @@
-# ScalarDB
+<p align="center">
+  <img src='docs/images/scalardb.png'>
+</p>
 
+---
+
+## What is ScalarDB?
 ScalarDB is a cross-database HTAP engine. It achieves ACID transactions and real-time analytics across diverse databases to simplify the complexity of managing multiple databases.
+
+<p align="center">
+  <a href='https://www.youtube.com/watch?v=lW6nCEJV-gs' target="_blank"><img src='docs/images/scalardb-video-preview.png' width='70%'></a>
+</p>
+
+## Docs
+
+See our [User Documentation](https://scalardb.scalar-labs.com/docs/latest/).
 
 ## Install
 
@@ -22,10 +35,6 @@ To add a dependency using Maven:
   <version>3.15.1</version>
 </dependency>
 ```
-
-## Docs
-
-See our [User Documentation](https://scalardb.scalar-labs.com/docs/latest/).
 
 ## Contributing
 
