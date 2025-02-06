@@ -5,7 +5,7 @@
 ---
 
 ## What is ScalarDB?
-ScalarDB is a cross-database HTAP engine. It achieves ACID transactions and real-time analytics across diverse databases to simplify the complexity of managing multiple databases.
+ScalarDB is a universal HTAP engine. It achieves ACID transactions and real-time analytics across diverse databases to simplify the complexity of managing multiple databases.
 
 <p align="center">
   <a href='https://www.youtube.com/watch?v=lW6nCEJV-gs' target="_blank"><img src='docs/images/scalardb-video-preview.png' width='70%'></a>
