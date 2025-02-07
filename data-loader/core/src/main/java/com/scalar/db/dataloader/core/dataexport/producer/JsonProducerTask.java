@@ -6,7 +6,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
-import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.charset.Charset;
@@ -44,17 +43,15 @@ public class JsonProducerTask extends ProducerTask {
    * * Process scalarDB scan result data and returns CSV data
    *
    * @param dataChunk list of results
-   * @param exportReport export report
    * @return result converted to string
    */
   @Override
-  public String process(List<Result> dataChunk, ExportReport exportReport) {
+  public String process(List<Result> dataChunk) {
     ArrayNode arrayNode = objectMapper.createArrayNode();
 
     for (Result result : dataChunk) {
       ObjectNode objectNode = generateJsonForResult(result);
       arrayNode.add(objectNode);
-      exportReport.increaseExportedRowCount();
     }
 
     if (prettyPrintJson) {

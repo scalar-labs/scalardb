@@ -137,7 +137,7 @@ public class ExportManager {
             exportOptions.getProjectionColumns(),
             tableMetadata,
             dataTypeByColumnName);
-    String dataChunkContent = producerTask.process(dataChunk, exportReport);
+    String dataChunkContent = producerTask.process(dataChunk);
 
     try {
       synchronized (lock) {
@@ -145,6 +145,7 @@ public class ExportManager {
           bufferedWriter.write(",");
         }
         bufferedWriter.write(dataChunkContent);
+        exportReport.updateExportedRowCount(dataChunk.size());
       }
     } catch (IOException e) {
       logger.error("Error while writing data chunk: {}", e.getMessage());

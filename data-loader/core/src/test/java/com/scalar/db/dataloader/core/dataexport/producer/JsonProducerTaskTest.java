@@ -5,7 +5,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.UnitTestUtils;
-import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.ArrayList;
@@ -34,7 +33,7 @@ class JsonProducerTaskTest {
   @Test
   void process_withEmptyResultList_shouldReturnEmptyString() {
     List<Result> results = Collections.emptyList();
-    String output = jsonProducerTask.process(results, new ExportReport());
+    String output = jsonProducerTask.process(results);
     Assertions.assertEquals(" ", output);
   }
 
@@ -45,7 +44,7 @@ class JsonProducerTaskTest {
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
     resultList.add(result);
-    String output = jsonProducerTask.process(resultList, new ExportReport());
+    String output = jsonProducerTask.process(resultList);
     Assertions.assertEquals(rootNode.toPrettyString(), output.trim());
   }
 
@@ -57,7 +56,7 @@ class JsonProducerTaskTest {
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
     resultList.add(result);
-    String output = jsonProducerTask.process(resultList, new ExportReport());
+    String output = jsonProducerTask.process(resultList);
     Assertions.assertEquals(rootNode.toPrettyString(), output.trim());
   }
 }
