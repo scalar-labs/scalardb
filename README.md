@@ -1,6 +1,19 @@
-# ScalarDB
+<p align="center">
+  <img src='docs/images/scalardb.png'>
+</p>
 
-ScalarDB is a cross-database HTAP engine. It achieves ACID transactions and real-time analytics across diverse databases to simplify the complexity of managing multiple databases.
+---
+
+## What is ScalarDB?
+ScalarDB is a universal HTAP engine. It achieves ACID transactions and real-time analytics across diverse databases to simplify the complexity of managing multiple databases.
+
+<p align="center">
+  <a href='https://www.youtube.com/watch?v=lW6nCEJV-gs' target="_blank"><img src='docs/images/scalardb-video-preview.png' width='70%'></a>
+</p>
+
+## Docs
+
+See our [User Documentation](https://scalardb.scalar-labs.com/docs/latest/).
 
 ## Install
 
@@ -23,20 +36,12 @@ To add a dependency using Maven:
 </dependency>
 ```
 
-## Docs
-
-See our [User Documentation](https://scalardb.scalar-labs.com/docs/latest/).
-
 ## Contributing
 
 This library is mainly maintained by the Scalar Engineering Team, but of course we appreciate any help.
 
 * For asking questions, finding answers and helping other users, please go to [stackoverflow](https://stackoverflow.com/) and use [scalardb](https://stackoverflow.com/questions/tagged/scalardb) tag.
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
-
-Here are the contributors we are especially thankful for:
-- [Toshihiro Suzuki](https://github.com/brfrn169) - created [Phoenix adapter](https://github.com/scalar-labs/scalardb-phoenix) for ScalarDB
-- [Yonezawa-T2](https://github.com/Yonezawa-T2) - reported bugs around Serializable and proposed a new Serializable strategy (now named Extra-Read)
 
 ### Pre-commit hook
 
