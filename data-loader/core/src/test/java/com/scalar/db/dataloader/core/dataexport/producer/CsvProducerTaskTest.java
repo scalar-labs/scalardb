@@ -4,7 +4,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.UnitTestUtils;
-import com.scalar.db.dataloader.core.dataexport.DataChunkProcessResult;
+import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.ArrayList;
@@ -33,8 +33,8 @@ class CsvProducerTaskTest {
   @Test
   void process_withEmptyResultList_shouldReturnEmptyString() {
     List<Result> results = Collections.emptyList();
-    DataChunkProcessResult output = csvProducerTask.process(results);
-    Assertions.assertEquals("", output.getProcessedDataChunkOutput());
+    String output = csvProducerTask.process(results, new ExportReport());
+    Assertions.assertEquals("", output);
   }
 
   @Test
@@ -45,8 +45,8 @@ class CsvProducerTaskTest {
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
     resultList.add(result);
-    DataChunkProcessResult output = csvProducerTask.process(resultList);
-    Assertions.assertEquals(expectedOutput, output.getProcessedDataChunkOutput().trim());
+    String output = csvProducerTask.process(resultList, new ExportReport());
+    Assertions.assertEquals(expectedOutput, output.trim());
   }
 
   @Test
@@ -58,8 +58,7 @@ class CsvProducerTaskTest {
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
     resultList.add(result);
-    DataChunkProcessResult output = csvProducerTask.process(resultList);
-    Assertions.assertEquals(expectedOutput, output.getProcessedDataChunkOutput().trim());
-    Assertions.assertEquals(1L, output.getCount());
+    String output = csvProducerTask.process(resultList, new ExportReport());
+    Assertions.assertEquals(expectedOutput, output.trim());
   }
 }

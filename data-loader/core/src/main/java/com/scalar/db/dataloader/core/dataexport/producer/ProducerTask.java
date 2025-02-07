@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataexport.producer;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.dataexport.DataChunkProcessResult;
+import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.io.DataType;
 import java.util.HashSet;
 import java.util.List;
@@ -35,5 +35,5 @@ public abstract class ProducerTask {
     this.dataTypeByColumnName = columnDataTypes;
   }
 
-  public abstract DataChunkProcessResult process(List<Result> dataChunk);
+  public abstract String process(List<Result> dataChunk, ExportReport exportReport);
 }

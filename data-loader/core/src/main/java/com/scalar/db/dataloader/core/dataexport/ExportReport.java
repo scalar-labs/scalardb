@@ -20,7 +20,7 @@ public class ExportReport {
     return exportedRowCount.sum();
   }
 
-  public void addExportRowCount(long count) {
-    exportedRowCount.add(count);
+  public void increaseExportedRowCount() {
+    this.exportedRowCount.increment();
   }
 }

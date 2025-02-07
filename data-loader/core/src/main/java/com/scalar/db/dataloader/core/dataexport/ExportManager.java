@@ -137,15 +137,14 @@ public class ExportManager {
             exportOptions.getProjectionColumns(),
             tableMetadata,
             dataTypeByColumnName);
-    DataChunkProcessResult dataChunkContent = producerTask.process(dataChunk);
+    String dataChunkContent = producerTask.process(dataChunk, exportReport);
 
     try {
       synchronized (lock) {
         if (isJson && !isFirstBatch.getAndSet(false)) {
           bufferedWriter.write(",");
         }
-        bufferedWriter.write(dataChunkContent.getProcessedDataChunkOutput());
-        exportReport.addExportRowCount(dataChunkContent.getCount());
+        bufferedWriter.write(dataChunkContent);
       }
     } catch (IOException e) {
       logger.error("Error while writing data chunk: {}", e.getMessage());

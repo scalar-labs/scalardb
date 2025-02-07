@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core.dataexport.producer;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.dataloader.core.dataexport.DataChunkProcessResult;
+import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
 import com.scalar.db.io.DataType;
@@ -49,21 +49,18 @@ public class CsvProducerTask extends ProducerTask {
    * Process scalarDB scan result data and returns CSV data
    *
    * @param dataChunk list of results
+   * @param exportReport export report
    * @return result converted to string
    */
   @Override
-  public DataChunkProcessResult process(List<Result> dataChunk) {
+  public String process(List<Result> dataChunk, ExportReport exportReport) {
     StringBuilder csvContent = new StringBuilder();
-    long count = 0;
     for (Result result : dataChunk) {
       String csvRow = convertResultToCsv(result);
       csvContent.append(csvRow);
-      count++;
+      exportReport.increaseExportedRowCount();
     }
-    return DataChunkProcessResult.hiddenBuilder()
-        .processedDataChunkOutput(csvContent.toString())
-        .count(count)
-        .build();
+    return csvContent.toString();
   }
 
   /**
