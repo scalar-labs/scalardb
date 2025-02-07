@@ -203,7 +203,7 @@ public class ControlFileValidator {
 
   /**
    * Check that a control file table mapping does not contain duplicate mappings for the same target
-   * <<<<<<< HEAD column ======= column and creates a set of unique mappings >>>>>>> master
+   * column and creates a set of unique mappings
    *
    * @param controlFileTable Control file entry for one ScalarDB table
    * @return Set of uniquely mapped target columns
