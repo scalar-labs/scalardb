@@ -5,7 +5,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.UnitTestUtils;
-import com.scalar.db.dataloader.core.dataexport.ExportReport;
+import com.scalar.db.dataloader.core.dataexport.DataChunkProcessResult;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.ArrayList;
@@ -34,8 +34,8 @@ class JsonLineProducerTaskTest {
   @Test
   void process_withEmptyResultList_shouldReturnEmptyString() {
     List<Result> results = Collections.emptyList();
-    String output = jsonLineProducerTask.process(results, new ExportReport());
-    Assertions.assertEquals("", output);
+    DataChunkProcessResult output = jsonLineProducerTask.process(results);
+    Assertions.assertEquals("", output.getProcessedDataChunkOutput());
   }
 
   @Test
@@ -45,8 +45,8 @@ class JsonLineProducerTaskTest {
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
     resultList.add(result);
-    String output = jsonLineProducerTask.process(resultList, new ExportReport());
-    Assertions.assertEquals(rootNode.toString(), output.trim());
+    DataChunkProcessResult output = jsonLineProducerTask.process(resultList);
+    Assertions.assertEquals(rootNode.toString(), output.getProcessedDataChunkOutput().trim());
   }
 
   @Test
@@ -58,7 +58,8 @@ class JsonLineProducerTaskTest {
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
     resultList.add(result);
-    String output = jsonLineProducerTask.process(resultList, new ExportReport());
-    Assertions.assertEquals(rootNode.toString(), output.trim());
+    DataChunkProcessResult output = jsonLineProducerTask.process(resultList);
+    Assertions.assertEquals(rootNode.toString(), output.getProcessedDataChunkOutput().trim());
+    Assertions.assertEquals(1L, output.getCount());
   }
 }

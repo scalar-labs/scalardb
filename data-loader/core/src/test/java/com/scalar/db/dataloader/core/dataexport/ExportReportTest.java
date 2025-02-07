@@ -14,8 +14,8 @@ class ExportReportTest {
   @Test
   void getExportedRowCount_afterIncrementingTwice_ShouldBeTwo() {
     ExportReport exportReport = new ExportReport();
-    exportReport.increaseExportedRowCount();
-    exportReport.increaseExportedRowCount();
-    Assertions.assertEquals(2, exportReport.getExportedRowCount());
+    exportReport.addExportRowCount(10);
+    exportReport.addExportRowCount(30);
+    Assertions.assertEquals(40, exportReport.getExportedRowCount());
   }
 }
