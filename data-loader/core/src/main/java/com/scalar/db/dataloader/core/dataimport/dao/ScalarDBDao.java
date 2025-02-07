@@ -332,6 +332,7 @@ public class ScalarDBDao {
       if (projectionColumns != null && !projectionColumns.isEmpty()) {
         buildableScanAll.projections(projectionColumns);
       }
+      
       if (sortOrders != null && !sortOrders.isEmpty()) {
         for (Scan.Ordering sort : sortOrders) {
           buildableScanAll.ordering(sort);
