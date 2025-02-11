@@ -764,7 +764,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0165", "Missing namespace or table: %s, %s", "", ""),
   DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED(
       Category.USER_ERROR, "0166", "Failed to retrieve table metadata. Details: %s", "", ""),
-
   DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
       Category.USER_ERROR,
       "0167",
@@ -805,21 +804,21 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN(
       Category.USER_ERROR,
-      "0166",
+      "0175",
       "Missing required field or column mapping for clustering key %s",
       "",
       ""),
   DATA_LOADER_MISSING_PARTITION_KEY_COLUMN(
       Category.USER_ERROR,
-      "0167",
+      "0176",
       "Missing required field or column mapping for partition key %s",
       "",
       ""),
   DATA_LOADER_MISSING_COLUMN(
-      Category.USER_ERROR, "0168", "Missing field or column mapping for %s", "", ""),
+      Category.USER_ERROR, "0177", "Missing field or column mapping for %s", "", ""),
   DATA_LOADER_MISSING_SOURCE_FIELD(
       Category.USER_ERROR,
-      "0169",
+      "0178",
       "The data mapping source field '%s' for table '%s' is missing in the json data record",
       "",
       ""),
