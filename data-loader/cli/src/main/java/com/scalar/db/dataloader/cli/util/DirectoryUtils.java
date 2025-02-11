@@ -27,7 +27,6 @@ public final class DirectoryUtils {
 
     // Check if the current working directory is writable
     if (!Files.isWritable(workingDirectoryPath)) {
-      // TODO: this error needs to be proper, check and set the label properly
       throw new DirectoryValidationException(
           String.format(ERROR_DIRECTORY_WRITE_ACCESS, workingDirectoryPath.toAbsolutePath()));
     }
