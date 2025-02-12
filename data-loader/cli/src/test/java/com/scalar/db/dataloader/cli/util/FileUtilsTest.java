@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 
-public class FileUtilsTest {
+class FileUtilsTest {
 
   private static final String currentPath = Paths.get("").toAbsolutePath().toString();
 
