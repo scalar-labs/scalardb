@@ -36,7 +36,7 @@ public class JsonLineProducerTask extends ProducerTask {
   }
 
   /**
-   * * Process ScalarDB scan result data and returns CSV data
+   * Process ScalarDB scan result data and returns CSV data
    *
    * @param dataChunk list of results
    * @return result converted to string
@@ -81,7 +81,7 @@ public class JsonLineProducerTask extends ProducerTask {
   }
 
   /**
-   * * Add result column name and value to json object node
+   * Add result column name and value to json object node
    *
    * @param result ScalarDB result
    * @param columnName column name
