@@ -14,7 +14,9 @@ import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -28,8 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 
-class ExportManagerTest {
-
+public class JsonLineExportManagerTest {
   TableMetadata mockData;
   DistributedStorage storage;
   @Spy ScalarDBDao dao;
@@ -47,15 +48,15 @@ class ExportManagerTest {
   @Test
   void startExport_givenValidDataWithoutPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDBDaoException {
-    exportManager = new ExportManager(storage, dao, producerTaskFactory);
+    exportManager = new JsonLineExportManager(storage, dao, producerTaskFactory);
     Scanner scanner = Mockito.mock(Scanner.class);
-    String filePath = Paths.get("").toAbsolutePath() + "/output.json";
+    String filePath = Paths.get("").toAbsolutePath() + "/output.jsonl";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
     List<Result> results = Collections.singletonList(result);
 
     ExportOptions exportOptions =
-        ExportOptions.builder("namespace", "table", null, FileFormat.JSON)
+        ExportOptions.builder("namespace", "table", null, FileFormat.JSONL)
             .sortOrders(Collections.emptyList())
             .scanRange(new ScanRange(null, null, false, false))
             .build();
@@ -86,9 +87,9 @@ class ExportManagerTest {
   @Test
   void startExport_givenPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDBDaoException {
-    exportManager = new ExportManager(storage, dao, producerTaskFactory);
+    exportManager = new JsonLineExportManager(storage, dao, producerTaskFactory);
     Scanner scanner = Mockito.mock(Scanner.class);
-    String filePath = Paths.get("").toAbsolutePath() + "/output.json";
+    String filePath = Paths.get("").toAbsolutePath() + "/output.jsonl";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
     List<Result> results = Collections.singletonList(result);
@@ -98,54 +99,7 @@ class ExportManagerTest {
                 "namespace",
                 "table",
                 Key.newBuilder().add(IntColumn.of("col1", 1)).build(),
-                FileFormat.JSON)
-            .sortOrders(Collections.emptyList())
-            .scanRange(new ScanRange(null, null, false, false))
-            .build();
-
-    Mockito.when(
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getScanPartitionKey(),
-                exportOptions.getScanRange(),
-                exportOptions.getSortOrders(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                storage))
-        .thenReturn(scanner);
-    Mockito.when(scanner.iterator()).thenReturn(results.iterator());
-    try (BufferedWriter writer =
-        new BufferedWriter(
-            Files.newBufferedWriter(
-                Paths.get(filePath),
-                Charset.defaultCharset(), // Explicitly use the default charset
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND))) {
-      exportManager.startExport(exportOptions, mockData, writer);
-    }
-    File file = new File(filePath);
-    Assertions.assertTrue(file.exists());
-    Assertions.assertTrue(file.delete());
-  }
-
-  @Test
-  void startExport_givenPartitionKeyAndFileFormatCsv_shouldGenerateOutputFile()
-      throws IOException, ScalarDBDaoException {
-    producerTaskFactory = new ProducerTaskFactory(",", false, false);
-    exportManager = new ExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
-    String filePath = Paths.get("").toAbsolutePath() + "/output.csv";
-    Map<String, Column<?>> values = UnitTestUtils.createTestValues();
-    Result result = new ResultImpl(values, mockData);
-    List<Result> results = Collections.singletonList(result);
-
-    ExportOptions exportOptions =
-        ExportOptions.builder(
-                "namespace",
-                "table",
-                Key.newBuilder().add(IntColumn.of("col1", 1)).build(),
-                FileFormat.CSV)
+                FileFormat.JSONL)
             .sortOrders(Collections.emptyList())
             .scanRange(new ScanRange(null, null, false, false))
             .build();

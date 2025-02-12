@@ -11,10 +11,8 @@ import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidati
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidator;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
-import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -31,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RequiredArgsConstructor
-public class ExportManager {
+public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
   private final DistributedStorage storage;
@@ -39,6 +37,27 @@ public class ExportManager {
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
 
+  /**
+   * Create and add header part for the export file
+   *
+   * @param exportOptions Export options for the data export
+   * @param tableMetadata Metadata of the table to export
+   * @param writer File writer object
+   * @throws IOException If any IO exception occurs
+   */
+  abstract void processHeader(
+      ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer) throws IOException;
+
+  /**
+   * Create and add footer part for the export file
+   *
+   * @param exportOptions Export options for the data export
+   * @param tableMetadata Metadata of the table to export
+   * @param writer File writer object
+   * @throws IOException If any IO exception occurs
+   */
+  abstract void processFooter(
+      ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer) throws IOException;
   /**
    * Starts the export process
    *
@@ -53,11 +72,7 @@ public class ExportManager {
       validateExportOptions(exportOptions, tableMetadata);
       Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
       handleTransactionMetadata(exportOptions, tableMetadata);
-
-      if (exportOptions.getOutputFileFormat() == FileFormat.CSV
-          && !exportOptions.isExcludeHeaderRow()) {
-        writeCsvHeaderRow(exportOptions, tableMetadata, writer);
-      }
+      processHeader(exportOptions, tableMetadata, writer);
 
       int maxThreadCount =
           exportOptions.getMaxThreadCount() == 0
@@ -69,9 +84,6 @@ public class ExportManager {
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
       try (Scanner scanner = createScanner(exportOptions, dao, storage)) {
-        if (isJson) {
-          bufferedWriter.write("[");
-        }
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
@@ -97,9 +109,7 @@ public class ExportManager {
           logger.error("Timeout occurred while waiting for tasks to complete");
           // TODO: handle this
         }
-        if (isJson) {
-          bufferedWriter.write("]");
-        }
+        processFooter(exportOptions, tableMetadata, bufferedWriter);
         bufferedWriter.flush();
       } catch (InterruptedException | IOException e) {
         logger.error("Error during export: {}", e.getMessage());
@@ -111,7 +121,7 @@ public class ExportManager {
   }
 
   /**
-   * * To process result data chunk
+   * To process result data chunk
    *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
@@ -153,7 +163,7 @@ public class ExportManager {
   }
 
   /**
-   * * To split result into batches
+   * To split result into batches
    *
    * @param iterator iterator which parse results
    * @param batchSize size of batch
@@ -182,7 +192,7 @@ public class ExportManager {
   }
 
   /**
-   * * To update projection columns of export options if include metadata options is enabled
+   * To update projection columns of export options if include metadata options is enabled
    *
    * @param exportOptions export options
    * @param tableMetadata metadata of the table
@@ -198,25 +208,10 @@ public class ExportManager {
   }
 
   /**
-   * * To create and write the header row to the CSV export file
+   * To create a scanner object
    *
    * @param exportOptions export options
-   * @param tableMetadata metadata of the table
-   * @param writer writer object
-   * @throws IOException throws if any exception occur in file operations
-   */
-  private void writeCsvHeaderRow(
-      ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer) throws IOException {
-    String header = createCsvHeaderRow(exportOptions, tableMetadata);
-    writer.append(header);
-    writer.flush();
-  }
-
-  /**
-   * * To create a scanner object
-   *
-   * @param exportOptions export options
-   * @param dao scalardb dao object
+   * @param dao ScalarDB dao object
    * @param storage distributed storage object
    * @return created scanner
    * @throws ScalarDBDaoException throws if any issue occurs in creating scanner object
@@ -243,52 +238,5 @@ public class ExportManager {
           exportOptions.getLimit(),
           storage);
     }
-  }
-
-  /**
-   * * To generate the header row of CSV export file
-   *
-   * @param exportOptions export options
-   * @param tableMetadata metadata of the table
-   * @return generated CSV header row
-   */
-  private String createCsvHeaderRow(ExportOptions exportOptions, TableMetadata tableMetadata) {
-    StringBuilder headerRow = new StringBuilder();
-    List<String> projections = exportOptions.getProjectionColumns();
-    Iterator<String> iterator = tableMetadata.getColumnNames().iterator();
-    while (iterator.hasNext()) {
-      String columnName = iterator.next();
-      if (shouldIgnoreColumn(
-          exportOptions.isIncludeTransactionMetadata(), columnName, tableMetadata, projections)) {
-        continue;
-      }
-      headerRow.append(columnName);
-      if (iterator.hasNext()) {
-        headerRow.append(exportOptions.getDelimiter());
-      }
-    }
-    CsvUtil.removeTrailingDelimiter(headerRow, exportOptions.getDelimiter());
-    headerRow.append("\n");
-    return headerRow.toString();
-  }
-
-  /**
-   * * To ignore a column or not based on conditions such as if it is a metadata column or if it is
-   * not include in selected projections
-   *
-   * @param isIncludeTransactionMetadata to include transaction metadata or not
-   * @param columnName column name
-   * @param tableMetadata table metadata
-   * @param projections selected columns for projection
-   * @return ignore the column or not
-   */
-  private boolean shouldIgnoreColumn(
-      boolean isIncludeTransactionMetadata,
-      String columnName,
-      TableMetadata tableMetadata,
-      List<String> projections) {
-    return (!isIncludeTransactionMetadata
-            && ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata))
-        || (!projections.isEmpty() && !projections.contains(columnName));
   }
 }
