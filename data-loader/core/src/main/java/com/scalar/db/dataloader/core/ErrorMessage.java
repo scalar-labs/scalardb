@@ -38,4 +38,9 @@ public class ErrorMessage {
       "The required clustering key '%s' is missing in the control file mapping for table '%s'";
   public static final String MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND =
       "Duplicated data mappings found for column '%s' in table '%s'";
+  public static final String MISSING_CLUSTERING_KEY_COLUMN =
+      "Missing required field or column mapping for clustering key %s";
+  public static final String MISSING_PARTITION_KEY_COLUMN =
+      "Missing required field or column mapping for partition key %s";
+  public static final String MISSING_COLUMN = "Missing field or column mapping for %s";
 }
