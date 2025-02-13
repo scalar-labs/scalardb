@@ -110,9 +110,10 @@ public abstract class ExportManager {
           // TODO: handle this
         }
         processFooter(exportOptions, tableMetadata, bufferedWriter);
-        bufferedWriter.flush();
       } catch (InterruptedException | IOException e) {
         logger.error("Error during export: {}", e.getMessage());
+      } finally {
+        bufferedWriter.flush();
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDBDaoException e) {
       logger.error("Error during export: {}", e.getMessage());

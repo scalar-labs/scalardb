@@ -23,9 +23,7 @@ public class JsonLineExportManager extends ExportManager {
    */
   @Override
   void processHeader(ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer)
-      throws IOException {
-    System.out.println("SSSSSSSSSSSSSSSSSSSSSSSS");
-  }
+      throws IOException {}
 
   /**
    * Create and add footer part for the export file
@@ -37,7 +35,5 @@ public class JsonLineExportManager extends ExportManager {
    */
   @Override
   void processFooter(ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer)
-      throws IOException {
-    System.out.println("SSSSSSSSSSSSSSSSSSSSSSSS");
-  }
+      throws IOException {}
 }
