@@ -802,14 +802,28 @@ public enum CoreError implements ScalarDbError {
       "Duplicated data mappings found for column '%s' in table '%s'",
       "",
       ""),
-  DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
+  DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN(
       Category.USER_ERROR,
       "0174",
+      "Missing required field or column mapping for clustering key %s",
+      "",
+      ""),
+  DATA_LOADER_MISSING_PARTITION_KEY_COLUMN(
+      Category.USER_ERROR,
+      "0175",
+      "Missing required field or column mapping for partition key %s",
+      "",
+      ""),
+  DATA_LOADER_MISSING_COLUMN(
+      Category.USER_ERROR, "0176", "Missing field or column mapping for %s", "", ""),
+  DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
+      Category.USER_ERROR,
+      "0177",
       "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
       "",
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
-      Category.USER_ERROR, "0175", "The provided file format is not supported : %s", "", ""),
+      Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
 
   //
   // Errors for the concurrency error category
