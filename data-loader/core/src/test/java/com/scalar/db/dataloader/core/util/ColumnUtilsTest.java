@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
@@ -25,7 +26,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -124,6 +124,6 @@ class ColumnUtilsTest {
       throws Base64Exception, ColumnParsingException {
     List<Column<?>> columns =
         ColumnUtils.getColumnsFromResult(scalarDBResult, sourceRecord, false, mockMetadata);
-    Assertions.assertEquals(7, columns.size());
+    assertEquals(7, columns.size());
   }
 }

@@ -12,7 +12,11 @@ import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -26,6 +30,15 @@ public final class KeyUtils {
   /** Restrict instantiation via private constructor */
   private KeyUtils() {}
 
+  /**
+   * Creates an {@link Optional} clustering key from the given source record.
+   *
+   * @param clusteringKeyNames A set of column names that make up the clustering key.
+   * @param dataTypeByColumnName A map defining the data type for each column name.
+   * @param sourceRecord The source record containing the data.
+   * @return An {@link Optional} containing the clustering key if clustering keys exist, otherwise
+   *     {@link Optional#empty()}.
+   */
   public static Optional<Key> createClusteringKeyFromSource(
       Set<String> clusteringKeyNames,
       Map<String, DataType> dataTypeByColumnName,
@@ -35,6 +48,14 @@ public final class KeyUtils {
         : createKeyFromSource(clusteringKeyNames, dataTypeByColumnName, sourceRecord);
   }
 
+  /**
+   * Creates an {@link Optional} partition key from the given source record.
+   *
+   * @param partitionKeyNames A set of column names that make up the partition key.
+   * @param dataTypeByColumnName A map defining the data type for each column name.
+   * @param sourceRecord The source record containing the data.
+   * @return An {@link Optional} containing the partition key.
+   */
   public static Optional<Key> createPartitionKeyFromSource(
       Set<String> partitionKeyNames,
       Map<String, DataType> dataTypeByColumnName,

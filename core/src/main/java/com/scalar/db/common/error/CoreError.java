@@ -822,6 +822,22 @@ public enum CoreError implements ScalarDbError {
       "The data mapping source field '%s' for table '%s' is missing in the json data record",
       "",
       ""),
+  DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
+  DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY(
+      Category.USER_ERROR, "0179", "Could not find the partition key", "", ""),
+  DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS(
+      Category.USER_ERROR,
+      "0180",
+      "The source record needs to contain all fields if the UPSERT turns into an INSERT",
+      "",
+      ""),
+  DATA_LOADER_DATA_ALREADY_EXISTS(Category.USER_ERROR, "0181", "Record already exists", "", ""),
+  DATA_LOADER_DATA_NOT_FOUND(Category.USER_ERROR, "0182", "Record was not found", "", ""),
+  DATA_LOADER_COULD_NOT_FIND_CLUSTERING_KEY(
+      Category.USER_ERROR, "0183", "Could not find the clustering key", "", ""),
+  DATA_LOADER_TABLE_METADATA_MISSING(
+      Category.USER_ERROR, "0184", "No table metadata found", "", ""),
 
   //
   // Errors for the concurrency error category

@@ -1,7 +1,9 @@
 package com.scalar.db.dataloader.core.util;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.TableMetadata;
@@ -20,8 +22,12 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import org.junit.jupiter.api.Assertions;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -155,7 +161,7 @@ class KeyUtilsTest {
   @Test
   void createClusteringKeyFromSource_withEmptyClusteringKeySet_shouldReturnEmpty() {
     Optional<Key> key = KeyUtils.createClusteringKeyFromSource(Collections.EMPTY_SET, null, null);
-    Assertions.assertEquals(Optional.empty(), key);
+    assertEquals(Optional.empty(), key);
   }
 
   @Test
@@ -165,7 +171,7 @@ class KeyUtilsTest {
     clusterKeySet.add(UnitTestUtils.TEST_COLUMN_3_CK);
     Optional<Key> key =
         KeyUtils.createClusteringKeyFromSource(clusterKeySet, dataTypeByColumnName, sourceRecord);
-    Assertions.assertEquals(
+    assertEquals(
         "Optional[Key{IntColumn{name=col2, value=2147483647, hasNullValue=false}, BooleanColumn{name=col3, value=true, hasNullValue=false}}]",
         key.toString());
   }
@@ -176,7 +182,7 @@ class KeyUtilsTest {
     partitionKeySet.add("id1");
     Optional<Key> key =
         KeyUtils.createPartitionKeyFromSource(partitionKeySet, dataTypeByColumnName, sourceRecord);
-    Assertions.assertEquals(Optional.empty(), key);
+    assertEquals(Optional.empty(), key);
   }
 
   @Test
@@ -185,7 +191,7 @@ class KeyUtilsTest {
     partitionKeySet.add(UnitTestUtils.TEST_COLUMN_1_PK);
     Optional<Key> key =
         KeyUtils.createPartitionKeyFromSource(partitionKeySet, dataTypeByColumnName, sourceRecord);
-    Assertions.assertEquals(
+    assertEquals(
         "Optional[Key{BigIntColumn{name=col1, value=9007199254740992, hasNullValue=false}}]",
         key.toString());
   }

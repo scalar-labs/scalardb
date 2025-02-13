@@ -17,7 +17,12 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -194,14 +199,14 @@ public final class ColumnUtils {
    * @param ignoreNullValues ignore null values or not
    * @param dataTypesByColumns data types of columns
    * @return column data
-   * @throws Base64Exception if an error occurs while base64 decoding
+   * @throws ColumnParsingException if an error occurs while parsing the column
    */
   private static Column<?> getColumnFromSourceRecord(
       JsonNode sourceRecord,
       String columnName,
       boolean ignoreNullValues,
       Map<String, DataType> dataTypesByColumns)
-      throws Base64Exception, ColumnParsingException {
+      throws ColumnParsingException {
     DataType dataType = dataTypesByColumns.get(columnName);
     String columnValue =
         sourceRecord.has(columnName) && !sourceRecord.get(columnName).isNull()

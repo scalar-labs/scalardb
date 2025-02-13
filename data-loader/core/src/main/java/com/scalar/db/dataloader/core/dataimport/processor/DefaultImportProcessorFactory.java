@@ -1,5 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
+import com.scalar.db.common.error.CoreError;
+
 public class DefaultImportProcessorFactory implements ImportProcessorFactory {
 
   /**
@@ -22,7 +24,9 @@ public class DefaultImportProcessorFactory implements ImportProcessorFactory {
         importProcessor = new CsvImportProcessor(params);
         break;
       default:
-        importProcessor = null;
+        throw new IllegalArgumentException(
+            CoreError.DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED.buildMessage(
+                params.getImportOptions().getFileFormat().toString()));
     }
     return importProcessor;
   }

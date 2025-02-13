@@ -1,12 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport.task;
 
-import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_COULD_NOT_FIND_CLUSTERING_KEY;
-import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_COULD_NOT_FIND_PARTITION_KEY;
-import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_DATA_ALREADY_EXISTS;
-import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_DATA_NOT_FOUND;
-import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_TABLE_METADATA_MISSING;
-import static com.scalar.db.dataloader.core.dataimport.task.ImportTaskConstants.ERROR_UPSERT_INSERT_MISSING_COLUMNS;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
@@ -45,6 +38,7 @@ public abstract class ImportTask {
 
   protected final ImportTaskParams params;
 
+  /** Executes the import task, ie import data to database tables */
   public ImportTaskResult execute() {
 
     ObjectNode mutableSourceRecord = params.getSourceRecord().deepCopy();
@@ -86,6 +80,15 @@ public abstract class ImportTask {
         .build();
   }
 
+  /**
+   * @param controlFile control file which is used to map source data columns to columns of tables
+   *     to which data is imported
+   * @param tableMetadataByTableName a map of table metadata with table name as key
+   * @param tableColumnDataTypes a map with table name as key that contains a map of column names
+   *     and their data types
+   * @param mutableSourceRecord mutable source record data
+   * @return result object of import
+   */
   private List<ImportTargetResult> startMultiTableImportProcess(
       ControlFile controlFile,
       Map<String, TableMetadata> tableMetadataByTableName,
@@ -135,9 +138,19 @@ public abstract class ImportTask {
     return targetResults;
   }
 
+  /**
+   * @param namespace Namespace name
+   * @param table table name
+   * @param tableMetadata metadata of the table
+   * @param dataTypeByColumnName a map with table name as key that contains a map of column names
+   *     and their data types
+   * @param controlFileTable the control file table containing column mappings
+   * @param mutableSourceRecord mutable source record
+   * @return result of the import
+   */
   private ImportTargetResult importIntoSingleTable(
       String namespace,
-      String tableName,
+      String table,
       TableMetadata tableMetadata,
       Map<String, DataType> dataTypeByColumnName,
       ControlFileTable controlFileTable,
@@ -148,9 +161,11 @@ public abstract class ImportTask {
     if (dataTypeByColumnName == null || tableMetadata == null) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
-          .errors(Collections.singletonList(ERROR_TABLE_METADATA_MISSING))
+          .errors(
+              Collections.singletonList(
+                  CoreError.DATA_LOADER_TABLE_METADATA_MISSING.buildMessage()))
           .build();
     }
 
@@ -174,7 +189,7 @@ public abstract class ImportTask {
     if (!validationResult.isValid()) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(validationResult.getErrorMessages())
           .build();
@@ -186,9 +201,11 @@ public abstract class ImportTask {
     if (!optionalPartitionKey.isPresent()) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
-          .errors(Collections.singletonList(ERROR_COULD_NOT_FIND_PARTITION_KEY))
+          .errors(
+              Collections.singletonList(
+                  CoreError.DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY.buildMessage()))
           .build();
     }
     Optional<Key> optionalClusteringKey = Optional.empty();
@@ -199,9 +216,11 @@ public abstract class ImportTask {
       if (!optionalClusteringKey.isPresent()) {
         return ImportTargetResult.builder()
             .namespace(namespace)
-            .tableName(tableName)
+            .tableName(table)
             .status(ImportTargetResultStatus.VALIDATION_FAILED)
-            .errors(Collections.singletonList(ERROR_COULD_NOT_FIND_CLUSTERING_KEY))
+            .errors(
+                Collections.singletonList(
+                    CoreError.DATA_LOADER_COULD_NOT_FIND_CLUSTERING_KEY.buildMessage()))
             .build();
       }
     }
@@ -211,11 +230,11 @@ public abstract class ImportTask {
     try {
       optionalScalarDBResult =
           getDataRecord(
-              namespace, tableName, optionalPartitionKey.get(), optionalClusteringKey.orElse(null));
+              namespace, table, optionalPartitionKey.get(), optionalClusteringKey.orElse(null));
     } catch (ScalarDBDaoException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .status(ImportTargetResultStatus.RETRIEVAL_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
           .build();
@@ -232,9 +251,11 @@ public abstract class ImportTask {
       if (!validationResultForMissingColumns.isValid()) {
         return ImportTargetResult.builder()
             .namespace(namespace)
-            .tableName(tableName)
+            .tableName(table)
             .status(ImportTargetResultStatus.MISSING_COLUMNS)
-            .errors(Collections.singletonList(ERROR_UPSERT_INSERT_MISSING_COLUMNS))
+            .errors(
+                Collections.singletonList(
+                    CoreError.DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS.buildMessage()))
             .build();
       }
     }
@@ -242,22 +263,23 @@ public abstract class ImportTask {
     if (shouldFailForExistingData(importAction, importOptions)) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .importedRecord(mutableSourceRecord)
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_ALREADY_EXISTS)
-          .errors(Collections.singletonList(ERROR_DATA_ALREADY_EXISTS))
+          .errors(
+              Collections.singletonList(CoreError.DATA_LOADER_DATA_ALREADY_EXISTS.buildMessage()))
           .build();
     }
 
     if (shouldFailForMissingData(importAction, importOptions)) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .importedRecord(mutableSourceRecord)
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_NOT_FOUND)
-          .errors(Collections.singletonList(ERROR_DATA_NOT_FOUND))
+          .errors(Collections.singletonList(CoreError.DATA_LOADER_DATA_NOT_FOUND.buildMessage()))
           .build();
     }
 
@@ -273,24 +295,24 @@ public abstract class ImportTask {
     } catch (Base64Exception | ColumnParsingException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
           .build();
     }
 
-    // Time to save the record
+    // Save the record
     try {
       saveRecord(
           namespace,
-          tableName,
+          table,
           optionalPartitionKey.get(),
           optionalClusteringKey.orElse(null),
           columns);
 
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .importAction(importAction)
           .importedRecord(mutableSourceRecord)
           .status(ImportTargetResultStatus.SAVED)
@@ -299,7 +321,7 @@ public abstract class ImportTask {
     } catch (ScalarDBDaoException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .tableName(tableName)
+          .tableName(table)
           .importAction(importAction)
           .status(ImportTargetResultStatus.SAVE_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
@@ -307,17 +329,40 @@ public abstract class ImportTask {
     }
   }
 
+  /**
+   * Applies data mapping to the given source record based on the specified control file table.
+   *
+   * @param controlFileTable the control file table containing column mappings
+   * @param mutableSourceRecord the source record to be modified based on the mappings
+   */
   private void applyDataMapping(ControlFileTable controlFileTable, ObjectNode mutableSourceRecord) {
     if (controlFileTable != null) {
       ImportDataMapping.apply(mutableSourceRecord, controlFileTable);
     }
   }
 
+  /**
+   * Determines whether missing columns should be checked based on import options.
+   *
+   * @param importOptions the import options to evaluate
+   * @return {@code true} if missing columns should be checked, otherwise {@code false}
+   */
   private boolean shouldCheckForMissingColumns(ImportOptions importOptions) {
     return importOptions.getImportMode() == ImportMode.INSERT
         || importOptions.isRequireAllColumns();
   }
 
+  /**
+   * Validates a source record against the given table metadata and constraints.
+   *
+   * @param partitionKeyNames the set of partition key names
+   * @param clusteringKeyNames the set of clustering key names
+   * @param columnNames the set of expected column names
+   * @param mutableSourceRecord the source record to be validated
+   * @param checkForMissingColumns whether to check for missing columns
+   * @param tableMetadata the table metadata containing schema details
+   * @return the validation result containing any validation errors or success status
+   */
   private ImportSourceRecordValidationResult validateSourceRecord(
       LinkedHashSet<String> partitionKeyNames,
       LinkedHashSet<String> clusteringKeyNames,
@@ -334,17 +379,38 @@ public abstract class ImportTask {
         tableMetadata);
   }
 
+  /**
+   * Determines whether missing columns should be revalidated when performing an upsert operation.
+   *
+   * @param importOptions the import options to evaluate
+   * @param checkForMissingColumns whether missing columns were initially checked
+   * @return {@code true} if missing columns should be revalidated, otherwise {@code false}
+   */
   private boolean shouldRevalidateMissingColumns(
       ImportOptions importOptions, boolean checkForMissingColumns) {
     return !checkForMissingColumns && importOptions.getImportMode() == ImportMode.UPSERT;
   }
 
+  /**
+   * Determines whether the operation should fail if data already exists.
+   *
+   * @param importAction the action being performed (e.g., INSERT, UPDATE)
+   * @param importOptions the import options specifying behavior
+   * @return {@code true} if the operation should fail for existing data, otherwise {@code false}
+   */
   private boolean shouldFailForExistingData(
       ImportTaskAction importAction, ImportOptions importOptions) {
     return importAction == ImportTaskAction.UPDATE
         && importOptions.getImportMode() == ImportMode.INSERT;
   }
 
+  /**
+   * Determines whether the operation should fail if the expected data is missing.
+   *
+   * @param importAction the action being performed (e.g., INSERT, UPDATE)
+   * @param importOptions the import options specifying behavior
+   * @return {@code true} if the operation should fail for missing data, otherwise {@code false}
+   */
   private boolean shouldFailForMissingData(
       ImportTaskAction importAction, ImportOptions importOptions) {
     return importAction == ImportTaskAction.INSERT
