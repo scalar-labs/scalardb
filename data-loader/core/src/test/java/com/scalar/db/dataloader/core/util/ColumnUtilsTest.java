@@ -1,9 +1,16 @@
 package com.scalar.db.dataloader.core.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.UnitTestUtils;
+import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -16,6 +23,8 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,6 +34,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 class ColumnUtilsTest {
 
   private static final float FLOAT_VALUE = 2.78f;
+  private static final TableMetadata mockMetadata = UnitTestUtils.createTestTableMetadata();
+  private static final ObjectNode sourceRecord = UnitTestUtils.getOutputDataWithMetadata();
+  private static final Map<String, Column<?>> values = UnitTestUtils.createTestValues();
+  private static final Result scalarDBResult = new ResultImpl(values, mockMetadata);
 
   private static Stream<Arguments> provideColumnsForCreateColumnFromValue() {
     return Stream.of(
@@ -104,5 +117,13 @@ class ColumnUtilsTest {
         CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
             columnName, "table", "ns"),
         exception.getMessage());
+  }
+
+  @Test
+  void getColumnsFromResult_withValidData_shouldReturnColumns()
+      throws Base64Exception, ColumnParsingException {
+    List<Column<?>> columns =
+        ColumnUtils.getColumnsFromResult(scalarDBResult, sourceRecord, false, mockMetadata);
+    assertEquals(7, columns.size());
   }
 }
