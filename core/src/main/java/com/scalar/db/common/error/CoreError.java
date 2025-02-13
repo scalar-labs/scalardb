@@ -823,11 +823,7 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0178                                                                                                                                                                                                                       ",
-      "The provided file format is not supported : %s",
-      "",
-      ""),
+      Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
 
   //
   // Errors for the concurrency error category
