@@ -690,6 +690,20 @@ public enum CoreError implements ScalarDbError {
       "Duplicated data mappings found for column '%s' in table '%s'",
       "",
       ""),
+  DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN(
+      Category.USER_ERROR,
+      "0174",
+      "Missing required field or column mapping for clustering key %s",
+      "",
+      ""),
+  DATA_LOADER_MISSING_PARTITION_KEY_COLUMN(
+      Category.USER_ERROR,
+      "0175",
+      "Missing required field or column mapping for partition key %s",
+      "",
+      ""),
+  DATA_LOADER_MISSING_COLUMN(
+      Category.USER_ERROR, "0176", "Missing field or column mapping for %s", "", ""),
 
   //
   // Errors for the concurrency error category
