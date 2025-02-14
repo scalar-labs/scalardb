@@ -16,7 +16,7 @@ public class ProducerTaskFactory {
   private final boolean prettyPrintJson;
 
   /**
-   * *
+   * Create a producer task object based on file format
    *
    * @param fileFormat file format
    * @param projectionColumns columns names that are selected

@@ -3,7 +3,6 @@ package com.scalar.db.dataloader.core.dataexport.producer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
@@ -119,9 +118,7 @@ public class JsonLineProducerTask extends ProducerTask {
         objectNode.put(columnName, new String(encoded, Charset.defaultCharset()));
         break;
       default:
-        logger.error(
-            CoreError.DATA_LOADER_CONVERT_TO_STRING_FAILED.buildMessage(dataType.toString()));
-        break;
+        throw new AssertionError("Unknown data type:" + dataType);
     }
   }
 }

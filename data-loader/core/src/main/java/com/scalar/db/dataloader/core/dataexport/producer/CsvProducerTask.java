@@ -145,9 +145,7 @@ public class CsvProducerTask extends ProducerTask {
         value = result.getText(columnName);
         break;
       default:
-        logger.error(
-            CoreError.DATA_LOADER_CONVERT_TO_STRING_FAILED.buildMessage(dataType.toString()));
-        break;
+        throw new AssertionError("Unknown data type:" + dataType);
     }
     return value;
   }
