@@ -804,24 +804,32 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN(
       Category.USER_ERROR,
-      "0175",
+      "0174",
       "Missing required field or column mapping for clustering key %s",
       "",
       ""),
   DATA_LOADER_MISSING_PARTITION_KEY_COLUMN(
       Category.USER_ERROR,
-      "0176",
+      "0175",
       "Missing required field or column mapping for partition key %s",
       "",
       ""),
   DATA_LOADER_MISSING_COLUMN(
-      Category.USER_ERROR, "0177", "Missing field or column mapping for %s", "", ""),
+      Category.USER_ERROR, "0176", "Missing field or column mapping for %s", "", ""),
   DATA_LOADER_MISSING_SOURCE_FIELD(
       Category.USER_ERROR,
-      "0178",
+      "0177",
       "The data mapping source field '%s' for table '%s' is missing in the json data record",
       "",
       ""),
+  DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
+      Category.USER_ERROR,
+      "0178",
+      "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0179", "The provided file format is not supported : %s", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -1083,6 +1091,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0048",
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
+      "",
+      ""),
+  DATA_LOADER_CONVERT_TO_STRING_FAILED(
+      Category.INTERNAL_ERROR,
+      "0049",
+      "Unable to convert value to string from data format: %s",
       "",
       ""),
 
