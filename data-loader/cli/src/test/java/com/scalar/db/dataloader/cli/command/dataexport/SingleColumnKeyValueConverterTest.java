@@ -1,4 +1,4 @@
-package com.scalar.db.dataloader.cli.command;
+package com.scalar.db.dataloader.cli.command.dataexport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import org.junit.jupiter.api.Test;
 
-class ColumnKeyValueConverterTest {
+class SingleColumnKeyValueConverterTest {
 
-  private final ColumnKeyValueConverter converter = new ColumnKeyValueConverter();
+  private final SingleColumnKeyValueConverter converter = new SingleColumnKeyValueConverter();
 
   @Test
   void convert_ValidInput_ReturnsColumnKeyValue() {

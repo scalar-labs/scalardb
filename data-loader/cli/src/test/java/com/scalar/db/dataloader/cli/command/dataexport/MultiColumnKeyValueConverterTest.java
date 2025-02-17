@@ -7,9 +7,9 @@ import java.util.Collections;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class ColumnKeyValueConverterTest {
+public class MultiColumnKeyValueConverterTest {
 
-  ColumnKeyValueConverter columnKeyValueConverter = new ColumnKeyValueConverter();
+  MultiColumnKeyValueConverter multiColumnKeyValueConverter = new MultiColumnKeyValueConverter();
 
   @Test
   public void convert_withInvalidValue_ShouldThrowError() {
@@ -17,9 +17,9 @@ public class ColumnKeyValueConverterTest {
     IllegalArgumentException thrown =
         assertThrows(
             IllegalArgumentException.class,
-            () -> columnKeyValueConverter.convert(value),
+            () -> multiColumnKeyValueConverter.convert(value),
             "Expected to throw exception");
-    Assertions.assertEquals("Invalid key format: id 15", thrown.getMessage());
+    Assertions.assertEquals("Invalid key-value format: id 15", thrown.getMessage());
   }
 
   @Test
@@ -28,9 +28,9 @@ public class ColumnKeyValueConverterTest {
     ColumnKeyValue expectedOrder = new ColumnKeyValue("id", "15");
     Assertions.assertEquals(
         Collections.singletonList(expectedOrder).get(0).getColumnName(),
-        columnKeyValueConverter.convert(value).get(0).getColumnName());
+        multiColumnKeyValueConverter.convert(value).get(0).getColumnName());
     Assertions.assertEquals(
         Collections.singletonList(expectedOrder).get(0).getColumnValue(),
-        columnKeyValueConverter.convert(value).get(0).getColumnValue());
+        multiColumnKeyValueConverter.convert(value).get(0).getColumnValue());
   }
 }

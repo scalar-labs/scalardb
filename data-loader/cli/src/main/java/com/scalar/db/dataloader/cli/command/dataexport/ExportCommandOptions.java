@@ -50,7 +50,7 @@ public class ExportCommandOptions {
       names = {"--partition-key", "-pk"},
       paramLabel = "<KEY=VALUE>",
       description = "ScalarDB partition key and value in the format 'key=value'",
-      converter = ColumnKeyValueConverter.class)
+      converter = MultiColumnKeyValueConverter.class)
   protected List<ColumnKeyValue> partitionKeyValue;
 
   @CommandLine.Option(
@@ -77,8 +77,8 @@ public class ExportCommandOptions {
       names = {"--start-key", "-sk"},
       paramLabel = "<KEY=VALUE>",
       description = "Clustering key and value to mark the start of the scan (inclusive)",
-      converter = ColumnKeyValueConverter.class)
-  protected List<ColumnKeyValue> scanStartKeyValue;
+      converter = SingleColumnKeyValueConverter.class)
+  protected ColumnKeyValue scanStartKeyValue;
 
   @CommandLine.Option(
       names = {"--start-inclusive", "-si"},
@@ -91,8 +91,8 @@ public class ExportCommandOptions {
       names = {"--end-key", "-ek"},
       paramLabel = "<KEY=VALUE>",
       description = "Clustering key and value to mark the end of the scan (inclusive)",
-      converter = ColumnKeyValueConverter.class)
-  protected List<ColumnKeyValue> scanEndKeyValue;
+      converter = SingleColumnKeyValueConverter.class)
+  protected ColumnKeyValue scanEndKeyValue;
 
   @CommandLine.Option(
       names = {"--end-inclusive", "-ei"},
