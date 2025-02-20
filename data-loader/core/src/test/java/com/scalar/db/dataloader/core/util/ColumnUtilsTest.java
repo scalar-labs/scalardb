@@ -10,11 +10,19 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Base64;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -61,7 +69,36 @@ class ColumnUtilsTest {
             "blobColumn",
             Base64.getEncoder().encodeToString("binary".getBytes(StandardCharsets.UTF_8)),
             BlobColumn.of("blobColumn", "binary".getBytes(StandardCharsets.UTF_8))),
-        Arguments.of(DataType.BLOB, "blobColumn", null, BlobColumn.ofNull("blobColumn")));
+        Arguments.of(DataType.BLOB, "blobColumn", null, BlobColumn.ofNull("blobColumn")),
+        Arguments.of(
+            DataType.DATE,
+            "dateColumn",
+            LocalDate.of(2000, 1, 1).toString(),
+            DateColumn.of("dateColumn", LocalDate.of(2000, 1, 1))),
+        Arguments.of(DataType.DATE, "dateColumn", null, DateColumn.ofNull("dateColumn")),
+        Arguments.of(
+            DataType.TIME,
+            "timeColumn",
+            LocalTime.of(1, 1, 1).toString(),
+            TimeColumn.of("timeColumn", LocalTime.of(1, 1, 1))),
+        Arguments.of(DataType.TIME, "timeColumn", null, TimeColumn.ofNull("timeColumn")),
+        Arguments.of(
+            DataType.TIMESTAMP,
+            "timestampColumn",
+            LocalDateTime.of(2000, 1, 1, 1, 1).toString(),
+            TimestampColumn.of("timestampColumn", LocalDateTime.of(2000, 1, 1, 1, 1))),
+        Arguments.of(
+            DataType.TIMESTAMP, "timestampColumn", null, TimestampColumn.ofNull("timestampColumn")),
+        Arguments.of(
+            DataType.TIMESTAMPTZ,
+            "timestampTZColumn",
+            Instant.ofEpochMilli(1940041740).toString(),
+            TimestampTZColumn.of("timestampTZColumn", Instant.ofEpochMilli(1940041740))),
+        Arguments.of(
+            DataType.TIMESTAMPTZ,
+            "timestampTZColumn",
+            null,
+            TimestampTZColumn.ofNull("timestampTZColumn")));
   }
 
   @ParameterizedTest
