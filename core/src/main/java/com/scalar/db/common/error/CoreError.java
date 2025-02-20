@@ -1087,12 +1087,6 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
-  DATA_LOADER_CONVERT_TO_STRING_FAILED(
-      Category.INTERNAL_ERROR,
-      "0049",
-      "Unable to convert value to string from data format: %s",
-      "",
-      ""),
 
   //
   // Errors for the unknown transaction status error category
