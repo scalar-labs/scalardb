@@ -43,4 +43,8 @@ public class ErrorMessage {
   public static final String MISSING_PARTITION_KEY_COLUMN =
       "Missing required field or column mapping for partition key %s";
   public static final String MISSING_COLUMN = "Missing field or column mapping for %s";
+  public static final String VALUE_TO_STRING_CONVERSION_FAILED =
+      "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s";
+  public static final String FILE_FORMAT_NOT_SUPPORTED =
+      "The provided file format is not supported : %s";
 }
