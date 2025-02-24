@@ -816,10 +816,10 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_MISSING_COLUMN(
       Category.USER_ERROR, "0176", "Missing field or column mapping for %s", "", ""),
-  DATA_LOADER_MISSING_SOURCE_FIELD(
+  DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
       Category.USER_ERROR,
       "0177",
-      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
       "",
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
@@ -838,6 +838,12 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0183", "Could not find the clustering key", "", ""),
   DATA_LOADER_TABLE_METADATA_MISSING(
       Category.USER_ERROR, "0184", "No table metadata found", "", ""),
+  DATA_LOADER_MISSING_SOURCE_FIELD(
+      Category.USER_ERROR,
+      "0185",
+      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
