@@ -116,8 +116,12 @@ public final class ColumnUtils {
       throws Base64Exception, ColumnParsingException {
 
     List<Column<?>> columns = new ArrayList<>();
+    Set<String> columnsToIgnore =
+        getColumnsToIgnore(
+            tableMetadata.getPartitionKeyNames(), tableMetadata.getClusteringKeyNames());
     for (String columnName : tableMetadata.getColumnNames()) {
-      if (ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata)) {
+      if (ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata)
+          || columnsToIgnore.contains(columnName)) {
         continue;
       }
 

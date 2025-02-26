@@ -124,6 +124,6 @@ class ColumnUtilsTest {
       throws Base64Exception, ColumnParsingException {
     List<Column<?>> columns =
         ColumnUtils.getColumnsFromResult(scalarDBResult, sourceRecord, false, mockMetadata);
-    assertEquals(7, columns.size());
+    assertEquals(4, columns.size());
   }
 }
