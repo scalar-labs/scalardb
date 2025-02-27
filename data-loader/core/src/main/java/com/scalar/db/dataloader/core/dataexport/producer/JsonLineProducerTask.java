@@ -7,6 +7,10 @@ import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.charset.Charset;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -118,16 +122,24 @@ public class JsonLineProducerTask extends ProducerTask {
         objectNode.put(columnName, new String(encoded, Charset.defaultCharset()));
         break;
       case DATE:
-        objectNode.put(columnName, result.getDate(columnName).toString());
+        LocalDate date = result.getDate(columnName);
+        assert date != null;
+        objectNode.put(columnName, date.toString());
         break;
       case TIME:
-        objectNode.put(columnName, result.getTime(columnName).toString());
+        LocalTime time = result.getTime(columnName);
+        assert time != null;
+        objectNode.put(columnName, time.toString());
         break;
       case TIMESTAMP:
-        objectNode.put(columnName, result.getTimestamp(columnName).toString());
+        LocalDateTime localDateTime = result.getTimestamp(columnName);
+        assert localDateTime != null;
+        objectNode.put(columnName, localDateTime.toString());
         break;
       case TIMESTAMPTZ:
-        objectNode.put(columnName, result.getTimestampTZ(columnName).toString());
+        Instant instant = result.getTimestampTZ(columnName);
+        assert instant != null;
+        objectNode.put(columnName, instant.toString());
         break;
       default:
         throw new AssertionError("Unknown data type:" + dataType);
