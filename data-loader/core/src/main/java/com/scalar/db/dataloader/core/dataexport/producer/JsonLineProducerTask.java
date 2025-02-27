@@ -11,7 +11,6 @@ import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,18 +118,16 @@ public class JsonLineProducerTask extends ProducerTask {
         objectNode.put(columnName, new String(encoded, Charset.defaultCharset()));
         break;
       case DATE:
-        objectNode.put(columnName, Objects.requireNonNull(result.getDate(columnName)).toString());
+        objectNode.put(columnName, result.getDate(columnName).toString());
         break;
       case TIME:
-        objectNode.put(columnName, Objects.requireNonNull(result.getTime(columnName)).toString());
+        objectNode.put(columnName, result.getTime(columnName).toString());
         break;
       case TIMESTAMP:
-        objectNode.put(
-            columnName, Objects.requireNonNull(result.getTimestamp(columnName)).toString());
+        objectNode.put(columnName, result.getTimestamp(columnName).toString());
         break;
       case TIMESTAMPTZ:
-        objectNode.put(
-            columnName, Objects.requireNonNull(result.getTimestampTZ(columnName)).toString());
+        objectNode.put(columnName, result.getTimestampTZ(columnName).toString());
         break;
       default:
         throw new AssertionError("Unknown data type:" + dataType);

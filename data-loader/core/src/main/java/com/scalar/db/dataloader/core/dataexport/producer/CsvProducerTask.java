@@ -13,7 +13,6 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,16 +145,16 @@ public class CsvProducerTask extends ProducerTask {
         value = result.getText(columnName);
         break;
       case DATE:
-        value = Objects.requireNonNull(result.getDate(columnName)).toString();
+        value = result.getDate(columnName).toString();
         break;
       case TIME:
-        value = Objects.requireNonNull(result.getTime(columnName)).toString();
+        value = result.getTime(columnName).toString();
         break;
       case TIMESTAMP:
-        value = Objects.requireNonNull(result.getTimestamp(columnName)).toString();
+        value = result.getTimestamp(columnName).toString();
         break;
       case TIMESTAMPTZ:
-        value = Objects.requireNonNull(result.getTimestampTZ(columnName)).toString();
+        value = result.getTimestampTZ(columnName).toString();
         break;
       default:
         throw new AssertionError("Unknown data type:" + dataType);
