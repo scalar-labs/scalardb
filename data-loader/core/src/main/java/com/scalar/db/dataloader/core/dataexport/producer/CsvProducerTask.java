@@ -8,6 +8,10 @@ import com.scalar.db.dataloader.core.util.DecimalUtil;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.charset.Charset;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -143,6 +147,26 @@ public class CsvProducerTask extends ProducerTask {
         break;
       case TEXT:
         value = result.getText(columnName);
+        break;
+      case DATE:
+        LocalDate date = result.getDate(columnName);
+        assert date != null;
+        value = date.toString();
+        break;
+      case TIME:
+        LocalTime time = result.getTime(columnName);
+        assert time != null;
+        value = time.toString();
+        break;
+      case TIMESTAMP:
+        LocalDateTime localDateTime = result.getTimestamp(columnName);
+        assert localDateTime != null;
+        value = localDateTime.toString();
+        break;
+      case TIMESTAMPTZ:
+        Instant instant = result.getTimestampTZ(columnName);
+        assert instant != null;
+        value = instant.toString();
         break;
       default:
         throw new AssertionError("Unknown data type:" + dataType);
