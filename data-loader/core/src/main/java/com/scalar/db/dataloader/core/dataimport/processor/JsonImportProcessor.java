@@ -31,16 +31,16 @@ public class JsonImportProcessor extends ImportProcessor {
 
   /**
    * Processes the source data from the given import file.
-   * <p>
-   * This method reads data from the provided {@link BufferedReader}, processes it in chunks,
-   * and batches transactions according to the specified sizes. The method returns a list of
-   * {@link ImportDataChunkStatus} objects, each representing the status of a processed data chunk.
-   * </p>
+   *
+   * <p>This method reads data from the provided {@link BufferedReader}, processes it in chunks, and
+   * batches transactions according to the specified sizes. The method returns a list of {@link
+   * ImportDataChunkStatus} objects, each representing the status of a processed data chunk.
    *
    * @param dataChunkSize the number of records to include in each data chunk
    * @param transactionBatchSize the number of records to include in each transaction batch
    * @param reader the {@link BufferedReader} used to read the source file
-   * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status of each data chunk
+   * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status of
+   *     each data chunk
    * @throws ExecutionException if an error occurs during asynchronous processing
    * @throws InterruptedException if the processing is interrupted
    */
