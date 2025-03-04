@@ -39,15 +39,23 @@ public abstract class ImportProcessor {
   private final List<ImportEventListener> listeners = new ArrayList<>();
 
   /**
-   * * Process the source data from import file
+   * Processes the source data from the given import file.
+   * <p>
+   * This method reads data from the provided {@link BufferedReader}, processes it in chunks,
+   * and batches transactions according to the specified sizes. The method returns a list of
+   * {@link ImportDataChunkStatus} objects, each representing the status of a processed data chunk.
+   * </p>
    *
-   * @param dataChunkSize size of data chunk
-   * @param transactionBatchSize size of transaction batch
-   * @param reader reader which reads the source file
-   * @return list of import data chunk status objects
+   * @param dataChunkSize the number of records to include in each data chunk
+   * @param transactionBatchSize the number of records to include in each transaction batch
+   * @param reader the {@link BufferedReader} used to read the source file
+   * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status of each data chunk
+   * @throws ExecutionException if an error occurs during asynchronous processing
+   * @throws InterruptedException if the processing is interrupted
    */
   public List<ImportDataChunkStatus> process(
-      int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
+      int dataChunkSize, int transactionBatchSize, BufferedReader reader)
+      throws ExecutionException, InterruptedException {
     return Collections.emptyList();
   }
 

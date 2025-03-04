@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -38,7 +39,7 @@ public class ImportManager implements ImportEventListener {
    *
    * @return list of import data chunk status objects
    */
-  public List<ImportDataChunkStatus> startImport() {
+  public List<ImportDataChunkStatus> startImport() throws ExecutionException, InterruptedException {
     ImportProcessorParams params =
         ImportProcessorParams.builder()
             .scalarDBMode(scalarDBMode)
