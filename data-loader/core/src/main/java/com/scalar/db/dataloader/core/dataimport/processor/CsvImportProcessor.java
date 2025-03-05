@@ -38,13 +38,10 @@ public class CsvImportProcessor extends ImportProcessor {
    * @param reader the {@link BufferedReader} used to read the source file
    * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status of
    *     each data chunk
-   * @throws ExecutionException if an error occurs during asynchronous processing
-   * @throws InterruptedException if the processing is interrupted
    */
   @Override
   public List<ImportDataChunkStatus> process(
-      int dataChunkSize, int transactionBatchSize, BufferedReader reader)
-      throws ExecutionException, InterruptedException {
+      int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     int numCores = Runtime.getRuntime().availableProcessors();
     ExecutorService dataChunkExecutor = Executors.newFixedThreadPool(numCores);
     // Create a queue to hold data batches
@@ -104,7 +101,7 @@ public class CsvImportProcessor extends ImportProcessor {
                 }
 
               } catch (IOException e) {
-                throw new RuntimeException();
+                throw new RuntimeException("Failed to read import file", e);
               }
             });
 
@@ -128,7 +125,11 @@ public class CsvImportProcessor extends ImportProcessor {
     List<ImportDataChunkStatus> importDataChunkStatusList = new ArrayList<>();
     // Wait for all data chunk threads to complete
     for (Future<?> dataChunkFuture : dataChunkFutures) {
-      importDataChunkStatusList.add((ImportDataChunkStatus) dataChunkFuture.get());
+      try {
+        importDataChunkStatusList.add((ImportDataChunkStatus) dataChunkFuture.get());
+      } catch (InterruptedException | ExecutionException e) {
+        throw new RuntimeException("Data chunk processing failed", e);
+      }
     }
     dataChunkExecutor.shutdown();
     notifyAllDataChunksCompleted();

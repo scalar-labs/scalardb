@@ -50,12 +50,9 @@ public abstract class ImportProcessor {
    * @param reader the {@link BufferedReader} used to read the source file
    * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status of
    *     each data chunk
-   * @throws ExecutionException if an error occurs during asynchronous processing
-   * @throws InterruptedException if the processing is interrupted
    */
   public List<ImportDataChunkStatus> process(
-      int dataChunkSize, int transactionBatchSize, BufferedReader reader)
-      throws ExecutionException, InterruptedException {
+      int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     return Collections.emptyList();
   }
 
