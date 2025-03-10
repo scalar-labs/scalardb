@@ -1,7 +1,11 @@
 package com.scalar.db.dataloader.core.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -16,11 +20,17 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -43,7 +53,7 @@ public final class ColumnUtils {
    *
    * @param dataType the data type of the specified column
    * @param columnInfo the ScalarDB table column information
-   * @param value the value for the ScalarDB column (may be {@code null})
+   * @param value the value for the ScalarDB column (maybe {@code null})
    * @return the ScalarDB column created from the specified data
    * @throws ColumnParsingException if an error occurs while creating the column or parsing the
    *     value
@@ -111,5 +121,129 @@ public final class ColumnUtils {
               columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     }
+  }
+
+  /**
+   * Get columns from result data
+   *
+   * @param scalarDBResult result record
+   * @param sourceRecord source data
+   * @param ignoreNullValues ignore null values or not
+   * @return list of columns
+   * @throws Base64Exception if an error occurs while base64 decoding
+   */
+  public static List<Column<?>> getColumnsFromResult(
+      Result scalarDBResult,
+      JsonNode sourceRecord,
+      boolean ignoreNullValues,
+      TableMetadata tableMetadata)
+      throws Base64Exception, ColumnParsingException {
+
+    List<Column<?>> columns = new ArrayList<>();
+    Set<String> columnsToIgnore =
+        getColumnsToIgnore(
+            tableMetadata.getPartitionKeyNames(), tableMetadata.getClusteringKeyNames());
+    for (String columnName : tableMetadata.getColumnNames()) {
+      if (ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata)
+          || columnsToIgnore.contains(columnName)) {
+        continue;
+      }
+
+      Column<?> column =
+          getColumn(
+              scalarDBResult,
+              sourceRecord,
+              columnName,
+              ignoreNullValues,
+              tableMetadata.getColumnDataTypes());
+
+      if (column != null) {
+        columns.add(column);
+      }
+    }
+
+    return columns;
+  }
+
+  /**
+   * Create a set of columns to ignore
+   *
+   * @param partitionKeyNames a set of partition key names
+   * @param clusteringKeyNames a set of clustering key names
+   * @return a set of columns to ignore
+   */
+  private static Set<String> getColumnsToIgnore(
+      Set<String> partitionKeyNames, Set<String> clusteringKeyNames) {
+    Set<String> columnsToIgnore =
+        new HashSet<>(ConsensusCommitUtils.getTransactionMetaColumns().keySet());
+    columnsToIgnore.addAll(partitionKeyNames);
+    columnsToIgnore.addAll(clusteringKeyNames);
+    return columnsToIgnore;
+  }
+
+  /**
+   * Get columns from result data
+   *
+   * @param scalarDBResult result record
+   * @param sourceRecord source data
+   * @param columnName column name
+   * @param ignoreNullValues ignore null values or not
+   * @param dataTypesByColumns data types of columns
+   * @return column data
+   * @throws ColumnParsingException if an error occurs while base64 parsing the column
+   */
+  private static Column<?> getColumn(
+      Result scalarDBResult,
+      JsonNode sourceRecord,
+      String columnName,
+      boolean ignoreNullValues,
+      Map<String, DataType> dataTypesByColumns)
+      throws ColumnParsingException {
+    if (scalarDBResult != null && !sourceRecord.has(columnName)) {
+      return getColumnFromResult(scalarDBResult, columnName);
+    } else {
+      return getColumnFromSourceRecord(
+          sourceRecord, columnName, ignoreNullValues, dataTypesByColumns);
+    }
+  }
+
+  /**
+   * Get column from result
+   *
+   * @param scalarDBResult result record
+   * @param columnName column name
+   * @return column data
+   */
+  private static Column<?> getColumnFromResult(Result scalarDBResult, String columnName) {
+    Map<String, Column<?>> columnValues = scalarDBResult.getColumns();
+    return columnValues.get(columnName);
+  }
+
+  /**
+   * Get column from result
+   *
+   * @param sourceRecord source data
+   * @param columnName column name
+   * @param ignoreNullValues ignore null values or not
+   * @param dataTypesByColumns data types of columns
+   * @return column data
+   * @throws ColumnParsingException if an error occurs while parsing the column
+   */
+  private static Column<?> getColumnFromSourceRecord(
+      JsonNode sourceRecord,
+      String columnName,
+      boolean ignoreNullValues,
+      Map<String, DataType> dataTypesByColumns)
+      throws ColumnParsingException {
+    DataType dataType = dataTypesByColumns.get(columnName);
+    String columnValue =
+        sourceRecord.has(columnName) && !sourceRecord.get(columnName).isNull()
+            ? sourceRecord.get(columnName).asText()
+            : null;
+    if (!ignoreNullValues || columnValue != null) {
+      ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
+      return createColumnFromValue(dataType, columnInfo, columnValue);
+    }
+    return null;
   }
 }
