@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
@@ -14,9 +15,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -47,32 +50,65 @@ public class CsvImportProcessor extends ImportProcessor {
     int numCores = Runtime.getRuntime().availableProcessors();
     ExecutorService dataChunkExecutor = Executors.newFixedThreadPool(numCores);
     BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>();
+    List<CompletableFuture<ImportDataChunkStatus>> dataChunkFutures = new CopyOnWriteArrayList<>();
 
-    CompletableFuture<Void> readerFuture =
-        CompletableFuture.runAsync(() -> readDataChunks(reader, dataChunkSize, dataChunkQueue));
+    try {
+      CompletableFuture<Void> readerFuture =
+          CompletableFuture.runAsync(
+              () -> readDataChunks(reader, dataChunkSize, dataChunkQueue), dataChunkExecutor);
 
-    List<CompletableFuture<ImportDataChunkStatus>> dataChunkFutures = new ArrayList<>();
-    readerFuture
-        .thenRun(
-            () -> {
-              ImportDataChunk dataChunk;
-              while ((dataChunk = dataChunkQueue.poll()) != null) {
-                ImportDataChunk finalDataChunk = dataChunk;
-                CompletableFuture<ImportDataChunkStatus> future =
-                    CompletableFuture.supplyAsync(
-                        () -> processDataChunk(finalDataChunk, transactionBatchSize, numCores),
-                        dataChunkExecutor);
-                dataChunkFutures.add(future);
-              }
-            })
-        .join();
+      CompletableFuture<Void> processingFuture =
+          readerFuture.thenRunAsync(
+              () -> {
+                while (!(dataChunkQueue.isEmpty() && readerFuture.isDone())) {
+                  try {
+                    ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
+                    if (dataChunk != null) {
+                      dataChunkFutures.add(
+                          CompletableFuture.supplyAsync(
+                              () -> processDataChunk(dataChunk, transactionBatchSize, numCores),
+                              dataChunkExecutor));
+                    }
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException(
+                        CoreError.DATA_LOADER_DATA_CHUNK_PROCESS_FAILED.buildMessage(
+                            e.getMessage()),
+                        e);
+                  }
+                }
+              },
+              dataChunkExecutor);
 
-    List<ImportDataChunkStatus> importDataChunkStatusList =
-        dataChunkFutures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+      processingFuture.join();
 
-    dataChunkExecutor.shutdown();
-    notifyAllDataChunksCompleted();
-    return importDataChunkStatusList;
+      return CompletableFuture.allOf(dataChunkFutures.toArray(new CompletableFuture[0]))
+          .thenApply(
+              v ->
+                  dataChunkFutures.stream()
+                      .map(
+                          f ->
+                              f.exceptionally(
+                                      e -> {
+                                        System.err.println(
+                                            "Data chunk processing failed: " + e.getMessage());
+                                        return null;
+                                      })
+                                  .join())
+                      .collect(Collectors.toList()))
+          .join();
+    } finally {
+      dataChunkExecutor.shutdown();
+      try {
+        if (!dataChunkExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+          dataChunkExecutor.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        dataChunkExecutor.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+      notifyAllDataChunksCompleted();
+    }
   }
 
   private void readDataChunks(
@@ -95,7 +131,8 @@ public class CsvImportProcessor extends ImportProcessor {
       while ((line = reader.readLine()) != null) {
         String[] dataArray = line.split(delimiter);
         if (headerArray.length != dataArray.length) {
-          throw new IllegalArgumentException("CSV row does not match header length.");
+          throw new IllegalArgumentException(
+              CoreError.DATA_LOADER_CSV_DATA_MISMATCH.buildMessage(line, header));
         }
         JsonNode jsonNode = combineHeaderAndData(headerArray, dataArray);
         if (jsonNode.isEmpty()) continue;
@@ -108,7 +145,8 @@ public class CsvImportProcessor extends ImportProcessor {
       }
       if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
     } catch (IOException | InterruptedException e) {
-      throw new RuntimeException("Failed to read CSV file", e);
+      throw new RuntimeException(
+          CoreError.DATA_LOADER_CSV_FILE_READ_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -122,7 +160,8 @@ public class CsvImportProcessor extends ImportProcessor {
     try {
       return reader.readLine();
     } catch (IOException e) {
-      throw new UncheckedIOException("Failed to read header line", e);
+      throw new UncheckedIOException(
+          CoreError.DATA_LOADER_CSV_FILE_HEADER_READ_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 

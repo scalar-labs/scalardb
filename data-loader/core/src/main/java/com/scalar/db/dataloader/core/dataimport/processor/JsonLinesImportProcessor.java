@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
@@ -68,7 +69,10 @@ public class JsonLinesImportProcessor extends ImportProcessor {
                     }
                   } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new RuntimeException("Data chunk processing was interrupted", e);
+                    throw new RuntimeException(
+                        CoreError.DATA_LOADER_DATA_CHUNK_PROCESS_FAILED.buildMessage(
+                            e.getMessage()),
+                        e);
                   }
                 }
               },
@@ -124,7 +128,8 @@ public class JsonLinesImportProcessor extends ImportProcessor {
       if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
     } catch (IOException | InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new RuntimeException("Failed to read import file", e);
+      throw new RuntimeException(
+          CoreError.DATA_LOADER_JSONLINES_FILE_READ_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 
