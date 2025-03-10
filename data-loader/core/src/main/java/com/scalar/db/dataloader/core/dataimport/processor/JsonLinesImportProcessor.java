@@ -8,14 +8,16 @@ import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class JsonLinesImportProcessor extends ImportProcessor {
 
@@ -43,87 +45,92 @@ public class JsonLinesImportProcessor extends ImportProcessor {
   public List<ImportDataChunkStatus> process(
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     int numCores = Runtime.getRuntime().availableProcessors();
-
-    // Create a thread pool for processing data batches
     ExecutorService dataChunkExecutor = Executors.newFixedThreadPool(numCores);
+    BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>();
+    List<CompletableFuture<ImportDataChunkStatus>> dataChunkFutures = new CopyOnWriteArrayList<>();
 
-    // Create a queue to hold data batches
-    Queue<ImportDataChunk> dataChunkQueue = new LinkedList<>();
-
-    // Create a thread to read JSON lines and populate data batches
-    Thread readerThread =
-        new Thread(
-            () -> {
-              try {
-                List<ImportRow> currentDataChunk = new ArrayList<>();
-                int rowNumber = 1;
-                String line;
-                while ((line = reader.readLine()) != null) {
-                  JsonNode jsonNode = OBJECT_MAPPER.readTree(line);
-                  if (jsonNode == null || jsonNode.isEmpty()) {
-                    continue;
-                  }
-
-                  ImportRow importRow = new ImportRow(rowNumber, jsonNode);
-                  currentDataChunk.add(importRow);
-
-                  // If the data chunk is full, add it to the queue
-                  if (currentDataChunk.size() == dataChunkSize) {
-                    int dataChunkId = dataChunkIdCounter.getAndIncrement();
-                    ImportDataChunk importDataChunk =
-                        ImportDataChunk.builder()
-                            .dataChunkId(dataChunkId)
-                            .sourceData(currentDataChunk)
-                            .build();
-                    dataChunkQueue.offer(importDataChunk);
-                    currentDataChunk = new ArrayList<>();
-                  }
-                  rowNumber++;
-                }
-
-                // Add the last data chunk to the queue
-                if (!currentDataChunk.isEmpty()) {
-                  int dataChunkId = dataChunkIdCounter.getAndIncrement();
-                  ImportDataChunk importDataChunk =
-                      ImportDataChunk.builder()
-                          .dataChunkId(dataChunkId)
-                          .sourceData(currentDataChunk)
-                          .build();
-                  dataChunkQueue.offer(importDataChunk);
-                }
-              } catch (IOException e) {
-                throw new RuntimeException("Failed to read import file", e);
-              }
-            });
-    readerThread.start();
     try {
-      // Wait for readerThread to finish
-      readerThread.join();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      System.err.println("Main thread was interrupted.");
-    }
-    // Process data chunks in parallel
-    List<Future<?>> dataChunkFutures = new ArrayList<>();
-    while (!dataChunkQueue.isEmpty()) {
-      ImportDataChunk dataChunk = dataChunkQueue.poll();
-      Future<?> dataChunkFuture =
-          dataChunkExecutor.submit(
-              () -> processDataChunk(dataChunk, transactionBatchSize, numCores));
-      dataChunkFutures.add(dataChunkFuture);
-    }
+      CompletableFuture<Void> readerFuture =
+          CompletableFuture.runAsync(
+              () -> readDataChunks(reader, dataChunkSize, dataChunkQueue), dataChunkExecutor);
 
-    List<ImportDataChunkStatus> importDataChunkStatusList = new ArrayList<>();
-    // Wait for all data chunk threads to complete
-    for (Future<?> dataChunkFuture : dataChunkFutures) {
+      CompletableFuture<Void> processingFuture =
+          readerFuture.thenRunAsync(
+              () -> {
+                while (!(dataChunkQueue.isEmpty() && readerFuture.isDone())) {
+                  try {
+                    ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
+                    if (dataChunk != null) {
+                      dataChunkFutures.add(
+                          CompletableFuture.supplyAsync(
+                              () -> processDataChunk(dataChunk, transactionBatchSize, numCores),
+                              dataChunkExecutor));
+                    }
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Data chunk processing was interrupted", e);
+                  }
+                }
+              },
+              dataChunkExecutor);
+
+      processingFuture.join();
+
+      return CompletableFuture.allOf(dataChunkFutures.toArray(new CompletableFuture[0]))
+          .thenApply(
+              v ->
+                  dataChunkFutures.stream()
+                      .map(
+                          f ->
+                              f.exceptionally(
+                                      e -> {
+                                        System.err.println(
+                                            "Data chunk processing failed: " + e.getMessage());
+                                        return null;
+                                      })
+                                  .join())
+                      .collect(Collectors.toList()))
+          .join();
+    } finally {
+      dataChunkExecutor.shutdown();
       try {
-        importDataChunkStatusList.add((ImportDataChunkStatus) dataChunkFuture.get());
-      } catch (InterruptedException | ExecutionException e) {
-        throw new RuntimeException("Data chunk processing failed", e.getCause());
+        if (!dataChunkExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+          dataChunkExecutor.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        dataChunkExecutor.shutdownNow();
+        Thread.currentThread().interrupt();
       }
+      notifyAllDataChunksCompleted();
     }
-    dataChunkExecutor.shutdown();
-    notifyAllDataChunksCompleted();
-    return importDataChunkStatusList;
+  }
+
+  private void readDataChunks(
+      BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
+    try {
+      List<ImportRow> currentDataChunk = new ArrayList<>();
+      int rowNumber = 1;
+      String line;
+      while ((line = reader.readLine()) != null) {
+        JsonNode jsonNode = OBJECT_MAPPER.readTree(line);
+        if (jsonNode == null || jsonNode.isEmpty()) continue;
+
+        currentDataChunk.add(new ImportRow(rowNumber++, jsonNode));
+        if (currentDataChunk.size() == dataChunkSize) {
+          enqueueDataChunk(currentDataChunk, dataChunkQueue);
+          currentDataChunk = new ArrayList<>();
+        }
+      }
+      if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
+    } catch (IOException | InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("Failed to read import file", e);
+    }
+  }
+
+  private void enqueueDataChunk(List<ImportRow> dataChunk, BlockingQueue<ImportDataChunk> queue)
+      throws InterruptedException {
+    int dataChunkId = dataChunkIdCounter.getAndIncrement();
+    queue.put(ImportDataChunk.builder().dataChunkId(dataChunkId).sourceData(dataChunk).build());
   }
 }

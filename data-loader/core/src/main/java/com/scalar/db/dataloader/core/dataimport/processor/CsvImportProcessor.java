@@ -8,15 +8,17 @@ import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ExecutionException;
+import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class CsvImportProcessor extends ImportProcessor {
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
@@ -44,96 +46,84 @@ public class CsvImportProcessor extends ImportProcessor {
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     int numCores = Runtime.getRuntime().availableProcessors();
     ExecutorService dataChunkExecutor = Executors.newFixedThreadPool(numCores);
-    // Create a queue to hold data batches
-    Queue<ImportDataChunk> dataChunkQueue = new LinkedList<>();
-    Thread readerThread =
-        new Thread(
+    BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>();
+
+    CompletableFuture<Void> readerFuture =
+        CompletableFuture.runAsync(() -> readDataChunks(reader, dataChunkSize, dataChunkQueue));
+
+    List<CompletableFuture<ImportDataChunkStatus>> dataChunkFutures = new ArrayList<>();
+    readerFuture
+        .thenRun(
             () -> {
-              try {
-                String header = params.getImportOptions().getCustomHeaderRow();
-                String delimiter = Character.toString(params.getImportOptions().getDelimiter());
-                if (delimiter.trim().isEmpty()) {
-                  delimiter = ",";
-                }
-                if (header == null) {
-                  header = reader.readLine();
-                }
-                String[] headerArray = header.split(delimiter);
-                String line;
-                int rowNumber = 1;
-                List<ImportRow> currentDataChunk = new ArrayList<>();
-                while ((line = reader.readLine()) != null) {
-                  String[] dataArray = line.split(delimiter);
-                  if (headerArray.length != dataArray.length) {
-                    // Throw a custom exception for related issue
-                    throw new RuntimeException();
-                  }
-                  JsonNode jsonNode = combineHeaderAndData(headerArray, dataArray);
-                  if (jsonNode == null || jsonNode.isEmpty()) {
-                    continue;
-                  }
-
-                  ImportRow importRow = new ImportRow(rowNumber, jsonNode);
-                  currentDataChunk.add(importRow);
-                  // If the data chunk is full, add it to the queue
-                  if (currentDataChunk.size() == dataChunkSize) {
-                    int dataChunkId = dataChunkIdCounter.getAndIncrement();
-                    ImportDataChunk importDataChunk =
-                        ImportDataChunk.builder()
-                            .dataChunkId(dataChunkId)
-                            .sourceData(currentDataChunk)
-                            .build();
-                    dataChunkQueue.offer(importDataChunk);
-                    currentDataChunk = new ArrayList<>();
-                  }
-                  rowNumber++;
-                }
-
-                // Add the last data chunk to the queue
-                if (!currentDataChunk.isEmpty()) {
-                  int dataChunkId = dataChunkIdCounter.getAndIncrement();
-                  ImportDataChunk importDataChunk =
-                      ImportDataChunk.builder()
-                          .dataChunkId(dataChunkId)
-                          .sourceData(currentDataChunk)
-                          .build();
-                  dataChunkQueue.offer(importDataChunk);
-                }
-
-              } catch (IOException e) {
-                throw new RuntimeException("Failed to read import file", e);
+              ImportDataChunk dataChunk;
+              while ((dataChunk = dataChunkQueue.poll()) != null) {
+                ImportDataChunk finalDataChunk = dataChunk;
+                CompletableFuture<ImportDataChunkStatus> future =
+                    CompletableFuture.supplyAsync(
+                        () -> processDataChunk(finalDataChunk, transactionBatchSize, numCores),
+                        dataChunkExecutor);
+                dataChunkFutures.add(future);
               }
-            });
+            })
+        .join();
 
-    readerThread.start();
-    try {
-      // Wait for readerThread to finish
-      readerThread.join();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-    // Process data chunks in parallel
-    List<Future<?>> dataChunkFutures = new ArrayList<>();
-    while (!dataChunkQueue.isEmpty()) {
-      ImportDataChunk dataChunk = dataChunkQueue.poll();
-      Future<?> dataChunkFuture =
-          dataChunkExecutor.submit(
-              () -> processDataChunk(dataChunk, transactionBatchSize, numCores));
-      dataChunkFutures.add(dataChunkFuture);
-    }
+    List<ImportDataChunkStatus> importDataChunkStatusList =
+        dataChunkFutures.stream().map(CompletableFuture::join).collect(Collectors.toList());
 
-    List<ImportDataChunkStatus> importDataChunkStatusList = new ArrayList<>();
-    // Wait for all data chunk threads to complete
-    for (Future<?> dataChunkFuture : dataChunkFutures) {
-      try {
-        importDataChunkStatusList.add((ImportDataChunkStatus) dataChunkFuture.get());
-      } catch (InterruptedException | ExecutionException e) {
-        throw new RuntimeException("Data chunk processing failed", e);
-      }
-    }
     dataChunkExecutor.shutdown();
     notifyAllDataChunksCompleted();
     return importDataChunkStatusList;
+  }
+
+  private void readDataChunks(
+      BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
+    try {
+      String delimiter =
+          Optional.of(params.getImportOptions().getDelimiter())
+              .map(c -> Character.toString(c).trim())
+              .filter(s -> !s.isEmpty())
+              .orElse(",");
+
+      String header =
+          Optional.ofNullable(params.getImportOptions().getCustomHeaderRow())
+              .orElseGet(() -> safeReadLine(reader));
+
+      String[] headerArray = header.split(delimiter);
+      List<ImportRow> currentDataChunk = new ArrayList<>();
+      String line;
+      int rowNumber = 1;
+      while ((line = reader.readLine()) != null) {
+        String[] dataArray = line.split(delimiter);
+        if (headerArray.length != dataArray.length) {
+          throw new IllegalArgumentException("CSV row does not match header length.");
+        }
+        JsonNode jsonNode = combineHeaderAndData(headerArray, dataArray);
+        if (jsonNode.isEmpty()) continue;
+
+        currentDataChunk.add(new ImportRow(rowNumber++, jsonNode));
+        if (currentDataChunk.size() == dataChunkSize) {
+          enqueueDataChunk(currentDataChunk, dataChunkQueue);
+          currentDataChunk = new ArrayList<>();
+        }
+      }
+      if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
+    } catch (IOException | InterruptedException e) {
+      throw new RuntimeException("Failed to read CSV file", e);
+    }
+  }
+
+  private void enqueueDataChunk(List<ImportRow> dataChunk, BlockingQueue<ImportDataChunk> queue)
+      throws InterruptedException {
+    int dataChunkId = dataChunkIdCounter.getAndIncrement();
+    queue.put(ImportDataChunk.builder().dataChunkId(dataChunkId).sourceData(dataChunk).build());
+  }
+
+  private String safeReadLine(BufferedReader reader) {
+    try {
+      return reader.readLine();
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to read header line", e);
+    }
   }
 
   private JsonNode combineHeaderAndData(String[] header, String[] data) {
