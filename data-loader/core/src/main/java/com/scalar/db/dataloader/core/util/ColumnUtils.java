@@ -36,9 +36,22 @@ import javax.annotation.Nullable;
 /**
  * Utility class for creating and managing ScalarDB columns.
  *
- * <p>This class provides methods for creating ScalarDB columns based on the given data type, column
- * information, and value. It includes handling for various data types and special cases like base64
- * encoding for BLOB data.
+ * <p>This class provides utility methods for:
+ *
+ * <ul>
+ *   <li>Creating ScalarDB columns from various data types and values
+ *   <li>Converting between ScalarDB Result objects and column data
+ *   <li>Handling special data formats like base64 encoding for BLOB data
+ *   <li>Managing transaction-related metadata columns
+ * </ul>
+ *
+ * <p>The class supports all ScalarDB data types including:
+ *
+ * <ul>
+ *   <li>Basic types: BOOLEAN, INT, BIGINT, FLOAT, DOUBLE, TEXT
+ *   <li>Binary data: BLOB (requires base64 encoding)
+ *   <li>Temporal types: DATE, TIME, TIMESTAMP, TIMESTAMPTZ
+ * </ul>
  */
 public final class ColumnUtils {
 
@@ -48,15 +61,22 @@ public final class ColumnUtils {
   /**
    * Creates a ScalarDB column from the given data type, column information, and value.
    *
-   * <p>Blob source values need to be base64 encoded before passing them as a value. If the value is
-   * {@code null}, the corresponding column is created as a {@code null} column.
+   * <p>This method handles the creation of columns for all supported ScalarDB data types. For BLOB
+   * type columns, the input value must be base64 encoded before being passed to this method.
    *
-   * @param dataType the data type of the specified column
-   * @param columnInfo the ScalarDB table column information
-   * @param value the value for the ScalarDB column (maybe {@code null})
+   * <p>If the provided value is {@code null}, a null column of the appropriate type is created.
+   *
+   * @param dataType the data type of the specified column (e.g., BOOLEAN, INT, TEXT, etc.)
+   * @param columnInfo the ScalarDB table column information containing column name and metadata
+   * @param value the string representation of the value for the ScalarDB column (maybe {@code
+   *     null})
    * @return the ScalarDB column created from the specified data
-   * @throws ColumnParsingException if an error occurs while creating the column or parsing the
-   *     value
+   * @throws ColumnParsingException if an error occurs while creating the column, such as:
+   *     <ul>
+   *       <li>Invalid number format for numeric types
+   *       <li>Invalid base64 encoding for BLOB type
+   *       <li>Invalid date/time format for temporal types
+   *     </ul>
    */
   public static Column<?> createColumnFromValue(
       DataType dataType, ColumnInfo columnInfo, @Nullable String value)
@@ -124,13 +144,25 @@ public final class ColumnUtils {
   }
 
   /**
-   * Get columns from result data
+   * Retrieves columns from a ScalarDB Result object, comparing with source data and handling
+   * metadata.
    *
-   * @param scalarDBResult result record
-   * @param sourceRecord source data
-   * @param ignoreNullValues ignore null values or not
-   * @return list of columns
-   * @throws Base64Exception if an error occurs while base64 decoding
+   * <p>This method processes the result data while:
+   *
+   * <ul>
+   *   <li>Excluding transaction metadata columns
+   *   <li>Excluding partition and clustering key columns
+   *   <li>Handling null values based on the ignoreNullValues parameter
+   *   <li>Merging data from both ScalarDB Result and source record
+   * </ul>
+   *
+   * @param scalarDBResult the ScalarDB Result object containing the current data
+   * @param sourceRecord the source data in JSON format to compare against
+   * @param ignoreNullValues if true, null values will be excluded from the result
+   * @param tableMetadata metadata about the table structure and column types
+   * @return a List of Column objects representing the processed data
+   * @throws Base64Exception if there's an error processing base64 encoded BLOB data
+   * @throws ColumnParsingException if there's an error parsing column values
    */
   public static List<Column<?>> getColumnsFromResult(
       Result scalarDBResult,
@@ -166,11 +198,19 @@ public final class ColumnUtils {
   }
 
   /**
-   * Create a set of columns to ignore
+   * Creates a set of column names that should be ignored during processing.
    *
-   * @param partitionKeyNames a set of partition key names
-   * @param clusteringKeyNames a set of clustering key names
-   * @return a set of columns to ignore
+   * <p>This method combines:
+   *
+   * <ul>
+   *   <li>Transaction metadata columns
+   *   <li>Partition key columns
+   *   <li>Clustering key columns
+   * </ul>
+   *
+   * @param partitionKeyNames set of column names that are partition keys
+   * @param clusteringKeyNames set of column names that are clustering keys
+   * @return a Set of column names that should be ignored during processing
    */
   private static Set<String> getColumnsToIgnore(
       Set<String> partitionKeyNames, Set<String> clusteringKeyNames) {
@@ -182,15 +222,22 @@ public final class ColumnUtils {
   }
 
   /**
-   * Get columns from result data
+   * Retrieves a column value by comparing ScalarDB Result data with source record data.
    *
-   * @param scalarDBResult result record
-   * @param sourceRecord source data
-   * @param columnName column name
-   * @param ignoreNullValues ignore null values or not
-   * @param dataTypesByColumns data types of columns
-   * @return column data
-   * @throws ColumnParsingException if an error occurs while base64 parsing the column
+   * <p>This method determines which data source to use for the column value:
+   *
+   * <ul>
+   *   <li>If the column exists in ScalarDB Result but not in source record, uses Result data
+   *   <li>Otherwise, uses the source record data
+   * </ul>
+   *
+   * @param scalarDBResult the ScalarDB Result object containing current data
+   * @param sourceRecord the source data in JSON format
+   * @param columnName the name of the column to retrieve
+   * @param ignoreNullValues whether to ignore null values in the result
+   * @param dataTypesByColumns mapping of column names to their data types
+   * @return the Column object containing the value, or null if ignored
+   * @throws ColumnParsingException if there's an error parsing the column value
    */
   private static Column<?> getColumn(
       Result scalarDBResult,

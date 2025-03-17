@@ -31,6 +31,11 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * An abstract class that handles the processing of data imports into ScalarDB. This processor
+ * supports both transactional and non-transactional (storage) modes and provides event notification
+ * capabilities for monitoring the import process.
+ */
 @RequiredArgsConstructor
 public abstract class ImportProcessor {
 
@@ -42,14 +47,16 @@ public abstract class ImportProcessor {
    * Processes the source data from the given import file.
    *
    * <p>This method reads data from the provided {@link BufferedReader}, processes it in chunks, and
-   * batches transactions according to the specified sizes. The method returns a list of {@link
-   * ImportDataChunkStatus} objects, each representing the status of a processed data chunk.
+   * batches transactions according to the specified sizes. The processing can be done in either
+   * transactional or storage mode, depending on the configured {@link ScalarDBMode}.
    *
-   * @param dataChunkSize the number of records to include in each data chunk
-   * @param transactionBatchSize the number of records to include in each transaction batch
+   * @param dataChunkSize the number of records to include in each data chunk for parallel
+   *     processing
+   * @param transactionBatchSize the number of records to group together in a single transaction
+   *     (only used in transaction mode)
    * @param reader the {@link BufferedReader} used to read the source file
-   * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status of
-   *     each data chunk
+   * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status and
+   *     results of each data chunk
    */
   public List<ImportDataChunkStatus> process(
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
@@ -140,11 +147,12 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Split the data chunk into transaction batches
+   * Splits a data chunk into smaller transaction batches for processing. This method is used in
+   * transaction mode to group records together for atomic processing.
    *
-   * @param dataChunk data chunk object
-   * @param batchSize batch size
-   * @return created list of transaction batches
+   * @param dataChunk the data chunk to split into batches
+   * @param batchSize the maximum number of records per transaction batch
+   * @return a list of {@link ImportTransactionBatch} objects representing the split batches
    */
   private List<ImportTransactionBatch> splitIntoTransactionBatches(
       ImportDataChunk dataChunk, int batchSize) {
@@ -167,11 +175,14 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * To process a transaction batch and return the result
+   * Processes a single transaction batch within a data chunk. Creates a new transaction, processes
+   * all records in the batch, and commits or aborts the transaction based on the success of all
+   * operations.
    *
-   * @param dataChunk data chunk object
-   * @param transactionBatch transaction batch object
-   * @return processed transaction batch result
+   * @param dataChunk the parent data chunk containing this batch
+   * @param transactionBatch the batch of records to process in a single transaction
+   * @return an {@link ImportTransactionBatchResult} containing the processing results and any
+   *     errors
    */
   private ImportTransactionBatchResult processTransactionBatch(
       ImportDataChunk dataChunk, ImportTransactionBatch transactionBatch) {
@@ -236,9 +247,12 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * @param dataChunk data chunk object
-   * @param importRow data row object
-   * @return thr task result after processing the row data
+   * Processes a single record in storage mode (non-transactional). Each record is processed
+   * independently without transaction guarantees.
+   *
+   * @param dataChunk the parent data chunk containing this record
+   * @param importRow the record to process
+   * @return an {@link ImportTaskResult} containing the processing result for the record
    */
   private ImportTaskResult processStorageRecord(ImportDataChunk dataChunk, ImportRow importRow) {
     ImportTaskParams taskParams =
@@ -266,12 +280,13 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Process data chunk data
+   * Processes a complete data chunk using parallel execution. The processing mode (transactional or
+   * storage) is determined by the configured {@link ScalarDBMode}.
    *
-   * @param dataChunk data chunk object
-   * @param transactionBatchSize transaction batch size
-   * @param numCores num of cpu cores
-   * @return import data chunk status object after processing the data chunk
+   * @param dataChunk the data chunk to process
+   * @param transactionBatchSize the size of transaction batches (used only in transaction mode)
+   * @param numCores the number of CPU cores to use for parallel processing
+   * @return an {@link ImportDataChunkStatus} containing the complete processing results and metrics
    */
   protected ImportDataChunkStatus processDataChunk(
       ImportDataChunk dataChunk, int transactionBatchSize, int numCores) {
@@ -294,12 +309,13 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Process data chunk data with transactions
+   * Processes a data chunk using transaction mode with parallel batch processing. Multiple
+   * transaction batches are processed concurrently using a thread pool.
    *
-   * @param dataChunk data chunk object
-   * @param transactionBatchSize transaction batch size
-   * @param numCores num of cpu cores
-   * @return import data chunk status object after processing the data chunk
+   * @param dataChunk the data chunk to process
+   * @param transactionBatchSize the number of records per transaction batch
+   * @param numCores the maximum number of concurrent transactions to process
+   * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
   private ImportDataChunkStatus processDataChunkWithTransactions(
       ImportDataChunk dataChunk, int transactionBatchSize, int numCores) {
@@ -360,11 +376,12 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Process data chunk data without transactions
+   * Processes a data chunk using storage mode with parallel record processing. Individual records
+   * are processed concurrently without transaction guarantees.
    *
-   * @param dataChunk data chunk object
-   * @param numCores num of cpu cores
-   * @return import data chunk status object after processing the data chunk
+   * @param dataChunk the data chunk to process
+   * @param numCores the number of records to process concurrently
+   * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
   private ImportDataChunkStatus processDataChunkWithoutTransactions(
       ImportDataChunk dataChunk, int numCores) {
@@ -407,6 +424,12 @@ public abstract class ImportProcessor {
         .build();
   }
 
+  /**
+   * Waits for all futures in the provided list to complete. Any exceptions during execution are
+   * logged but not propagated.
+   *
+   * @param futures the list of {@link Future} objects to wait for
+   */
   private void waitForFuturesToComplete(List<Future<?>> futures) {
     for (Future<?> future : futures) {
       try {

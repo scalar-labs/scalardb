@@ -33,12 +33,24 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Abstract base class for handling data import tasks into ScalarDB tables. This class provides
+ * functionality to import data into single or multiple tables based on the provided import options
+ * and control file configurations.
+ */
 @RequiredArgsConstructor
 public abstract class ImportTask {
 
   protected final ImportTaskParams params;
 
-  /** Executes the import task, ie import data to database tables */
+  /**
+   * Executes the import task by importing data into one or more database tables. If a control file
+   * is specified in the import options, performs a multi-table import. Otherwise, performs a single
+   * table import.
+   *
+   * @return ImportTaskResult containing the results of the import operation including
+   *     success/failure status and any error messages for each target table
+   */
   public ImportTaskResult execute() {
 
     ObjectNode mutableSourceRecord = params.getSourceRecord().deepCopy();
@@ -81,13 +93,14 @@ public abstract class ImportTask {
   }
 
   /**
-   * @param controlFile control file which is used to map source data columns to columns of tables
-   *     to which data is imported
-   * @param tableMetadataByTableName a map of table metadata with table name as key
-   * @param tableColumnDataTypes a map with table name as key that contains a map of column names
-   *     and their data types
-   * @param mutableSourceRecord mutable source record data
-   * @return result object of import
+   * Processes multi-table import based on the control file configuration. For each table specified
+   * in the control file, validates the source data and performs the import operation.
+   *
+   * @param controlFile control file which maps source data columns to target table columns
+   * @param tableMetadataByTableName map of table metadata indexed by table name
+   * @param tableColumnDataTypes map of column data types indexed by table name
+   * @param mutableSourceRecord source record data that can be modified during import
+   * @return List of ImportTargetResult objects containing the results for each table import
    */
   private List<ImportTargetResult> startMultiTableImportProcess(
       ControlFile controlFile,
@@ -139,14 +152,18 @@ public abstract class ImportTask {
   }
 
   /**
-   * @param namespace Namespace name
-   * @param table table name
-   * @param tableMetadata metadata of the table
-   * @param dataTypeByColumnName a map with table name as key that contains a map of column names
-   *     and their data types
-   * @param controlFileTable the control file table containing column mappings
-   * @param mutableSourceRecord mutable source record
-   * @return result of the import
+   * Imports data into a single table with validation and error handling. The method performs the
+   * following steps: 1. Validates table metadata and source record 2. Creates partition and
+   * clustering keys 3. Determines whether to insert or update based on existing data 4. Applies the
+   * import operation according to specified import mode
+   *
+   * @param namespace database namespace name
+   * @param table target table name
+   * @param tableMetadata metadata describing the table structure
+   * @param dataTypeByColumnName map of column names to their data types
+   * @param controlFileTable optional control file table configuration for column mapping
+   * @param mutableSourceRecord source record to be imported
+   * @return ImportTargetResult containing the result of the import operation
    */
   private ImportTargetResult importIntoSingleTable(
       String namespace,
@@ -417,10 +434,30 @@ public abstract class ImportTask {
         && importOptions.getImportMode() == ImportMode.UPDATE;
   }
 
+  /**
+   * Retrieves an existing record from the database if it exists.
+   *
+   * @param namespace the database namespace
+   * @param tableName the target table name
+   * @param partitionKey the partition key for the record
+   * @param clusteringKey the clustering key for the record (can be null)
+   * @return Optional containing the Result if found, empty if not found
+   * @throws ScalarDBDaoException if there is an error accessing the database
+   */
   protected abstract Optional<Result> getDataRecord(
       String namespace, String tableName, Key partitionKey, Key clusteringKey)
       throws ScalarDBDaoException;
 
+  /**
+   * Saves a record to the database, either as an insert or update operation.
+   *
+   * @param namespace the database namespace
+   * @param tableName the target table name
+   * @param partitionKey the partition key for the record
+   * @param clusteringKey the clustering key for the record (can be null)
+   * @param columns the columns and their values to be saved
+   * @throws ScalarDBDaoException if there is an error saving to the database
+   */
   protected abstract void saveRecord(
       String namespace,
       String tableName,

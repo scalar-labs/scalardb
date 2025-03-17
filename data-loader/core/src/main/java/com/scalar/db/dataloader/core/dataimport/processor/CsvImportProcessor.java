@@ -23,10 +23,30 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * A processor for importing CSV data into the database.
+ *
+ * <p>This class handles the processing of CSV files by:
+ *
+ * <ul>
+ *   <li>Reading and parsing CSV data with configurable delimiters
+ *   <li>Processing data in configurable chunk sizes for efficient batch processing
+ *   <li>Supporting parallel processing using multiple threads
+ *   <li>Converting CSV rows into JSON format for database import
+ * </ul>
+ *
+ * <p>The processor supports custom headers and validates that each data row matches the header
+ * structure before processing.
+ */
 public class CsvImportProcessor extends ImportProcessor {
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
   private static final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
 
+  /**
+   * Creates a new CsvImportProcessor with the specified parameters.
+   *
+   * @param params Configuration parameters for the import processor
+   */
   public CsvImportProcessor(ImportProcessorParams params) {
     super(params);
   }
@@ -111,6 +131,24 @@ public class CsvImportProcessor extends ImportProcessor {
     }
   }
 
+  /**
+   * Reads and processes CSV data in chunks from the provided reader.
+   *
+   * <p>This method:
+   *
+   * <ul>
+   *   <li>Reads the CSV header (custom or from file)
+   *   <li>Validates each data row against the header
+   *   <li>Converts rows to JSON format
+   *   <li>Batches rows into data chunks
+   *   <li>Enqueues chunks for processing
+   * </ul>
+   *
+   * @param reader the BufferedReader containing CSV data
+   * @param dataChunkSize the number of rows to include in each chunk
+   * @param dataChunkQueue the queue where data chunks are placed for processing
+   * @throws RuntimeException if there are errors reading the file or if interrupted
+   */
   private void readDataChunks(
       BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
     try {
@@ -150,12 +188,26 @@ public class CsvImportProcessor extends ImportProcessor {
     }
   }
 
+  /**
+   * Adds a completed data chunk to the processing queue.
+   *
+   * @param dataChunk the list of ImportRows to be processed
+   * @param queue the queue where the chunk should be placed
+   * @throws InterruptedException if the thread is interrupted while waiting to add to the queue
+   */
   private void enqueueDataChunk(List<ImportRow> dataChunk, BlockingQueue<ImportDataChunk> queue)
       throws InterruptedException {
     int dataChunkId = dataChunkIdCounter.getAndIncrement();
     queue.put(ImportDataChunk.builder().dataChunkId(dataChunkId).sourceData(dataChunk).build());
   }
 
+  /**
+   * Safely reads a line from the BufferedReader, handling IOExceptions.
+   *
+   * @param reader the BufferedReader to read from
+   * @return the line read from the reader
+   * @throws UncheckedIOException if an IOException occurs while reading
+   */
   private String safeReadLine(BufferedReader reader) {
     try {
       return reader.readLine();
@@ -165,6 +217,13 @@ public class CsvImportProcessor extends ImportProcessor {
     }
   }
 
+  /**
+   * Combines header fields with data values to create a JSON object.
+   *
+   * @param header array of header field names
+   * @param data array of data values corresponding to the header fields
+   * @return a JsonNode containing the combined header-value pairs
+   */
   private JsonNode combineHeaderAndData(String[] header, String[] data) {
     ObjectNode objectNode = OBJECT_MAPPER.createObjectNode();
     for (int i = 0; i < header.length; i++) {
