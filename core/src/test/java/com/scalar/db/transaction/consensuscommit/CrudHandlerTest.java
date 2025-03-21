@@ -23,6 +23,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -32,6 +33,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ScalarDbUtils;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,8 +45,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -227,8 +230,8 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
-    verify(snapshot, never()).putIntoReadSet(any(), ArgumentMatchers.any());
-    verify(snapshot, never()).putIntoGetSet(any(), ArgumentMatchers.any());
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
   }
 
   @Test
@@ -341,8 +344,9 @@ public class CrudHandlerTest {
     assertThatThrownBy(() -> handler.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void scan_ResultGivenFromStorage_ShouldUpdateSnapshotAndReturn()
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_ResultGivenFromStorage_ShouldUpdateSnapshotAndReturn(ScanType scanType)
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
@@ -350,12 +354,16 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     Snapshot.Key key = new Snapshot.Key(scan, result);
     TransactionResult expected = new TransactionResult(result);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
     when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
 
     // Act
-    List<Result> results = handler.scan(scan);
+    List<Result> results = scanOrGetScanner(scan, scanType);
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
@@ -366,19 +374,24 @@ public class CrudHandlerTest {
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
   }
 
-  @Test
-  public void
-      scan_PreparedResultGivenFromStorage_ShouldNeverUpdateSnapshotThrowUncommittedRecordException()
-          throws ExecutionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_PreparedResultGivenFromStorage_ShouldNeverUpdateSnapshotThrowUncommittedRecordException(
+          ScanType scanType) throws ExecutionException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.PREPARED);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.scan(scan))
+    assertThatThrownBy(() -> scanOrGetScanner(scan, scanType))
         .isInstanceOf(UncommittedRecordException.class)
         .satisfies(
             e -> {
@@ -388,12 +401,13 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
-    verify(snapshot, never()).putIntoReadSet(any(), ArgumentMatchers.any());
-    verify(snapshot, never()).putIntoScanSet(any(), ArgumentMatchers.any());
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoScanSet(any(), any());
   }
 
-  @Test
-  public void scan_CalledTwice_SecondTimeShouldReturnTheSameFromSnapshot()
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_CalledTwice_SecondTimeShouldReturnTheSameFromSnapshot(ScanType scanType)
       throws ExecutionException, CrudException {
     // Arrange
     Scan originalScan = prepareScan();
@@ -402,7 +416,11 @@ public class CrudHandlerTest {
     Scan scan2 = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
     TransactionResult expected = new TransactionResult(result);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
     Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
     when(snapshot.getResults(scanForStorage))
@@ -411,8 +429,8 @@ public class CrudHandlerTest {
     when(snapshot.getResult(key)).thenReturn(Optional.of(expected));
 
     // Act
-    List<Result> results1 = handler.scan(scan1);
-    List<Result> results2 = handler.scan(scan2);
+    List<Result> results1 = scanOrGetScanner(scan1, scanType);
+    List<Result> results2 = scanOrGetScanner(scan2, scanType);
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
@@ -425,9 +443,10 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
   }
 
-  @Test
-  public void scan_CalledTwiceUnderRealSnapshot_SecondTimeShouldReturnTheSameFromSnapshot()
-      throws ExecutionException, CrudException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scan_CalledTwiceUnderRealSnapshot_SecondTimeShouldReturnTheSameFromSnapshot(
+      ScanType scanType) throws ExecutionException, CrudException {
     // Arrange
     Scan originalScan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(originalScan);
@@ -437,12 +456,16 @@ public class CrudHandlerTest {
     TransactionResult expected = new TransactionResult(result);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act
-    List<Result> results1 = handler.scan(scan1);
-    List<Result> results2 = handler.scan(scan2);
+    List<Result> results1 = scanOrGetScanner(scan1, scanType);
+    List<Result> results2 = scanOrGetScanner(scan2, scanType);
 
     // Assert
     assertThat(results1.size()).isEqualTo(1);
@@ -453,14 +476,19 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
   }
 
-  @Test
-  public void scan_GetCalledAfterScan_ShouldReturnFromStorage()
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_GetCalledAfterScan_ShouldReturnFromStorage(ScanType scanType)
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -471,7 +499,7 @@ public class CrudHandlerTest {
     when(snapshot.getResult(key)).thenReturn(transactionResult);
 
     // Act
-    List<Result> results = handler.scan(scan);
+    List<Result> results = scanOrGetScanner(scan, scanType);
     Optional<Result> result = handler.get(get);
 
     // Assert
@@ -483,21 +511,26 @@ public class CrudHandlerTest {
     assertThat(results.get(0)).isEqualTo(result.get());
   }
 
-  @Test
-  public void scan_GetCalledAfterScanUnderRealSnapshot_ShouldReturnFromStorage()
-      throws ExecutionException, CrudException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_GetCalledAfterScanUnderRealSnapshot_ShouldReturnFromStorage(
+      ScanType scanType) throws ExecutionException, CrudException {
     // Arrange
     Scan scan = toScanForStorageFrom(prepareScan());
     result = prepareResult(TransactionState.COMMITTED);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(scan)).thenReturn(scanner);
     Get get = prepareGet();
     when(storage.get(get)).thenReturn(Optional.of(result));
 
     // Act
-    List<Result> results = handler.scan(scan);
+    List<Result> results = scanOrGetScanner(scan, scanType);
     Optional<Result> result = handler.get(get);
 
     // Assert
@@ -508,9 +541,11 @@ public class CrudHandlerTest {
     assertThat(results.get(0)).isEqualTo(result.get());
   }
 
-  @Test
-  public void scan_CalledAfterDeleteUnderRealSnapshot_ShouldThrowIllegalArgumentException()
-      throws ExecutionException, CrudException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void
+      scanOrGetScanner_CalledAfterDeleteUnderRealSnapshot_ShouldThrowIllegalArgumentException(
+          ScanType scanType) throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -546,9 +581,17 @@ public class CrudHandlerTest {
             new ConcurrentHashMap<>(),
             new HashMap<>(),
             new HashMap<>(),
-            deleteSet);
+            deleteSet,
+            new ArrayList<>());
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
-    when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
+    } else {
+      when(scanner.one())
+          .thenReturn(Optional.of(result))
+          .thenReturn(Optional.of(result2))
+          .thenReturn(Optional.empty());
+    }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     Delete delete =
@@ -563,24 +606,30 @@ public class CrudHandlerTest {
     assertThat(deleteSet.size()).isEqualTo(1);
     assertThat(deleteSet).containsKey(new Snapshot.Key(delete));
 
-    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> scanOrGetScanner(scan, scanType))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void
-      scan_CrossPartitionScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndValidateThenReturn()
-          throws ExecutionException, CrudException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_CrossPartitionScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndVerifyThenReturn(
+          ScanType scanType) throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.COMMITTED);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
     TransactionResult transactionResult = new TransactionResult(result);
     when(snapshot.getResult(key)).thenReturn(Optional.of(transactionResult));
 
     // Act
-    List<Result> results = handler.scan(scan);
+    List<Result> results = scanOrGetScanner(scan, scanType);
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
@@ -592,18 +641,23 @@ public class CrudHandlerTest {
             new FilteredResult(transactionResult, Collections.emptyList(), TABLE_METADATA, false));
   }
 
-  @Test
-  public void
-      scan_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorValidateButThrowUncommittedRecordException()
-          throws ExecutionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorVerifyButThrowUncommittedRecordException(
+          ScanType scanType) throws ExecutionException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.PREPARED);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.scan(scan))
+    assertThatThrownBy(() -> scanOrGetScanner(scan, scanType))
         .isInstanceOf(UncommittedRecordException.class)
         .satisfies(
             e -> {
@@ -613,7 +667,8 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
-    verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), ArgumentMatchers.any());
+    verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), any());
+    verify(snapshot, never()).putIntoScannerSet(any(Scan.class), any());
     verify(snapshot, never()).verify(any(), any());
   }
 
@@ -656,6 +711,37 @@ public class CrudHandlerTest {
     assertThatThrownBy(() -> handler.scan(scan))
         .isInstanceOf(CrudException.class)
         .hasCause(runtimeException);
+  }
+
+  @Test
+  public void
+      getScanner_ScannerNotFullyScanned_ShouldPutReadSetAndScannerSetInSnapshotAndVerifyScan()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result1 = prepareResult(TransactionState.COMMITTED);
+    Result result2 = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    TransactionResult txResult1 = new TransactionResult(result1);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan);
+    Optional<Result> actualResult = actualScanner.one();
+    actualScanner.close();
+
+    // Assert
+    verify(snapshot).putIntoReadSet(key1, Optional.of(txResult1));
+    verify(snapshot).putIntoScannerSet(scan, ImmutableMap.of(key1, txResult1));
+    verify(snapshot).verify(scan, ImmutableMap.of(key1, txResult1));
+
+    assertThat(actualResult)
+        .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
   }
 
   @Test
@@ -1100,5 +1186,35 @@ public class CrudHandlerTest {
     assertThat(tasks.size()).isEqualTo(4);
 
     assertThat(transactionIdCaptor.getValue()).isEqualTo(ANY_TX_ID);
+  }
+
+  private List<Result> scanOrGetScanner(Scan scan, ScanType scanType) throws CrudException {
+    if (scanType == ScanType.SCAN) {
+      return handler.scan(scan);
+    }
+
+    try (TransactionCrudOperable.Scanner scanner = handler.getScanner(scan)) {
+      switch (scanType) {
+        case SCANNER_ONE:
+          List<Result> results = new ArrayList<>();
+          while (true) {
+            Optional<Result> result = scanner.one();
+            if (!result.isPresent()) {
+              return results;
+            }
+            results.add(result.get());
+          }
+        case SCANNER_ALL:
+          return scanner.all();
+        default:
+          throw new AssertionError();
+      }
+    }
+  }
+
+  enum ScanType {
+    SCAN,
+    SCANNER_ONE,
+    SCANNER_ALL
   }
 }

@@ -852,6 +852,18 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0186", "The CSV row: %s does not match header: %s.", "", ""),
   DATA_LOADER_JSON_CONTENT_START_ERROR(
       Category.USER_ERROR, "0187", "Expected JSON file content to be an array", "", ""),
+  CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0188",
+      "Some scanners were not closed. All scanners must be closed before committing the transaction.",
+      "",
+      ""),
+  TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0189",
+      "Some scanners were not closed. All scanners must be closed before preparing the transaction.",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

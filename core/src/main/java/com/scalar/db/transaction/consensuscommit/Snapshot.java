@@ -60,6 +60,9 @@ public class Snapshot {
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
+  // The scanner set used to store information about scanners that are not fully scanned
+  private final List<ScannerInfo> scannerSet;
+
   public Snapshot(
       String id,
       Isolation isolation,
@@ -74,6 +77,7 @@ public class Snapshot {
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
+    scannerSet = new ArrayList<>();
   }
 
   @VisibleForTesting
@@ -86,7 +90,8 @@ public class Snapshot {
       ConcurrentMap<Get, Optional<TransactionResult>> getSet,
       Map<Scan, Map<Key, TransactionResult>> scanSet,
       Map<Key, Put> writeSet,
-      Map<Key, Delete> deleteSet) {
+      Map<Key, Delete> deleteSet,
+      List<ScannerInfo> scannerSet) {
     this.id = id;
     this.isolation = isolation;
     this.tableMetadataManager = tableMetadataManager;
@@ -96,6 +101,7 @@ public class Snapshot {
     this.scanSet = scanSet;
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
+    this.scannerSet = scannerSet;
   }
 
   @Nonnull
@@ -167,6 +173,10 @@ public class Snapshot {
     }
 
     deleteSet.put(key, delete);
+  }
+
+  public void putIntoScannerSet(Scan scan, Map<Key, TransactionResult> results) {
+    scannerSet.add(new ScannerInfo(scan, results));
   }
 
   public List<Put> getPutsInWriteSet() {
@@ -452,7 +462,12 @@ public class Snapshot {
 
     // Scan set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Scan, Map<Key, TransactionResult>> entry : scanSet.entrySet()) {
-      tasks.add(() -> validateScanResults(storage, entry.getKey(), entry.getValue()));
+      tasks.add(() -> validateScanResults(storage, entry.getKey(), entry.getValue(), false));
+    }
+
+    // Scanner set is re-validated to check if there is no anti-dependency
+    for (ScannerInfo scannerInfo : scannerSet) {
+      tasks.add(() -> validateScanResults(storage, scannerInfo.scan, scannerInfo.results, true));
     }
 
     // Get set is re-validated to check if there is no anti-dependency
@@ -494,11 +509,16 @@ public class Snapshot {
    * @param storage a distributed storage
    * @param scan the scan to be validated
    * @param results the results of the scan
+   * @param notFullyScannedScanner if this is a validation for a scanner that has not been fully
+   *     scanned
    * @throws ExecutionException if a storage operation fails
    * @throws ValidationConflictException if the scan results are changed by another transaction
    */
   private void validateScanResults(
-      DistributedStorage storage, Scan scan, Map<Key, TransactionResult> results)
+      DistributedStorage storage,
+      Scan scan,
+      Map<Key, TransactionResult> results,
+      boolean notFullyScannedScanner)
       throws ExecutionException, ValidationConflictException {
     Scanner scanner = null;
     try {
@@ -586,6 +606,11 @@ public class Snapshot {
 
       if (scan.getLimit() != 0 && results.size() == scan.getLimit()) {
         // We’ve already checked up to the limit, so no further checks are needed
+        return;
+      }
+
+      if (notFullyScannedScanner) {
+        // If the scanner is not fully scanned, no further checks are needed
         return;
       }
 
@@ -777,6 +802,34 @@ public class Snapshot {
     @Override
     public int hashCode() {
       return Objects.hash(transactionId, readSetMap, writeSet, deleteSet);
+    }
+  }
+
+  @VisibleForTesting
+  static class ScannerInfo {
+    public final Scan scan;
+    public final Map<Key, TransactionResult> results;
+
+    public ScannerInfo(Scan scan, Map<Key, TransactionResult> results) {
+      this.scan = scan;
+      this.results = results;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof ScannerInfo)) {
+        return false;
+      }
+      ScannerInfo that = (ScannerInfo) o;
+      return Objects.equals(scan, that.scan) && Objects.equals(results, that.results);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(scan, results);
     }
   }
 }

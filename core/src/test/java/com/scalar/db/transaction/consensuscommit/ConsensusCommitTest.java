@@ -21,6 +21,7 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -68,6 +69,9 @@ public class ConsensusCommitTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    when(crud.areAllScannersClosed()).thenReturn(true);
   }
 
   private Get prepareGet() {
@@ -160,6 +164,93 @@ public class ConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(() -> consensus.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(scan, result);
+  }
+
+  @Test
+  public void getScannerAndScannerOne_ShouldCallCrudHandlerGetScannerAndScannerOne()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    Result result = mock(Result.class);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(crud.getScanner(scan)).thenReturn(scanner);
+
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = consensus.getScanner(scan);
+    Optional<Result> actualResult = actualScanner.one();
+
+    // Assert
+    assertThat(actualResult).hasValue(result);
+    verify(crud).getScanner(scan);
+    verify(scanner).one();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerOne_UncommittedRecordExceptionThrownByScannerOne_ShouldRecoverRecord()
+          throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    TransactionResult result = mock(TransactionResult.class);
+    when(toThrow.getSelection()).thenReturn(scan);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(scanner.one()).thenThrow(toThrow);
+    when(crud.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actualScanner = consensus.getScanner(scan);
+    assertThatThrownBy(actualScanner::one).isInstanceOf(UncommittedRecordException.class);
+
+    verify(recovery).recover(scan, result);
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldCallCrudHandlerGetScannerAndScannerAll()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    when(scanner.all()).thenReturn(Arrays.asList(result1, result2));
+    when(crud.getScanner(scan)).thenReturn(scanner);
+
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = consensus.getScanner(scan);
+    List<Result> actualResults = actualScanner.all();
+
+    // Assert
+    assertThat(actualResults).containsExactly(result1, result2);
+    verify(crud).getScanner(scan);
+    verify(scanner).all();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerAll_UncommittedRecordExceptionThrownByScannerAll_ShouldRecoverRecord()
+          throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+
+    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
+    TransactionResult result = mock(TransactionResult.class);
+    when(toThrow.getSelection()).thenReturn(scan);
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(scanner.all()).thenThrow(toThrow);
+    when(crud.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actualScanner = consensus.getScanner(scan);
+    assertThatThrownBy(actualScanner::all).isInstanceOf(UncommittedRecordException.class);
 
     verify(recovery).recover(scan, result);
   }
@@ -671,6 +762,15 @@ public class ConsensusCommitTest {
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitException.class);
+  }
+
+  @Test
+  public void commit_ScannerNotClosed_ShouldThrowIllegalStateException() {
+    // Arrange
+    when(crud.areAllScannersClosed()).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
