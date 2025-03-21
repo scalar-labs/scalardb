@@ -193,7 +193,7 @@ public class RdbEngineOracle implements RdbEngineStrategy {
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
-        return "NUMBER(19)";
+        return "NUMBER(16)";
       case BLOB:
         return "RAW(2000)";
       case BOOLEAN:
