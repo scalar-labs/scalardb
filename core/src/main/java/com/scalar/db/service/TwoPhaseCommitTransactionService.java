@@ -125,10 +125,19 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
   }
 
   @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    return manager.getScanner(scan);
+  }
+
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
+  @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     manager.put(put);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
     manager.put(puts);
@@ -154,6 +163,8 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
     manager.delete(delete);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
     manager.delete(deletes);

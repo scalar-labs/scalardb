@@ -47,6 +47,18 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
    *     faults. You can try retrying the transaction from the beginning, but the transaction may
    *     still fail if the cause is nontranient
+   */
+  @Override
+  Scanner getScanner(Scan scan) throws CrudConflictException, CrudException;
+
+  /**
+   * {@inheritDoc}
+   *
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontranient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
@@ -177,4 +189,39 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   void mutate(List<? extends Mutation> mutations)
       throws CrudConflictException, CrudException, UnsatisfiedConditionException,
           UnknownTransactionStatusException;
+
+  interface Scanner extends CrudOperable.Scanner<TransactionException> {
+    /**
+     * {@inheritDoc}
+     *
+     * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+     *     (e.g., a conflict error). You can retry the transaction from the beginning
+     * @throws CrudException if the transaction CRUD operation fails due to transient or
+     *     nontransient faults. You can try retrying the transaction from the beginning, but the
+     *     transaction may still fail if the cause is nontranient
+     */
+    @Override
+    Optional<Result> one() throws CrudConflictException, CrudException;
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+     *     (e.g., a conflict error). You can retry the transaction from the beginning
+     * @throws CrudException if the transaction CRUD operation fails due to transient or
+     *     nontransient faults. You can try retrying the transaction from the beginning, but the
+     *     transaction may still fail if the cause is nontranient
+     */
+    @Override
+    List<Result> all() throws CrudConflictException, CrudException;
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws CrudException if closing the scanner fails
+     * @throws UnknownTransactionStatusException if the status of the commit is unknown
+     */
+    @Override
+    void close() throws CrudException, UnknownTransactionStatusException;
+  }
 }

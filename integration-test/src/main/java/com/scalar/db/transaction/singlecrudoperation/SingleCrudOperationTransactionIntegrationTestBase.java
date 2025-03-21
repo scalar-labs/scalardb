@@ -126,7 +126,12 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
-  public void scanAll_ScanAllGivenForNonExisting_ShouldReturnEmpty() {}
+  public void scan_ScanAllGivenForNonExisting_ShouldReturnEmpty() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
@@ -404,6 +409,11 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Override
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
+
+  @Disabled("Implement later")
+  @Override
+  @Test
+  public void manager_getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
 
   @Disabled(
       "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
