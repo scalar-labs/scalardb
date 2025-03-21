@@ -2,8 +2,6 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.TwoPhaseCommitTransactionIntegrationTestBase;
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 public abstract class TwoPhaseConsensusCommitIntegrationTestBase
     extends TwoPhaseCommitTransactionIntegrationTestBase {
@@ -40,14 +38,4 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   protected Properties getProps2(String testName) {
     return getProps1(testName);
   }
-
-  @Disabled("Implement later")
-  @Override
-  @Test
-  public void getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
-
-  @Disabled("Implement later")
-  @Override
-  @Test
-  public void manager_getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
 }
