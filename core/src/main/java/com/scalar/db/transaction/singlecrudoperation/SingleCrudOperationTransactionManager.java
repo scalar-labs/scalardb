@@ -20,7 +20,6 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
@@ -156,11 +155,17 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
   public List<Result> scan(Scan scan) throws CrudException {
     scan = copyAndSetTargetToIfNot(scan);
 
-    try (Scanner scanner = storage.scan(scan.withConsistency(Consistency.LINEARIZABLE))) {
+    try (com.scalar.db.api.Scanner scanner =
+        storage.scan(scan.withConsistency(Consistency.LINEARIZABLE))) {
       return scanner.all();
     } catch (ExecutionException | IOException e) {
       throw new CrudException(e.getMessage(), e, null);
     }
+  }
+
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    throw new UnsupportedOperationException("Implement later");
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */

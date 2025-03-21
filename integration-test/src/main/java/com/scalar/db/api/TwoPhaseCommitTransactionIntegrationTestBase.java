@@ -1327,6 +1327,32 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
+  public void getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    TwoPhaseCommitTransaction transaction = manager1.start();
+    Scan scan = prepareScan(0, 0, 2, namespace1, TABLE_1);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
+
+    Optional<Result> result1 = scanner.one();
+    assertThat(result1).isPresent();
+    assertResult(0, 0, result1.get());
+
+    Optional<Result> result2 = scanner.one();
+    assertThat(result2).isPresent();
+    assertResult(0, 1, result2.get());
+
+    scanner.close();
+
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+  }
+
+  @Test
   public void resume_WithBeginningTransaction_ShouldReturnBegunTransaction()
       throws TransactionException {
     // Arrange
@@ -2277,6 +2303,42 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
     assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
     assertThat(results.get(2).getInt(SOME_COLUMN)).isEqualTo(2);
+  }
+
+  @Test
+  public void manager_getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords()
+      throws TransactionException {
+    // Arrange
+    populateRecords(manager1, namespace1, TABLE_1);
+    Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner scanner = manager1.getScanner(scan);
+
+    Optional<Result> result1 = scanner.one();
+    assertThat(result1).isPresent();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(result1.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result1.get().getInt(SOME_COLUMN)).isEqualTo(0);
+
+    Optional<Result> result2 = scanner.one();
+    assertThat(result2).isPresent();
+    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(result2.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result2.get().getInt(SOME_COLUMN)).isEqualTo(1);
+
+    Optional<Result> result3 = scanner.one();
+    assertThat(result3).isPresent();
+    assertThat(result3.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result3.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(result3.get())).isEqualTo(INITIAL_BALANCE);
+    assertThat(result3.get().getInt(SOME_COLUMN)).isEqualTo(2);
+
+    assertThat(scanner.one()).isNotPresent();
+
+    scanner.close();
   }
 
   @Test

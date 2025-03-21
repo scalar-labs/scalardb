@@ -121,6 +121,11 @@ public class ActiveTransactionManagedDistributedTransactionManager
       return super.scan(scan);
     }
 
+    @Override
+    public synchronized Scanner getScanner(Scan scan) throws CrudException {
+      return super.getScanner(scan);
+    }
+
     /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
     @Deprecated
     @Override
