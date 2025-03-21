@@ -96,6 +96,11 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     }
   }
 
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    throw new UnsupportedOperationException("Implement later");
+  }
+
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override

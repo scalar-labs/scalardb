@@ -15,6 +15,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
 import java.util.Optional;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public abstract class ConsensusCommitIntegrationTestBase
@@ -929,4 +930,14 @@ public abstract class ConsensusCommitIntegrationTestBase
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult).isNotPresent();
   }
+
+  @Disabled("Implement later")
+  @Override
+  @Test
+  public void getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
+
+  @Disabled("Implement later")
+  @Override
+  @Test
+  public void manager_getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
 }
