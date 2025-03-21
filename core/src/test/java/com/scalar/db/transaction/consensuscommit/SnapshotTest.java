@@ -41,12 +41,14 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.transaction.consensuscommit.Snapshot.ReadWriteSets;
 import com.scalar.db.util.ScalarDbUtils;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -98,6 +100,7 @@ public class SnapshotTest {
   private Map<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
+  private List<Snapshot.ScannerInfo> scannerSet;
 
   @Mock private ConsensusCommitConfig config;
   @Mock private PrepareMutationComposer prepareComposer;
@@ -122,6 +125,7 @@ public class SnapshotTest {
     scanSet = new HashMap<>();
     writeSet = new HashMap<>();
     deleteSet = new HashMap<>();
+    scannerSet = new ArrayList<>();
 
     return spy(
         new Snapshot(
@@ -133,7 +137,8 @@ public class SnapshotTest {
             getSet,
             scanSet,
             writeSet,
-            deleteSet));
+            deleteSet,
+            scannerSet));
   }
 
   private TransactionResult prepareResult(String txId) {
@@ -1612,6 +1617,33 @@ public class SnapshotTest {
 
     // Assert
     verify(storage).scan(scanWithProjectionsWithoutLimit);
+  }
+
+  @Test
+  public void toSerializable_ScannerSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScan();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    snapshot.putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjections =
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test

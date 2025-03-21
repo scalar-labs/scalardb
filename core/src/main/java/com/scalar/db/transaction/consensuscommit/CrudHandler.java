@@ -16,6 +16,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -23,9 +25,11 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -42,6 +46,7 @@ public class CrudHandler {
   private final boolean isIncludeMetadataEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
   private final ParallelExecutor parallelExecutor;
+  private final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
@@ -211,6 +216,37 @@ public class CrudHandler {
     snapshot.putIntoReadSet(key, Optional.of(result));
   }
 
+  public TransactionCrudOperable.Scanner getScanner(Scan originalScan) throws CrudException {
+    List<String> originalProjections = new ArrayList<>(originalScan.getProjections());
+    Scan scan = (Scan) prepareStorageSelection(originalScan);
+
+    ConsensusCommitScanner scanner;
+
+    Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> resultsInSnapshot =
+        snapshot.getResults(scan);
+    if (resultsInSnapshot.isPresent()) {
+      scanner =
+          new ConsensusCommitSnapshotScanner(scan, originalProjections, resultsInSnapshot.get());
+    } else {
+      scanner = new ConsensusCommitStorageScanner(scan, originalProjections);
+    }
+
+    scanners.add(scanner);
+    return scanner;
+  }
+
+  public boolean areAllScannersClosed() {
+    return scanners.stream().allMatch(ConsensusCommitScanner::isClosed);
+  }
+
+  public void closeScanners() throws CrudException {
+    for (ConsensusCommitScanner scanner : scanners) {
+      if (!scanner.isClosed()) {
+        scanner.close();
+      }
+    }
+  }
+
   public void put(Put put) throws CrudException {
     Snapshot.Key key = new Snapshot.Key(put);
 
@@ -359,5 +395,171 @@ public class CrudHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP")
   public Snapshot getSnapshot() {
     return snapshot;
+  }
+
+  private interface ConsensusCommitScanner extends TransactionCrudOperable.Scanner {
+    boolean isClosed();
+  }
+
+  @NotThreadSafe
+  private class ConsensusCommitStorageScanner extends AbstractTransactionCrudOperableScanner
+      implements ConsensusCommitScanner {
+
+    private final Scan scan;
+    private final List<String> originalProjections;
+    private final Scanner scanner;
+
+    private final LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+    private boolean fullyScanned;
+    private boolean failed;
+    private boolean closed;
+
+    public ConsensusCommitStorageScanner(Scan scan, List<String> originalProjections)
+        throws CrudException {
+      this.scan = scan;
+      this.originalProjections = originalProjections;
+      scanner = scanFromStorage(scan);
+    }
+
+    @Override
+    public Optional<Result> one() throws CrudException {
+      try {
+        Optional<Result> r = scanner.one();
+
+        if (!r.isPresent()) {
+          fullyScanned = true;
+          return Optional.empty();
+        }
+
+        Snapshot.Key key = new Snapshot.Key(scan, r.get());
+        TransactionResult result = new TransactionResult(r.get());
+        processScanResult(key, scan, result);
+        results.put(key, result);
+
+        TableMetadata metadata = getTableMetadata(scan);
+        return Optional.of(
+            new FilteredResult(result, originalProjections, metadata, isIncludeMetadataEnabled));
+      } catch (ExecutionException e) {
+        failed = true;
+        throw new CrudException(
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+            e,
+            snapshot.getId());
+      } catch (CrudException e) {
+        failed = true;
+        throw e;
+      }
+    }
+
+    @Override
+    public List<Result> all() throws CrudException {
+      List<Result> results = new ArrayList<>();
+
+      while (true) {
+        Optional<Result> result = one();
+        if (!result.isPresent()) {
+          break;
+        }
+        results.add(result.get());
+      }
+
+      return results;
+    }
+
+    @Override
+    public void close() {
+      if (closed) {
+        return;
+      }
+      closed = true;
+
+      try {
+        scanner.close();
+      } catch (IOException e) {
+        logger.warn("Failed to close the scanner", e);
+      }
+
+      if (failed) {
+        return;
+      }
+
+      if (fullyScanned) {
+        // If the scanner is fully scanned, we can treat it as a normal scan, and put the results
+        // into the scan set
+        snapshot.putIntoScanSet(scan, results);
+      } else {
+        // If the scan is not fully scanned, put the results into the scanner set
+        snapshot.putIntoScannerSet(scan, results);
+      }
+
+      snapshot.verifyNoOverlap(scan, results);
+    }
+
+    @Override
+    public boolean isClosed() {
+      return closed;
+    }
+  }
+
+  @NotThreadSafe
+  private class ConsensusCommitSnapshotScanner extends AbstractTransactionCrudOperableScanner
+      implements ConsensusCommitScanner {
+
+    private final Scan scan;
+    private final List<String> originalProjections;
+    private final Iterator<Map.Entry<Snapshot.Key, TransactionResult>> resultsIterator;
+
+    private final LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+    private boolean closed;
+
+    public ConsensusCommitSnapshotScanner(
+        Scan scan,
+        List<String> originalProjections,
+        LinkedHashMap<Snapshot.Key, TransactionResult> resultsInSnapshot) {
+      this.scan = scan;
+      this.originalProjections = originalProjections;
+      resultsIterator = resultsInSnapshot.entrySet().iterator();
+    }
+
+    @Override
+    public Optional<Result> one() throws CrudException {
+      if (!resultsIterator.hasNext()) {
+        return Optional.empty();
+      }
+
+      Map.Entry<Snapshot.Key, TransactionResult> entry = resultsIterator.next();
+      results.put(entry.getKey(), entry.getValue());
+
+      TableMetadata metadata = getTableMetadata(scan);
+      return Optional.of(
+          new FilteredResult(
+              entry.getValue(), originalProjections, metadata, isIncludeMetadataEnabled));
+    }
+
+    @Override
+    public List<Result> all() throws CrudException {
+      List<Result> results = new ArrayList<>();
+
+      while (true) {
+        Optional<Result> result = one();
+        if (!result.isPresent()) {
+          break;
+        }
+        results.add(result.get());
+      }
+
+      return results;
+    }
+
+    @Override
+    public void close() {
+      closed = true;
+      snapshot.verifyNoOverlap(scan, results);
+    }
+
+    @Override
+    public boolean isClosed() {
+      return closed;
+    }
   }
 }
