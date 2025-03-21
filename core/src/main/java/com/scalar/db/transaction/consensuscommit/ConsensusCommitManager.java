@@ -229,6 +229,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
   }
 
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    throw new UnsupportedOperationException("Implement later");
+  }
+
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {

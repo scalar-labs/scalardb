@@ -12,6 +12,9 @@ import java.util.Optional;
  * An interface for transactional CRUD operations. Note that the LINEARIZABLE consistency level is
  * always used in transactional CRUD operations, so {@link Consistency} specified for CRUD
  * operations is ignored.
+ *
+ * @param <E> the type of {@link TransactionException} that the implementation throws if the
+ *     operation fails
  */
 public interface CrudOperable<E extends TransactionException> {
 
@@ -26,15 +29,36 @@ public interface CrudOperable<E extends TransactionException> {
   Optional<Result> get(Get get) throws E;
 
   /**
-   * Retrieves results from the storage through a transaction with the specified {@link Scan}
-   * command with a partition key and returns a list of {@link Result}. Results can be filtered by
-   * specifying a range of clustering keys.
+   * Retrieves results from the storage through a transaction with the specified {@link Scan} or
+   * {@link ScanAll} or {@link ScanWithIndex} command with a partition key and returns a list of
+   * {@link Result}. Results can be filtered by specifying a range of clustering keys.
+   *
+   * <ul>
+   *   <li>{@link Scan} : by specifying a partition key, it will return results within the
+   *       partition. Results can be filtered by specifying a range of clustering keys.
+   *   <li>{@link ScanAll} : for a given table, it will return all its records even if they span
+   *       several partitions.
+   *   <li>{@link ScanWithIndex} : by specifying an index key, it will return results within the
+   *       index.
+   * </ul>
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
    * @throws E if the transaction CRUD operation fails
    */
   List<Result> scan(Scan scan) throws E;
+
+  /**
+   * Retrieves results from the storage through a transaction with the specified {@link Scan} or
+   * {@link ScanAll} or {@link ScanWithIndex} command with a partition key and returns a {@link
+   * Scanner} to iterate over the results. Results can be filtered by specifying a range of
+   * clustering keys.
+   *
+   * @param scan a {@code Scan} command
+   * @return a {@code Scanner} to iterate over the results
+   * @throws E if the transaction CRUD operation fails
+   */
+  Scanner<E> getScanner(Scan scan) throws E;
 
   /**
    * Inserts an entry into or updates an entry in the underlying storage through a transaction with
@@ -131,4 +155,31 @@ public interface CrudOperable<E extends TransactionException> {
    * @throws E if the transaction CRUD operation fails
    */
   void mutate(List<? extends Mutation> mutations) throws E;
+
+  /** A scanner abstraction for iterating results. */
+  interface Scanner<E extends TransactionException> extends AutoCloseable, Iterable<Result> {
+    /**
+     * Returns the first result in the results.
+     *
+     * @return the first result in the results
+     * @throws E if the operation fails
+     */
+    Optional<Result> one() throws E;
+
+    /**
+     * Returns all the results.
+     *
+     * @return the list of {@code Result}s
+     * @throws E if the operation fails
+     */
+    List<Result> all() throws E;
+
+    /**
+     * Closes the scanner.
+     *
+     * @throws E if closing the scanner fails
+     */
+    @Override
+    void close() throws E;
+  }
 }
