@@ -865,6 +865,18 @@ public enum CoreError implements ScalarDbError {
       "The replication feature is not enabled. To use this feature, you must enable it",
       "",
       ""),
+  CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0189",
+      "Some scanners were not closed. All scanners must be closed before committing the transaction.",
+      "",
+      ""),
+  TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0190",
+      "Some scanners were not closed. All scanners must be closed before preparing the transaction.",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
