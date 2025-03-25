@@ -15,13 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * A processor for importing JSON data into the database.
@@ -45,6 +44,7 @@ public class JsonImportProcessor extends ImportProcessor {
 
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
   private static final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
+  private static final int MAX_QUEUE_SIZE = 10;
 
   public JsonImportProcessor(ImportProcessorParams params) {
     super(params);
@@ -60,62 +60,38 @@ public class JsonImportProcessor extends ImportProcessor {
    * @param dataChunkSize the number of records to include in each data chunk
    * @param transactionBatchSize the number of records to include in each transaction batch
    * @param reader the {@link BufferedReader} used to read the source file
-   * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status of
-   *     each data chunk
+   * @return a map of {@link ImportDataChunkStatus} objects indicating the processing status of each
+   *     data chunk
    */
   @Override
-  public List<ImportDataChunkStatus> process(
+  public ConcurrentHashMap<Integer, ImportDataChunkStatus> process(
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     int numCores = Runtime.getRuntime().availableProcessors();
     ExecutorService dataChunkExecutor = Executors.newFixedThreadPool(numCores);
-    BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>();
-    List<CompletableFuture<ImportDataChunkStatus>> dataChunkFutures = new CopyOnWriteArrayList<>();
+    BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>(MAX_QUEUE_SIZE);
 
     try {
       CompletableFuture<Void> readerFuture =
           CompletableFuture.runAsync(
               () -> readDataChunks(reader, dataChunkSize, dataChunkQueue), dataChunkExecutor);
 
-      CompletableFuture<Void> processingFuture =
-          readerFuture.thenRunAsync(
-              () -> {
-                while (!(dataChunkQueue.isEmpty() && readerFuture.isDone())) {
-                  try {
-                    ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
-                    if (dataChunk != null) {
-                      dataChunkFutures.add(
-                          CompletableFuture.supplyAsync(
-                              () -> processDataChunk(dataChunk, transactionBatchSize, numCores),
-                              dataChunkExecutor));
-                    }
-                  } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException(
-                        CoreError.DATA_LOADER_DATA_CHUNK_PROCESS_FAILED.buildMessage(
-                            e.getMessage()),
-                        e);
-                  }
-                }
-              },
-              dataChunkExecutor);
+      ConcurrentHashMap<Integer, ImportDataChunkStatus> result = new ConcurrentHashMap<>();
 
-      processingFuture.join();
+      while (!(dataChunkQueue.isEmpty() && readerFuture.isDone())) {
+        ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
+        if (dataChunk != null) {
+          ImportDataChunkStatus status =
+              processDataChunk(dataChunk, transactionBatchSize, numCores);
+          result.put(status.getDataChunkId(), status);
+        }
+      }
 
-      return CompletableFuture.allOf(dataChunkFutures.toArray(new CompletableFuture[0]))
-          .thenApply(
-              v ->
-                  dataChunkFutures.stream()
-                      .map(
-                          f ->
-                              f.exceptionally(
-                                      e -> {
-                                        System.err.println(
-                                            "Data chunk processing failed: " + e.getMessage());
-                                        return null;
-                                      })
-                                  .join())
-                      .collect(Collectors.toList()))
-          .join();
+      readerFuture.join();
+      return result;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(
+          CoreError.DATA_LOADER_DATA_CHUNK_PROCESS_FAILED.buildMessage(e.getMessage()), e);
     } finally {
       dataChunkExecutor.shutdown();
       try {

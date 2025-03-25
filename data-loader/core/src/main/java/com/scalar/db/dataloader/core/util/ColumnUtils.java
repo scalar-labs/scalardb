@@ -240,7 +240,7 @@ public final class ColumnUtils {
    * @throws ColumnParsingException if there's an error parsing the column value
    */
   private static Column<?> getColumn(
-      Result scalarDBResult,
+      @Nullable Result scalarDBResult,
       JsonNode sourceRecord,
       String columnName,
       boolean ignoreNullValues,

@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
@@ -46,7 +47,8 @@ public class ImportManager implements ImportEventListener {
   private final ScalarDBMode scalarDBMode;
   private final DistributedStorage distributedStorage;
   private final DistributedTransactionManager distributedTransactionManager;
-  private final List<ImportDataChunkStatus> importDataChunkStatusList = new ArrayList<>();
+  private final ConcurrentHashMap<Integer, ImportDataChunkStatus> importDataChunkStatusMap =
+      new ConcurrentHashMap<>();
 
   /**
    * Starts the import process using the configured parameters.
@@ -55,12 +57,13 @@ public class ImportManager implements ImportEventListener {
    * processed as a single chunk. Otherwise, the file will be processed in chunks of the specified
    * size.
    *
-   * @return a list of {@link ImportDataChunkStatus} objects containing the status of each processed
+   * @return a map of {@link ImportDataChunkStatus} objects containing the status of each processed
    *     chunk
    * @throws ExecutionException if there is an error during the execution of the import process
    * @throws InterruptedException if the import process is interrupted
    */
-  public List<ImportDataChunkStatus> startImport() throws ExecutionException, InterruptedException {
+  public ConcurrentHashMap<Integer, ImportDataChunkStatus> startImport()
+      throws ExecutionException, InterruptedException {
     ImportProcessorParams params =
         ImportProcessorParams.builder()
             .scalarDBMode(scalarDBMode)
@@ -110,22 +113,12 @@ public class ImportManager implements ImportEventListener {
   }
 
   /**
-   * {@inheritDoc} Updates or adds the status of a data chunk in the status list. This method is
+   * {@inheritDoc} Updates or adds the status of a data chunk in the status map. This method is
    * thread-safe.
    */
   @Override
   public void addOrUpdateDataChunkStatus(ImportDataChunkStatus status) {
-    synchronized (importDataChunkStatusList) {
-      for (int i = 0; i < importDataChunkStatusList.size(); i++) {
-        if (importDataChunkStatusList.get(i).getDataChunkId() == status.getDataChunkId()) {
-          // Object found, replace it with the new one
-          importDataChunkStatusList.set(i, status);
-          return;
-        }
-      }
-      // If object is not found, add it to the list
-      importDataChunkStatusList.add(status);
-    }
+    importDataChunkStatusMap.put(status.getDataChunkId(), status);
   }
 
   /** {@inheritDoc} Forwards the event to all registered listeners. */
@@ -169,12 +162,12 @@ public class ImportManager implements ImportEventListener {
   }
 
   /**
-   * Returns the current list of import data chunk status objects.
+   * Returns the current map of import data chunk status objects.
    *
-   * @return an unmodifiable list of {@link ImportDataChunkStatus} objects
+   * @return a map of {@link ImportDataChunkStatus} objects
    */
-  public List<ImportDataChunkStatus> getImportDataChunkStatusList() {
-    return importDataChunkStatusList;
+  public ConcurrentHashMap<Integer, ImportDataChunkStatus> getImportDataChunkStatus() {
+    return importDataChunkStatusMap;
   }
 
   /**

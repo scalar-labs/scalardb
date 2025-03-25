@@ -5,7 +5,13 @@ import static com.scalar.db.io.DataType.BLOB;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.ResultImpl;
+import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
+import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
+import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTableFieldMapping;
+import com.scalar.db.dataloader.core.dataimport.processor.TableColumnDataTypes;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -16,11 +22,14 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import java.io.BufferedReader;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -272,5 +281,167 @@ public class UnitTestUtils {
       default:
         return TEST_VALUE_TEXT;
     }
+  }
+
+  public static TableColumnDataTypes getTableColumnData() {
+    TableColumnDataTypes tableColumnDataTypes = new TableColumnDataTypes();
+    Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
+    tableMetadataMap.put("namespace.table", createTestTableMetadata());
+    tableMetadataMap.forEach(
+        (name, metadata) ->
+            metadata
+                .getColumnDataTypes()
+                .forEach((k, v) -> tableColumnDataTypes.addColumnDataType(name, k, v)));
+    return tableColumnDataTypes;
+  }
+
+  public static ControlFile getControlFile() {
+    List<ControlFileTable> controlFileTables = new ArrayList<>();
+    List<ControlFileTableFieldMapping> mappings = new ArrayList<>();
+    mappings.add(new ControlFileTableFieldMapping("col1", "col1"));
+    mappings.add(new ControlFileTableFieldMapping("col2", "col2"));
+    mappings.add(new ControlFileTableFieldMapping("col3", "col3"));
+    mappings.add(new ControlFileTableFieldMapping("col4", "col4"));
+    mappings.add(new ControlFileTableFieldMapping("col5", "col5"));
+    mappings.add(new ControlFileTableFieldMapping("col6", "col6"));
+    mappings.add(new ControlFileTableFieldMapping("col7", "col7"));
+    mappings.add(new ControlFileTableFieldMapping("col8", "col8"));
+    mappings.add(new ControlFileTableFieldMapping("col9", "col9"));
+    mappings.add(new ControlFileTableFieldMapping("col10", "col10"));
+    mappings.add(new ControlFileTableFieldMapping("col11", "col11"));
+    mappings.add(new ControlFileTableFieldMapping("col11", "col11"));
+    controlFileTables.add(new ControlFileTable("namespace", "table", mappings));
+    return new ControlFile(controlFileTables);
+  }
+
+  public static BufferedReader getJsonReaderOrg() {
+    String jsonData =
+        "[{\"col1\":1,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":3,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":4,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":5,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":6,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":7,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":8,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":9,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":10,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":11,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"},"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}]";
+    return new BufferedReader(new StringReader(jsonData));
+  }
+
+  public static BufferedReader getJsonReader() {
+    String jsonData =
+        "[{\"col1\":1,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}]";
+    return new BufferedReader(new StringReader(jsonData));
+  }
+
+  public static BufferedReader getJsonLinesReaderOrg() {
+    String jsonLinesData =
+        "{\"col1\":1,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":3,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":4,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":5,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":6,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":7,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":8,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":9,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":10,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":11,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n"
+            + "{\"col1\":2,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n";
+    return new BufferedReader(new StringReader(jsonLinesData));
+  }
+
+  public static BufferedReader getJsonLinesReader() {
+    String jsonLinesData =
+        "{\"col1\":1,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\",\"col8\":\"2000-01-01\",\"col9\":\"01:01:01.000000\",\"col10\":\"2000-01-01T01:01:00\",\"col11\":\"1970-01-21T03:20:41.740Z\"}\n";
+    return new BufferedReader(new StringReader(jsonLinesData));
+  }
+
+  public static BufferedReader getCsvReaderOrg() {
+    String csvData =
+        "col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11 \n"
+            + "1,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "2,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "3,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "4,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "5,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "6,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "7,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "8,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "9,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "10,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n";
+    return new BufferedReader(new StringReader(csvData));
+  }
+
+  public static BufferedReader getCsvReader() {
+
+    String csvData =
+        "col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11 \n"
+            + "1,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
+            + "2,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n";
+    return new BufferedReader(new StringReader(csvData));
+  }
+
+  public static Key getClusteringKey() {
+    return Key.newBuilder()
+        .add(IntColumn.of("col2", 1))
+        .add(BooleanColumn.of("col3", true))
+        .build();
+  }
+
+  public static Key getPartitionKey(int j) {
+    return Key.ofBigInt("col1", j);
+  }
+
+  public static Optional<Result> getResult(long pk) {
+    Map<String, Column<?>> values = new HashMap<>();
+    values.put(TEST_COLUMN_1_PK, BigIntColumn.of(TEST_COLUMN_1_PK, pk));
+    values.put(TEST_COLUMN_2_CK, IntColumn.of(TEST_COLUMN_2_CK, 1));
+    values.put(TEST_COLUMN_3_CK, BooleanColumn.of(TEST_COLUMN_3_CK, true));
+    values.put(TEST_COLUMN_4, FloatColumn.of(TEST_COLUMN_4, TEST_VALUE_FLOAT));
+    values.put(TEST_COLUMN_5, DoubleColumn.of(TEST_COLUMN_5, TEST_VALUE_DOUBLE));
+    values.put(TEST_COLUMN_6, TextColumn.of(TEST_COLUMN_6, TEST_VALUE_TEXT));
+    values.put(TEST_COLUMN_7, BlobColumn.of(TEST_COLUMN_7, TEST_VALUE_BLOB));
+    values.put(TEST_COLUMN_8, DateColumn.of(TEST_COLUMN_8, TEST_VALUE_DATE));
+    values.put(TEST_COLUMN_9, TimeColumn.of(TEST_COLUMN_9, TEST_VALUE_TIME));
+    values.put(TEST_COLUMN_10, TimestampColumn.of(TEST_COLUMN_10, TEST_VALUE_DATE_TIME));
+    values.put(TEST_COLUMN_11, TimestampTZColumn.of(TEST_COLUMN_11, TEST_VALUE_INSTANT));
+    values.put(
+        Attribute.BEFORE_PREFIX + TEST_COLUMN_4,
+        FloatColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_4, TEST_VALUE_FLOAT));
+    values.put(
+        Attribute.BEFORE_PREFIX + TEST_COLUMN_5,
+        DoubleColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_5, TEST_VALUE_DOUBLE));
+    values.put(
+        Attribute.BEFORE_PREFIX + TEST_COLUMN_6,
+        TextColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_6, TEST_VALUE_TEXT));
+    values.put(
+        Attribute.BEFORE_PREFIX + TEST_COLUMN_7,
+        BlobColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_7, TEST_VALUE_BLOB));
+    values.put(Attribute.ID, TextColumn.of(Attribute.ID, TEST_VALUE_TX_ID));
+    values.put(Attribute.STATE, IntColumn.of(Attribute.STATE, TEST_VALUE_INT));
+    values.put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, TEST_VALUE_INT));
+    values.put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, TEST_VALUE_LONG));
+    values.put(Attribute.COMMITTED_AT, BigIntColumn.of(Attribute.COMMITTED_AT, TEST_VALUE_LONG));
+    values.put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, TEST_VALUE_TEXT));
+    values.put(Attribute.BEFORE_STATE, IntColumn.of(Attribute.BEFORE_STATE, TEST_VALUE_INT));
+    values.put(Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, TEST_VALUE_INT));
+    values.put(
+        Attribute.BEFORE_PREPARED_AT,
+        BigIntColumn.of(Attribute.BEFORE_PREPARED_AT, TEST_VALUE_LONG));
+    values.put(
+        Attribute.BEFORE_COMMITTED_AT,
+        BigIntColumn.of(Attribute.BEFORE_COMMITTED_AT, TEST_VALUE_LONG));
+    TableMetadata tableMetadata = createTestTableMetadata();
+    Result data = new ResultImpl(createTestValues(), createTestTableMetadata());
+
+    return Optional.of(data);
   }
 }

@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,13 +56,11 @@ public abstract class ImportProcessor {
    * @param transactionBatchSize the number of records to group together in a single transaction
    *     (only used in transaction mode)
    * @param reader the {@link BufferedReader} used to read the source file
-   * @return a list of {@link ImportDataChunkStatus} objects indicating the processing status and
+   * @return a map of {@link ImportDataChunkStatus} objects indicating the processing status and
    *     results of each data chunk
    */
-  public List<ImportDataChunkStatus> process(
-      int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
-    return Collections.emptyList();
-  }
+  public abstract ConcurrentHashMap<Integer, ImportDataChunkStatus> process(
+      int dataChunkSize, int transactionBatchSize, BufferedReader reader);
 
   /**
    * Add import event listener to listener list
@@ -195,9 +194,10 @@ public abstract class ImportProcessor {
     List<ImportTaskResult> importRecordResult = new ArrayList<>();
     boolean isSuccess;
     String error = "";
+    DistributedTransaction transaction = null;
     try {
       // Create the ScalarDB transaction
-      DistributedTransaction transaction = params.getDistributedTransactionManager().start();
+      transaction = params.getDistributedTransactionManager().start();
 
       // Loop over the transaction batch and process each record
       for (ImportRow importRow : transactionBatch.getSourceData()) {
@@ -233,6 +233,15 @@ public abstract class ImportProcessor {
     } catch (TransactionException e) {
       isSuccess = false;
       LOGGER.error(e.getMessage());
+      try {
+        if (transaction != null) {
+          transaction.abort(); // Ensure transaction is aborted
+        }
+      } catch (TransactionException abortException) {
+        LOGGER.error(
+            "Failed to abort transaction: {}", abortException.getMessage(), abortException);
+      }
+      error = e.getMessage();
     }
     ImportTransactionBatchResult importTransactionBatchResult =
         ImportTransactionBatchResult.builder()
@@ -323,43 +332,46 @@ public abstract class ImportProcessor {
     List<ImportTransactionBatch> transactionBatches =
         splitIntoTransactionBatches(dataChunk, transactionBatchSize);
     ExecutorService transactionBatchExecutor =
-        Executors.newFixedThreadPool(Math.min(transactionBatches.size(), numCores));
+        Executors.newFixedThreadPool(Math.min(transactionBatches.size(), numCores * 2));
     List<Future<?>> transactionBatchFutures = new ArrayList<>();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);
-    for (ImportTransactionBatch transactionBatch : transactionBatches) {
-      Future<?> transactionBatchFuture =
-          transactionBatchExecutor.submit(
-              () -> processTransactionBatch(dataChunk, transactionBatch));
-      transactionBatchFutures.add(transactionBatchFuture);
-    }
+    try {
+      for (ImportTransactionBatch transactionBatch : transactionBatches) {
+        Future<?> transactionBatchFuture =
+            transactionBatchExecutor.submit(
+                () -> processTransactionBatch(dataChunk, transactionBatch));
+        transactionBatchFutures.add(transactionBatchFuture);
+      }
 
-    waitForFuturesToComplete(transactionBatchFutures);
-    transactionBatchExecutor.shutdown();
-    transactionBatchFutures.forEach(
-        batchResult -> {
-          try {
-            ImportTransactionBatchResult importTransactionBatchResult =
-                (ImportTransactionBatchResult) batchResult.get();
-            importTransactionBatchResult
-                .getRecords()
-                .forEach(
-                    batchRecords -> {
-                      if (batchRecords.getTargets().stream()
-                          .allMatch(
-                              targetResult ->
-                                  targetResult
-                                      .getStatus()
-                                      .equals(ImportTargetResultStatus.SAVED))) {
-                        successCount.incrementAndGet();
-                      } else {
-                        failureCount.incrementAndGet();
-                      }
-                    });
-          } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-          }
-        });
+      waitForFuturesToComplete(transactionBatchFutures);
+      transactionBatchFutures.forEach(
+          batchResult -> {
+            try {
+              ImportTransactionBatchResult importTransactionBatchResult =
+                  (ImportTransactionBatchResult) batchResult.get();
+              importTransactionBatchResult
+                  .getRecords()
+                  .forEach(
+                      batchRecords -> {
+                        if (batchRecords.getTargets().stream()
+                            .allMatch(
+                                targetResult ->
+                                    targetResult
+                                        .getStatus()
+                                        .equals(ImportTargetResultStatus.SAVED))) {
+                          successCount.incrementAndGet();
+                        } else {
+                          failureCount.incrementAndGet();
+                        }
+                      });
+            } catch (InterruptedException | ExecutionException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    } finally {
+      transactionBatchExecutor.shutdown();
+    }
     Instant endTime = Instant.now();
     int totalDuration = (int) Duration.between(startTime, endTime).toMillis();
     return ImportDataChunkStatus.builder()
@@ -390,26 +402,29 @@ public abstract class ImportProcessor {
     AtomicInteger failureCount = new AtomicInteger(0);
     ExecutorService recordExecutor = Executors.newFixedThreadPool(numCores);
     List<Future<?>> recordFutures = new ArrayList<>();
-    for (ImportRow importRow : dataChunk.getSourceData()) {
-      Future<?> recordFuture =
-          recordExecutor.submit(() -> processStorageRecord(dataChunk, importRow));
-      recordFutures.add(recordFuture);
+    try {
+      for (ImportRow importRow : dataChunk.getSourceData()) {
+        Future<?> recordFuture =
+            recordExecutor.submit(() -> processStorageRecord(dataChunk, importRow));
+        recordFutures.add(recordFuture);
+      }
+      waitForFuturesToComplete(recordFutures);
+      recordFutures.forEach(
+          r -> {
+            try {
+              ImportTaskResult result = (ImportTaskResult) r.get();
+              boolean allSaved =
+                  result.getTargets().stream()
+                      .allMatch(t -> t.getStatus().equals(ImportTargetResultStatus.SAVED));
+              if (allSaved) successCount.incrementAndGet();
+              else failureCount.incrementAndGet();
+            } catch (InterruptedException | ExecutionException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    } finally {
+      recordExecutor.shutdown();
     }
-    waitForFuturesToComplete(recordFutures);
-    recordExecutor.shutdown();
-    recordFutures.forEach(
-        r -> {
-          try {
-            ImportTaskResult result = (ImportTaskResult) r.get();
-            boolean allSaved =
-                result.getTargets().stream()
-                    .allMatch(t -> t.getStatus().equals(ImportTargetResultStatus.SAVED));
-            if (allSaved) successCount.incrementAndGet();
-            else failureCount.incrementAndGet();
-          } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-          }
-        });
     Instant endTime = Instant.now();
     int totalDuration = (int) Duration.between(startTime, endTime).toMillis();
     return ImportDataChunkStatus.builder()
