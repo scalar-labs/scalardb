@@ -332,11 +332,9 @@ public class UnitTestUtils {
   }
 
   public static BufferedReader getCsvReader() {
-
     String csvData =
         "col1,col2,col3,col4,col5,col6,col7,col8,col9,col10,col11 \n"
-            + "1,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n"
-            + "2,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n";
+            + "1,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565,2000-01-01,01:01:01.000000,2000-01-01T01:01:00,1970-01-21T03:20:41.740Z  \n";
     return new BufferedReader(new StringReader(csvData));
   }
 
