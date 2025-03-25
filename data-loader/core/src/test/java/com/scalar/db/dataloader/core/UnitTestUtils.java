@@ -35,7 +35,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /** Utils for the service unit tests */
 public class UnitTestUtils {
@@ -347,47 +352,7 @@ public class UnitTestUtils {
   }
 
   public static Optional<Result> getResult(long pk) {
-    Map<String, Column<?>> values = new HashMap<>();
-    values.put(TEST_COLUMN_1_PK, BigIntColumn.of(TEST_COLUMN_1_PK, pk));
-    values.put(TEST_COLUMN_2_CK, IntColumn.of(TEST_COLUMN_2_CK, 1));
-    values.put(TEST_COLUMN_3_CK, BooleanColumn.of(TEST_COLUMN_3_CK, true));
-    values.put(TEST_COLUMN_4, FloatColumn.of(TEST_COLUMN_4, TEST_VALUE_FLOAT));
-    values.put(TEST_COLUMN_5, DoubleColumn.of(TEST_COLUMN_5, TEST_VALUE_DOUBLE));
-    values.put(TEST_COLUMN_6, TextColumn.of(TEST_COLUMN_6, TEST_VALUE_TEXT));
-    values.put(TEST_COLUMN_7, BlobColumn.of(TEST_COLUMN_7, TEST_VALUE_BLOB));
-    values.put(TEST_COLUMN_8, DateColumn.of(TEST_COLUMN_8, TEST_VALUE_DATE));
-    values.put(TEST_COLUMN_9, TimeColumn.of(TEST_COLUMN_9, TEST_VALUE_TIME));
-    values.put(TEST_COLUMN_10, TimestampColumn.of(TEST_COLUMN_10, TEST_VALUE_DATE_TIME));
-    values.put(TEST_COLUMN_11, TimestampTZColumn.of(TEST_COLUMN_11, TEST_VALUE_INSTANT));
-    values.put(
-        Attribute.BEFORE_PREFIX + TEST_COLUMN_4,
-        FloatColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_4, TEST_VALUE_FLOAT));
-    values.put(
-        Attribute.BEFORE_PREFIX + TEST_COLUMN_5,
-        DoubleColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_5, TEST_VALUE_DOUBLE));
-    values.put(
-        Attribute.BEFORE_PREFIX + TEST_COLUMN_6,
-        TextColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_6, TEST_VALUE_TEXT));
-    values.put(
-        Attribute.BEFORE_PREFIX + TEST_COLUMN_7,
-        BlobColumn.of(Attribute.BEFORE_PREFIX + TEST_COLUMN_7, TEST_VALUE_BLOB));
-    values.put(Attribute.ID, TextColumn.of(Attribute.ID, TEST_VALUE_TX_ID));
-    values.put(Attribute.STATE, IntColumn.of(Attribute.STATE, TEST_VALUE_INT));
-    values.put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, TEST_VALUE_INT));
-    values.put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, TEST_VALUE_LONG));
-    values.put(Attribute.COMMITTED_AT, BigIntColumn.of(Attribute.COMMITTED_AT, TEST_VALUE_LONG));
-    values.put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, TEST_VALUE_TEXT));
-    values.put(Attribute.BEFORE_STATE, IntColumn.of(Attribute.BEFORE_STATE, TEST_VALUE_INT));
-    values.put(Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, TEST_VALUE_INT));
-    values.put(
-        Attribute.BEFORE_PREPARED_AT,
-        BigIntColumn.of(Attribute.BEFORE_PREPARED_AT, TEST_VALUE_LONG));
-    values.put(
-        Attribute.BEFORE_COMMITTED_AT,
-        BigIntColumn.of(Attribute.BEFORE_COMMITTED_AT, TEST_VALUE_LONG));
-    TableMetadata tableMetadata = createTestTableMetadata();
     Result data = new ResultImpl(createTestValues(), createTestTableMetadata());
-
     return Optional.of(data);
   }
 }
