@@ -824,6 +824,30 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
       Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
+  OBJECT_STORAGE_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0178",
+      "Cross-partition scan with ordering is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0179",
+      "Import-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_INDEX_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0180",
+      "Index-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
+      Category.USER_ERROR,
+      "0181",
+      "The value of the column %s in the primary key contains an illegal character. Value: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -933,6 +957,14 @@ public enum CoreError implements ScalarDbError {
       Category.CONCURRENCY_ERROR,
       "0025",
       "A transaction conflict occurred in the Insert operation",
+      "",
+      ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR, "0026", "An error occurred in the mutation. Details: %s", "", ""),
+  OBJECT_STORAGE_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0027",
+      "A transaction conflict occurred in the mutation. Details: %s",
       "",
       ""),
 
@@ -1087,6 +1119,8 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0049", "An error occurred in the selection. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category

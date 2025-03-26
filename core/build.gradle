@@ -56,6 +56,16 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
+    integrationTestObjectStorage {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/objectstorage/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
     integrationTestMultiStorage {
         java {
             compileClasspath += main.output + test.output
@@ -85,6 +95,9 @@ configurations {
     integrationTestJdbcImplementation.extendsFrom testImplementation
     integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestJdbcCompileOnly.extendsFrom testCompileOnly
+    integrationTestObjectStorageImplementation.extendsFrom testImplementation
+    integrationTestObjectStorageRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestObjectStorageCompileOnly.extendsFrom testCompileOnly
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
@@ -96,6 +109,7 @@ dependencies {
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
     implementation "com.datastax.cassandra:cassandra-driver-core:${cassandraDriverVersion}"
     implementation "com.azure:azure-cosmos:${azureCosmosVersion}"
+    implementation "com.azure:azure-storage-blob:${azureBlobVersion}"
     implementation "org.jooq:jooq:${jooqVersion}"
     implementation platform("software.amazon.awssdk:bom:${awssdkVersion}")
     implementation 'software.amazon.awssdk:applicationautoscaling'
@@ -182,6 +196,17 @@ task integrationTestJdbc(type: Test) {
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
     classpath = sourceSets.integrationTestJdbc.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+    }
+}
+
+task integrationTestObjectStorage(type: Test) {
+    description = 'Runs the integration tests for object storages.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestObjectStorage.output.classesDirs
+    classpath = sourceSets.integrationTestObjectStorage.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
