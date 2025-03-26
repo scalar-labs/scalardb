@@ -140,7 +140,42 @@ public class UnitTestUtils {
     rootNode.put(TEST_COLUMN_9, TEST_VALUE_TIME.toString());
     rootNode.put(TEST_COLUMN_10, TEST_VALUE_DATE_TIME.toString());
     rootNode.put(TEST_COLUMN_11, TEST_VALUE_INSTANT.toString());
+    return rootNode;
+  }
 
+  public static ObjectNode getPartialOutputDataWithoutMetadata() {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode rootNode = mapper.createObjectNode();
+    rootNode.put(TEST_COLUMN_1_PK, TEST_VALUE_LONG);
+    rootNode.put(TEST_COLUMN_2_CK, TEST_VALUE_INT);
+    rootNode.put(TEST_COLUMN_3_CK, TEST_VALUE_BOOLEAN);
+    rootNode.put(TEST_COLUMN_4, TEST_VALUE_FLOAT);
+    rootNode.put(TEST_COLUMN_5, TEST_VALUE_DOUBLE);
+    return rootNode;
+  }
+
+  public static ObjectNode getPartialOutputDataWithMetadata() {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode rootNode = mapper.createObjectNode();
+    rootNode.put(TEST_COLUMN_1_PK, TEST_VALUE_LONG);
+    rootNode.put(TEST_COLUMN_2_CK, TEST_VALUE_INT);
+    rootNode.put(TEST_COLUMN_3_CK, TEST_VALUE_BOOLEAN);
+    rootNode.put(TEST_COLUMN_4, TEST_VALUE_FLOAT);
+    rootNode.put(TEST_COLUMN_5, TEST_VALUE_DOUBLE);
+    rootNode.put(Attribute.BEFORE_PREFIX + TEST_COLUMN_4, TEST_VALUE_FLOAT);
+    rootNode.put(Attribute.BEFORE_PREFIX + TEST_COLUMN_5, TEST_VALUE_DOUBLE);
+    rootNode.put(Attribute.BEFORE_PREFIX + TEST_COLUMN_6, TEST_VALUE_TEXT);
+    rootNode.put(Attribute.BEFORE_PREFIX + TEST_COLUMN_7, TEST_VALUE_BLOB);
+    rootNode.put(Attribute.ID, TEST_VALUE_TX_ID);
+    rootNode.put(Attribute.STATE, TEST_VALUE_INT);
+    rootNode.put(Attribute.VERSION, TEST_VALUE_INT);
+    rootNode.put(Attribute.PREPARED_AT, TEST_VALUE_LONG);
+    rootNode.put(Attribute.COMMITTED_AT, TEST_VALUE_LONG);
+    rootNode.put(Attribute.BEFORE_ID, TEST_VALUE_TEXT);
+    rootNode.put(Attribute.BEFORE_STATE, TEST_VALUE_INT);
+    rootNode.put(Attribute.BEFORE_VERSION, TEST_VALUE_INT);
+    rootNode.put(Attribute.BEFORE_PREPARED_AT, TEST_VALUE_LONG);
+    rootNode.put(Attribute.BEFORE_COMMITTED_AT, TEST_VALUE_LONG);
     return rootNode;
   }
 
@@ -157,6 +192,40 @@ public class UnitTestUtils {
     projectedColumns.add(TEST_COLUMN_9);
     projectedColumns.add(TEST_COLUMN_10);
     projectedColumns.add(TEST_COLUMN_11);
+    projectedColumns.add(Attribute.BEFORE_PREFIX + TEST_COLUMN_4);
+    projectedColumns.add(Attribute.BEFORE_PREFIX + TEST_COLUMN_5);
+    projectedColumns.add(Attribute.BEFORE_PREFIX + TEST_COLUMN_6);
+    projectedColumns.add(Attribute.BEFORE_PREFIX + TEST_COLUMN_7);
+    projectedColumns.add(Attribute.ID);
+    projectedColumns.add(Attribute.STATE);
+    projectedColumns.add(Attribute.VERSION);
+    projectedColumns.add(Attribute.PREPARED_AT);
+    projectedColumns.add(Attribute.COMMITTED_AT);
+    projectedColumns.add(Attribute.BEFORE_ID);
+    projectedColumns.add(Attribute.BEFORE_STATE);
+    projectedColumns.add(Attribute.BEFORE_VERSION);
+    projectedColumns.add(Attribute.BEFORE_PREPARED_AT);
+    projectedColumns.add(Attribute.BEFORE_COMMITTED_AT);
+    return projectedColumns;
+  }
+
+  public static List<String> getPartialColumnsListWithoutMetadata() {
+    List<String> projectedColumns = new ArrayList<>();
+    projectedColumns.add(TEST_COLUMN_1_PK);
+    projectedColumns.add(TEST_COLUMN_2_CK);
+    projectedColumns.add(TEST_COLUMN_3_CK);
+    projectedColumns.add(TEST_COLUMN_4);
+    projectedColumns.add(TEST_COLUMN_5);
+    return projectedColumns;
+  }
+
+  public static List<String> getPartialColumnsListWithMetadata() {
+    List<String> projectedColumns = new ArrayList<>();
+    projectedColumns.add(TEST_COLUMN_1_PK);
+    projectedColumns.add(TEST_COLUMN_2_CK);
+    projectedColumns.add(TEST_COLUMN_3_CK);
+    projectedColumns.add(TEST_COLUMN_4);
+    projectedColumns.add(TEST_COLUMN_5);
     projectedColumns.add(Attribute.BEFORE_PREFIX + TEST_COLUMN_4);
     projectedColumns.add(Attribute.BEFORE_PREFIX + TEST_COLUMN_5);
     projectedColumns.add(Attribute.BEFORE_PREFIX + TEST_COLUMN_6);
