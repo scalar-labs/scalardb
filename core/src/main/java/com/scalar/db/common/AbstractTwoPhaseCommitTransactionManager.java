@@ -6,10 +6,12 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +61,11 @@ public abstract class AbstractTwoPhaseCommitTransactionManager
   @Override
   public Optional<String> getTable() {
     return tableName;
+  }
+
+  @Override
+  public TwoPhaseCommitTransaction resume(String txId) throws TransactionNotFoundException {
+    throw new UnsupportedOperationException("resume is not supported in this implementation");
   }
 
   protected <T extends Mutation> List<T> copyAndSetTargetToIfNot(List<T> mutations) {
