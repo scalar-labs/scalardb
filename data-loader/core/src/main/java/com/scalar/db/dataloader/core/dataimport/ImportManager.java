@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -59,11 +58,8 @@ public class ImportManager implements ImportEventListener {
    *
    * @return a map of {@link ImportDataChunkStatus} objects containing the status of each processed
    *     chunk
-   * @throws ExecutionException if there is an error during the execution of the import process
-   * @throws InterruptedException if the import process is interrupted
    */
-  public ConcurrentHashMap<Integer, ImportDataChunkStatus> startImport()
-      throws ExecutionException, InterruptedException {
+  public ConcurrentHashMap<Integer, ImportDataChunkStatus> startImport() {
     ImportProcessorParams params =
         ImportProcessorParams.builder()
             .scalarDBMode(scalarDBMode)

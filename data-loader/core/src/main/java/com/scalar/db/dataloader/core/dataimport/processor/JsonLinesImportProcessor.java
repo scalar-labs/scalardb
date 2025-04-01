@@ -38,7 +38,7 @@ public class JsonLinesImportProcessor extends ImportProcessor {
 
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
   private static final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
-  private static final int MAX_QUEUE_SIZE = 10;
+  private static final int MAX_QUEUE_SIZE = 256;
 
   /**
    * Creates a new JsonLinesImportProcessor with the specified parameters.

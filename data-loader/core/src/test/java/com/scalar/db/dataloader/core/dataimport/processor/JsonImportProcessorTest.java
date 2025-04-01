@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
-public class JsonImportProcessorTest {
-  @Mock ImportProcessorParams params;
+class JsonImportProcessorTest {
+  @Mock private ImportProcessorParams params;
   @Mock ScalarDBMode scalarDBMode;
   @Mock ImportOptions importOptions;
   @Mock Map<String, TableMetadata> tableMetadataByTableName;
