@@ -66,7 +66,7 @@ public class JsonLinesImportProcessor extends ImportProcessor {
   public ConcurrentHashMap<Integer, ImportDataChunkStatus> process(
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     int numCores = Runtime.getRuntime().availableProcessors();
-    ExecutorService dataChunkExecutor = Executors.newFixedThreadPool(numCores);
+    ExecutorService dataChunkExecutor = Executors.newSingleThreadExecutor();
     BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>(MAX_QUEUE_SIZE);
 
     try {
