@@ -15,6 +15,7 @@ import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatch;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchStatus;
+import com.scalar.db.dataloader.core.util.ConfigUtil;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.io.BufferedReader;
 import java.time.Duration;
@@ -332,7 +333,7 @@ public abstract class ImportProcessor {
     List<ImportTransactionBatch> transactionBatches =
         splitIntoTransactionBatches(dataChunk, transactionBatchSize);
     ExecutorService transactionBatchExecutor =
-        Executors.newFixedThreadPool(Math.min(transactionBatches.size(), numCores * 2));
+        Executors.newFixedThreadPool(ConfigUtil.getTransactionBatchThreadPoolSize());
     List<Future<?>> transactionBatchFutures = new ArrayList<>();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);

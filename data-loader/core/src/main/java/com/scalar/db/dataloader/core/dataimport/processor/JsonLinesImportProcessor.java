@@ -6,6 +6,7 @@ import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
+import com.scalar.db.dataloader.core.util.ConfigUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,7 +39,6 @@ public class JsonLinesImportProcessor extends ImportProcessor {
 
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
   private static final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
-  private static final int MAX_QUEUE_SIZE = 256;
 
   /**
    * Creates a new JsonLinesImportProcessor with the specified parameters.
@@ -67,7 +67,8 @@ public class JsonLinesImportProcessor extends ImportProcessor {
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     int numCores = Runtime.getRuntime().availableProcessors();
     ExecutorService dataChunkExecutor = Executors.newSingleThreadExecutor();
-    BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>(MAX_QUEUE_SIZE);
+    BlockingQueue<ImportDataChunk> dataChunkQueue =
+        new LinkedBlockingQueue<>(ConfigUtil.getImportDataChunkQueueSize());
 
     try {
       CompletableFuture<Void> readerFuture =
