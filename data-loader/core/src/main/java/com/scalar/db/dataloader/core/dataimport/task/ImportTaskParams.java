@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core.dataimport.task;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.processor.TableColumnDataTypes;
 import java.util.Map;
 import lombok.Builder;
@@ -37,5 +37,5 @@ public class ImportTaskParams {
   @NonNull TableColumnDataTypes tableColumnDataTypes;
 
   /** Data Access Object for interacting with ScalarDB */
-  @NonNull ScalarDBDao dao;
+  @NonNull ScalarDbDao dao;
 }
