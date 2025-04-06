@@ -59,4 +59,61 @@ class JsonProducerTaskTest {
     String output = jsonProducerTask.process(resultList);
     Assertions.assertEquals(rootNode.toPrettyString(), output.trim());
   }
+
+  @Test
+  void process_withValidResultList_withPartialProjections_shouldReturnValidJsonLineString() {
+    projectedColumns = UnitTestUtils.getPartialColumnsListWithoutMetadata();
+    jsonProducerTask =
+        new JsonProducerTask(false, projectedColumns, mockMetadata, columnData, false);
+    ObjectNode rootNode = UnitTestUtils.getPartialOutputDataWithoutMetadata();
+    Map<String, Column<?>> values = UnitTestUtils.createTestValues();
+    Result result = new ResultImpl(values, mockMetadata);
+    List<Result> resultList = new ArrayList<>();
+    resultList.add(result);
+    String output = jsonProducerTask.process(resultList);
+    Assertions.assertEquals(rootNode.toString(), output.trim());
+  }
+
+  @Test
+  void
+      process_withValidResultList_withPartialProjectionsAndMetadata_shouldReturnValidJsonLineString() {
+    projectedColumns = UnitTestUtils.getPartialColumnsListWithMetadata();
+    jsonProducerTask =
+        new JsonProducerTask(true, projectedColumns, mockMetadata, columnData, false);
+    ObjectNode rootNode = UnitTestUtils.getPartialOutputDataWithMetadata();
+    Map<String, Column<?>> values = UnitTestUtils.createTestValues();
+    Result result = new ResultImpl(values, mockMetadata);
+    List<Result> resultList = new ArrayList<>();
+    resultList.add(result);
+    String output = jsonProducerTask.process(resultList);
+    Assertions.assertEquals(rootNode.toString(), output.trim());
+  }
+
+  @Test
+  void
+      process_withValidResultListWithNoProjectionSpecifiedWithoutMetadata_shouldReturnValidJsonLineString() {
+    jsonProducerTask =
+        new JsonProducerTask(false, Collections.emptyList(), mockMetadata, columnData, true);
+    ObjectNode rootNode = UnitTestUtils.getOutputDataWithoutMetadata();
+    Map<String, Column<?>> values = UnitTestUtils.createTestValues();
+    Result result = new ResultImpl(values, mockMetadata);
+    List<Result> resultList = new ArrayList<>();
+    resultList.add(result);
+    String output = jsonProducerTask.process(resultList);
+    Assertions.assertEquals(rootNode.toPrettyString(), output.trim());
+  }
+
+  @Test
+  void
+      process_withValidResultListWithNoProjectionSpecifiedWithMetadata_shouldReturnValidJsonLineString() {
+    jsonProducerTask =
+        new JsonProducerTask(true, Collections.emptyList(), mockMetadata, columnData, true);
+    ObjectNode rootNode = UnitTestUtils.getOutputDataWithMetadata();
+    Map<String, Column<?>> values = UnitTestUtils.createTestValues();
+    Result result = new ResultImpl(values, mockMetadata);
+    List<Result> resultList = new ArrayList<>();
+    resultList.add(result);
+    String output = jsonProducerTask.process(resultList);
+    Assertions.assertEquals(rootNode.toPrettyString(), output.trim());
+  }
 }
