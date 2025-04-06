@@ -15,7 +15,6 @@ import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatch;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchStatus;
-import com.scalar.db.dataloader.core.util.ConfigUtil;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.io.BufferedReader;
 import java.time.Duration;
@@ -295,11 +294,11 @@ public abstract class ImportProcessor {
    *
    * @param dataChunk the data chunk to process
    * @param transactionBatchSize the size of transaction batches (used only in transaction mode)
-   * @param numCores the number of CPU cores to use for parallel processing
+   * @param threadSize the number of threads to use for parallel processing
    * @return an {@link ImportDataChunkStatus} containing the complete processing results and metrics
    */
   protected ImportDataChunkStatus processDataChunk(
-      ImportDataChunk dataChunk, int transactionBatchSize, int numCores) {
+      ImportDataChunk dataChunk, int transactionBatchSize, int threadSize) {
     ImportDataChunkStatus status =
         ImportDataChunkStatus.builder()
             .dataChunkId(dataChunk.getDataChunkId())
@@ -310,9 +309,9 @@ public abstract class ImportProcessor {
     ImportDataChunkStatus importDataChunkStatus;
     if (params.getScalarDBMode() == ScalarDBMode.TRANSACTION) {
       importDataChunkStatus =
-          processDataChunkWithTransactions(dataChunk, transactionBatchSize, numCores);
+          processDataChunkWithTransactions(dataChunk, transactionBatchSize, threadSize);
     } else {
-      importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk, numCores);
+      importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk, threadSize);
     }
     notifyDataChunkCompleted(importDataChunkStatus);
     return importDataChunkStatus;
@@ -324,16 +323,15 @@ public abstract class ImportProcessor {
    *
    * @param dataChunk the data chunk to process
    * @param transactionBatchSize the number of records per transaction batch
-   * @param numCores the maximum number of concurrent transactions to process
+   * @param threadSize the maximum number of concurrent transactions to process
    * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
   private ImportDataChunkStatus processDataChunkWithTransactions(
-      ImportDataChunk dataChunk, int transactionBatchSize, int numCores) {
+      ImportDataChunk dataChunk, int transactionBatchSize, int threadSize) {
     Instant startTime = Instant.now();
     List<ImportTransactionBatch> transactionBatches =
         splitIntoTransactionBatches(dataChunk, transactionBatchSize);
-    ExecutorService transactionBatchExecutor =
-        Executors.newFixedThreadPool(ConfigUtil.getTransactionBatchThreadPoolSize());
+    ExecutorService transactionBatchExecutor = Executors.newFixedThreadPool(threadSize);
     List<Future<?>> transactionBatchFutures = new ArrayList<>();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);
@@ -393,15 +391,15 @@ public abstract class ImportProcessor {
    * are processed concurrently without transaction guarantees.
    *
    * @param dataChunk the data chunk to process
-   * @param numCores the number of records to process concurrently
+   * @param threadSize the number of records to process concurrently
    * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
   private ImportDataChunkStatus processDataChunkWithoutTransactions(
-      ImportDataChunk dataChunk, int numCores) {
+      ImportDataChunk dataChunk, int threadSize) {
     Instant startTime = Instant.now();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);
-    ExecutorService recordExecutor = Executors.newFixedThreadPool(numCores);
+    ExecutorService recordExecutor = Executors.newFixedThreadPool(threadSize);
     List<Future<?>> recordFutures = new ArrayList<>();
     try {
       for (ImportRow importRow : dataChunk.getSourceData()) {

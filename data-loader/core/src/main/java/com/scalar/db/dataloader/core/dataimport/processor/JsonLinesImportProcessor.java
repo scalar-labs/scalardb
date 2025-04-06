@@ -6,7 +6,6 @@ import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
-import com.scalar.db.dataloader.core.util.ConfigUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -65,10 +64,9 @@ public class JsonLinesImportProcessor extends ImportProcessor {
   @Override
   public ConcurrentHashMap<Integer, ImportDataChunkStatus> process(
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
-    int numCores = Runtime.getRuntime().availableProcessors();
     ExecutorService dataChunkExecutor = Executors.newSingleThreadExecutor();
     BlockingQueue<ImportDataChunk> dataChunkQueue =
-        new LinkedBlockingQueue<>(ConfigUtil.getImportDataChunkQueueSize());
+        new LinkedBlockingQueue<>(params.getImportOptions().getDataChunkQueueSize());
 
     try {
       CompletableFuture<Void> readerFuture =
@@ -81,7 +79,8 @@ public class JsonLinesImportProcessor extends ImportProcessor {
         ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
         if (dataChunk != null) {
           ImportDataChunkStatus status =
-              processDataChunk(dataChunk, transactionBatchSize, numCores);
+              processDataChunk(
+                  dataChunk, transactionBatchSize, params.getImportOptions().getMaxThreads());
           result.put(status.getDataChunkId(), status);
         }
       }
