@@ -80,9 +80,7 @@ public class CsvImportProcessor extends ImportProcessor {
       while (!(dataChunkQueue.isEmpty() && readerFuture.isDone())) {
         ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
         if (dataChunk != null) {
-          ImportDataChunkStatus status =
-              processDataChunk(
-                  dataChunk, transactionBatchSize, params.getImportOptions().getMaxThreads());
+          ImportDataChunkStatus status = processDataChunk(dataChunk, transactionBatchSize);
           result.put(status.getDataChunkId(), status);
         }
       }
