@@ -58,6 +58,8 @@ class JsonImportProcessorTest {
             .dataChunkSize(5)
             .tableName("table")
             .logMode(LogMode.SINGLE_FILE)
+            .maxThreads(8)
+            .dataChunkQueueSize(256)
             .build();
     Mockito.when(
             dao.get(
