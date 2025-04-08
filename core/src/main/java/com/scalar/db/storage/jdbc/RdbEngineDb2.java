@@ -134,7 +134,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+    return "DROP INDEX " + enclose(indexName);
   }
 
   @Override
@@ -240,7 +240,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case TEXT:
         return "VARCHAR(" + keyColumnSize + ")";
       case BLOB:
-        return "BLOB(" + keyColumnSize + ")";
+        return "VARBINARY(" + keyColumnSize + ")";
       default:
         return null;
     }
