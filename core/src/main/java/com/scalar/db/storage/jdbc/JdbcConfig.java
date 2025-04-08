@@ -55,6 +55,8 @@ public class JdbcConfig {
       PREFIX + "oracle.variable_key_column_size";
   public static final String ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "oracle.time_column.default_date_component";
+  public static final String DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
+      PREFIX + "db2.time_column.default_date_component";
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
@@ -93,6 +95,11 @@ public class JdbcConfig {
   // comparison and sorting. The default date component is 1970-01-01.
   public static final String DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
 
+  // In Db2, to store a date with a fractional second, the timestamp type is used. So ScalarDB
+  // stores every value of the TIME type with the same date component columns for ease of
+  // comparison and sorting. The default date component is 1970-01-01.
+  public static final String DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
+
   private final String jdbcUrl;
   @Nullable private final String username;
   @Nullable private final String password;
@@ -118,6 +125,7 @@ public class JdbcConfig {
   private final int oracleVariableKeyColumnSize;
 
   private final LocalDate oracleTimeColumnDefaultDateComponent;
+  private final LocalDate db2TimeColumnDefaultDateComponent;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -230,6 +238,14 @@ public class JdbcConfig {
     oracleTimeColumnDefaultDateComponent =
         LocalDate.parse(
             oracleTimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
+    String db2TimeColumnDefaultDateComponentString =
+        getString(
+            databaseConfig.getProperties(),
+            DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT,
+            DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
+    assert db2TimeColumnDefaultDateComponentString != null;
+    db2TimeColumnDefaultDateComponent =
+        LocalDate.parse(db2TimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
 
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
@@ -321,5 +337,9 @@ public class JdbcConfig {
 
   public LocalDate getOracleTimeColumnDefaultDateComponent() {
     return oracleTimeColumnDefaultDateComponent;
+  }
+
+  public LocalDate getDb2TimeColumnDefaultDateComponent() {
+    return db2TimeColumnDefaultDateComponent;
   }
 }

@@ -41,6 +41,10 @@ public interface RdbEngineStrategy {
 
   String getDataTypeForKey(DataType dataType);
 
+  default String getDataTypeForSecondaryIndex(DataType dataType){
+    return getDataTypeForEngine(dataType);
+  }
+
   DataType getDataTypeForScalarDb(
       JDBCType type,
       String typeName,
@@ -51,7 +55,7 @@ public interface RdbEngineStrategy {
 
   int getSqlTypes(DataType dataType);
 
-  String getTextType(int charLength);
+  String getTextType(int charLength, boolean isKey);
 
   String computeBooleanValue(boolean value);
 
@@ -123,6 +127,7 @@ public interface RdbEngineStrategy {
    * @return The properly-preprocessed like pattern
    */
   default String getPattern(LikeExpression likeExpression) {
+    // TODO Check for db2
     return likeExpression.getTextValue();
   }
 

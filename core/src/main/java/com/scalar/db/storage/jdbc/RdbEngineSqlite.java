@@ -147,7 +147,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return "TEXT";
   }
 

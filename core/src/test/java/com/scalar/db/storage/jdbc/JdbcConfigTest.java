@@ -41,6 +41,7 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "64");
     props.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "64");
     props.setProperty(JdbcConfig.ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT, "2020-01-01");
+    props.setProperty(JdbcConfig.DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT, "2022-01-01");
 
     // Act
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
@@ -69,6 +70,8 @@ public class JdbcConfigTest {
     assertThat(config.getOracleVariableKeyColumnSize()).isEqualTo(64);
     assertThat(config.getOracleTimeColumnDefaultDateComponent())
         .isEqualTo(LocalDate.parse("2020-01-01", DateTimeFormatter.ISO_LOCAL_DATE));
+    assertThat(config.getDb2TimeColumnDefaultDateComponent())
+        .isEqualTo(LocalDate.parse("2022-01-01", DateTimeFormatter.ISO_LOCAL_DATE));
   }
 
   @Test
@@ -114,6 +117,8 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     assertThat(config.getOracleTimeColumnDefaultDateComponent())
         .isEqualTo(JdbcConfig.DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
+    assertThat(config.getDb2TimeColumnDefaultDateComponent())
+        .isEqualTo(JdbcConfig.DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
   }
 
   @Test
