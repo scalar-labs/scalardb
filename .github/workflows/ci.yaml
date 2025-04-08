@@ -1621,6 +1621,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Wait for the container to be ready
+        run : sleep 3m
+
       - name: Execute Gradle 'integrationTestJdbc' task
         run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
