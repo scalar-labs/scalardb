@@ -35,4 +35,5 @@ public class ImportOptions {
   private final String tableName;
   private final int maxThreads;
   private final String customHeaderRow;
+  private final int dataChunkQueueSize;
 }

@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +32,11 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * An abstract class that handles the processing of data imports into ScalarDB. This processor
+ * supports both transactional and non-transactional (storage) modes and provides event notification
+ * capabilities for monitoring the import process.
+ */
 @RequiredArgsConstructor
 public abstract class ImportProcessor {
 
@@ -39,17 +45,22 @@ public abstract class ImportProcessor {
   private final List<ImportEventListener> listeners = new ArrayList<>();
 
   /**
-   * * Process the source data from import file
+   * Processes the source data from the given import file.
    *
-   * @param dataChunkSize size of data chunk
-   * @param transactionBatchSize size of transaction batch
-   * @param reader reader which reads the source file
-   * @return list of import data chunk status objects
+   * <p>This method reads data from the provided {@link BufferedReader}, processes it in chunks, and
+   * batches transactions according to the specified sizes. The processing can be done in either
+   * transactional or storage mode, depending on the configured {@link ScalarDBMode}.
+   *
+   * @param dataChunkSize the number of records to include in each data chunk for parallel
+   *     processing
+   * @param transactionBatchSize the number of records to group together in a single transaction
+   *     (only used in transaction mode)
+   * @param reader the {@link BufferedReader} used to read the source file
+   * @return a map of {@link ImportDataChunkStatus} objects indicating the processing status and
+   *     results of each data chunk
    */
-  public List<ImportDataChunkStatus> process(
-      int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
-    return Collections.emptyList();
-  }
+  public abstract ConcurrentHashMap<Integer, ImportDataChunkStatus> process(
+      int dataChunkSize, int transactionBatchSize, BufferedReader reader);
 
   /**
    * Add import event listener to listener list
@@ -135,11 +146,12 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Split the data chunk into transaction batches
+   * Splits a data chunk into smaller transaction batches for processing. This method is used in
+   * transaction mode to group records together for atomic processing.
    *
-   * @param dataChunk data chunk object
-   * @param batchSize batch size
-   * @return created list of transaction batches
+   * @param dataChunk the data chunk to split into batches
+   * @param batchSize the maximum number of records per transaction batch
+   * @return a list of {@link ImportTransactionBatch} objects representing the split batches
    */
   private List<ImportTransactionBatch> splitIntoTransactionBatches(
       ImportDataChunk dataChunk, int batchSize) {
@@ -162,11 +174,14 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * To process a transaction batch and return the result
+   * Processes a single transaction batch within a data chunk. Creates a new transaction, processes
+   * all records in the batch, and commits or aborts the transaction based on the success of all
+   * operations.
    *
-   * @param dataChunk data chunk object
-   * @param transactionBatch transaction batch object
-   * @return processed transaction batch result
+   * @param dataChunk the parent data chunk containing this batch
+   * @param transactionBatch the batch of records to process in a single transaction
+   * @return an {@link ImportTransactionBatchResult} containing the processing results and any
+   *     errors
    */
   private ImportTransactionBatchResult processTransactionBatch(
       ImportDataChunk dataChunk, ImportTransactionBatch transactionBatch) {
@@ -179,9 +194,10 @@ public abstract class ImportProcessor {
     List<ImportTaskResult> importRecordResult = new ArrayList<>();
     boolean isSuccess;
     String error = "";
+    DistributedTransaction transaction = null;
     try {
       // Create the ScalarDB transaction
-      DistributedTransaction transaction = params.getDistributedTransactionManager().start();
+      transaction = params.getDistributedTransactionManager().start();
 
       // Loop over the transaction batch and process each record
       for (ImportRow importRow : transactionBatch.getSourceData()) {
@@ -217,6 +233,15 @@ public abstract class ImportProcessor {
     } catch (TransactionException e) {
       isSuccess = false;
       LOGGER.error(e.getMessage());
+      try {
+        if (transaction != null) {
+          transaction.abort(); // Ensure transaction is aborted
+        }
+      } catch (TransactionException abortException) {
+        LOGGER.error(
+            "Failed to abort transaction: {}", abortException.getMessage(), abortException);
+      }
+      error = e.getMessage();
     }
     ImportTransactionBatchResult importTransactionBatchResult =
         ImportTransactionBatchResult.builder()
@@ -231,9 +256,12 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * @param dataChunk data chunk object
-   * @param importRow data row object
-   * @return thr task result after processing the row data
+   * Processes a single record in storage mode (non-transactional). Each record is processed
+   * independently without transaction guarantees.
+   *
+   * @param dataChunk the parent data chunk containing this record
+   * @param importRow the record to process
+   * @return an {@link ImportTaskResult} containing the processing result for the record
    */
   private ImportTaskResult processStorageRecord(ImportDataChunk dataChunk, ImportRow importRow) {
     ImportTaskParams taskParams =
@@ -261,15 +289,15 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Process data chunk data
+   * Processes a complete data chunk using parallel execution. The processing mode (transactional or
+   * storage) is determined by the configured {@link ScalarDBMode}.
    *
-   * @param dataChunk data chunk object
-   * @param transactionBatchSize transaction batch size
-   * @param numCores num of cpu cores
-   * @return import data chunk status object after processing the data chunk
+   * @param dataChunk the data chunk to process
+   * @param transactionBatchSize the size of transaction batches (used only in transaction mode)
+   * @return an {@link ImportDataChunkStatus} containing the complete processing results and metrics
    */
   protected ImportDataChunkStatus processDataChunk(
-      ImportDataChunk dataChunk, int transactionBatchSize, int numCores) {
+      ImportDataChunk dataChunk, int transactionBatchSize) {
     ImportDataChunkStatus status =
         ImportDataChunkStatus.builder()
             .dataChunkId(dataChunk.getDataChunkId())
@@ -279,66 +307,68 @@ public abstract class ImportProcessor {
     notifyDataChunkStarted(status);
     ImportDataChunkStatus importDataChunkStatus;
     if (params.getScalarDBMode() == ScalarDBMode.TRANSACTION) {
-      importDataChunkStatus =
-          processDataChunkWithTransactions(dataChunk, transactionBatchSize, numCores);
+      importDataChunkStatus = processDataChunkWithTransactions(dataChunk, transactionBatchSize);
     } else {
-      importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk, numCores);
+      importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk);
     }
     notifyDataChunkCompleted(importDataChunkStatus);
     return importDataChunkStatus;
   }
 
   /**
-   * Process data chunk data with transactions
+   * Processes a data chunk using transaction mode with parallel batch processing. Multiple
+   * transaction batches are processed concurrently using a thread pool.
    *
-   * @param dataChunk data chunk object
-   * @param transactionBatchSize transaction batch size
-   * @param numCores num of cpu cores
-   * @return import data chunk status object after processing the data chunk
+   * @param dataChunk the data chunk to process
+   * @param transactionBatchSize the number of records per transaction batch
+   * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
   private ImportDataChunkStatus processDataChunkWithTransactions(
-      ImportDataChunk dataChunk, int transactionBatchSize, int numCores) {
+      ImportDataChunk dataChunk, int transactionBatchSize) {
     Instant startTime = Instant.now();
     List<ImportTransactionBatch> transactionBatches =
         splitIntoTransactionBatches(dataChunk, transactionBatchSize);
     ExecutorService transactionBatchExecutor =
-        Executors.newFixedThreadPool(Math.min(transactionBatches.size(), numCores));
+        Executors.newFixedThreadPool(params.getImportOptions().getMaxThreads());
     List<Future<?>> transactionBatchFutures = new ArrayList<>();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);
-    for (ImportTransactionBatch transactionBatch : transactionBatches) {
-      Future<?> transactionBatchFuture =
-          transactionBatchExecutor.submit(
-              () -> processTransactionBatch(dataChunk, transactionBatch));
-      transactionBatchFutures.add(transactionBatchFuture);
-    }
+    try {
+      for (ImportTransactionBatch transactionBatch : transactionBatches) {
+        Future<?> transactionBatchFuture =
+            transactionBatchExecutor.submit(
+                () -> processTransactionBatch(dataChunk, transactionBatch));
+        transactionBatchFutures.add(transactionBatchFuture);
+      }
 
-    waitForFuturesToComplete(transactionBatchFutures);
-    transactionBatchExecutor.shutdown();
-    transactionBatchFutures.forEach(
-        batchResult -> {
-          try {
-            ImportTransactionBatchResult importTransactionBatchResult =
-                (ImportTransactionBatchResult) batchResult.get();
-            importTransactionBatchResult
-                .getRecords()
-                .forEach(
-                    batchRecords -> {
-                      if (batchRecords.getTargets().stream()
-                          .allMatch(
-                              targetResult ->
-                                  targetResult
-                                      .getStatus()
-                                      .equals(ImportTargetResultStatus.SAVED))) {
-                        successCount.incrementAndGet();
-                      } else {
-                        failureCount.incrementAndGet();
-                      }
-                    });
-          } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-          }
-        });
+      waitForFuturesToComplete(transactionBatchFutures);
+      transactionBatchFutures.forEach(
+          batchResult -> {
+            try {
+              ImportTransactionBatchResult importTransactionBatchResult =
+                  (ImportTransactionBatchResult) batchResult.get();
+              importTransactionBatchResult
+                  .getRecords()
+                  .forEach(
+                      batchRecords -> {
+                        if (batchRecords.getTargets().stream()
+                            .allMatch(
+                                targetResult ->
+                                    targetResult
+                                        .getStatus()
+                                        .equals(ImportTargetResultStatus.SAVED))) {
+                          successCount.incrementAndGet();
+                        } else {
+                          failureCount.incrementAndGet();
+                        }
+                      });
+            } catch (InterruptedException | ExecutionException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    } finally {
+      transactionBatchExecutor.shutdown();
+    }
     Instant endTime = Instant.now();
     int totalDuration = (int) Duration.between(startTime, endTime).toMillis();
     return ImportDataChunkStatus.builder()
@@ -355,39 +385,42 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Process data chunk data without transactions
+   * Processes a data chunk using storage mode with parallel record processing. Individual records
+   * are processed concurrently without transaction guarantees.
    *
-   * @param dataChunk data chunk object
-   * @param numCores num of cpu cores
-   * @return import data chunk status object after processing the data chunk
+   * @param dataChunk the data chunk to process
+   * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
-  private ImportDataChunkStatus processDataChunkWithoutTransactions(
-      ImportDataChunk dataChunk, int numCores) {
+  private ImportDataChunkStatus processDataChunkWithoutTransactions(ImportDataChunk dataChunk) {
     Instant startTime = Instant.now();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);
-    ExecutorService recordExecutor = Executors.newFixedThreadPool(numCores);
+    ExecutorService recordExecutor =
+        Executors.newFixedThreadPool(params.getImportOptions().getMaxThreads());
     List<Future<?>> recordFutures = new ArrayList<>();
-    for (ImportRow importRow : dataChunk.getSourceData()) {
-      Future<?> recordFuture =
-          recordExecutor.submit(() -> processStorageRecord(dataChunk, importRow));
-      recordFutures.add(recordFuture);
+    try {
+      for (ImportRow importRow : dataChunk.getSourceData()) {
+        Future<?> recordFuture =
+            recordExecutor.submit(() -> processStorageRecord(dataChunk, importRow));
+        recordFutures.add(recordFuture);
+      }
+      waitForFuturesToComplete(recordFutures);
+      recordFutures.forEach(
+          r -> {
+            try {
+              ImportTaskResult result = (ImportTaskResult) r.get();
+              boolean allSaved =
+                  result.getTargets().stream()
+                      .allMatch(t -> t.getStatus().equals(ImportTargetResultStatus.SAVED));
+              if (allSaved) successCount.incrementAndGet();
+              else failureCount.incrementAndGet();
+            } catch (InterruptedException | ExecutionException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    } finally {
+      recordExecutor.shutdown();
     }
-    waitForFuturesToComplete(recordFutures);
-    recordExecutor.shutdown();
-    recordFutures.forEach(
-        r -> {
-          try {
-            ImportTaskResult result = (ImportTaskResult) r.get();
-            boolean allSaved =
-                result.getTargets().stream()
-                    .allMatch(t -> t.getStatus().equals(ImportTargetResultStatus.SAVED));
-            if (allSaved) successCount.incrementAndGet();
-            else failureCount.incrementAndGet();
-          } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-          }
-        });
     Instant endTime = Instant.now();
     int totalDuration = (int) Duration.between(startTime, endTime).toMillis();
     return ImportDataChunkStatus.builder()
@@ -402,6 +435,12 @@ public abstract class ImportProcessor {
         .build();
   }
 
+  /**
+   * Waits for all futures in the provided list to complete. Any exceptions during execution are
+   * logged but not propagated.
+   *
+   * @param futures the list of {@link Future} objects to wait for
+   */
   private void waitForFuturesToComplete(List<Future<?>> futures) {
     for (Future<?> future : futures) {
       try {
