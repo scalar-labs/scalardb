@@ -7,6 +7,10 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Unit tests for {@link DefaultImportProcessorFactory} class. Tests the factory's ability to create
+ * appropriate import processors based on different file formats.
+ */
 class DefaultImportProcessorFactoryTest {
 
   private DefaultImportProcessorFactory factory;
@@ -16,6 +20,10 @@ class DefaultImportProcessorFactoryTest {
     factory = new DefaultImportProcessorFactory();
   }
 
+  /**
+   * Tests that the factory creates a {@link JsonLinesImportProcessor} when JSONL format is
+   * specified.
+   */
   @Test
   void createImportProcessor_givenFileFormatIsJsonl_shouldReturnJsonLinesImportProcessor() {
     // Arrange
@@ -30,6 +38,7 @@ class DefaultImportProcessorFactoryTest {
     assertInstanceOf(JsonLinesImportProcessor.class, result);
   }
 
+  /** Tests that the factory creates a {@link JsonImportProcessor} when JSON format is specified. */
   @Test
   void createImportProcessor_givenFileFormatIsJson_shouldReturnJsonImportProcessor() {
     // Given
@@ -44,6 +53,7 @@ class DefaultImportProcessorFactoryTest {
     assertInstanceOf(JsonImportProcessor.class, result);
   }
 
+  /** Tests that the factory creates a {@link CsvImportProcessor} when CSV format is specified. */
   @Test
   void createImportProcessor_givenFileFormatIsCsv_shouldReturnCsvImportProcessor() {
     // Given

@@ -17,9 +17,24 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
+/**
+ * Manages the data import process and coordinates event handling between the import processor and
+ * listeners. This class implements {@link ImportEventListener} to receive events from the processor
+ * and relay them to registered listeners.
+ *
+ * <p>The import process involves:
+ *
+ * <ul>
+ *   <li>Reading data from an input file
+ *   <li>Processing the data in configurable chunk sizes
+ *   <li>Managing database transactions in batches
+ *   <li>Notifying listeners of various import events
+ * </ul>
+ */
 @AllArgsConstructor
 public class ImportManager implements ImportEventListener {
 
@@ -31,14 +46,20 @@ public class ImportManager implements ImportEventListener {
   private final ScalarDBMode scalarDBMode;
   private final DistributedStorage distributedStorage;
   private final DistributedTransactionManager distributedTransactionManager;
-  private final List<ImportDataChunkStatus> importDataChunkStatusList = new ArrayList<>();
+  private final ConcurrentHashMap<Integer, ImportDataChunkStatus> importDataChunkStatusMap =
+      new ConcurrentHashMap<>();
 
   /**
-   * * Start the import process
+   * Starts the import process using the configured parameters.
    *
-   * @return list of import data chunk status objects
+   * <p>If the data chunk size in {@link ImportOptions} is set to 0, the entire file will be
+   * processed as a single chunk. Otherwise, the file will be processed in chunks of the specified
+   * size.
+   *
+   * @return a map of {@link ImportDataChunkStatus} objects containing the status of each processed
+   *     chunk
    */
-  public List<ImportDataChunkStatus> startImport() {
+  public ConcurrentHashMap<Integer, ImportDataChunkStatus> startImport() {
     ImportProcessorParams params =
         ImportProcessorParams.builder()
             .scalarDBMode(scalarDBMode)
@@ -60,14 +81,26 @@ public class ImportManager implements ImportEventListener {
         dataChunkSize, importOptions.getTransactionBatchSize(), importFileReader);
   }
 
+  /**
+   * Registers a new listener to receive import events.
+   *
+   * @param listener the listener to add
+   * @throws IllegalArgumentException if the listener is null
+   */
   public void addListener(ImportEventListener listener) {
     listeners.add(listener);
   }
 
+  /**
+   * Removes a previously registered listener.
+   *
+   * @param listener the listener to remove
+   */
   public void removeListener(ImportEventListener listener) {
     listeners.remove(listener);
   }
 
+  /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
   public void onDataChunkStarted(ImportDataChunkStatus status) {
     for (ImportEventListener listener : listeners) {
@@ -75,21 +108,16 @@ public class ImportManager implements ImportEventListener {
     }
   }
 
+  /**
+   * {@inheritDoc} Updates or adds the status of a data chunk in the status map. This method is
+   * thread-safe.
+   */
   @Override
   public void addOrUpdateDataChunkStatus(ImportDataChunkStatus status) {
-    synchronized (importDataChunkStatusList) {
-      for (int i = 0; i < importDataChunkStatusList.size(); i++) {
-        if (importDataChunkStatusList.get(i).getDataChunkId() == status.getDataChunkId()) {
-          // Object found, replace it with the new one
-          importDataChunkStatusList.set(i, status);
-          return;
-        }
-      }
-      // If object is not found, add it to the list
-      importDataChunkStatusList.add(status);
-    }
+    importDataChunkStatusMap.put(status.getDataChunkId(), status);
   }
 
+  /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
   public void onDataChunkCompleted(ImportDataChunkStatus status) {
     for (ImportEventListener listener : listeners) {
@@ -97,6 +125,7 @@ public class ImportManager implements ImportEventListener {
     }
   }
 
+  /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
   public void onTransactionBatchStarted(ImportTransactionBatchStatus status) {
     for (ImportEventListener listener : listeners) {
@@ -104,6 +133,7 @@ public class ImportManager implements ImportEventListener {
     }
   }
 
+  /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
   public void onTransactionBatchCompleted(ImportTransactionBatchResult batchResult) {
     for (ImportEventListener listener : listeners) {
@@ -111,6 +141,7 @@ public class ImportManager implements ImportEventListener {
     }
   }
 
+  /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
   public void onTaskComplete(ImportTaskResult taskResult) {
     for (ImportEventListener listener : listeners) {
@@ -118,6 +149,7 @@ public class ImportManager implements ImportEventListener {
     }
   }
 
+  /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
   public void onAllDataChunksCompleted() {
     for (ImportEventListener listener : listeners) {
@@ -125,10 +157,20 @@ public class ImportManager implements ImportEventListener {
     }
   }
 
-  public List<ImportDataChunkStatus> getImportDataChunkStatusList() {
-    return importDataChunkStatusList;
+  /**
+   * Returns the current map of import data chunk status objects.
+   *
+   * @return a map of {@link ImportDataChunkStatus} objects
+   */
+  public ConcurrentHashMap<Integer, ImportDataChunkStatus> getImportDataChunkStatus() {
+    return importDataChunkStatusMap;
   }
 
+  /**
+   * Creates and returns a mapping of table column data types from the table metadata.
+   *
+   * @return a {@link TableColumnDataTypes} object containing the column data types for all tables
+   */
   public TableColumnDataTypes getTableColumnDataTypes() {
     TableColumnDataTypes tableColumnDataTypes = new TableColumnDataTypes();
     tableMetadata.forEach(
