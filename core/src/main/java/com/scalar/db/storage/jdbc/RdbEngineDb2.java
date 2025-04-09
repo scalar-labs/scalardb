@@ -203,6 +203,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case BOOLEAN:
         return "BOOLEAN";
       case FLOAT:
+        return "REAL";
       case DOUBLE:
         return "DOUBLE";
       case INT:
