@@ -11,7 +11,6 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
-import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -65,9 +64,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
 
   private void add(Selection base, @Nullable TransactionResult result) throws ExecutionException {
     if (result == null) {
-      // for deleting non-existing record that was prepared with DELETED for Serializable with
-      // Extra-write
-      mutations.add(composeDelete(base, null));
+      throw new AssertionError(
+          "This path should not be reached since the EXTRA_WRITE strategy is deleted");
     } else if (result.getState().equals(TransactionState.PREPARED)) {
       // for rollforward in lazy recovery
       mutations.add(composePut(base, result));
@@ -122,10 +120,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
         return ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
       } else {
-        // for deleting non-existing record that was prepared with DELETED for Serializable with
-        // Extra-write
-        assert base instanceof Get;
-        return base.getPartitionKey();
+        throw new AssertionError(
+            "This path should not be reached since the EXTRA_WRITE strategy is deleted");
       }
     }
   }
@@ -142,10 +138,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
         return ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
       } else {
-        // for deleting non-existing record that was prepared with DELETED for Serializable with
-        // Extra-write
-        assert base instanceof Get;
-        return base.getClusteringKey();
+        throw new AssertionError(
+            "This path should not be reached since the EXTRA_WRITE strategy is deleted");
       }
     }
   }
