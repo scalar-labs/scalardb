@@ -282,6 +282,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .dataChunkSize(dataChunkSize)
             .transactionBatchSize(transactionSize)
             .maxThreads(maxThreads)
+            .dataChunkQueueSize(dataChunkQueueSize)
             .tableName(tableName);
 
     // Import mode
