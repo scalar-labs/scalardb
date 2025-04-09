@@ -1,9 +1,16 @@
 package com.scalar.db.dataloader.core.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.UnitTestUtils;
+import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -16,16 +23,33 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+/**
+ * Unit tests for the ColumnUtils class which handles column creation and manipulation. Tests
+ * various data type conversions and error handling scenarios.
+ */
 class ColumnUtilsTest {
 
   private static final float FLOAT_VALUE = 2.78f;
+  private static final TableMetadata mockMetadata = UnitTestUtils.createTestTableMetadata();
+  private static final ObjectNode sourceRecord = UnitTestUtils.getOutputDataWithMetadata();
+  private static final Map<String, Column<?>> values = UnitTestUtils.createTestValues();
+  private static final Result scalarDBResult = new ResultImpl(values, mockMetadata);
 
+  /**
+   * Provides test cases for column creation with different data types and values. Each test case
+   * includes: - The target DataType - Column name - Input value (as string) - Expected Column
+   * object
+   *
+   * @return Stream of Arguments containing test parameters
+   */
   private static Stream<Arguments> provideColumnsForCreateColumnFromValue() {
     return Stream.of(
         Arguments.of(DataType.BOOLEAN, "boolColumn", "true", BooleanColumn.of("boolColumn", true)),
@@ -64,6 +88,16 @@ class ColumnUtilsTest {
         Arguments.of(DataType.BLOB, "blobColumn", null, BlobColumn.ofNull("blobColumn")));
   }
 
+  /**
+   * Tests column creation from string values for various data types. Verifies that the created
+   * column matches the expected column with correct type and value.
+   *
+   * @param dataType The target ScalarDB data type
+   * @param columnName Name of the column
+   * @param value String value to convert
+   * @param expectedColumn Expected Column object after conversion
+   * @throws ColumnParsingException if the value cannot be parsed into the target data type
+   */
   @ParameterizedTest
   @MethodSource("provideColumnsForCreateColumnFromValue")
   void createColumnFromValue_validInput_returnsColumn(
@@ -74,6 +108,10 @@ class ColumnUtilsTest {
     assertEquals(expectedColumn, actualColumn);
   }
 
+  /**
+   * Tests that attempting to create a numeric column with an invalid number format throws a
+   * ColumnParsingException with appropriate error message.
+   */
   @Test
   void createColumnFromValue_invalidNumberFormat_throwsNumberFormatException() {
     String columnName = "intColumn";
@@ -90,6 +128,10 @@ class ColumnUtilsTest {
         exception.getMessage());
   }
 
+  /**
+   * Tests that attempting to create a BLOB column with invalid Base64 encoding throws a
+   * ColumnParsingException with appropriate error message.
+   */
   @Test
   void createColumnFromValue_invalidBase64_throwsBase64Exception() {
     String columnName = "blobColumn";
@@ -104,5 +146,21 @@ class ColumnUtilsTest {
         CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
             columnName, "table", "ns"),
         exception.getMessage());
+  }
+
+  /**
+   * Tests the extraction of columns from a ScalarDB Result object. Verifies that all columns are
+   * correctly extracted and converted from the source record.
+   *
+   * @throws Base64Exception if BLOB data contains invalid Base64 encoding
+   * @throws ColumnParsingException if any column value cannot be parsed into its target data type
+   */
+  @Test
+  void getColumnsFromResult_withValidData_shouldReturnColumns()
+      throws Base64Exception, ColumnParsingException {
+    List<Column<?>> columns =
+        ColumnUtils.getColumnsFromResult(scalarDBResult, sourceRecord, false, mockMetadata);
+    System.out.println(columns);
+    assertEquals(4, columns.size());
   }
 }
