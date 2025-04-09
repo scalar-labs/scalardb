@@ -464,7 +464,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
-  //TODO Fix
+  // TODO Fix
   @Test
   @Disabled
   public void createTableThenAlterTables_ShouldExecuteProperly() throws Exception {

@@ -494,7 +494,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     assertThat(admin.tableExists(namespace1, TABLE3)).isTrue();
     assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
   }
-  //TODO Fix
+  // TODO Fix
   @Disabled
   @Test
   public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly()

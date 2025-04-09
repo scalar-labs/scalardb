@@ -171,11 +171,9 @@ public final class TestUtils {
       case INT:
         return IntColumn.of(columnName, Integer.MIN_VALUE);
       case FLOAT:
-        //TODO Change only for db2
-        return FloatColumn.of(columnName, Float.MIN_NORMAL);
+        return FloatColumn.of(columnName, Float.MIN_VALUE);
       case DOUBLE:
-        //TODO Change only for db2
-        return DoubleColumn.of(columnName, Double.MIN_NORMAL);
+        return DoubleColumn.of(columnName, Double.MIN_VALUE);
       case BLOB:
         return BlobColumn.of(columnName, allowEmpty ? new byte[0] : new byte[] {0x00});
       case TEXT:

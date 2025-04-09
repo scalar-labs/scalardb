@@ -557,16 +557,16 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Act
       admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
-      //TODO Request times out; try on RDS
-//      admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
+      // TODO Request times out; try on RDS
+      //      admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME4, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME5, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME6, options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
       }
-      //TODO Request times out; try on RDS
-//      admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
+      // TODO Request times out; try on RDS
+      //      admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME10, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME11, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME12, options);
@@ -577,14 +577,14 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       // Assert
 
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
-//      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
+      //      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
       }
-//      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
+      //      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME9)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME10)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME11)).isTrue();
@@ -598,11 +598,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       assertThat(actualSecondaryIndexNames)
           .contains(
               COL_NAME2,
-//              COL_NAME3,
+              //              COL_NAME3,
               COL_NAME4,
               COL_NAME5,
               COL_NAME6,
-//              COL_NAME8,
+              //              COL_NAME8,
               COL_NAME9,
               COL_NAME10,
               COL_NAME11,

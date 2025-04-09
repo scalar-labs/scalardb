@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.TestUtils;
 import java.util.List;
@@ -42,6 +43,14 @@ public final class JdbcTestUtils {
     return DoubleColumn.of(columnName, MAX_ORACLE_DOUBLE_VALUE);
   }
 
+  public static FloatColumn getMinDb2FloatValue(String columnName) {
+    return FloatColumn.of(columnName, Float.MIN_NORMAL);
+  }
+
+  public static DoubleColumn getMinDb2DoubleValue(String columnName) {
+    return DoubleColumn.of(columnName, Double.MIN_NORMAL);
+  }
+
   public static TextColumn getMaxSqlServerTextValue(String columnName) {
     // Since SQL Server can't handle 0xFF character correctly, we use "ZZZ..." as the max value
     StringBuilder builder = new StringBuilder();
@@ -71,6 +80,10 @@ public final class JdbcTestUtils {
 
   public static boolean isYugabyte(RdbEngineStrategy rdbEngine) {
     return rdbEngine instanceof RdbEngineYugabyte;
+  }
+
+  public static boolean isDb2(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineDb2;
   }
 
   /**
