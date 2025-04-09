@@ -1625,15 +1625,18 @@ jobs:
         if: always()
         run: docker logs db2
 
-      - name: Wait for the container to be ready
-        timeout-minutes: 10
-        run : |
-          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
-          do
-            sleep 10s
-            echo "Container is not yet ready"
-          done
-          echo "Container is ready"
+#      - name: Wait for the container to be ready
+#        timeout-minutes: 10
+#        run : |
+#          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+#          do
+#            sleep 10s
+#            echo "Container is not yet ready"
+#          done
+#          echo "Container is ready"
+      - name: Sleep 5 min
+        run: sleep 5m
+
       - name: Print docker logs
         if: always()
         run : docker logs db2
