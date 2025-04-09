@@ -267,9 +267,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private <R> R executeTransaction(
       ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction)
       throws CrudException, UnknownTransactionStatusException {
-    String txId = UUID.randomUUID().toString();
-    TwoPhaseCommitTransaction transaction = begin(txId);
-
+    TwoPhaseCommitTransaction transaction = begin();
     try {
       R result = throwableFunction.apply(transaction);
       transaction.prepare();

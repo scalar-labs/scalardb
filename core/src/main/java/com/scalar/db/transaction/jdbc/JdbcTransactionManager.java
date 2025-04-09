@@ -249,8 +249,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
       throws CrudException, UnknownTransactionStatusException {
     DistributedTransaction transaction;
     try {
-      String txId = UUID.randomUUID().toString();
-      transaction = begin(txId);
+      transaction = begin();
     } catch (TransactionNotFoundException e) {
       throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (TransactionException e) {

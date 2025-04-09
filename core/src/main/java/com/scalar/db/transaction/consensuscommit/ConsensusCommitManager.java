@@ -310,9 +310,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private <R> R executeTransaction(
       ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction)
       throws CrudException, UnknownTransactionStatusException {
-    String txId = UUID.randomUUID().toString();
-    DistributedTransaction transaction = begin(txId);
-
+    DistributedTransaction transaction = begin();
     try {
       R result = throwableFunction.apply(transaction);
       transaction.commit();
