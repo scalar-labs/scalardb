@@ -526,7 +526,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -538,7 +538,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     Optional<Result> actual = spied.get(get);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).get(get);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -553,7 +553,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -562,7 +562,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -575,7 +575,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -584,7 +584,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -597,7 +597,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -606,7 +606,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -619,7 +619,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -628,7 +628,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -641,7 +641,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -650,7 +650,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(UnknownTransactionStatusException.class);
 
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -662,7 +662,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -671,7 +671,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -682,7 +682,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Scan scan =
         Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -695,7 +695,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     List<Result> actual = spied.scan(scan);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).scan(scan);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -709,7 +709,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Put put =
         Put.newBuilder()
@@ -723,7 +723,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).put(put);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -736,7 +736,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     List<Put> puts =
         Arrays.asList(
@@ -762,7 +762,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.put(puts);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).put(puts);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -775,7 +775,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Insert insert =
         Insert.newBuilder()
@@ -789,7 +789,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.insert(insert);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).insert(insert);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -802,7 +802,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Upsert upsert =
         Upsert.newBuilder()
@@ -816,7 +816,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.upsert(upsert);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).upsert(upsert);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -829,7 +829,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Update update =
         Update.newBuilder()
@@ -843,7 +843,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.update(update);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).update(update);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -856,7 +856,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     Delete delete =
         Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -865,7 +865,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).delete(delete);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -878,7 +878,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     List<Delete> deletes =
         Arrays.asList(
@@ -901,7 +901,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.delete(deletes);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).delete(deletes);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -914,7 +914,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).begin(any());
+    doReturn(transaction).when(spied).begin();
 
     List<Mutation> mutations =
         Arrays.asList(
@@ -952,7 +952,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.mutate(mutations);
 
     // Assert
-    verify(spied).begin(any());
+    verify(spied).begin();
     verify(transaction).mutate(mutations);
     verify(transaction).prepare();
     verify(transaction).validate();
