@@ -137,7 +137,6 @@ public class ExportCommandOptions {
       names = {"--pretty-print", "-pp"},
       description = "Pretty-print JSON output (default: false)",
       defaultValue = "false")
-  // TODO: test that -pp works, it does not seem to accept true
   protected boolean prettyPrintJson;
 
   @CommandLine.Option(
