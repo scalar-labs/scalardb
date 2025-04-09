@@ -12,9 +12,9 @@ public class ImportCommandOptions {
 
   @CommandLine.Option(
       names = {"--mode", "-m"},
-      description = "ScalarDB mode (storage, transaction) (default: storage)",
+      description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
       paramLabel = "<MODE>",
-      defaultValue = "storage")
+      defaultValue = "STORAGE")
   protected ScalarDBMode scalarDbMode;
 
   @CommandLine.Option(
@@ -35,7 +35,8 @@ public class ImportCommandOptions {
       names = {"--max-threads", "-mt"},
       paramLabel = "<MAX_THREADS>",
       description =
-          "Maximum number of threads to use for parallel processing (default: number of available processors)")
+          "Maximum number of threads to use for parallel processing (default: number of available processors)",
+      defaultValue = "16")
   protected int maxThreads;
 
   @CommandLine.Option(
@@ -72,8 +73,8 @@ public class ImportCommandOptions {
   @CommandLine.Option(
       names = {"--format", "-fmt"},
       paramLabel = "<FORMAT>",
-      description = "Format of the import source file (json, csv, tsv) (default: json)",
-      defaultValue = "json")
+      description = "Format of the import source file (JSON, CSV, JSONL) (default: JSON)",
+      defaultValue = "JSON")
   protected FileFormat sourceFileFormat;
 
   @CommandLine.Option(
@@ -104,23 +105,21 @@ public class ImportCommandOptions {
       names = {"--control-file-validation", "-cfv"},
       paramLabel = "<VALIDATION_LEVEL>",
       description =
-          "Level of validation to perform on control file data mappings (full, keys, mapped) (default: mapped)",
-      defaultValue = "mapped")
-  // TODO: do we need to rename the ControlFileValidationLevel class?
+          "Level of validation to perform on control file data mappings (FULL, KEYS, MAPPED) (default: MAPPED)",
+      defaultValue = "MAPPED")
   protected ControlFileValidationLevel controlFileValidation;
 
   @CommandLine.Option(
       names = {"--import-mode", "-im"},
       paramLabel = "<IMPORT_MODE>",
-      description = "Import mode (insert, update, upsert) (default: insert)",
-      defaultValue = "insert")
+      description = "Import mode (INSERT, UPDATE, UPSERT) (default: INSERT)",
+      defaultValue = "INSERT")
   protected ImportMode importMode;
 
   @CommandLine.Option(
       names = {"--delimiter", "-d"},
       paramLabel = "<DELIMITER>",
-      description =
-          "Delimiter character used in the CSV/TSV import file (default: comma for CSV, tab for TSV)",
+      description = "Delimiter character used in the CSV import file (default: comma for CSV)",
       defaultValue = ",")
   protected char delimiter;
 
@@ -132,14 +131,14 @@ public class ImportCommandOptions {
   protected String customHeaderRow;
 
   @CommandLine.Option(
-      names = {"--data-chunk-size"},
+      names = {"--data-chunk-size", "-dcs"},
       paramLabel = "<DATA_CHUNK_SIZE>",
       description = "Maximum number of records to be included in a single data chunk",
       defaultValue = "500")
   protected int dataChunkSize;
 
   @CommandLine.Option(
-      names = {"--transaction-size"},
+      names = {"--transaction-size", "-ts"},
       paramLabel = "<TRANSACTION_SIZE>",
       description =
           "Maximum number of put operations that are grouped together into one ScalarDB distributed transaction, only supported in ScalarDB transaction mode",
@@ -147,9 +146,16 @@ public class ImportCommandOptions {
   protected int transactionSize;
 
   @CommandLine.Option(
-      names = {"--split-log-mode"},
+      names = {"--split-log-mode", "-slm"},
       paramLabel = "<SPLIT_LOG_MODE>",
       description = "Split log file into multiple files based on data chunks",
-      defaultValue = "true")
+      defaultValue = "false")
   protected boolean splitLogMode;
+
+  @CommandLine.Option(
+      names = {"--data-chunk-queue-size", "-qs"},
+      paramLabel = "<DATA_CHUNK_QUEUE_SIZE>",
+      description = "Maximum number of data chunks that can be kept at a time for processing",
+      defaultValue = "256")
+  protected int dataChunkQueueSize;
 }

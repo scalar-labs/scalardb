@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
-public class ImportCommandTest {
+class ImportCommandTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ImportCommandTest.class);
   @TempDir Path tempDir;
@@ -31,7 +31,7 @@ public class ImportCommandTest {
   }
 
   @AfterEach
-  public void cleanup() throws IOException {
+  void cleanup() throws IOException {
     cleanUpTempDir();
   }
 
