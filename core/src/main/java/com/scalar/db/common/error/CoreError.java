@@ -1111,12 +1111,6 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
-  DATA_LOADER_CONVERT_TO_STRING_FAILED(
-      Category.INTERNAL_ERROR,
-      "0049",
-      "Unable to convert value to string from data format: %s",
-      "",
-      ""),
   DATA_LOADER_CSV_FILE_READ_FAILED(
       Category.INTERNAL_ERROR, "0049", "Failed to read CSV file. Details: %s.", "", ""),
   DATA_LOADER_CSV_FILE_HEADER_READ_FAILED(
@@ -1131,6 +1125,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0052", "Failed to read JSON file. Details: %s.", "", ""),
   DATA_LOADER_JSONLINES_FILE_READ_FAILED(
       Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
+  DATA_LOADER_CONVERT_TO_STRING_FAILED(
+      Category.INTERNAL_ERROR,
+      "0054",
+      "Unable to convert value to string from data format: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
