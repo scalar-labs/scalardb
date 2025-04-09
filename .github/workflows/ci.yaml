@@ -1578,7 +1578,7 @@ jobs:
           LICENSE: accept
         ports:
           - 50000:50000
-        options: --privileged
+        options: --privileged --name db2
 
     strategy:
       matrix:
