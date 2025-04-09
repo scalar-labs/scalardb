@@ -254,28 +254,4 @@ public class CommitMutationComposerTest {
             new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
     assertThat(actual).isEqualTo(expected);
   }
-
-  @Test
-  public void
-      add_GetAndNullResultGiven_ShouldComposeDeleteForDeletingNonExistingRecordForSerializableWithExtraWrite()
-          throws ExecutionException {
-    // Arrange
-    Get get = prepareGet();
-
-    // Act
-    composer.add(get, null);
-
-    // Assert
-    Delete actual = (Delete) composer.get().get(0);
-    Delete expected =
-        new Delete(get.getPartitionKey(), get.getClusteringKey().orElse(null))
-            .forNamespace(get.forNamespace().get())
-            .forTable(get.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
-    assertThat(actual).isEqualTo(expected);
-  }
 }

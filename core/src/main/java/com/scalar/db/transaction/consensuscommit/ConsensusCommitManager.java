@@ -134,26 +134,26 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public DistributedTransaction begin() {
-    return begin(config.getIsolation(), config.getSerializableStrategy());
+    return begin(config.getIsolation());
   }
 
   @Override
   public DistributedTransaction begin(String txId) {
-    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation());
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(com.scalar.db.api.Isolation isolation) {
-    return begin(Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
+    return begin(Isolation.valueOf(isolation.name()));
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, com.scalar.db.api.Isolation isolation) {
-    return begin(txId, Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
+    return begin(txId, Isolation.valueOf(isolation.name()));
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -161,14 +161,14 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Override
   public DistributedTransaction start(
       com.scalar.db.api.Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
+    return begin(Isolation.valueOf(isolation.name()));
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
+    return begin(Isolation.SERIALIZABLE);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -176,7 +176,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Override
   public DistributedTransaction start(
       String txId, com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(txId, Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
+    return begin(txId, Isolation.SERIALIZABLE);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -186,31 +186,29 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId,
       com.scalar.db.api.Isolation isolation,
       com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(txId, Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
+    return begin(txId, Isolation.valueOf(isolation.name()));
   }
 
   @VisibleForTesting
-  DistributedTransaction begin(Isolation isolation, SerializableStrategy strategy) {
+  DistributedTransaction begin(Isolation isolation) {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, isolation, strategy);
+    return begin(txId, isolation);
   }
 
   @VisibleForTesting
-  DistributedTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy) {
+  DistributedTransaction begin(String txId, Isolation isolation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
     if (isGroupCommitEnabled()) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);
     }
-    if (!config.getIsolation().equals(isolation)
-        || !config.getSerializableStrategy().equals(strategy)) {
+    if (!config.getIsolation().equals(isolation)) {
       logger.warn(
-          "Setting different isolation level or serializable strategy from the ones "
-              + "in DatabaseConfig might cause unexpected anomalies");
+          "Setting different isolation level from the one in DatabaseConfig might cause unexpected "
+              + "anomalies");
     }
-    Snapshot snapshot =
-        new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);

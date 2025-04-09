@@ -121,11 +121,7 @@ public class CommitHandlerTest {
   private Snapshot prepareSnapshotWithDifferentPartitionPut() {
     Snapshot snapshot =
         new Snapshot(
-            anyId(),
-            Isolation.SNAPSHOT,
-            SerializableStrategy.EXTRA_WRITE,
-            tableMetadataManager,
-            new ParallelExecutor(config));
+            anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
 
     // different partition
     Put put1 = preparePut1();
@@ -139,11 +135,7 @@ public class CommitHandlerTest {
   private Snapshot prepareSnapshotWithSamePartitionPut() {
     Snapshot snapshot =
         new Snapshot(
-            anyId(),
-            Isolation.SNAPSHOT,
-            SerializableStrategy.EXTRA_WRITE,
-            tableMetadataManager,
-            new ParallelExecutor(config));
+            anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
 
     // same partition
     Put put1 = preparePut1();
@@ -395,7 +387,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
-    doThrow(ValidationConflictException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
@@ -419,7 +411,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
-    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(ExecutionException.class).when(snapshot).toSerializable(storage);
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
@@ -444,7 +436,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
-    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(ExecutionException.class).when(snapshot).toSerializable(storage);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
@@ -475,7 +467,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
-    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(ExecutionException.class).when(snapshot).toSerializable(storage);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
@@ -504,7 +496,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
-    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(ExecutionException.class).when(snapshot).toSerializable(storage);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
@@ -533,7 +525,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
-    doThrow(ExecutionException.class).when(snapshot).toSerializableWithExtraRead(storage);
+    doThrow(ExecutionException.class).when(snapshot).toSerializable(storage);
     doThrow(CoordinatorException.class)
         .when(coordinator)
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));

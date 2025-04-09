@@ -15,7 +15,6 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
@@ -98,14 +97,6 @@ public class PrepareMutationComposerTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
-  }
-
-  private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
@@ -400,31 +391,6 @@ public class PrepareMutationComposerTest {
         new Put(delete.getPartitionKey(), delete.getClusteringKey().orElse(null))
             .forNamespace(delete.forNamespace().get())
             .forTable(delete.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(new PutIfNotExists());
-    expected.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
-    expected.withValue(Attribute.toIdValue(ANY_ID_3));
-    expected.withValue(Attribute.toStateValue(TransactionState.DELETED));
-    expected.withValue(Attribute.toVersionValue(1));
-    assertThat(actual).isEqualTo(expected);
-  }
-
-  @Test
-  public void
-      add_GetAndNullResultGiven_ShouldComposePutForPuttingNonExistingRecordForSerializableWithExtraWrite()
-          throws ExecutionException {
-    // Arrange
-    Get get = prepareGet();
-
-    // Act
-    composer.add(get, null);
-
-    // Assert
-    Put actual = (Put) composer.get().get(0);
-    Put expected =
-        new Put(get.getPartitionKey(), get.getClusteringKey().orElse(null))
-            .forNamespace(get.forNamespace().get())
-            .forTable(get.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(new PutIfNotExists());
     expected.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));

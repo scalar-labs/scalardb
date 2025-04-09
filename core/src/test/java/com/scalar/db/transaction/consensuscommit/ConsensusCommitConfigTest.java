@@ -19,7 +19,6 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
     assertThat(config.getCoordinatorNamespace()).isNotPresent();
     assertThat(config.getParallelExecutorCount()).isEqualTo(128);
     assertThat(config.isParallelPreparationEnabled()).isTrue();
@@ -63,32 +62,6 @@ public class ConsensusCommitConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_COMMITTED");
-
-    // Act Assert
-    assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void constructor_PropertiesWithSerializableStrategyGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(
-        ConsensusCommitConfig.SERIALIZABLE_STRATEGY, SerializableStrategy.EXTRA_WRITE.toString());
-
-    // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
-
-    // Assert
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_WRITE);
-  }
-
-  @Test
-  public void
-      constructor_UnsupportedSerializableStrategyGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.SERIALIZABLE_STRATEGY, "NO_STRATEGY");
 
     // Act Assert
     assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))

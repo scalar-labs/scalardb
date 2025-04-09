@@ -289,32 +289,6 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void
-      add_GetAndNullResultGiven_ShouldComposeDeleteForDeletingNonExistingRecordForSerializableWithExtraWrite()
-          throws ExecutionException {
-    // Arrange
-    TransactionResult result = prepareInitialResult(ANY_ID_2, TransactionState.DELETED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
-    Get get = prepareGet();
-
-    // Act
-    composer.add(get, null);
-
-    // Assert
-    Delete actual = (Delete) composer.get().get(0);
-    Delete expected =
-        new Delete(get.getPartitionKey(), get.getClusteringKey().orElse(null))
-            .forNamespace(get.forNamespace().get())
-            .forTable(get.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
-    assertThat(actual).isEqualTo(expected);
-  }
-
-  @Test
   public void add_PutAndNullResultGivenAndOldResultGivenFromStorage_ShouldDoNothing()
       throws ExecutionException {
     // Arrange

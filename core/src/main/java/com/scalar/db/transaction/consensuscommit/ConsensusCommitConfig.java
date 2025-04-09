@@ -22,7 +22,6 @@ public class ConsensusCommitConfig {
   public static final String TRANSACTION_MANAGER_NAME = "consensus-commit";
   public static final String PREFIX = DatabaseConfig.PREFIX + "consensus_commit.";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
-  public static final String SERIALIZABLE_STRATEGY = PREFIX + "serializable_strategy";
   public static final String COORDINATOR_NAMESPACE = PREFIX + "coordinator.namespace";
 
   public static final String PARALLEL_EXECUTOR_COUNT = PREFIX + "parallel_executor_count";
@@ -64,7 +63,6 @@ public class ConsensusCommitConfig {
   public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS = 20;
 
   private final Isolation isolation;
-  private final SerializableStrategy strategy;
   @Nullable private final String coordinatorNamespace;
 
   private final int parallelExecutorCount;
@@ -113,14 +111,16 @@ public class ConsensusCommitConfig {
                 .toUpperCase(Locale.ROOT));
     if (isolation.equals(Isolation.SERIALIZABLE)) {
       validateCrossPartitionScanConfig(databaseConfig);
+
+      if (databaseConfig
+          .getProperties()
+          .containsKey("scalar.db.consensus_commit.serializable_strategy")) {
+        logger.warn(
+            "The property \"scalar.db.consensus_commit.serializable_strategy\" is deprecated and will "
+                + "be removed in 5.0.0. The EXTRA_READ strategy is always used for the SERIALIZABLE "
+                + "isolation level.");
+      }
     }
-    strategy =
-        SerializableStrategy.valueOf(
-            getString(
-                    databaseConfig.getProperties(),
-                    SERIALIZABLE_STRATEGY,
-                    SerializableStrategy.EXTRA_READ.toString())
-                .toUpperCase(Locale.ROOT));
 
     coordinatorNamespace = getString(databaseConfig.getProperties(), COORDINATOR_NAMESPACE, null);
 
@@ -191,10 +191,6 @@ public class ConsensusCommitConfig {
 
   public Isolation getIsolation() {
     return isolation;
-  }
-
-  public SerializableStrategy getSerializableStrategy() {
-    return strategy;
   }
 
   public Optional<String> getCoordinatorNamespace() {

@@ -6,8 +6,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * A Serializable strategy used in Consensus Commit algorithm. Both strategies basically make
  * transactions avoid an anti-dependency that is the root cause of the anomalies in Snapshot
  * Isolation.
+ *
+ * @deprecated As of release 3.16.0. Will be removed in release 5.0.0
  */
 @SuppressFBWarnings("NM_SAME_SIMPLE_NAME_AS_INTERFACE")
+@Deprecated
 public enum SerializableStrategy implements com.scalar.db.api.SerializableStrategy {
   /**
    * Extra-write strategy converts all read set into write set when preparing records to remove
