@@ -143,6 +143,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateIndexError(SQLException e) {
+    // TODO should check warning to throw error if index already exists
     // Even though the "create index if exists ..." syntax does exist,
     // only a warning is raised when the index already exists but no error is thrown
     // so we return false in any case
