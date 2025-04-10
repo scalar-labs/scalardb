@@ -21,7 +21,9 @@ import java.time.format.SignStyle;
 
 class RdbEngineTimeTypeDb2
     implements RdbEngineTimeTypeStrategy<String, LocalDateTime, String, String> {
-  /** A formatter for a a Db2 DATE literal. The format is "YYYY-MM-DD". For example, "2020-03-04". */
+  /**
+   * A formatter for a a Db2 DATE literal. The format is "YYYY-MM-DD". For example, "2020-03-04".
+   */
   public static final DateTimeFormatter DATE_FORMATTER =
       new DateTimeFormatterBuilder()
           .appendValue(YEAR, 4, 4, SignStyle.NEVER)
