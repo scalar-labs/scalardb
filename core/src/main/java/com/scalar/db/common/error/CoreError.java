@@ -776,6 +776,30 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
       Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
+  DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY(
+      Category.USER_ERROR, "0179", "Could not find the partition key", "", ""),
+  DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS(
+      Category.USER_ERROR,
+      "0180",
+      "The source record needs to contain all fields if the UPSERT turns into an INSERT",
+      "",
+      ""),
+  DATA_LOADER_DATA_ALREADY_EXISTS(Category.USER_ERROR, "0181", "Record already exists", "", ""),
+  DATA_LOADER_DATA_NOT_FOUND(Category.USER_ERROR, "0182", "Record was not found", "", ""),
+  DATA_LOADER_COULD_NOT_FIND_CLUSTERING_KEY(
+      Category.USER_ERROR, "0183", "Could not find the clustering key", "", ""),
+  DATA_LOADER_TABLE_METADATA_MISSING(
+      Category.USER_ERROR, "0184", "No table metadata found", "", ""),
+  DATA_LOADER_MISSING_SOURCE_FIELD(
+      Category.USER_ERROR,
+      "0185",
+      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "",
+      ""),
+  DATA_LOADER_CSV_DATA_MISMATCH(
+      Category.USER_ERROR, "0186", "The CSV row: %s does not match header: %s.", "", ""),
+  DATA_LOADER_JSON_CONTENT_START_ERROR(
+      Category.USER_ERROR, "0187", "Expected JSON file content to be an array", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -1033,6 +1057,20 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
+  DATA_LOADER_CSV_FILE_READ_FAILED(
+      Category.INTERNAL_ERROR, "0049", "Failed to read CSV file. Details: %s.", "", ""),
+  DATA_LOADER_CSV_FILE_HEADER_READ_FAILED(
+      Category.INTERNAL_ERROR, "0050", "Failed to CSV read header line. Details: %s.", "", ""),
+  DATA_LOADER_DATA_CHUNK_PROCESS_FAILED(
+      Category.INTERNAL_ERROR,
+      "0051",
+      "Data chunk processing was interrupted. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_JSON_FILE_READ_FAILED(
+      Category.INTERNAL_ERROR, "0052", "Failed to read JSON file. Details: %s.", "", ""),
+  DATA_LOADER_JSONLINES_FILE_READ_FAILED(
+      Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
 
   //
   // Errors for the unknown transaction status error category
