@@ -98,7 +98,8 @@ public class JdbcDatabaseTest {
   public void whenScanOperationExecutedAndScannerClosed_shouldCallJdbcService() throws Exception {
     // Arrange
     when(jdbcService.getScanner(any(), any()))
-        .thenReturn(new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet));
+        .thenReturn(
+            new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet, true));
 
     // Act
     Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
