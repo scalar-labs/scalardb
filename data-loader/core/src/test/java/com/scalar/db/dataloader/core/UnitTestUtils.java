@@ -5,7 +5,13 @@ import static com.scalar.db.io.DataType.BLOB;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.ResultImpl;
+import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
+import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
+import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTableFieldMapping;
+import com.scalar.db.dataloader.core.dataimport.processor.TableColumnDataTypes;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -15,10 +21,18 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import java.io.BufferedReader;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /** Utils for the service unit tests */
 public class UnitTestUtils {
@@ -223,5 +237,66 @@ public class UnitTestUtils {
       default:
         return TEST_VALUE_TEXT;
     }
+  }
+
+  public static TableColumnDataTypes getTableColumnData() {
+    TableColumnDataTypes tableColumnDataTypes = new TableColumnDataTypes();
+    Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
+    tableMetadataMap.put("namespace.table", createTestTableMetadata());
+    tableMetadataMap.forEach(
+        (name, metadata) ->
+            metadata
+                .getColumnDataTypes()
+                .forEach((k, v) -> tableColumnDataTypes.addColumnDataType(name, k, v)));
+    return tableColumnDataTypes;
+  }
+
+  public static ControlFile getControlFile() {
+    List<ControlFileTable> controlFileTables = new ArrayList<>();
+    List<ControlFileTableFieldMapping> mappings = new ArrayList<>();
+    mappings.add(new ControlFileTableFieldMapping("col1", "col1"));
+    mappings.add(new ControlFileTableFieldMapping("col2", "col2"));
+    mappings.add(new ControlFileTableFieldMapping("col3", "col3"));
+    mappings.add(new ControlFileTableFieldMapping("col4", "col4"));
+    mappings.add(new ControlFileTableFieldMapping("col5", "col5"));
+    mappings.add(new ControlFileTableFieldMapping("col6", "col6"));
+    mappings.add(new ControlFileTableFieldMapping("col7", "col7"));
+    controlFileTables.add(new ControlFileTable("namespace", "table", mappings));
+    return new ControlFile(controlFileTables);
+  }
+
+  public static BufferedReader getJsonReader() {
+    String jsonData =
+        "[{\"col1\":1,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\"}]";
+    return new BufferedReader(new StringReader(jsonData));
+  }
+
+  public static BufferedReader getJsonLinesReader() {
+    String jsonLinesData =
+        "{\"col1\":1,\"col2\":\"1\",\"col3\":\"1\",\"col4\":\"1.4e-45\",\"col5\":\"5e-324\",\"col6\":\"VALUE!!s\",\"col7\":\"0x626C6F6220746573742076616C7565\"}\n";
+    return new BufferedReader(new StringReader(jsonLinesData));
+  }
+
+  public static BufferedReader getCsvReader() {
+    String csvData =
+        "col1,col2,col3,col4,col5,col6,col7 \n"
+            + "1,1,1,1.4E-45,5e-324,VALUE!!s,0x626C6F6220746573742076616C7565 \n";
+    return new BufferedReader(new StringReader(csvData));
+  }
+
+  public static Key getClusteringKey() {
+    return Key.newBuilder()
+        .add(IntColumn.of("col2", 1))
+        .add(BooleanColumn.of("col3", true))
+        .build();
+  }
+
+  public static Key getPartitionKey(int j) {
+    return Key.ofBigInt("col1", j);
+  }
+
+  public static Optional<Result> getResult(long pk) {
+    Result data = new ResultImpl(createTestValues(), createTestTableMetadata());
+    return Optional.of(data);
   }
 }
