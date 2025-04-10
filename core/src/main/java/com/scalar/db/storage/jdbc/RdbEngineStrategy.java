@@ -20,7 +20,9 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -42,7 +44,7 @@ public interface RdbEngineStrategy {
   String getDataTypeForKey(DataType dataType);
 
   default String getDataTypeForSecondaryIndex(DataType dataType) {
-    return getDataTypeForEngine(dataType);
+    return getDataTypeForKey(dataType);
   }
 
   DataType getDataTypeForScalarDb(
@@ -127,7 +129,6 @@ public interface RdbEngineStrategy {
    * @return The properly-preprocessed like pattern
    */
   default String getPattern(LikeExpression likeExpression) {
-    // TODO Check for db2
     return likeExpression.getTextValue();
   }
 
@@ -207,4 +208,11 @@ public interface RdbEngineStrategy {
   }
 
   RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
+
+  default String getSelectQueryProjectionsSql(TableMetadata metadata, List<String> projections) {
+    if (projections.isEmpty()) {
+      return "*";
+    }
+    return projections.stream().map(this::enclose).collect(Collectors.joining(","));
+  }
 }

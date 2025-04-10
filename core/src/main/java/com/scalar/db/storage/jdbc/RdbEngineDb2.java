@@ -3,6 +3,8 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.collect.ImmutableMap;
+import com.ibm.db2.jcc.DB2BaseDataSource;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -25,6 +27,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -212,7 +216,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         // TODO Too big ?
         return "VARCHAR(32672)";
       case DATE:
-        return "TIMESTAMP(0)";
+        return "DATE";
       case TIME:
         return "TIMESTAMP(6)";
       case TIMESTAMP:
@@ -319,6 +323,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case TEXT:
         return Types.VARCHAR;
       case DATE:
+        return Types.DATE;
       case TIME:
       case TIMESTAMP:
       case TIMESTAMPTZ:
@@ -330,7 +335,11 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public String getTextType(int charLength, boolean isKey) {
-    return "VARCHAR(" + charLength + ")" + (isKey ? " NOT NULL" : "");
+    String ret = "VARCHAR(" + charLength + ")";
+    if (isKey) {
+      ret += " NOT NULL";
+    }
+    return ret;
   }
 
   @Override
@@ -345,13 +354,12 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
-    String timestampStr = resultSet.getString(columnName);
-    if (timestampStr == null) {
+    String dateStr = resultSet.getString(columnName);
+    if (dateStr == null) {
       return DateColumn.ofNull(columnName);
     } else {
-      LocalDate timestamp =
-          RdbEngineTimeTypeDb2.TIMESTAMP_FORMATTER.parse(timestampStr, LocalDate::from);
-      return DateColumn.of(columnName, timestamp);
+      LocalDate date = RdbEngineTimeTypeDb2.DATE_FORMATTER.parse(dateStr, LocalDate::from);
+      return DateColumn.of(columnName, date);
     }
   }
 
@@ -404,23 +412,63 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   @Override
   public Map<String, String> getConnectionProperties() {
     ImmutableMap.Builder<String, String> props = new ImmutableMap.Builder<>();
-    // With this property set to true, Db2 will return a textual description of the error when
+    // With this Db2 will return a textual description of the error when
     // calling JDBC `SQLException.getMessage` instead of a message only containing error codes
-    props.put("retrieveMessagesFromServerOnGetMessage", "true");
+    props.put(DB2BaseDataSource.propertyKey_retrieveMessagesFromServerOnGetMessage, "true");
 
-    // With this property set to true, db2 will not make adjustment:
+    // With this db2 will not make adjustment for Db2 TIMESTAMP type:
     // - for daylight saving time
     // - for the problematic period of October 5, 1582, through October 14, 1582 because the Julian
     // to Gregorian calendar conversion
     // Cf.
     // https://www.ibm.com/docs/en/db2/12.1.0?topic=dttmddtija-date-time-timestamp-values-that-can-cause-problems-in-jdbc-sqlj-applications
-    props.put("sqljAvoidTimeStampConversion", "true");
+    props.put(DB2BaseDataSource.propertyKey_sqljAvoidTimeStampConversion, "true");
 
+    //  By default, calling `ResultSet.next()` when the cursor is already set after the last row
+    //  will throw an exception because the cursor is automatically closed. This differs from other
+    //  JDBC storages which return false in this case.
+    //  By setting this property, the Db2 adapter will match the other storages behaviors with one
+    //  difference being `ResultSet.next()` won't throw an exception if the ResultSet is already
+    //  closed.
+    props.put(
+        DB2BaseDataSource.propertyKey_allowNextOnExhaustedResultSet,
+        String.valueOf(DB2BaseDataSource.YES));
     return props.build();
   }
 
   @Override
   public String truncateTableSql(String namespace, String table) {
     return "TRUNCATE TABLE " + encloseFullTableName(namespace, table) + " IMMEDIATE";
+  }
+
+  @Override
+  public String getEscape(LikeExpression likeExpression) {
+    String escape = likeExpression.getEscape();
+    return escape.isEmpty() ? null : escape;
+  }
+
+  @Override
+  public String getSelectQueryProjectionsSql(
+      TableMetadata metadata, List<String> originalProjections) {
+    if (originalProjections.isEmpty()
+        && !metadata.getColumnDataTypes().containsValue(DataType.DATE)) {
+      return "*";
+    }
+    Collection<String> projections =
+        originalProjections.isEmpty() ? metadata.getColumnNames() : originalProjections;
+
+    return projections.stream()
+        .map(columnName -> getProjection(columnName, metadata.getColumnDataType(columnName)))
+        .collect(Collectors.joining(","));
+  }
+
+  private String getProjection(String columnName, DataType dataType) {
+    if (dataType == DataType.DATE) {
+      // Cast the DATE column values to CHAR for SELECT queries
+      // This is required to read correctly DATE values between the period of October 5,
+      // 1582, through October 14, 1582 because of the Julian to Gregorian calendar transition
+      return "CHAR(" + enclose(columnName) + ") AS " + enclose(columnName);
+    }
+    return enclose(columnName);
   }
 }

@@ -13,23 +13,32 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
 import java.time.format.SignStyle;
 
 class RdbEngineTimeTypeDb2
     implements RdbEngineTimeTypeStrategy<String, LocalDateTime, String, String> {
-  /**
-   * A formatter for a Db2 TIMESTAMP type literal. The format is "YYYY-MM-DD HH:MM:SS[.FFFFFF]". For
-   * example, "2020-03-04 12:34:56.123456". The fractional second is optional.
-   */
-  public static final DateTimeFormatter TIMESTAMP_FORMATTER =
+  /** A formatter for a a Db2 DATE literal. The format is "YYYY-MM-DD". For example, "2020-03-04". */
+  public static final DateTimeFormatter DATE_FORMATTER =
       new DateTimeFormatterBuilder()
           .appendValue(YEAR, 4, 4, SignStyle.NEVER)
           .appendLiteral('-')
           .appendValue(MONTH_OF_YEAR, 2)
           .appendLiteral('-')
           .appendValue(DAY_OF_MONTH, 2)
+          .toFormatter()
+          .withResolverStyle(ResolverStyle.STRICT)
+          .withChronology(IsoChronology.INSTANCE);
+  /**
+   * A formatter for a Db2 TIMESTAMP type literal. The format is "YYYY-MM-DD HH:MM:SS[.FFFFFF]". For
+   * example, "2020-03-04 12:34:56.123456". The fractional second is optional.
+   */
+  public static final DateTimeFormatter TIMESTAMP_FORMATTER =
+      new DateTimeFormatterBuilder()
+          .append(DATE_FORMATTER)
           .appendLiteral(' ')
           .appendValue(HOUR_OF_DAY, 2)
           .appendLiteral(':')

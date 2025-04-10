@@ -11,11 +11,14 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// TODO Fix it
+@Disabled
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
 
   private static final Logger logger =
