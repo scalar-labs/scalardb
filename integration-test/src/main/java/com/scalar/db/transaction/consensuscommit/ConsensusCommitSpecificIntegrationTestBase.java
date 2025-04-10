@@ -31,7 +31,6 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -589,9 +588,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             TransactionState.COMMITTED,
             commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -677,9 +674,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         TransactionState.ABORTED,
         commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -997,9 +992,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         TransactionState.COMMITTED,
         commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -1076,9 +1069,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         TransactionState.ABORTED,
         commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->

@@ -15,7 +15,7 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
+import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
@@ -44,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class JdbcTransactionManager extends ActiveTransactionManagedDistributedTransactionManager {
+public class JdbcTransactionManager extends AbstractDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
@@ -92,16 +92,12 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
 
   @Override
   public DistributedTransaction begin(String txId) throws TransactionException {
-    return begin(txId, true);
-  }
-
-  private DistributedTransaction begin(String txId, boolean decorate) throws TransactionException {
     try {
       JdbcTransaction transaction =
           new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
-      return decorate ? decorate(transaction) : transaction;
+      return transaction;
     } catch (SQLException e) {
       throw new TransactionException(
           CoreError.JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED.buildMessage(e.getMessage()),
@@ -253,7 +249,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       throws CrudException, UnknownTransactionStatusException {
     DistributedTransaction transaction;
     try {
-      transaction = beginInternal();
+      transaction = begin();
     } catch (TransactionNotFoundException e) {
       throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (TransactionException e) {
@@ -276,12 +272,6 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
       rollbackTransaction(transaction);
       throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
-  }
-
-  @VisibleForTesting
-  DistributedTransaction beginInternal() throws TransactionException {
-    String txId = UUID.randomUUID().toString();
-    return begin(txId, false);
   }
 
   private void rollbackTransaction(DistributedTransaction transaction) {

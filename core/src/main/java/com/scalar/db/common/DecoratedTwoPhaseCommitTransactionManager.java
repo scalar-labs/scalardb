@@ -22,7 +22,6 @@ import java.util.function.BiConsumer;
 
 public abstract class DecoratedTwoPhaseCommitTransactionManager
     implements TwoPhaseCommitTransactionManager,
-        TwoPhaseCommitTransactionDecoratorAddable,
         TwoPhaseCommitTransactionExpirationHandlerSettable {
 
   private final TwoPhaseCommitTransactionManager transactionManager;
@@ -180,14 +179,6 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
           .getOriginalTransactionManager();
     }
     return transactionManager;
-  }
-
-  @Override
-  public void addTransactionDecorator(TwoPhaseCommitTransactionDecorator transactionDecorator) {
-    if (transactionManager instanceof TwoPhaseCommitTransactionDecoratorAddable) {
-      ((TwoPhaseCommitTransactionDecoratorAddable) transactionManager)
-          .addTransactionDecorator(transactionDecorator);
-    }
   }
 
   @Override

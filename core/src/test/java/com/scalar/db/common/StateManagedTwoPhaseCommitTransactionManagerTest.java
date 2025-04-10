@@ -1,9 +1,12 @@
 package com.scalar.db.common;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
@@ -12,11 +15,13 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -27,17 +32,65 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class TransactionDecorationTwoPhaseCommitTransactionManagerTest {
+public class StateManagedTwoPhaseCommitTransactionManagerTest {
 
-  @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC")
+  @Mock private TwoPhaseCommitTransactionManager wrappedTransactionManager;
+
+  private StateManagedTwoPhaseCommitTransactionManager transactionManager;
+
+  @BeforeEach
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    transactionManager =
+        new StateManagedTwoPhaseCommitTransactionManager(wrappedTransactionManager);
+  }
+
+  @Test
+  public void begin_ShouldReturnStateManagedTransaction() throws TransactionException {
+    // Arrange
+    when(wrappedTransactionManager.begin()).thenReturn(mock(TwoPhaseCommitTransaction.class));
+    when(wrappedTransactionManager.begin(anyString()))
+        .thenReturn(mock(TwoPhaseCommitTransaction.class));
+
+    // Act
+    TwoPhaseCommitTransaction transaction1 = transactionManager.begin();
+    TwoPhaseCommitTransaction transaction2 = transactionManager.begin("txId");
+
+    // Assert
+    assertThat(transaction1)
+        .isInstanceOf(StateManagedTwoPhaseCommitTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction2)
+        .isInstanceOf(StateManagedTwoPhaseCommitTransactionManager.StateManagedTransaction.class);
+  }
+
+  @Test
+  public void start_ShouldReturnStateManagedTransaction() throws TransactionException {
+    // Arrange
+    when(wrappedTransactionManager.start()).thenReturn(mock(TwoPhaseCommitTransaction.class));
+    when(wrappedTransactionManager.start(anyString()))
+        .thenReturn(mock(TwoPhaseCommitTransaction.class));
+
+    // Act
+    TwoPhaseCommitTransaction transaction1 = transactionManager.start();
+    TwoPhaseCommitTransaction transaction2 = transactionManager.start("txId");
+
+    // Assert
+    assertThat(transaction1)
+        .isInstanceOf(StateManagedTwoPhaseCommitTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction2)
+        .isInstanceOf(StateManagedTwoPhaseCommitTransactionManager.StateManagedTransaction.class);
+  }
+
+  @SuppressFBWarnings({"SIC_INNER_SHOULD_BE_STATIC", "EI_EXPOSE_REP2"})
   @SuppressWarnings("ClassCanBeStatic")
   @Nested
   public class StateManagedTransactionTest {
 
     @Mock private TwoPhaseCommitTransaction wrappedTransaction;
 
-    private TransactionDecorationTwoPhaseCommitTransactionManager.StateManagedTransaction
-        transaction;
+    private StateManagedTwoPhaseCommitTransactionManager.StateManagedTransaction transaction;
 
     @BeforeEach
     public void setUp() throws Exception {
@@ -45,7 +98,7 @@ public class TransactionDecorationTwoPhaseCommitTransactionManagerTest {
 
       // Arrange
       transaction =
-          new TransactionDecorationTwoPhaseCommitTransactionManager.StateManagedTransaction(
+          new StateManagedTwoPhaseCommitTransactionManager.StateManagedTransaction(
               wrappedTransaction);
     }
 

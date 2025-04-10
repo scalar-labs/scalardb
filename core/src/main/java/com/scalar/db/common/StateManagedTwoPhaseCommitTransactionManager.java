@@ -2,53 +2,54 @@ package com.scalar.db.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationException;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
 
-public abstract class TransactionDecorationDistributedTransactionManager
-    extends AbstractDistributedTransactionManager
-    implements DistributedTransactionDecoratorAddable {
+public class StateManagedTwoPhaseCommitTransactionManager
+    extends DecoratedTwoPhaseCommitTransactionManager {
 
-  private final List<DistributedTransactionDecorator> transactionDecorators =
-      new CopyOnWriteArrayList<>();
-
-  public TransactionDecorationDistributedTransactionManager(DatabaseConfig config) {
-    super(config);
-
-    // Add the StateManagedTransaction decorator by default
-    addTransactionDecorator(StateManagedTransaction::new);
-  }
-
-  protected DistributedTransaction decorate(DistributedTransaction transaction)
-      throws TransactionException {
-    DistributedTransaction decorated = transaction;
-    for (DistributedTransactionDecorator transactionDecorator : transactionDecorators) {
-      decorated = transactionDecorator.decorate(decorated);
-    }
-    return decorated;
+  public StateManagedTwoPhaseCommitTransactionManager(
+      TwoPhaseCommitTransactionManager transactionManager) {
+    super(transactionManager);
   }
 
   @Override
-  public void addTransactionDecorator(DistributedTransactionDecorator transactionDecorator) {
-    transactionDecorators.add(transactionDecorator);
+  public TwoPhaseCommitTransaction begin() throws TransactionException {
+    return new StateManagedTransaction(super.begin());
+  }
+
+  @Override
+  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
+    return new StateManagedTransaction(super.begin(txId));
+  }
+
+  @Override
+  public TwoPhaseCommitTransaction start() throws TransactionException {
+    return new StateManagedTransaction(super.start());
+  }
+
+  @Override
+  public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
+    return new StateManagedTransaction(super.start(txId));
   }
 
   /**
@@ -57,10 +58,14 @@ public abstract class TransactionDecorationDistributedTransactionManager
    * layer.
    */
   @VisibleForTesting
-  static class StateManagedTransaction extends DecoratedDistributedTransaction {
+  static class StateManagedTransaction extends DecoratedTwoPhaseCommitTransaction {
 
     private enum Status {
       ACTIVE,
+      PREPARED,
+      PREPARE_FAILED,
+      VALIDATED,
+      VALIDATION_FAILED,
       COMMITTED,
       COMMIT_FAILED,
       ROLLED_BACK
@@ -69,7 +74,7 @@ public abstract class TransactionDecorationDistributedTransactionManager
     private Status status;
 
     @VisibleForTesting
-    StateManagedTransaction(DistributedTransaction transaction) {
+    StateManagedTransaction(TwoPhaseCommitTransaction transaction) {
       super(transaction);
       status = Status.ACTIVE;
     }
@@ -141,8 +146,39 @@ public abstract class TransactionDecorationDistributedTransactionManager
     }
 
     @Override
-    public void commit() throws CommitException, UnknownTransactionStatusException {
+    public void prepare() throws PreparationException {
       checkIfActive();
+      try {
+        super.prepare();
+        status = Status.PREPARED;
+      } catch (Exception e) {
+        status = Status.PREPARE_FAILED;
+        throw e;
+      }
+    }
+
+    @Override
+    public void validate() throws ValidationException {
+      if (status != Status.PREPARED) {
+        throw new IllegalStateException(CoreError.TRANSACTION_NOT_PREPARED.buildMessage(status));
+      }
+
+      try {
+        super.validate();
+        status = Status.VALIDATED;
+      } catch (Exception e) {
+        status = Status.VALIDATION_FAILED;
+        throw e;
+      }
+    }
+
+    @Override
+    public void commit() throws CommitException, UnknownTransactionStatusException {
+      if (status != Status.PREPARED && status != Status.VALIDATED) {
+        throw new IllegalStateException(
+            CoreError.TRANSACTION_NOT_PREPARED_OR_VALIDATED.buildMessage(status));
+      }
+
       try {
         super.commit();
         status = Status.COMMITTED;
