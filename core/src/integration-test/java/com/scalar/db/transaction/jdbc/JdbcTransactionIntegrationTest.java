@@ -42,14 +42,4 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   @Override
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
-
-  @Disabled("Implement later")
-  @Override
-  @Test
-  public void getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
-
-  @Disabled("Implement later")
-  @Override
-  @Test
-  public void manager_getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
 }
