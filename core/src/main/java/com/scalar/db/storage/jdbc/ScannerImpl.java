@@ -25,17 +25,20 @@ public class ScannerImpl extends AbstractScanner {
   private final Connection connection;
   private final PreparedStatement preparedStatement;
   private final ResultSet resultSet;
+  private final boolean closeConnectionOnClose;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ScannerImpl(
       ResultInterpreter resultInterpreter,
       Connection connection,
       PreparedStatement preparedStatement,
-      ResultSet resultSet) {
+      ResultSet resultSet,
+      boolean closeConnectionOnClose) {
     this.resultInterpreter = Objects.requireNonNull(resultInterpreter);
     this.connection = Objects.requireNonNull(connection);
     this.preparedStatement = Objects.requireNonNull(preparedStatement);
     this.resultSet = Objects.requireNonNull(resultSet);
+    this.closeConnectionOnClose = closeConnectionOnClose;
   }
 
   @Override
@@ -75,10 +78,13 @@ public class ScannerImpl extends AbstractScanner {
     } catch (SQLException e) {
       logger.warn("Failed to close the preparedStatement", e);
     }
-    try {
-      connection.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the connection", e);
+
+    if (closeConnectionOnClose) {
+      try {
+        connection.close();
+      } catch (SQLException e) {
+        logger.warn("Failed to close the connection", e);
+      }
     }
   }
 }
