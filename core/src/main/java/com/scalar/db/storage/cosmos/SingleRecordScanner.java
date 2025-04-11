@@ -2,10 +2,9 @@ package com.scalar.db.storage.cosmos;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
+import com.scalar.db.common.AbstractScanner;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -13,7 +12,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public final class SingleRecordScanner implements Scanner {
+public final class SingleRecordScanner extends AbstractScanner {
 
   @Nullable private Record record;
   private final ResultInterpreter resultInterpreter;
@@ -46,12 +45,6 @@ public final class SingleRecordScanner implements Scanner {
     } else {
       return Collections.emptyList();
     }
-  }
-
-  @Override
-  @Nonnull
-  public Iterator<Result> iterator() {
-    return all().iterator();
   }
 
   @Override

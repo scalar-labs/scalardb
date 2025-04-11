@@ -1,8 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
-import com.scalar.db.common.ScannerIterator;
+import com.scalar.db.common.AbstractScanner;
 import com.scalar.db.storage.dynamo.request.PaginatedRequest;
 import com.scalar.db.storage.dynamo.request.PaginatedRequestResponse;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -17,7 +16,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 @NotThreadSafe
-public class QueryScanner implements Scanner {
+public class QueryScanner extends AbstractScanner {
 
   private final PaginatedRequest request;
   private final ResultInterpreter resultInterpreter;
@@ -25,8 +24,6 @@ public class QueryScanner implements Scanner {
   private Iterator<Map<String, AttributeValue>> itemsIterator;
   @Nullable private Integer remainingLimit;
   @Nullable private Map<String, AttributeValue> lastEvaluatedKey;
-
-  private ScannerIterator scannerIterator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public QueryScanner(PaginatedRequest request, int limit, ResultInterpreter resultInterpreter) {
@@ -93,15 +90,6 @@ public class QueryScanner implements Scanner {
       ret.add(one.get());
     }
     return ret;
-  }
-
-  @Override
-  @Nonnull
-  public Iterator<Result> iterator() {
-    if (scannerIterator == null) {
-      scannerIterator = new ScannerIterator(this);
-    }
-    return scannerIterator;
   }
 
   @Override
