@@ -9,12 +9,11 @@ import com.scalar.db.dataloader.core.dataimport.task.result.ImportTargetResult;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTargetResultStatus;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SplitByDataChunkImportLogger extends AbstractImportLogger {
 

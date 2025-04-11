@@ -1,10 +1,9 @@
 package com.scalar.db.dataloader.core.dataimport.log.writer;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
 import lombok.AllArgsConstructor;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-
-import java.io.IOException;
 
 @AllArgsConstructor
 public class AwsS3LogWriter implements LogWriter {

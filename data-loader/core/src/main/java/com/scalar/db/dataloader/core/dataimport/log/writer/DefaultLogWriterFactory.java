@@ -1,9 +1,8 @@
 package com.scalar.db.dataloader.core.dataimport.log.writer;
 
 import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
-import lombok.AllArgsConstructor;
-
 import java.io.IOException;
+import lombok.AllArgsConstructor;
 
 /** A factory class to create log writers. */
 @AllArgsConstructor

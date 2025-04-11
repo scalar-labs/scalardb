@@ -2,15 +2,14 @@ package com.scalar.db.dataloader.core.dataimport.log.writer;
 
 import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
 import com.scalar.db.dataloader.core.dataimport.log.LogStorageLocation;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
 
 class DefaultLogWriterFactoryTest {
 
