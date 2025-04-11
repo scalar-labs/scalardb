@@ -27,14 +27,6 @@ public abstract class AbstractImportLogger implements ImportEventListener {
   protected final LogWriterFactory logWriterFactory;
   protected final List<ImportEventListener> listeners = new ArrayList<>();
 
-  public void addListener(ImportEventListener listener) {
-    listeners.add(listener);
-  }
-
-  public void removeListener(ImportEventListener listener) {
-    listeners.remove(listener);
-  }
-
   @Override
   public void onDataChunkStarted(ImportDataChunkStatus importDataChunkStatus) {
     // Currently we are not logging the start of a data chunk
@@ -55,11 +47,6 @@ public abstract class AbstractImportLogger implements ImportEventListener {
 
     logTransactionBatch(batchResult);
     notifyTransactionBatchCompleted(batchResult);
-  }
-
-  @Override
-  public void onTaskComplete(ImportTaskResult taskResult) {
-    // TODO: we can remove this event if it's current not being used in the import Manager as well
   }
 
   protected abstract void logTransactionBatch(ImportTransactionBatchResult batchResult);
