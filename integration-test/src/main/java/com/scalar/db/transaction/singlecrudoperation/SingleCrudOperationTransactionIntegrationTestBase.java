@@ -410,11 +410,6 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 
-  @Disabled("Implement later")
-  @Override
-  @Test
-  public void manager_getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords() {}
-
   @Disabled(
       "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
   @Override
