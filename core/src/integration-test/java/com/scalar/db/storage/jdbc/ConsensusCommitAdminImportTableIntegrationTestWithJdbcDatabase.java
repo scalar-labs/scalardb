@@ -6,14 +6,12 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminImportTable
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Disabled
+@DisabledIf("isSqlite")
 public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminImportTableIntegrationTestBase {
   private static final Logger logger =
@@ -56,20 +54,18 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
   }
 
   @SuppressWarnings("unused")
-  private boolean isSqlite() {
+  private static boolean isSqlite() {
     return JdbcEnv.isSqlite();
   }
 
   @Test
   @Override
-  @DisabledIf("isSqlite")
   public void importTable_ShouldWorkProperly() throws Exception {
     super.importTable_ShouldWorkProperly();
   }
 
   @Test
   @Override
-  @EnabledIf("isSqlite")
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();

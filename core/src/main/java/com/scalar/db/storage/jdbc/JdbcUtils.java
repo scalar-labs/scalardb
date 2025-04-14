@@ -112,6 +112,9 @@ public final class JdbcUtils {
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getAdminConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
+    for (Entry<String, String> entry : rdbEngine.getConnectionProperties().entrySet()) {
+      dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
+    }
     return dataSource;
   }
 

@@ -260,14 +260,11 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       int digits,
       String columnDescription,
       @Nullable DataType overrideDataType) {
-    // TODO Check for import table
+    // TODO Print loggin warning if size is too big and so on
+    System.out.printf(
+        "typeName: %s, type: %s, columnSize: %d, digits: %d%n", typeName, type, columnSize, digits);
     switch (type) {
-      case BIT:
-        if (columnSize != 1) {
-          throw new IllegalArgumentException(
-              CoreError.JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED.buildMessage(
-                  typeName, columnSize, columnDescription));
-        }
+      case BOOLEAN:
         return DataType.BOOLEAN;
       case SMALLINT:
         return DataType.INT;
@@ -275,29 +272,31 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         return DataType.INT;
       case BIGINT:
         return DataType.BIGINT;
+      case REAL:
+        return DataType.FLOAT;
       case FLOAT:
         return DataType.FLOAT;
       case DOUBLE:
         return DataType.DOUBLE;
-      case DECIMAL:
-      case NUMERIC:
-        if (digits == 0) {
-          return DataType.INT;
-        }
-        return DataType.DOUBLE;
       case CHAR:
       case VARCHAR:
-      case LONGVARCHAR:
+      case CLOB:
         return DataType.TEXT;
       case BINARY:
       case VARBINARY:
-      case LONGVARBINARY:
+      case BLOB:
         return DataType.BLOB;
       case DATE:
         return DataType.DATE;
       case TIME:
         return DataType.TIME;
       case TIMESTAMP:
+        if (overrideDataType == DataType.TIME) {
+          return DataType.TIME;
+        }
+        if (overrideDataType == DataType.TIMESTAMPTZ) {
+          return DataType.TIMESTAMPTZ;
+        }
         return DataType.TIMESTAMP;
       default:
         throw new IllegalArgumentException(
