@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
@@ -21,6 +22,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
@@ -402,6 +404,8 @@ public class JdbcTransactionManagerTest {
   public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     manager.begin(ANY_ID);
@@ -412,6 +416,8 @@ public class JdbcTransactionManagerTest {
   public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     manager.start(ANY_ID);
@@ -421,6 +427,9 @@ public class JdbcTransactionManagerTest {
   @Test
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
 
     // Act
@@ -433,6 +442,8 @@ public class JdbcTransactionManagerTest {
   @Test
   public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_ID))
@@ -443,6 +454,9 @@ public class JdbcTransactionManagerTest {
   public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.commit();
 
@@ -455,6 +469,9 @@ public class JdbcTransactionManagerTest {
   public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
       throws TransactionException, SQLException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     doThrow(SQLException.class).when(connection).commit();
 
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
@@ -475,6 +492,9 @@ public class JdbcTransactionManagerTest {
   public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.rollback();
 
@@ -488,6 +508,9 @@ public class JdbcTransactionManagerTest {
       resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
           throws TransactionException, SQLException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     doThrow(SQLException.class).when(connection).rollback();
 
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
@@ -505,6 +528,9 @@ public class JdbcTransactionManagerTest {
   @Test
   public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
 
     // Act
@@ -517,6 +543,8 @@ public class JdbcTransactionManagerTest {
   @Test
   public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
@@ -526,6 +554,9 @@ public class JdbcTransactionManagerTest {
   public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.commit();
 
@@ -537,6 +568,9 @@ public class JdbcTransactionManagerTest {
   public void join_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
       throws TransactionException, SQLException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     doThrow(SQLException.class).when(connection).commit();
 
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
@@ -557,6 +591,9 @@ public class JdbcTransactionManagerTest {
   public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.rollback();
 
@@ -569,6 +606,9 @@ public class JdbcTransactionManagerTest {
       join_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
           throws TransactionException, SQLException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     doThrow(SQLException.class).when(connection).rollback();
 
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
@@ -588,7 +628,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -600,7 +640,7 @@ public class JdbcTransactionManagerTest {
     Optional<Result> actual = spied.get(get);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).get(get);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(Optional.of(result));
@@ -612,7 +652,7 @@ public class JdbcTransactionManagerTest {
           throws TransactionException {
     // Arrange
     JdbcTransactionManager spied = spy(manager);
-    doThrow(TransactionNotFoundException.class).when(spied).beginInternal();
+    doThrow(TransactionNotFoundException.class).when(spied).begin(any());
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -620,7 +660,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
   }
 
   @Test
@@ -628,7 +668,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException {
     // Arrange
     JdbcTransactionManager spied = spy(manager);
-    doThrow(TransactionException.class).when(spied).beginInternal();
+    doThrow(TransactionException.class).when(spied).begin(any());
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -636,7 +676,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
   }
 
   @Test
@@ -646,7 +686,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -655,7 +695,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -668,7 +708,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -677,7 +717,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -690,7 +730,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -699,7 +739,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(UnknownTransactionStatusException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -711,7 +751,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -720,7 +760,7 @@ public class JdbcTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -731,7 +771,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Scan scan =
         Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -744,7 +784,7 @@ public class JdbcTransactionManagerTest {
     List<Result> actual = spied.scan(scan);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).scan(scan);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(results);
@@ -756,7 +796,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Put put =
         Put.newBuilder()
@@ -770,7 +810,7 @@ public class JdbcTransactionManagerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).put(put);
     verify(transaction).commit();
   }
@@ -781,7 +821,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     List<Put> puts =
         Arrays.asList(
@@ -808,7 +848,7 @@ public class JdbcTransactionManagerTest {
     spied.put(puts);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).put(puts);
     verify(transaction).commit();
   }
@@ -819,7 +859,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Insert insert =
         Insert.newBuilder()
@@ -833,7 +873,7 @@ public class JdbcTransactionManagerTest {
     spied.insert(insert);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).insert(insert);
     verify(transaction).commit();
   }
@@ -844,7 +884,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Upsert upsert =
         Upsert.newBuilder()
@@ -858,7 +898,7 @@ public class JdbcTransactionManagerTest {
     spied.upsert(upsert);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).upsert(upsert);
     verify(transaction).commit();
   }
@@ -869,7 +909,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Update update =
         Update.newBuilder()
@@ -883,7 +923,7 @@ public class JdbcTransactionManagerTest {
     spied.update(update);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).update(update);
     verify(transaction).commit();
   }
@@ -894,7 +934,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     Delete delete =
         Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -903,7 +943,7 @@ public class JdbcTransactionManagerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).delete(delete);
     verify(transaction).commit();
   }
@@ -914,7 +954,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     List<Delete> deletes =
         Arrays.asList(
@@ -938,7 +978,7 @@ public class JdbcTransactionManagerTest {
     spied.delete(deletes);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).delete(deletes);
     verify(transaction).commit();
   }
@@ -949,7 +989,7 @@ public class JdbcTransactionManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     JdbcTransactionManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction).when(spied).begin(any());
 
     List<Mutation> mutations =
         Arrays.asList(
@@ -987,7 +1027,7 @@ public class JdbcTransactionManagerTest {
     spied.mutate(mutations);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(any());
     verify(transaction).mutate(mutations);
     verify(transaction).commit();
   }
