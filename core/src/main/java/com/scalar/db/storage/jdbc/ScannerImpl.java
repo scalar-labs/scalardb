@@ -1,8 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
-import com.scalar.db.common.ScannerIterator;
+import com.scalar.db.common.AbstractScanner;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -11,25 +10,21 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
-public class ScannerImpl implements Scanner {
+public class ScannerImpl extends AbstractScanner {
   private static final Logger logger = LoggerFactory.getLogger(ScannerImpl.class);
 
   private final ResultInterpreter resultInterpreter;
   private final Connection connection;
   private final PreparedStatement preparedStatement;
   private final ResultSet resultSet;
-
-  private ScannerIterator scannerIterator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ScannerImpl(
@@ -66,15 +61,6 @@ public class ScannerImpl implements Scanner {
     } catch (SQLException e) {
       throw new ExecutionException(CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(), e);
     }
-  }
-
-  @Override
-  @Nonnull
-  public Iterator<Result> iterator() {
-    if (scannerIterator == null) {
-      scannerIterator = new ScannerIterator(this);
-    }
-    return scannerIterator;
   }
 
   @Override
