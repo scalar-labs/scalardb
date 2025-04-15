@@ -1,21 +1,29 @@
 package com.scalar.db.common;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
+import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -25,16 +33,107 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class TransactionDecorationDistributedTransactionManagerTest {
+public class StateManagedDistributedTransactionManagerTest {
 
-  @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC")
+  @Mock private DistributedTransactionManager wrappedTransactionManager;
+
+  private StateManagedDistributedTransactionManager transactionManager;
+
+  @BeforeEach
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    transactionManager = new StateManagedDistributedTransactionManager(wrappedTransactionManager);
+  }
+
+  @Test
+  public void begin_ShouldReturnStateManagedTransaction() throws TransactionException {
+    // Arrange
+    when(wrappedTransactionManager.begin()).thenReturn(mock(DistributedTransaction.class));
+    when(wrappedTransactionManager.begin(anyString()))
+        .thenReturn(mock(DistributedTransaction.class));
+
+    // Act
+    DistributedTransaction transaction1 = transactionManager.begin();
+    DistributedTransaction transaction2 = transactionManager.begin("txId");
+
+    // Assert
+    assertThat(transaction1)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction2)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+  }
+
+  @Test
+  public void start_ShouldReturnStateManagedTransaction() throws TransactionException {
+    // Arrange
+    when(wrappedTransactionManager.start()).thenReturn(mock(DistributedTransaction.class));
+    when(wrappedTransactionManager.start(anyString()))
+        .thenReturn(mock(DistributedTransaction.class));
+
+    when(wrappedTransactionManager.start(any(Isolation.class)))
+        .thenReturn(mock(DistributedTransaction.class));
+    when(wrappedTransactionManager.start(anyString(), any(Isolation.class)))
+        .thenReturn(mock(DistributedTransaction.class));
+    when(wrappedTransactionManager.start(any(Isolation.class), any(SerializableStrategy.class)))
+        .thenReturn(mock(DistributedTransaction.class));
+    when(wrappedTransactionManager.start(any(SerializableStrategy.class)))
+        .thenReturn(mock(DistributedTransaction.class));
+    when(wrappedTransactionManager.start(anyString(), any(SerializableStrategy.class)))
+        .thenReturn(mock(DistributedTransaction.class));
+    when(wrappedTransactionManager.start(
+            anyString(), any(Isolation.class), any(SerializableStrategy.class)))
+        .thenReturn(mock(DistributedTransaction.class));
+
+    // Act
+    DistributedTransaction transaction1 = transactionManager.start();
+    DistributedTransaction transaction2 = transactionManager.start("txId");
+    DistributedTransaction transaction3 = transactionManager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction4 = transactionManager.start("txId", Isolation.SERIALIZABLE);
+    DistributedTransaction transaction5 =
+        transactionManager.start(
+            Isolation.SERIALIZABLE,
+            com.scalar.db.transaction.consensuscommit.SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction6 =
+        transactionManager.start(
+            com.scalar.db.transaction.consensuscommit.SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction7 =
+        transactionManager.start(
+            "txId", com.scalar.db.transaction.consensuscommit.SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction8 =
+        transactionManager.start(
+            "txId",
+            Isolation.SERIALIZABLE,
+            com.scalar.db.transaction.consensuscommit.SerializableStrategy.EXTRA_READ);
+
+    // Assert
+    assertThat(transaction1)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction2)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction3)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction4)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction5)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction6)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction7)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+    assertThat(transaction8)
+        .isInstanceOf(StateManagedDistributedTransactionManager.StateManagedTransaction.class);
+  }
+
+  @SuppressFBWarnings({"SIC_INNER_SHOULD_BE_STATIC", "EI_EXPOSE_REP2"})
   @SuppressWarnings("ClassCanBeStatic")
   @Nested
   public class StateManagedTransactionTest {
 
     @Mock private DistributedTransaction wrappedTransaction;
 
-    private TransactionDecorationDistributedTransactionManager.StateManagedTransaction transaction;
+    private StateManagedDistributedTransactionManager.StateManagedTransaction transaction;
 
     @BeforeEach
     public void setUp() throws Exception {
@@ -42,8 +141,7 @@ public class TransactionDecorationDistributedTransactionManagerTest {
 
       // Arrange
       transaction =
-          new TransactionDecorationDistributedTransactionManager.StateManagedTransaction(
-              wrappedTransaction);
+          new StateManagedDistributedTransactionManager.StateManagedTransaction(wrappedTransaction);
     }
 
     @Test
