@@ -23,9 +23,7 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public abstract class DecoratedDistributedTransactionManager
-    implements DistributedTransactionManager,
-        DistributedTransactionDecoratorAddable,
-        DistributedTransactionExpirationHandlerSettable {
+    implements DistributedTransactionManager, DistributedTransactionExpirationHandlerSettable {
 
   private final DistributedTransactionManager transactionManager;
 
@@ -227,14 +225,6 @@ public abstract class DecoratedDistributedTransactionManager
           .getOriginalTransactionManager();
     }
     return transactionManager;
-  }
-
-  @Override
-  public void addTransactionDecorator(DistributedTransactionDecorator transactionDecorator) {
-    if (transactionManager instanceof DistributedTransactionDecoratorAddable) {
-      ((DistributedTransactionDecoratorAddable) transactionManager)
-          .addTransactionDecorator(transactionDecorator);
-    }
   }
 
   @Override
