@@ -458,11 +458,11 @@ public enum CoreError implements ScalarDbError {
       ""),
   CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
       Category.USER_ERROR, "0106", "Reading already-written data is not allowed", "", ""),
-  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_EXTRA_READ(
+  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0107",
       "The transaction is not validated."
-          + " When using the EXTRA_READ serializable strategy, you need to call validate()"
+          + " When using the SERIALIZABLE isolation level, you need to call validate()"
           + " before calling commit()",
       "",
       ""),
@@ -929,13 +929,7 @@ public enum CoreError implements ScalarDbError {
       "The condition on the column '%s' is not satisfied",
       "",
       ""),
-  CONSENSUS_COMMIT_READING_EMPTY_RECORDS_IN_EXTRA_WRITE(
-      Category.CONCURRENCY_ERROR,
-      "0021",
-      "Reading empty records might cause a write skew anomaly, so the transaction has been aborted for safety purposes",
-      "",
-      ""),
-  CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND_IN_EXTRA_READ(
+  CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND(
       Category.CONCURRENCY_ERROR,
       "0022",
       "An anti-dependency was found. The transaction has been aborted",

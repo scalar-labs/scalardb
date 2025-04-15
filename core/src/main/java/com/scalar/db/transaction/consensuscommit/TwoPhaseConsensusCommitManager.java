@@ -130,43 +130,41 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   @Override
   public TwoPhaseCommitTransaction begin() {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation());
   }
 
   @Override
   public TwoPhaseCommitTransaction begin(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
-    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation());
   }
 
   @VisibleForTesting
-  TwoPhaseCommitTransaction begin(Isolation isolation, SerializableStrategy strategy) {
+  TwoPhaseCommitTransaction begin(Isolation isolation) {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, isolation, strategy);
+    return begin(txId, isolation);
   }
 
   @VisibleForTesting
-  TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy) {
+  TwoPhaseCommitTransaction begin(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    return createNewTransaction(txId, isolation, strategy);
+    return createNewTransaction(txId, isolation);
   }
 
   @Override
   public TwoPhaseCommitTransaction join(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
-    return join(txId, config.getIsolation(), config.getSerializableStrategy());
+    return join(txId, config.getIsolation());
   }
 
   @VisibleForTesting
-  TwoPhaseCommitTransaction join(String txId, Isolation isolation, SerializableStrategy strategy) {
+  TwoPhaseCommitTransaction join(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    return createNewTransaction(txId, isolation, strategy);
+    return createNewTransaction(txId, isolation);
   }
 
-  private TwoPhaseCommitTransaction createNewTransaction(
-      String txId, Isolation isolation, SerializableStrategy strategy) {
-    Snapshot snapshot =
-        new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
+  private TwoPhaseCommitTransaction createNewTransaction(String txId, Isolation isolation) {
+    Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
