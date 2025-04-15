@@ -4,8 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.azure.cosmos.models.FeedResponse;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
-import com.scalar.db.common.ScannerIterator;
+import com.scalar.db.common.AbstractScanner;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,12 +15,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public final class ScannerImpl implements Scanner {
+public final class ScannerImpl extends AbstractScanner {
 
   private final ResultInterpreter resultInterpreter;
   private Iterator<FeedResponse<Record>> recordsPages;
   private Iterator<Record> currentPageRecords;
-  private ScannerIterator scannerIterator;
 
   /**
    * Create a Scanner for Cosmos DB query operations
@@ -71,15 +69,6 @@ public final class ScannerImpl implements Scanner {
     recordsPages = Collections.emptyIterator();
 
     return ret;
-  }
-
-  @Override
-  @Nonnull
-  public Iterator<Result> iterator() {
-    if (scannerIterator == null) {
-      scannerIterator = new ScannerIterator(this);
-    }
-    return scannerIterator;
   }
 
   @Override
