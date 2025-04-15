@@ -9,7 +9,6 @@ import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.log.writer.DefaultLogWriterFactory;
 import com.scalar.db.dataloader.core.dataimport.log.writer.LogWriterFactory;
-import com.scalar.db.dataloader.core.dataimport.log.writer.LogWriterFactoryConfig;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import java.io.IOException;
@@ -36,10 +35,6 @@ class SplitByDataChunkImportLoggerTest {
 
   @BeforeEach
   void setUp() {
-    LogWriterFactoryConfig logWriterFactoryConfig =
-        LogWriterFactoryConfig.builder()
-            .logStorageLocation(LogStorageLocation.LOCAL_FILE_STORAGE)
-            .build();
     ImportLoggerConfig importLoggerConfig =
         ImportLoggerConfig.builder()
             .prettyPrint(false)
@@ -47,7 +42,7 @@ class SplitByDataChunkImportLoggerTest {
             .logRawSourceRecords(false)
             .logDirectoryPath("path")
             .build();
-    logWriterFactory = new DefaultLogWriterFactory(logWriterFactoryConfig, importLoggerConfig);
+    logWriterFactory = new DefaultLogWriterFactory(importLoggerConfig);
   }
 
   @Test

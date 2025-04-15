@@ -17,7 +17,6 @@ subprojects {
         implementation("org.apache.commons:commons-lang3:${commonsLangVersion}")
         implementation("commons-io:commons-io:${commonsIoVersion}")
         implementation("org.slf4j:slf4j-simple:${slf4jVersion}")
-        implementation("software.amazon.awssdk:s3:${awssdkVersion}")
 
         // Mockito
         testImplementation "org.mockito:mockito-core:${mockitoVersion}"
