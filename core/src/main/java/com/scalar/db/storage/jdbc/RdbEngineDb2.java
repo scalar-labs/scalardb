@@ -21,11 +21,11 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -33,8 +33,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RdbEngineDb2 extends AbstractRdbEngine {
+  private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final RdbEngineTimeTypeDb2 timeTypeEngine;
   // TODO Create configuration for key column size
   private final String keyColumnSize = "128";
@@ -203,7 +206,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case BIGINT:
         return "BIGINT";
       case BLOB:
-        // TODO Too big ?
         return "VARBINARY(32672)";
       case BOOLEAN:
         return "BOOLEAN";
@@ -214,7 +216,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case INT:
         return "INTEGER";
       case TEXT:
-        // TODO Too big ?
         return "VARCHAR(32672)";
       case DATE:
         return "DATE";
@@ -260,20 +261,22 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       int digits,
       String columnDescription,
       @Nullable DataType overrideDataType) {
-    // TODO Print loggin warning if size is too big and so on
     System.out.printf(
         "typeName: %s, type: %s, columnSize: %d, digits: %d%n", typeName, type, columnSize, digits);
     switch (type) {
       case BOOLEAN:
         return DataType.BOOLEAN;
       case SMALLINT:
+        logger.info(
+            "Data type larger than that of underlying database is assigned: {} ({} to INT)",
+            columnDescription,
+            typeName);
         return DataType.INT;
       case INTEGER:
         return DataType.INT;
       case BIGINT:
         return DataType.BIGINT;
       case REAL:
-        return DataType.FLOAT;
       case FLOAT:
         return DataType.FLOAT;
       case DOUBLE:
@@ -365,16 +368,13 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
-    // TODO Investigate if normal behavior that NPE is thrown when the value is null
-    try {
-      LocalTime time = resultSet.getObject(columnName, LocalDateTime.class).toLocalTime();
-      return TimeColumn.of(columnName, time);
-    } catch (NullPointerException e) {
-      if (resultSet.wasNull()) {
-        return TimeColumn.ofNull(columnName);
-      } else {
-        throw e;
-      }
+    // resultSet.getObject(columnName, LocalTime.class) throws a NullPointerException when the
+    // column value is null so use resultSet.getTimestamp(columnName) instead
+    Timestamp time = resultSet.getTimestamp(columnName);
+    if (time == null) {
+      return TimeColumn.ofNull(columnName);
+    } else {
+      return TimeColumn.of(columnName, time.toLocalDateTime().toLocalTime());
     }
   }
 
