@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("isSqlite")
 public class JdbcAdminImportTableIntegrationTest
     extends DistributedStorageAdminImportTableIntegrationTestBase {
   private static final Logger logger =
@@ -53,18 +53,20 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @SuppressWarnings("unused")
-  private static boolean isSqlite() {
+  private boolean isSqlite() {
     return JdbcEnv.isSqlite();
   }
 
   @Test
   @Override
+  @DisabledIf("isSqlite")
   public void importTable_ShouldWorkProperly() throws Exception {
     super.importTable_ShouldWorkProperly();
   }
 
   @Test
   @Override
+  @EnabledIf("isSqlite")
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();

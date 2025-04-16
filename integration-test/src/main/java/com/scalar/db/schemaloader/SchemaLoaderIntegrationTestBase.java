@@ -32,7 +32,6 @@ import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
@@ -217,7 +216,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
                         isTimestampTypeSupported()
                             ? ImmutableMap.of("col10", "TIMESTAMPTZ", "col11", "TIMESTAMP")
                             : ImmutableMap.of("col10", "TIMESTAMPTZ"))
-                    .put("col12", "TEXT")
+                    .put("col12", "INT")
                     .put("col13", "BLOB")
                     .build())
             .put("secondary-index", Arrays.asList("col3", "col12"))
@@ -464,9 +463,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(adminTestUtils.areTableAndMetadataForCoordinatorTablesPresent()).isTrue();
   }
 
-  // TODO Fix
   @Test
-  @Disabled
   public void createTableThenAlterTables_ShouldExecuteProperly() throws Exception {
     // Arrange
     int exitCodeCreation =
@@ -476,7 +473,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     TableMetadata expectedTable1Metadata =
         TableMetadata.newBuilder(getTable1Metadata())
-            .addColumn("col12", DataType.TEXT)
+            .addColumn("col12", DataType.INT)
             .addColumn("col13", DataType.BLOB)
             .removeSecondaryIndex("col1")
             .removeSecondaryIndex("col5")

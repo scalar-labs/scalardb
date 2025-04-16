@@ -39,11 +39,11 @@ import org.slf4j.LoggerFactory;
 class RdbEngineDb2 extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final RdbEngineTimeTypeDb2 timeTypeEngine;
-  // TODO Create configuration for key column size
-  private final String keyColumnSize = "128";
+  private final int keyColumnSize;
 
   public RdbEngineDb2(JdbcConfig config) {
     timeTypeEngine = new RdbEngineTimeTypeDb2(config);
+    keyColumnSize = config.getDb2VariableKeyColumnSize();
   }
 
   @Override

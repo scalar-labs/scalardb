@@ -40,6 +40,7 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "200");
     props.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "64");
     props.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "64");
+    props.setProperty(JdbcConfig.DB2_VARIABLE_KEY_COLUMN_SIZE, "64");
     props.setProperty(JdbcConfig.ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT, "2020-01-01");
     props.setProperty(JdbcConfig.DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT, "2022-01-01");
 
@@ -68,6 +69,7 @@ public class JdbcConfigTest {
     assertThat(config.getAdminConnectionPoolMaxTotal()).isEqualTo(200);
     assertThat(config.getMysqlVariableKeyColumnSize()).isEqualTo(64);
     assertThat(config.getOracleVariableKeyColumnSize()).isEqualTo(64);
+    assertThat(config.getDb2VariableKeyColumnSize()).isEqualTo(64);
     assertThat(config.getOracleTimeColumnDefaultDateComponent())
         .isEqualTo(LocalDate.parse("2020-01-01", DateTimeFormatter.ISO_LOCAL_DATE));
     assertThat(config.getDb2TimeColumnDefaultDateComponent())
@@ -114,6 +116,8 @@ public class JdbcConfigTest {
     assertThat(config.getMysqlVariableKeyColumnSize())
         .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     assertThat(config.getOracleVariableKeyColumnSize())
+        .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+    assertThat(config.getDb2VariableKeyColumnSize())
         .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     assertThat(config.getOracleTimeColumnDefaultDateComponent())
         .isEqualTo(JdbcConfig.DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
@@ -276,11 +280,19 @@ public class JdbcConfigTest {
     props2.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props2.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props2.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "32");
+    Properties props3 = new Properties();
+    props3.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props3.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props3.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props3.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props3.setProperty(JdbcConfig.DB2_VARIABLE_KEY_COLUMN_SIZE, "32");
 
     // Act Assert
     assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props1)))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props2)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props3)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }
