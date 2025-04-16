@@ -115,10 +115,7 @@ public class JdbcAdminImportTestUtils {
           "geometry",
           "geography");
   static final List<String> UNSUPPORTED_DATA_TYPES_DB2 =
-      Arrays.asList(
-          "DECIMAL",
-          "DECFLOAT",
-          "XML");
+      Arrays.asList("DECIMAL", "DECFLOAT", "XML");
 
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
