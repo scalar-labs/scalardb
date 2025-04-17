@@ -9,9 +9,9 @@ RETRY_INTERVAL=$4
 DEPLOYMENT_TYPE=${5:-"--docker"}  # Default to Docker if not specified
 COUNT=0
 
-# Validate that DEPLOYMENT_TYPE is either "--docker" or "--local"
-if [[ "$DEPLOYMENT_TYPE" != "--docker" && "$DEPLOYMENT_TYPE" != "--local" ]]; then
-    echo "ERROR: DEPLOYMENT_TYPE must be either --docker or --local" >&2
+# Validate that DEPLOYMENT_TYPE is either "--docker" or "--windows"
+if [[ "$DEPLOYMENT_TYPE" != "--docker" && "$DEPLOYMENT_TYPE" != "--windows" ]]; then
+    echo "ERROR: DEPLOYMENT_TYPE must be either --docker or --windows" >&2
     exit 1
 fi
 

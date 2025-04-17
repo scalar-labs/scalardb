@@ -1211,7 +1211,7 @@ jobs:
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3 --local
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3 --windows
         timeout-minutes: 1
 
       - name: Setup Gradle
