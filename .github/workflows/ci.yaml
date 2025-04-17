@@ -1176,7 +1176,7 @@ jobs:
 #          # Add tools to path
 #          echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
 #          source ~/.bashrc
-      - name: Setup MSSQL
+      - name: Setup SQL Server 2017
         uses: rails-sqlserver/setup-mssql@v1
         with:
           components: sqlcmd,sqlengine
