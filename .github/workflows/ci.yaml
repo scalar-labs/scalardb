@@ -1120,7 +1120,7 @@ jobs:
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-22.04
+    runs-on: windows-latest
     defaults:
       run:
         shell: bash
@@ -1147,41 +1147,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SQL Server 2017
-        run: |
-          # Import the public repository GPG keys
-          curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
-
-          # Register the Microsoft SQL Server Ubuntu repository
-          sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2017.list)"
-
-          # Update package lists
-          sudo apt-get update
-
-          # Install SQL Server
-          sudo apt-get install -y mssql-server
-
-          # Configure SQL Server
-          sudo MSSQL_SA_PASSWORD='SqlServer17' MSSQL_PID='Developer' /opt/mssql/bin/mssql-conf setup accept-eula
-
-          # Start service
-          sudo systemctl start mssql-server
-
-          # Install SQL Server command-line tools
-          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          sudo add-apt-repository "$(curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list)"
-          sudo apt-get update
-          sudo apt-get install -y mssql-tools unixodbc-dev
-
-          # Add tools to path
-          echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
-          source ~/.bashrc
-#      - name: Setup MSSQL
-#        uses: rails-sqlserver/setup-mssql@v1
-#        with:
-#          components: sqlcmd,sqlengine
-#          sa-password: "SqlServer17"
-#          version: 2017
+#      - name: Install SQL Server 2017
+#        run: |
+#          # Import the public repository GPG keys
+#          curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+#
+#          # Register the Microsoft SQL Server Ubuntu repository
+#          sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2017.list)"
+#
+#          # Update package lists
+#          sudo apt-get update
+#
+#          # Install SQL Server
+#          sudo apt-get install -y mssql-server
+#
+#          # Configure SQL Server
+#          sudo MSSQL_SA_PASSWORD='SqlServer17' MSSQL_PID='Developer' /opt/mssql/bin/mssql-conf setup accept-eula
+#
+#          # Start service
+#          sudo systemctl start mssql-server
+#
+#          # Install SQL Server command-line tools
+#          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+#          sudo add-apt-repository "$(curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list)"
+#          sudo apt-get update
+#          sudo apt-get install -y mssql-tools unixodbc-dev
+#
+#          # Add tools to path
+#          echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
+#          source ~/.bashrc
+      - name: Setup MSSQL
+        uses: rails-sqlserver/setup-mssql@v1
+        with:
+          components: sqlcmd,sqlengine
+          sa-password: "SqlServer17"
+          version: 2017
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -1219,7 +1219,7 @@ jobs:
 
       - name: Execute Gradle 'integrationTestJdbc' task
         shell: powershell
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
