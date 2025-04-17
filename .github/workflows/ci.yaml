@@ -1153,7 +1153,7 @@ jobs:
           curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
 
           # Register the Microsoft SQL Server Ubuntu repository
-          sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2017.list)"
+          sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04.04/mssql-server-2017.list)"
 
           # Update package lists
           sudo apt-get update
