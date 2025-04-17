@@ -1179,7 +1179,7 @@ jobs:
       - name: Setup MSSQL
         uses: rails-sqlserver/setup-mssql@v1
         with:
-          components: sqlengine
+          components: sqlcmd,sqlengine
           sa-password: "SqlServer17"
           version: 2017
 
@@ -1211,7 +1211,7 @@ jobs:
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3 --docker
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3 --local
         timeout-minutes: 1
 
       - name: Setup Gradle
