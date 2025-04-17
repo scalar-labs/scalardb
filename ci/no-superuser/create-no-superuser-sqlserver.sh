@@ -25,7 +25,7 @@ if [[ "$DEPLOYMENT_TYPE" == "--docker" ]]; then
       SQLCMD="docker exec -t $SQL_SERVER_CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd"
     fi
 else
-    SQLCMD=/opt/mssql-tools/bin/sqlcmd
+    SQLCMD=sqlcmd
 fi
 
 echo "SQLCMD: $SQLCMD"
