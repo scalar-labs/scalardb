@@ -1125,17 +1125,6 @@ jobs:
       run:
         shell: bash
 
-#    services:
-#      sqlserver:
-#        image: mcr.microsoft.com/mssql/server:2017-latest
-#        env:
-#          MSSQL_PID: "Express"
-#          SA_PASSWORD: "SqlServer17"
-#          ACCEPT_EULA: "Y"
-#        ports:
-#          - 1433:1433
-#        options: --name sqlserver17
-
     strategy:
       matrix:
         mode:
@@ -1147,41 +1136,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SQL Server 2017
-        run: |
-          # Get the repository configuration and write it to a sources list file
-          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
-          
-          # Manually download and register the SQL Server Ubuntu repository
-          curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2017.list | sudo tee /etc/apt/sources.list.d/mssql-server-2017.list
-
-          # Update package lists
-          sudo apt-get update
-
-          # Install SQL Server
-          sudo apt-get install -y mssql-server
-
-          # Configure SQL Server
-          sudo MSSQL_SA_PASSWORD='SqlServer17' MSSQL_PID='Developer' /opt/mssql/bin/mssql-conf setup accept-eula
-
-          # Start service
-          sudo systemctl start mssql-server
-
-          # Install SQL Server command-line tools
-          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          sudo add-apt-repository "$(curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list)"
-          sudo apt-get update
-          sudo apt-get install -y mssql-tools unixodbc-dev
-
-          # Add tools to path
-          echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
-          source ~/.bashrc
-#      - name: Setup MSSQL
-#        uses: rails-sqlserver/setup-mssql@v1
-#        with:
-#          components: sqlcmd,sqlengine
-#          sa-password: "SqlServer17"
-#          version: 2017
+      - name: Setup MSSQL
+        uses: rails-sqlserver/setup-mssql@v1
+        with:
+          components: sqlcmd,sqlengine
+          sa-password: "SqlServer17"
+          version: 2017
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -1218,7 +1178,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        shell: pwsh
+        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
