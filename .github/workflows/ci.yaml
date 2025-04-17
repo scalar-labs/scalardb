@@ -1125,6 +1125,17 @@ jobs:
       run:
         shell: bash
 
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2017-latest
+        env:
+          MSSQL_PID: "Express"
+          SA_PASSWORD: "SqlServer17"
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+        options: --name sqlserver17
+
     strategy:
       matrix:
         mode:
@@ -1135,9 +1146,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Start SQL Server 2017 container
-        run: |
-          docker run -d --name sqlserver17 -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer17 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:2017-latest
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -1182,10 +1190,6 @@ jobs:
         with:
           name: sqlserver_2017_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
-
-      - name: Stop and remove SQL Server container
-        if: always()
-        run: docker stop sqlserver17 && docker rm sqlserver17
 
 #  integration-test-for-jdbc-sqlserver-2019:
 #    name: SQL Server 2019 integration test (${{ matrix.mode.label }})
