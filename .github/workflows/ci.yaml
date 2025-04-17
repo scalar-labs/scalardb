@@ -1120,7 +1120,7 @@ jobs:
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test (${{ matrix.mode.label }})
-    runs-on: windows-latest
+    runs-on: macos-latest
     defaults:
       run:
         shell: bash
