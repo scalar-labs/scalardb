@@ -1149,11 +1149,8 @@ jobs:
 
       - name: Install SQL Server 2017
         run: |
-          # Import the public repository GPG keys
-          curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
-
-          # Register the Microsoft SQL Server Ubuntu repository
-          sudo add-apt-repository "$(wget -qO- https://packages.microsoft.com/config/ubuntu/22.04.04/mssql-server-2017.list)"
+          # Get the repository configuration and write it to a sources list file
+          wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2017.list | sudo tee /etc/apt/sources.list.d/mssql-server-2017.list
 
           # Update package lists
           sudo apt-get update
