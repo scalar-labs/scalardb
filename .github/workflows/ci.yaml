@@ -1180,7 +1180,6 @@ jobs:
         uses: rails-sqlserver/setup-mssql@v1
         with:
           components: sqlengine
-          force-encryption: true
           sa-password: "SqlServer17"
           version: 2017
 
