@@ -1150,7 +1150,10 @@ jobs:
       - name: Install SQL Server 2017
         run: |
           # Get the repository configuration and write it to a sources list file
-          wget -qO- https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2017.list | sudo tee /etc/apt/sources.list.d/mssql-server-2017.list
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+          
+          # Manually download and register the SQL Server Ubuntu repository
+          curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2017.list | sudo tee /etc/apt/sources.list.d/mssql-server-2017.list
 
           # Update package lists
           sudo apt-get update
