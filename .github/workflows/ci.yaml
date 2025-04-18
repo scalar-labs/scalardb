@@ -1120,7 +1120,7 @@ jobs:
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-22.04
+    runs-on: windows-latest
     defaults:
       run:
         shell: bash
@@ -1136,10 +1136,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup MSSQL
+      - name: Setup SQL Server 2017
         uses: rails-sqlserver/setup-mssql@v1
         with:
           components: sqlcmd,sqlengine
+          force-encryption: true
           sa-password: "SqlServer17"
           version: 2017
 
