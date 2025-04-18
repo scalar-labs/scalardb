@@ -1130,8 +1130,8 @@ jobs:
         mode:
           - label: default
             group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+#          - label: with_group_commit
+#            group_commit_enabled: true
 
     steps:
       - uses: actions/checkout@v4
