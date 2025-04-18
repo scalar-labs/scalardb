@@ -1180,7 +1180,7 @@ jobs:
 
       - name: Execute Gradle 'integrationTestJdbc' task
         shell: pwsh
-        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=no_superuser" "-Dscalardb.jdbc.password=no_superuser_password" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
