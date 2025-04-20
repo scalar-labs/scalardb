@@ -35,6 +35,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -128,6 +129,15 @@ public class CrudHandlerTest {
         .build();
   }
 
+  private Scan prepareScanWithLimit(int limit) {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .limit(limit)
+        .build();
+  }
+
   private Scan toScanForStorageFrom(Scan scan) {
     return Scan.newBuilder(scan)
         .clearProjections()
@@ -137,10 +147,15 @@ public class CrudHandlerTest {
   }
 
   private TransactionResult prepareResult(TransactionState state) {
+    return prepareResult(state, ANY_TEXT_1, ANY_TEXT_2);
+  }
+
+  private TransactionResult prepareResult(
+      TransactionState state, String partitionKayColumnValue, String clusteringKeyColumnValue) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
-            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
-            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, partitionKayColumnValue))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, clusteringKeyColumnValue))
             .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
             .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(state)))
             .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(2)))
@@ -627,6 +642,118 @@ public class CrudHandlerTest {
 
     verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), ArgumentMatchers.any());
     verify(snapshot, never()).verify(any());
+  }
+
+  @Test
+  public void scan_ScanWithLimitGiven_ShouldUpdateSnapshotAndReturn()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScanWithLimit(1);
+    Scan scanForStorage =
+        Scan.newBuilder(scan)
+            .clearProjections()
+            .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+            .consistency(Consistency.LINEARIZABLE)
+            .limit(0)
+            .build();
+    TransactionResult result1 = prepareResult(TransactionState.COMMITTED);
+    TransactionResult result2 = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result1);
+    TransactionResult expected = new TransactionResult(result1);
+    when(scanner.iterator()).thenReturn(Arrays.asList((Result) result1, result2).iterator());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(snapshot.getResult(key)).thenReturn(Optional.of(expected));
+
+    // Act
+    List<Result> actual = handler.scan(scan);
+
+    // Assert
+    verify(snapshot).putIntoReadSet(key, Optional.of(expected));
+    verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, expected));
+    verify(snapshot).verify(scan);
+    assertThat(actual.size()).isEqualTo(1);
+    assertThat(actual.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @Test
+  public void
+      scan_ScanWithLimitGiven_WhenDeletingFirstRecordInScanRange_ShouldUpdateSnapshotAndReturn()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScanWithLimit(1);
+    Scan scanForStorage =
+        Scan.newBuilder(scan)
+            .clearProjections()
+            .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+            .consistency(Consistency.LINEARIZABLE)
+            .limit(0)
+            .build();
+    TransactionResult result1 = prepareResult(TransactionState.COMMITTED, ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(TransactionState.COMMITTED, ANY_TEXT_1, ANY_TEXT_3);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    TransactionResult transactionResult1 = new TransactionResult(result1);
+    TransactionResult transactionResult2 = new TransactionResult(result2);
+    when(scanner.iterator()).thenReturn(Arrays.asList((Result) result1, result2).iterator());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(snapshot.getResult(key1)).thenReturn(Optional.empty());
+    when(snapshot.getResult(key2)).thenReturn(Optional.of(transactionResult2));
+
+    // Act
+    List<Result> actual = handler.scan(scan);
+
+    // Assert
+    verify(snapshot).putIntoReadSet(key1, Optional.of(transactionResult1));
+    verify(snapshot).putIntoReadSet(key2, Optional.of(transactionResult2));
+    verify(snapshot)
+        .putIntoScanSet(scan, ImmutableMap.of(key1, transactionResult1, key2, transactionResult2));
+    verify(snapshot).verify(scan);
+    assertThat(actual.size()).isEqualTo(1);
+    assertThat(actual.get(0))
+        .isEqualTo(
+            new FilteredResult(transactionResult2, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @Test
+  public void
+      scan_RuntimeExceptionCausedByExecutionExceptionThrownByIteratorHasNext_ShouldThrowCrudException()
+          throws ExecutionException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    RuntimeException runtimeException = mock(RuntimeException.class);
+    when(runtimeException.getCause()).thenReturn(executionException);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(scanner.iterator()).thenReturn(iterator);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scan))
+        .isInstanceOf(CrudException.class)
+        .hasCause(executionException);
+  }
+
+  @Test
+  public void scan_RuntimeExceptionThrownByIteratorHasNext_ShouldThrowCrudException()
+      throws ExecutionException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    RuntimeException runtimeException = mock(RuntimeException.class);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(scanner.iterator()).thenReturn(iterator);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scan))
+        .isInstanceOf(CrudException.class)
+        .hasCause(runtimeException);
   }
 
   @Test

@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -435,60 +435,15 @@ public class Snapshot {
 
     List<ParallelExecutorTask> tasks = new ArrayList<>();
 
-    // Read set by scan is re-validated to check if there is no anti-dependency
+    // Scan set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Scan, Map<Key, TransactionResult>> entry : scanSet.entrySet()) {
       tasks.add(
-          () -> {
-            Map<Key, TransactionResult> currentReadMap = new HashMap<>();
-            Set<Key> validatedReadSet = new HashSet<>();
-            Scanner scanner = null;
-            Scan scan = entry.getKey();
-            try {
-              // only get tx_id and tx_version columns because we use only them to compare
-              scan.clearProjections();
-              scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
-              ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
-              scanner = storage.scan(scan);
-              for (Result result : scanner) {
-                TransactionResult transactionResult = new TransactionResult(result);
-                // Ignore records that this transaction has prepared (and that are in the write set)
-                if (transactionResult.getId() != null && transactionResult.getId().equals(id)) {
-                  continue;
-                }
-                currentReadMap.put(new Key(scan, result), transactionResult);
-              }
-            } finally {
-              if (scanner != null) {
-                try {
-                  scanner.close();
-                } catch (IOException e) {
-                  logger.warn("Failed to close the scanner", e);
-                }
-              }
-            }
-
-            for (Map.Entry<Key, TransactionResult> e : entry.getValue().entrySet()) {
-              Key key = e.getKey();
-              TransactionResult result = e.getValue();
-              if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
-                continue;
-              }
-              // Check if read records are not changed
-              TransactionResult latestResult = currentReadMap.get(key);
-              if (isChanged(Optional.ofNullable(latestResult), Optional.of(result))) {
-                throwExceptionDueToAntiDependency();
-              }
-              validatedReadSet.add(key);
-            }
-
-            // Check if the size of a read set by scan is not changed
-            if (currentReadMap.size() != validatedReadSet.size()) {
-              throwExceptionDueToAntiDependency();
-            }
-          });
+          () ->
+              validateScanResults(
+                  storage, entry.getKey(), entry.getValue(), entry.getKey().getLimit() > 0));
     }
 
-    // Read set by get is re-validated to check if there is no anti-dependency
+    // Get set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
       Get get = entry.getKey();
       Key key = new Key(get);
@@ -499,11 +454,12 @@ public class Snapshot {
       tasks.add(
           () -> {
             Optional<TransactionResult> originalResult = getSet.get(get);
-            // only get tx_id and tx_version columns because we use only them to compare
+            // Only get tx_id and tx_version columns because we use only them to compare
             get.clearProjections();
             get.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
-            Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
+
             // Check if a read record is not changed
+            Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
             if (isChanged(latestResult, originalResult)) {
               throwExceptionDueToAntiDependency();
             }
@@ -513,11 +469,116 @@ public class Snapshot {
     parallelExecutor.validate(tasks, getId());
   }
 
-  private TableMetadata getTableMetadata(Scan scan) throws ExecutionException {
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(scan);
+  private void validateScanResults(
+      DistributedStorage storage,
+      Scan scan,
+      Map<Key, TransactionResult> results,
+      boolean scanWithLimit)
+      throws ExecutionException, ValidationConflictException {
+    Scanner scanner = null;
+    try {
+      // Only get tx_id, tx_version and primary key columns because we use only them to compare
+      scan.clearProjections();
+      scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+      ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
+
+      if (!scanWithLimit) {
+        scanner = storage.scan(scan);
+      } else {
+        // Get a scanner without the limit if the scan has a limit
+        scanner = storage.scan(Scan.newBuilder(scan).limit(0).build());
+      }
+
+      Iterator<Entry<Key, TransactionResult>> resultsIterator = results.entrySet().iterator();
+
+      Optional<Result> latestResult = scanner.one();
+
+      Entry<Key, TransactionResult> resultsEntry = null;
+      if (resultsIterator.hasNext()) {
+        resultsEntry = resultsIterator.next();
+      }
+
+      while (latestResult.isPresent() && resultsEntry != null) {
+        TransactionResult latestTransactionResult = new TransactionResult(latestResult.get());
+        Key key = new Key(scan, latestTransactionResult);
+
+        // Ignore records that this transaction has prepared (and that are in the write set or
+        // delete set)
+        if (latestTransactionResult.getId() != null && latestTransactionResult.getId().equals(id)) {
+          latestResult = scanner.one();
+
+          if (resultsEntry.getKey().equals(key)) {
+            // The record is updated by this transaction
+
+            if (resultsIterator.hasNext()) {
+              resultsEntry = resultsIterator.next();
+            } else {
+              resultsEntry = null;
+            }
+          } else {
+            // The record is inserted/deleted by this transaction
+          }
+
+          continue;
+        }
+
+        if (!resultsEntry.getKey().equals(key)) {
+          // The record is inserted/deleted by another transaction
+          throwExceptionDueToAntiDependency();
+        }
+
+        if (isChanged(latestTransactionResult, resultsEntry.getValue())) {
+          // The record is updated by another transaction
+          throwExceptionDueToAntiDependency();
+        }
+
+        latestResult = scanner.one();
+
+        if (resultsIterator.hasNext()) {
+          resultsEntry = resultsIterator.next();
+        } else {
+          resultsEntry = null;
+        }
+      }
+
+      if (resultsEntry != null) {
+        // Some of the records are deleted by another transaction
+        throwExceptionDueToAntiDependency();
+      }
+
+      if (!scanWithLimit) {
+        while (latestResult.isPresent()) {
+          TransactionResult latestTransactionResult = new TransactionResult(latestResult.get());
+
+          // Ignore records that this transaction has prepared (and that are in the write set or
+          // delete set)
+          if (latestTransactionResult.getId() != null
+              && latestTransactionResult.getId().equals(id)) {
+            // The record is inserted/deleted by this transaction
+
+            latestResult = scanner.one();
+          } else {
+            // The record is inserted by another transaction
+            throwExceptionDueToAntiDependency();
+          }
+        }
+      }
+    } finally {
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          logger.warn("Failed to close the scanner", e);
+        }
+      }
+    }
+  }
+
+  private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(operation);
     if (metadata == null) {
       throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(scan.forFullTableName().get()));
+          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
     }
     return metadata.getTableMetadata();
   }
@@ -530,8 +591,12 @@ public class Snapshot {
     if (!latestResult.isPresent()) {
       return false;
     }
-    return !Objects.equals(latestResult.get().getId(), result.get().getId())
-        || latestResult.get().getVersion() != result.get().getVersion();
+    return isChanged(latestResult.get(), result.get());
+  }
+
+  private boolean isChanged(TransactionResult latestResult, TransactionResult result) {
+    return !Objects.equals(latestResult.getId(), result.getId())
+        || latestResult.getVersion() != result.getVersion();
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {

@@ -24,6 +24,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -3262,6 +3263,104 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.ABORTED);
     assertThat(coordinator.getState(failingTxn2.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  void deleteAndScan_ScanWithLimitGiven_WhenDeletingFirstRecordInScanRange_ShouldReturnRecord()
+      throws TransactionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Act
+    DistributedTransaction transaction = manager.begin();
+
+    // Delete the first record
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    transaction.delete(delete);
+
+    // Scan with limit
+    List<Result> result =
+        transaction.scan(Scan.newBuilder(prepareScan(0, namespace1, TABLE_1)).limit(1).build());
+
+    transaction.commit();
+
+    // Assert
+    assertThat(result.size()).isEqualTo(1);
+
+    assertThat(result.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(result.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get(0).getText(SOME_COLUMN)).isNull();
+  }
+
+  @Test
+  void
+      scanAndInsert_ScanWithLimitGiven_WhenInsertingFirstRecordIntoScanRange_WithSerializable_ShouldCommit()
+          throws TransactionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+
+    // Scan with limit
+    List<Result> result =
+        transaction.scan(Scan.newBuilder(prepareScan(0, namespace1, TABLE_1)).limit(1).build());
+
+    assertThat(result.size()).isEqualTo(1);
+    assertThat(result.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(result.get(0))).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.get(0).getText(SOME_COLUMN)).isNull();
+
+    // Insert a record
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
   }
 
   private DistributedTransaction prepareTransfer(

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,7 +80,11 @@ public class CrudHandler {
     Get get = (Get) prepareStorageSelection(originalGet);
     Snapshot.Key key = new Snapshot.Key(get);
     readUnread(key, get);
-    return createGetResult(key, get, originalProjections);
+
+    TableMetadata metadata = getTableMetadata(get);
+    return snapshot
+        .getResult(key, get)
+        .map(r -> new FilteredResult(r, originalProjections, metadata, isIncludeMetadataEnabled));
   }
 
   @VisibleForTesting
@@ -113,14 +118,6 @@ public class CrudHandler {
         snapshot.getId());
   }
 
-  private Optional<Result> createGetResult(Snapshot.Key key, Get get, List<String> projections)
-      throws CrudException {
-    TableMetadata metadata = getTableMetadata(key.getNamespace(), key.getTable());
-    return snapshot
-        .getResult(key, get)
-        .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled));
-  }
-
   public List<Result> scan(Scan scan) throws CrudException {
     List<Result> results = scanInternal(scan);
 
@@ -141,33 +138,49 @@ public class CrudHandler {
 
     Optional<Map<Snapshot.Key, TransactionResult>> resultsInSnapshot = snapshot.getResults(scan);
     if (resultsInSnapshot.isPresent()) {
-      return createScanResults(scan, originalProjections, resultsInSnapshot.get());
+      return createFilteredScanResults(scan, originalProjections, resultsInSnapshot.get());
     }
 
+    // Results for users
     Map<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+
+    // Results for the scan set
+    Map<Snapshot.Key, TransactionResult> actualResults = new LinkedHashMap<>();
 
     Scanner scanner = null;
     try {
-      scanner = scanFromStorage(scan);
-      for (Result r : scanner) {
-        TransactionResult result = new TransactionResult(r);
-        if (!result.isCommitted()) {
-          throw new UncommittedRecordException(
-              scan,
-              result,
-              CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
-              snapshot.getId());
-        }
+      @Nullable Integer limit = null;
+      if (scan.getLimit() == 0) {
+        scanner = scanFromStorage(scan);
+      } else {
+        limit = scan.getLimit();
 
-        Snapshot.Key key = new Snapshot.Key(scan, r);
-
-        // We always update the read set to create before image by using the latest record (result)
-        // because another conflicting transaction might have updated the record after this
-        // transaction read it first.
-        snapshot.putIntoReadSet(key, Optional.of(result));
-
-        snapshot.getResult(key).ifPresent(value -> results.put(key, value));
+        // Get a scanner without the limit if the scan has a limit
+        scanner = scanFromStorage(Scan.newBuilder(scan).limit(0).build());
       }
+
+      for (Result r : scanner) {
+        Snapshot.Key key = new Snapshot.Key(scan, r);
+        TransactionResult result = new TransactionResult(r);
+        actualResults.put(key, result);
+        processScanResult(key, scan, result).ifPresent(res -> results.put(key, res));
+
+        // Get results up to the limit if the scan has a limit
+        if (limit != null && results.size() >= limit) {
+          break;
+        }
+      }
+    } catch (RuntimeException e) {
+      Exception exception;
+      if (e.getCause() instanceof ExecutionException) {
+        exception = (ExecutionException) e.getCause();
+      } else {
+        exception = e;
+      }
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          exception,
+          snapshot.getId());
     } finally {
       if (scanner != null) {
         try {
@@ -177,16 +190,33 @@ public class CrudHandler {
         }
       }
     }
-    snapshot.putIntoScanSet(scan, results);
+    snapshot.putIntoScanSet(scan, actualResults);
 
-    return createScanResults(scan, originalProjections, results);
+    return createFilteredScanResults(scan, originalProjections, results);
   }
 
-  private List<Result> createScanResults(
+  private Optional<TransactionResult> processScanResult(
+      Snapshot.Key key, Scan scan, TransactionResult result) throws CrudException {
+    if (!result.isCommitted()) {
+      throw new UncommittedRecordException(
+          scan,
+          result,
+          CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
+          snapshot.getId());
+    }
+
+    // We always update the read set to create before image by using the latest record (result)
+    // because another conflicting transaction might have updated the record after this
+    // transaction read it first.
+    snapshot.putIntoReadSet(key, Optional.of(result));
+
+    return snapshot.getResult(key);
+  }
+
+  private List<Result> createFilteredScanResults(
       Scan scan, List<String> projections, Map<Snapshot.Key, TransactionResult> results)
       throws CrudException {
-    assert scan.forNamespace().isPresent() && scan.forTable().isPresent();
-    TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
+    TableMetadata metadata = getTableMetadata(scan);
     return results.values().stream()
         .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled))
         .collect(Collectors.toList());
@@ -322,14 +352,13 @@ public class CrudHandler {
     }
   }
 
-  private TableMetadata getTableMetadata(String namespace, String table) throws CrudException {
+  private TableMetadata getTableMetadata(Operation operation) throws CrudException {
     try {
       TransactionTableMetadata metadata =
-          tableMetadataManager.getTransactionTableMetadata(namespace, table);
+          tableMetadataManager.getTransactionTableMetadata(operation);
       if (metadata == null) {
         throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(
-                ScalarDbUtils.getFullTableName(namespace, table)));
+            CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {
