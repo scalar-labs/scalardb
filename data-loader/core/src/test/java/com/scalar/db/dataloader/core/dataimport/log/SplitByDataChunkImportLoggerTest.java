@@ -38,8 +38,8 @@ class SplitByDataChunkImportLoggerTest {
     ImportLoggerConfig importLoggerConfig =
         ImportLoggerConfig.builder()
             .prettyPrint(false)
-            .logSuccessRecords(false)
-            .logRawSourceRecords(false)
+            .isLogSuccessRecords(false)
+            .isLogRawSourceRecords(false)
             .logDirectoryPath("path")
             .build();
     logWriterFactory = new DefaultLogWriterFactory(importLoggerConfig);
@@ -69,8 +69,8 @@ class SplitByDataChunkImportLoggerTest {
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(tempDir.toString() + "/")
-            .logRawSourceRecords(true)
-            .logSuccessRecords(logSuccessRecords)
+            .isLogRawSourceRecords(true)
+            .isLogSuccessRecords(logSuccessRecords)
             .build();
     SplitByDataChunkImportLogger importLogger =
         new SplitByDataChunkImportLogger(config, logWriterFactory);
@@ -175,8 +175,8 @@ class SplitByDataChunkImportLoggerTest {
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(tempDir.toString() + "/")
-            .logRawSourceRecords(true)
-            .logSuccessRecords(true)
+            .isLogRawSourceRecords(true)
+            .isLogSuccessRecords(true)
             .build();
     SplitByDataChunkImportLogger importLogger =
         new SplitByDataChunkImportLogger(config, logWriterFactory);

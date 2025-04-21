@@ -21,13 +21,13 @@ public class ImportLoggerConfig {
    * Whether to log records that were successfully imported. If true, successful import operations
    * will be logged to success log files.
    */
-  boolean logSuccessRecords;
+  boolean isLogSuccessRecords;
 
   /**
    * Whether to log raw source records that failed to be imported. If true, failed import operations
    * will be logged to failure log files.
    */
-  boolean logRawSourceRecords;
+  boolean isLogRawSourceRecords;
 
   /**
    * Whether to format the logs with pretty printing. If true, the JSON logs will be formatted with

@@ -42,8 +42,8 @@ class SingleFileImportLoggerTest {
     ImportLoggerConfig importLoggerConfig =
         ImportLoggerConfig.builder()
             .prettyPrint(false)
-            .logSuccessRecords(false)
-            .logRawSourceRecords(false)
+            .isLogSuccessRecords(false)
+            .isLogRawSourceRecords(false)
             .logDirectoryPath("path")
             .build();
     logWriterFactory = new DefaultLogWriterFactory(importLoggerConfig);
@@ -84,8 +84,8 @@ class SingleFileImportLoggerTest {
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(tempDir.toString() + "/")
-            .logRawSourceRecords(true)
-            .logSuccessRecords(logSuccessRecords)
+            .isLogRawSourceRecords(true)
+            .isLogSuccessRecords(logSuccessRecords)
             .build();
     SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
 
@@ -199,8 +199,8 @@ class SingleFileImportLoggerTest {
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(tempDir.toString() + "/")
-            .logRawSourceRecords(true)
-            .logSuccessRecords(true)
+            .isLogRawSourceRecords(true)
+            .isLogSuccessRecords(true)
             .build();
     SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
 
