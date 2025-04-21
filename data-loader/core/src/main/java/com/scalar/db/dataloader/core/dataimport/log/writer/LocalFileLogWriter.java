@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import javax.annotation.Nullable;
 
 /**
  * An implementation of {@link LogWriter} that writes log entries to a local file. This class writes
@@ -50,13 +51,11 @@ public class LocalFileLogWriter implements LogWriter {
    * @throws IOException if an I/O error occurs while writing the record
    */
   @Override
-  public void write(JsonNode sourceRecord) throws IOException {
+  public void write(@Nullable JsonNode sourceRecord) throws IOException {
     if (sourceRecord == null) {
       return;
     }
-    synchronized (logWriter) {
-      objectMapper.writeValue(logWriter, sourceRecord);
-    }
+    objectMapper.writeValue(logWriter, sourceRecord);
   }
 
   /**

@@ -9,6 +9,7 @@ import com.scalar.db.dataloader.core.dataimport.task.result.ImportTargetResultSt
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import java.io.IOException;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,15 +27,16 @@ import org.slf4j.LoggerFactory;
  *   <li>summary.log - Summary information for all data chunks
  * </ul>
  */
+@ThreadSafe
 public class SingleFileImportLogger extends AbstractImportLogger {
 
   protected static final String SUMMARY_LOG_FILE_NAME = "summary.log";
   protected static final String SUCCESS_LOG_FILE_NAME = "success.json";
   protected static final String FAILURE_LOG_FILE_NAME = "failure.json";
   private static final Logger LOGGER = LoggerFactory.getLogger(SingleFileImportLogger.class);
-  private LogWriter summaryLogWriter;
-  private LogWriter successLogWriter;
-  private LogWriter failureLogWriter;
+  private volatile LogWriter summaryLogWriter;
+  private final LogWriter successLogWriter;
+  private final LogWriter failureLogWriter;
 
   /**
    * Creates a new instance of SingleFileImportLogger. Initializes the success and failure log
@@ -133,10 +135,25 @@ public class SingleFileImportLogger extends AbstractImportLogger {
    * @throws IOException if an I/O error occurs while writing to the log
    */
   private void logDataChunkSummary(ImportDataChunkStatus dataChunkStatus) throws IOException {
-    if (summaryLogWriter == null) {
-      summaryLogWriter = createLogWriter(config.getLogDirectoryPath() + SUMMARY_LOG_FILE_NAME);
+    ensureSummaryLogWriterInitialized();
+    synchronized (summaryLogWriter) {
+      writeImportDataChunkSummary(dataChunkStatus, summaryLogWriter);
     }
-    writeImportDataChunkSummary(dataChunkStatus, summaryLogWriter);
+  }
+
+  /**
+   * Ensures that the summary log writer is initialized in a thread-safe manner.
+   *
+   * @throws IOException if an error occurs while creating the log writer
+   */
+  private void ensureSummaryLogWriterInitialized() throws IOException {
+    if (summaryLogWriter == null) {
+      synchronized (this) {
+        if (summaryLogWriter == null) {
+          summaryLogWriter = createLogWriter(config.getLogDirectoryPath() + SUMMARY_LOG_FILE_NAME);
+        }
+      }
+    }
   }
 
   /**
@@ -162,17 +179,7 @@ public class SingleFileImportLogger extends AbstractImportLogger {
    */
   private LogWriter getLogWriterForTransactionBatch(ImportTransactionBatchResult batchResult)
       throws IOException {
-    String logFileName = batchResult.isSuccess() ? SUCCESS_LOG_FILE_NAME : FAILURE_LOG_FILE_NAME;
-    LogWriter logWriter = batchResult.isSuccess() ? successLogWriter : failureLogWriter;
-    if (logWriter == null) {
-      logWriter = createLogWriter(config.getLogDirectoryPath() + logFileName);
-      if (batchResult.isSuccess()) {
-        successLogWriter = logWriter;
-      } else {
-        failureLogWriter = logWriter;
-      }
-    }
-    return logWriter;
+    return batchResult.isSuccess() ? successLogWriter : failureLogWriter;
   }
 
   /**
@@ -223,11 +230,11 @@ public class SingleFileImportLogger extends AbstractImportLogger {
    * been completed.
    */
   private void closeAllLogWriters() {
-    closeLogWriter(summaryLogWriter);
-    closeLogWriter(successLogWriter);
-    closeLogWriter(failureLogWriter);
-    summaryLogWriter = null;
-    successLogWriter = null;
-    failureLogWriter = null;
+    synchronized (this) {
+      closeLogWriter(summaryLogWriter);
+      closeLogWriter(successLogWriter);
+      closeLogWriter(failureLogWriter);
+      summaryLogWriter = null;
+    }
   }
 }

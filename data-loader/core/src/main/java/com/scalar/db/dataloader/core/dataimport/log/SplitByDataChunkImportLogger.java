@@ -10,8 +10,10 @@ import com.scalar.db.dataloader.core.dataimport.task.result.ImportTargetResultSt
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import java.io.IOException;
-import java.util.HashMap;
+import java.io.UncheckedIOException;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +33,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Log writers are created on demand and closed when their corresponding data chunk is completed.
  */
+@ThreadSafe
 public class SplitByDataChunkImportLogger extends AbstractImportLogger {
 
   protected static final String SUMMARY_LOG_FILE_NAME_FORMAT = "data_chunk_%s_summary.json";
@@ -38,9 +41,9 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
   protected static final String SUCCESS_LOG_FILE_NAME_FORMAT = "data_chunk_%s_success.json";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SplitByDataChunkImportLogger.class);
-  private final Map<Integer, LogWriter> summaryLogWriters = new HashMap<>();
-  private final Map<Integer, LogWriter> successLogWriters = new HashMap<>();
-  private final Map<Integer, LogWriter> failureLogWriters = new HashMap<>();
+  private final Map<Integer, LogWriter> summaryLogWriters = new ConcurrentHashMap<>();
+  private final Map<Integer, LogWriter> successLogWriters = new ConcurrentHashMap<>();
+  private final Map<Integer, LogWriter> failureLogWriters = new ConcurrentHashMap<>();
 
   /**
    * Creates a new instance of SplitByDataChunkImportLogger.
@@ -65,7 +68,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
     try {
       writeImportTaskResultDetailToLogs(taskResult);
     } catch (IOException e) {
-      LOGGER.error("Failed to write success/failure logs");
+      LOGGER.error("Failed to write success/failure logs", e);
     }
   }
 
@@ -78,28 +81,36 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
    */
   private void writeImportTaskResultDetailToLogs(ImportTaskResult importTaskResult)
       throws IOException {
-    JsonNode jsonNode;
     for (ImportTargetResult target : importTaskResult.getTargets()) {
-      if (config.isLogSuccessRecords()
-          && target.getStatus().equals(ImportTargetResultStatus.SAVED)) {
-        jsonNode = OBJECT_MAPPER.valueToTree(target);
-        synchronized (successLogWriters) {
-          LogWriter successLogWriter =
-              initializeLogWriterIfNeeded(LogFileType.SUCCESS, importTaskResult.getDataChunkId());
-          successLogWriter.write(jsonNode);
-          successLogWriter.flush();
-        }
+      ImportTargetResultStatus status = target.getStatus();
+      if (status.equals(ImportTargetResultStatus.SAVED) && config.isLogSuccessRecords()) {
+        writeLog(target, LogFileType.SUCCESS, importTaskResult.getDataChunkId());
+      } else if (!status.equals(ImportTargetResultStatus.SAVED) && config.isLogRawSourceRecords()) {
+        writeLog(target, LogFileType.FAILURE, importTaskResult.getDataChunkId());
       }
-      if (config.isLogRawSourceRecords()
-          && !target.getStatus().equals(ImportTargetResultStatus.SAVED)) {
-        jsonNode = OBJECT_MAPPER.valueToTree(target);
-        synchronized (failureLogWriters) {
-          LogWriter failureLogWriter =
-              initializeLogWriterIfNeeded(LogFileType.FAILURE, importTaskResult.getDataChunkId());
-          failureLogWriter.write(jsonNode);
-          failureLogWriter.flush();
-        }
-      }
+    }
+  }
+
+  /**
+   * Serializes the given {@link ImportTargetResult} to JSON and writes it to a log file
+   * corresponding to the provided {@link LogFileType} and data chunk ID.
+   *
+   * <p>This method ensures thread-safe access to the underlying {@link LogWriter} by synchronizing
+   * on the writer instance. It is safe to call concurrently from multiple threads handling the same
+   * or different data chunks.
+   *
+   * @param target the result of processing a single import target to be logged
+   * @param logFileType the type of log file to write to (e.g., SUCCESS or FAILURE)
+   * @param dataChunkId the ID of the data chunk associated with the log entry
+   * @throws IOException if writing or flushing the log fails
+   */
+  private void writeLog(ImportTargetResult target, LogFileType logFileType, int dataChunkId)
+      throws IOException {
+    JsonNode jsonNode = OBJECT_MAPPER.valueToTree(target);
+    LogWriter writer = initializeLogWriterIfNeeded(logFileType, dataChunkId);
+    synchronized (writer) {
+      writer.write(jsonNode);
+      writer.flush();
     }
   }
 
@@ -245,11 +256,19 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
   private LogWriter initializeLogWriterIfNeeded(LogFileType logFileType, int dataChunkId)
       throws IOException {
     Map<Integer, LogWriter> logWriters = getLogWriters(logFileType);
-    if (!logWriters.containsKey(dataChunkId)) {
-      LogWriter logWriter = createLogWriter(logFileType, dataChunkId);
-      logWriters.put(dataChunkId, logWriter);
+    try {
+      return logWriters.computeIfAbsent(
+          dataChunkId,
+          id -> {
+            try {
+              return createLogWriter(logFileType, id);
+            } catch (IOException e) {
+              throw new UncheckedIOException(e);
+            }
+          });
+    } catch (UncheckedIOException e) {
+      throw e.getCause();
     }
-    return logWriters.get(dataChunkId);
   }
 
   /**
@@ -272,7 +291,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
    * @return the map of log writers for the specified type
    */
   private Map<Integer, LogWriter> getLogWriters(LogFileType logFileType) {
-    Map<Integer, LogWriter> logWriterMap = null;
+    Map<Integer, LogWriter> logWriterMap;
     switch (logFileType) {
       case SUCCESS:
         logWriterMap = successLogWriters;
@@ -283,6 +302,8 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
       case SUMMARY:
         logWriterMap = summaryLogWriters;
         break;
+      default:
+        throw new AssertionError();
     }
     return logWriterMap;
   }
