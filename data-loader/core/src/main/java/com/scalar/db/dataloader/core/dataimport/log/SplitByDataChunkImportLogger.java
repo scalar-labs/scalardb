@@ -68,7 +68,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
     try {
       writeImportTaskResultDetailToLogs(taskResult);
     } catch (IOException e) {
-      LOGGER.error("Failed to write success/failure logs", e);
+      logError("Failed to write success/failure logs", e);
     }
   }
 
@@ -136,7 +136,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
       // Close the split log writers per data chunk if they exist for this data chunk id
       closeLogWritersForDataChunk(dataChunkStatus.getDataChunkId());
     } catch (IOException e) {
-      LOGGER.error("Failed to log the data chunk summary", e);
+      logError("Failed to log the data chunk summary", e);
     }
   }
 
@@ -163,7 +163,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
         logWriter.flush();
       }
     } catch (IOException e) {
-      LOGGER.error("Failed to write a transaction batch record to a split mode log file", e);
+      logError("Failed to write a transaction batch record to a split mode log file", e);
     }
   }
 
