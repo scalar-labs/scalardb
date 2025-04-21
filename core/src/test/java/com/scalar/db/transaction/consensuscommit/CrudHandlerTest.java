@@ -301,8 +301,7 @@ public class CrudHandlerTest {
     Get get2 = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    snapshot =
-        new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
+    snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
 
@@ -435,8 +434,7 @@ public class CrudHandlerTest {
     Scan scan2 = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
     TransactionResult expected = new TransactionResult(result);
-    snapshot =
-        new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
+    snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
@@ -490,8 +488,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = toScanForStorageFrom(prepareScan());
     result = prepareResult(TransactionState.COMMITTED);
-    snapshot =
-        new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
+    snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
@@ -542,7 +539,6 @@ public class CrudHandlerTest {
         new Snapshot(
             ANY_TX_ID,
             Isolation.SNAPSHOT,
-            null,
             tableMetadataManager,
             parallelExecutor,
             readSet,

@@ -703,7 +703,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void commit_ExtraReadUsedAndValidatedState_ShouldCommitProperly()
+  public void commit_SerializableUsedAndValidatedState_ShouldCommitProperly()
       throws CommitException, UnknownTransactionStatusException, PreparationException,
           ValidationException {
     // Arrange
@@ -722,7 +722,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void commit_ExtraReadUsedAndPreparedState_ShouldThrowIllegalStateException()
+  public void commit_SerializableUsedAndPreparedState_ShouldThrowIllegalStateException()
       throws PreparationException {
     // Arrange
     transaction.prepare();
