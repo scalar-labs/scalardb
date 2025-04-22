@@ -5,10 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Collections;
 import java.util.Map;
 
-/**
- * An administrative interface for the replication feature. The user can execute administrative
- * operations with it like createNamespace/createTable/getTableMetadata.
- */
+/** An administrative interface for the replication feature. */
 public interface ReplicationAdmin {
 
   /**
