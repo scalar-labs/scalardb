@@ -127,8 +127,7 @@ public abstract class AbstractImportLogger implements ImportEventListener {
           ImportTaskResult.builder()
               .rowNumber(taskResult.getRowNumber())
               .targets(targetResults)
-              .dataChunkId(taskResult.getDataChunkId())
-              .rowNumber(taskResult.getRowNumber());
+              .dataChunkId(taskResult.getDataChunkId());
 
       // Only add the raw record if the configuration is set to log raw source data
       if (config.isLogRawSourceRecords()) {
