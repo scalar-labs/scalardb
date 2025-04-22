@@ -10,16 +10,16 @@ SQL_SERVER_CONTAINER_NAME=${4:-''}
 COUNT=0
 
 if [[ -n $SQL_SERVER_CONTAINER_NAME ]]; then
-    # Check if the `/opt/mssql-tools18/bin/sqlcmd` command exists or not.
-    docker exec -t ${SQL_SERVER_CONTAINER_NAME} ls /opt/mssql-tools18/bin/sqlcmd
-    if [[ $? -eq 0 ]]; then
-      SQLCMD="docker exec -t $SQL_SERVER_CONTAINER_NAME /opt/mssql-tools18/bin/sqlcmd"
-    else
-      # If there is no `/opt/mssql-tools18/bin/sqlcmd` command, we use old command.
-      SQLCMD="docker exec -t $SQL_SERVER_CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd"
-    fi
+  # Check if the `/opt/mssql-tools18/bin/sqlcmd` command exists or not.
+  docker exec -t ${SQL_SERVER_CONTAINER_NAME} ls /opt/mssql-tools18/bin/sqlcmd
+  if [[ $? -eq 0 ]]; then
+    SQLCMD="docker exec -t $SQL_SERVER_CONTAINER_NAME /opt/mssql-tools18/bin/sqlcmd"
+  else
+    # If there is no `/opt/mssql-tools18/bin/sqlcmd` command, we use old command.
+    SQLCMD="docker exec -t $SQL_SERVER_CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd"
+  fi
 else
-    SQLCMD=sqlcmd
+  SQLCMD=sqlcmd
 fi
 
 echo "INFO: Creating no superuser start."
