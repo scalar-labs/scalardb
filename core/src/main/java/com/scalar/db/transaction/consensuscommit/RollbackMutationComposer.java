@@ -156,11 +156,8 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         clusteringKey =
             ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata()).orElse(null);
       } else {
-        // for deleting non-existing record that was prepared with DELETED for Serializable with
-        // Extra-write
-        assert operation instanceof Get;
-        partitionKey = operation.getPartitionKey();
-        clusteringKey = operation.getClusteringKey().orElse(null);
+        throw new AssertionError(
+            "This path should not be reached since the EXTRA_WRITE strategy is deleted");
       }
     }
 

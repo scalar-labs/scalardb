@@ -76,8 +76,6 @@ public class ConsensusCommitManagerTest {
             null);
 
     when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
-    when(consensusCommitConfig.getSerializableStrategy())
-        .thenReturn(SerializableStrategy.EXTRA_READ);
   }
 
   @Test

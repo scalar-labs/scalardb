@@ -205,8 +205,8 @@ public class CommitHandler {
 
   public void validate(Snapshot snapshot) throws ValidationException {
     try {
-      // validation is executed when SERIALIZABLE with EXTRA_READ strategy is chosen.
-      snapshot.toSerializableWithExtraRead(storage);
+      // validation is executed when SERIALIZABLE is chosen.
+      snapshot.toSerializable(storage);
     } catch (ExecutionException e) {
       throw new ValidationException(
           CoreError.CONSENSUS_COMMIT_VALIDATION_FAILED.buildMessage(), e, snapshot.getId());

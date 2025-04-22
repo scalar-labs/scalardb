@@ -67,7 +67,6 @@ public class TwoPhaseConsensusCommitManagerTest {
 
     // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
-    when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
 
     manager =
         new TwoPhaseConsensusCommitManager(
