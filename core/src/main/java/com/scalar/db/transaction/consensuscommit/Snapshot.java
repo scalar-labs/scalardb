@@ -6,7 +6,6 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperation
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -54,7 +53,6 @@ public class Snapshot {
   private static final Logger logger = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
   private final Isolation isolation;
-  private final SerializableStrategy strategy;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
@@ -66,12 +64,10 @@ public class Snapshot {
   public Snapshot(
       String id,
       Isolation isolation,
-      SerializableStrategy strategy,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.id = id;
     this.isolation = isolation;
-    this.strategy = strategy;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     readSet = new ConcurrentHashMap<>();
@@ -85,7 +81,6 @@ public class Snapshot {
   Snapshot(
       String id,
       Isolation isolation,
-      SerializableStrategy strategy,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
@@ -95,7 +90,6 @@ public class Snapshot {
       Map<Key, Delete> deleteSet) {
     this.id = id;
     this.isolation = isolation;
-    this.strategy = strategy;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.readSet = readSet;
@@ -272,8 +266,6 @@ public class Snapshot {
 
   public void to(MutationComposer composer)
       throws ExecutionException, PreparationConflictException {
-    toSerializableWithExtraWrite(composer);
-
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
       TransactionResult result =
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
@@ -435,52 +427,9 @@ public class Snapshot {
   }
 
   @VisibleForTesting
-  void toSerializableWithExtraWrite(MutationComposer composer)
-      throws ExecutionException, PreparationConflictException {
-    if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_WRITE) {
-      return;
-    }
-
-    for (Map.Entry<Key, Optional<TransactionResult>> entry : readSet.entrySet()) {
-      Key key = entry.getKey();
-      if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
-        continue;
-      }
-
-      if (entry.getValue().isPresent() && composer instanceof PrepareMutationComposer) {
-        // For existing records, convert a read set into a write set for Serializable. This needs to
-        // be done in only prepare phase because the records are treated as written afterwards.
-        Put put =
-            new Put(key.getPartitionKey(), key.getClusteringKey().orElse(null))
-                .withConsistency(Consistency.LINEARIZABLE)
-                .forNamespace(key.getNamespace())
-                .forTable(key.getTable());
-        writeSet.put(entry.getKey(), put);
-      } else {
-        // For non-existing records, special care is needed to guarantee Serializable. The records
-        // are treated as not existed explicitly by preparing DELETED records so that conflicts can
-        // be properly detected and handled. The records will be deleted in commit time by
-        // rollforwad since the records are marked as DELETED or in recovery time by rollback since
-        // the previous records are empty.
-        Get get =
-            new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
-                .withConsistency(Consistency.LINEARIZABLE)
-                .forNamespace(key.getNamespace())
-                .forTable(key.getTable());
-        composer.add(get, null);
-      }
-    }
-
-    // if there is a scan and a write in a transaction
-    if (!scanSet.isEmpty() && !writeSet.isEmpty()) {
-      throwExceptionDueToPotentialAntiDependency();
-    }
-  }
-
-  @VisibleForTesting
-  void toSerializableWithExtraRead(DistributedStorage storage)
+  void toSerializable(DistributedStorage storage)
       throws ExecutionException, ValidationConflictException {
-    if (!isExtraReadEnabled()) {
+    if (!isSerializable()) {
       return;
     }
 
@@ -585,22 +534,17 @@ public class Snapshot {
         || latestResult.get().getVersion() != result.get().getVersion();
   }
 
-  private void throwExceptionDueToPotentialAntiDependency() throws PreparationConflictException {
-    throw new PreparationConflictException(
-        CoreError.CONSENSUS_COMMIT_READING_EMPTY_RECORDS_IN_EXTRA_WRITE.buildMessage(), id);
-  }
-
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
     throw new ValidationConflictException(
-        CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND_IN_EXTRA_READ.buildMessage(), id);
+        CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), id);
   }
 
-  private boolean isExtraReadEnabled() {
-    return isolation == Isolation.SERIALIZABLE && strategy == SerializableStrategy.EXTRA_READ;
+  private boolean isSerializable() {
+    return isolation == Isolation.SERIALIZABLE;
   }
 
   public boolean isValidationRequired() {
-    return isExtraReadEnabled();
+    return isSerializable();
   }
 
   @Immutable

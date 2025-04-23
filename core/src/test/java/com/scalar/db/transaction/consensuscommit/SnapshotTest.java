@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -117,10 +116,6 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot(Isolation isolation) {
-    return prepareSnapshot(isolation, SerializableStrategy.EXTRA_WRITE);
-  }
-
-  private Snapshot prepareSnapshot(Isolation isolation, SerializableStrategy strategy) {
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -131,7 +126,6 @@ public class SnapshotTest {
         new Snapshot(
             ANY_ID,
             isolation,
-            strategy,
             tableMetadataManager,
             new ParallelExecutor(config),
             readSet,
@@ -983,29 +977,6 @@ public class SnapshotTest {
   }
 
   @Test
-  public void
-      to_PrepareMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws PreparationConflictException, ExecutionException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Put put = preparePut();
-    TransactionResult result = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    configureBehavior();
-
-    // Act
-    snapshot.to(prepareComposer);
-
-    // Assert
-    Put putFromGet = prepareAnotherPut();
-    verify(prepareComposer).add(put, result);
-    verify(prepareComposer).add(putFromGet, result);
-    verify(snapshot).toSerializableWithExtraWrite(prepareComposer);
-  }
-
-  @Test
   public void to_CommitMutationComposerGiven_ShouldCallComposerProperly()
       throws PreparationConflictException, ExecutionException {
     // Arrange
@@ -1024,31 +995,6 @@ public class SnapshotTest {
     // Assert
     verify(commitComposer).add(put, result);
     verify(commitComposer).add(delete, result);
-  }
-
-  @Test
-  public void
-      to_CommitMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws PreparationConflictException, ExecutionException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Put put = preparePut();
-    Delete delete = prepareAnotherDelete();
-    TransactionResult result = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
-    configureBehavior();
-
-    // Act
-    snapshot.to(commitComposer);
-
-    // Assert
-    // no effect on CommitMutationComposer
-    verify(commitComposer).add(put, result);
-    verify(commitComposer).add(delete, result);
-    verify(snapshot).toSerializableWithExtraWrite(commitComposer);
   }
 
   @Test
@@ -1074,108 +1020,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void
-      to_RollbackMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws PreparationConflictException, ExecutionException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Put put = preparePut();
-    Delete delete = prepareAnotherDelete();
-    TransactionResult result = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
-    configureBehavior();
-
-    // Act
-    snapshot.to(rollbackComposer);
-
-    // Assert
-    // no effect on RollbackMutationComposer
-    verify(rollbackComposer).add(put, result);
-    verify(rollbackComposer).add(delete, result);
-    verify(snapshot).toSerializableWithExtraWrite(rollbackComposer);
-  }
-
-  @Test
-  public void toSerializableWithExtraWrite_UnmutatedReadSetExists_ShouldConvertReadSetIntoWriteSet()
+  public void toSerializable_ReadSetNotChanged_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Get get = prepareAnotherGet();
-    Put put = preparePut();
-    TransactionResult result = prepareResult(ANY_ID);
-    TransactionResult txResult = new TransactionResult(result);
-    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(txResult));
-    snapshot.putIntoGetSet(get, Optional.of(txResult));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-
-    // Act Assert
-    assertThatCode(() -> snapshot.toSerializableWithExtraWrite(prepareComposer))
-        .doesNotThrowAnyException();
-
-    // Assert
-    Put expected =
-        new Put(get.getPartitionKey(), get.getClusteringKey().get())
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(get.forNamespace().get())
-            .forTable(get.forTable().get());
-    assertThat(writeSet).contains(entry(new Snapshot.Key(get), expected));
-    assertThat(writeSet.size()).isEqualTo(2);
-    verify(prepareComposer, never()).add(any(), any());
-  }
-
-  @Test
-  public void
-      toSerializableWithExtraWrite_UnmutatedReadSetForNonExistingExists_ShouldNotThrowAnyException()
-          throws ExecutionException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Get get = prepareAnotherGet();
-    Put put = preparePut();
-    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.empty());
-    snapshot.putIntoGetSet(get, Optional.empty());
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-
-    // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
-
-    // Assert
-    assertThat(thrown).doesNotThrowAnyException();
-    Get expected =
-        new Get(get.getPartitionKey(), get.getClusteringKey().get())
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(get.forNamespace().get())
-            .forTable(get.forTable().get());
-    verify(prepareComposer).add(expected, null);
-  }
-
-  @Test
-  public void
-      toSerializableWithExtraWrite_ScanSetAndWriteSetExist_ShouldThrowPreparationConflictException() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Scan scan = prepareScan();
-    TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    Put put = preparePut();
-    snapshot.putIntoReadSet(key, Optional.of(txResult));
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-
-    // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
-
-    // Assert
-    assertThat(thrown).isInstanceOf(PreparationConflictException.class);
-  }
-
-  @Test
-  public void toSerializableWithExtraRead_ReadSetNotChanged_ShouldProcessWithoutExceptions()
-      throws ExecutionException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
@@ -1189,17 +1037,17 @@ public class SnapshotTest {
     when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
-    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
     verify(storage).get(getWithProjections);
   }
 
   @Test
-  public void toSerializableWithExtraRead_ReadSetUpdated_ShouldThrowValidationConflictException()
+  public void toSerializable_ReadSetUpdated_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
@@ -1213,7 +1061,7 @@ public class SnapshotTest {
     when(storage.get(getWithProjections)).thenReturn(Optional.of(changedTxResult));
 
     // Act Assert
-    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
@@ -1221,10 +1069,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializableWithExtraRead_ReadSetExtended_ShouldThrowValidationConflictException()
+  public void toSerializable_ReadSetExtended_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
     snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.empty());
@@ -1237,7 +1085,7 @@ public class SnapshotTest {
     when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
-    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
@@ -1245,10 +1093,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializableWithExtraRead_ScanSetNotChanged_ShouldProcessWithoutExceptions()
+  public void toSerializable_ScanSetNotChanged_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
@@ -1266,17 +1114,17 @@ public class SnapshotTest {
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
-    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
     verify(storage).scan(scanWithProjections);
   }
 
   @Test
-  public void toSerializableWithExtraRead_ScanSetUpdated_ShouldThrowValidationConflictException()
+  public void toSerializable_ScanSetUpdated_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
@@ -1296,7 +1144,7 @@ public class SnapshotTest {
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
-    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
@@ -1304,10 +1152,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializableWithExtraRead_ScanSetExtended_ShouldThrowValidationConflictException()
+  public void toSerializable_ScanSetExtended_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID + "x");
@@ -1324,7 +1172,7 @@ public class SnapshotTest {
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
-    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
@@ -1332,11 +1180,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void
-      toSerializableWithExtraRead_MultipleScansInScanSetExist_ShouldProcessWithoutExceptions()
-          throws ExecutionException {
+  public void toSerializable_MultipleScansInScanSetExist_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
 
     Scan scan1 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
@@ -1414,15 +1261,14 @@ public class SnapshotTest {
     when(storage.scan(scan2WithProjections)).thenReturn(scanner2);
 
     // Act Assert
-    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
   }
 
   @Test
-  public void
-      toSerializableWithExtraRead_NullMetadataInReadSetNotChanged_ShouldProcessWithoutExceptions()
-          throws ExecutionException {
+  public void toSerializable_NullMetadataInReadSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
@@ -1436,18 +1282,17 @@ public class SnapshotTest {
     when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
-    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
     verify(storage).get(getWithProjections);
   }
 
   @Test
-  public void
-      toSerializableWithExtraRead_NullMetadataInReadSetChanged_ShouldThrowValidationConflictException()
-          throws ExecutionException {
+  public void toSerializable_NullMetadataInReadSetChanged_ShouldThrowValidationConflictException()
+      throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
@@ -1461,7 +1306,7 @@ public class SnapshotTest {
     when(storage.get(getWithProjections)).thenReturn(Optional.of(changedResult));
 
     // Act Assert
-    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
@@ -1469,11 +1314,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void
-      toSerializableWithExtraRead_ScannedResultDeleted_ShouldThrowValidationConflictException()
-          throws ExecutionException {
+  public void toSerializable_ScannedResultDeleted_ShouldThrowValidationConflictException()
+      throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
@@ -1489,7 +1333,7 @@ public class SnapshotTest {
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
-    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
@@ -1732,7 +1576,7 @@ public class SnapshotTest {
   @Test
   public void verify_ScanWithIndexGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -1756,7 +1600,7 @@ public class SnapshotTest {
   @Test
   public void verify_ScanWithIndexGivenAndPutInWriteSetInDifferentTable_ShouldNotThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put =
         Put.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1786,7 +1630,7 @@ public class SnapshotTest {
   @Test
   public void verify_ScanWithIndexAndPutWithSameIndexKeyGiven_ShouldThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put1 =
         Put.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1828,7 +1672,7 @@ public class SnapshotTest {
   public void
       verify_ScanWithIndexAndPutWithSameIndexKeyGivenButNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put1 =
         Put.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -1920,7 +1764,7 @@ public class SnapshotTest {
   @Test
   public void verify_CrossPartitionScanGivenAndPutInSameTable_ShouldThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -1939,7 +1783,7 @@ public class SnapshotTest {
   @Test
   public void verify_CrossPartitionScanGivenAndPutInDifferentNamespace_ShouldNotThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -1958,7 +1802,7 @@ public class SnapshotTest {
   @Test
   public void verify_CrossPartitionScanGivenAndPutInDifferentTable_ShouldNotThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -1978,7 +1822,7 @@ public class SnapshotTest {
   public void
       verify_CrossPartitionScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2012,7 +1856,7 @@ public class SnapshotTest {
   public void
       verify_CrossPartitionScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2035,7 +1879,7 @@ public class SnapshotTest {
   public void
       validate_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2058,7 +1902,7 @@ public class SnapshotTest {
   public void
       verify_CrossPartitionScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2081,7 +1925,7 @@ public class SnapshotTest {
   public void
       verify_CrossPartitionScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
