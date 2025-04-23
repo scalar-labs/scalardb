@@ -36,7 +36,7 @@ subprojects {
         sqliteDriverVersion = '3.49.1.0'
         yugabyteDriverVersion = '42.7.3-yb-4'
         mariadDbDriverVersion = '3.5.3'
-        picocliVersion = '4.7.6'
+        picocliVersion = '4.7.7'
         commonsTextVersion = '1.13.1'
         junitVersion = '5.11.4'
         commonsLangVersion = '3.17.0'
