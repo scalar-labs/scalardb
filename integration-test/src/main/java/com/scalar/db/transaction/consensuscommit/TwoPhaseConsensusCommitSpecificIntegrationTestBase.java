@@ -418,7 +418,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           SelectionType selectionType)
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.PREPARED, prepared_at, null);
 
@@ -798,7 +798,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           SelectionType selectionType)
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.DELETED, prepared_at, null);
 

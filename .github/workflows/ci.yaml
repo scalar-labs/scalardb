@@ -39,6 +39,7 @@ env:
   ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
   ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
   # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK)} then {true} else {false}
+  # Oracle JDK that are linux compatible and publicly available through direct download exist for all LTS versions
   SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle')) && 'true' || 'false' }}"
 
 jobs:
@@ -234,9 +235,10 @@ jobs:
     name: Cosmos DB integration test
     runs-on: windows-latest
     env:
+      # Official Oracle JDK images that are windows compatible and publicly available through direct download do not exist for JDK 8 and 11 so we use instead cached versions hosted on the Scalar container registry.
       # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
       SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
-      SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ (inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')) &&  'true' || 'false' }}"
+      SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -593,7 +595,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -1005,21 +1007,22 @@ jobs:
 
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test
-    runs-on: ubuntu-20.04
-
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2017-latest
-        env:
-          MSSQL_PID: "Express"
-          SA_PASSWORD: "SqlServer17"
-          ACCEPT_EULA: "Y"
-        ports:
-          - 1433:1433
-        options: --name sqlserver17
+    runs-on: windows-latest
+    env:
+      # Official Oracle JDK images that are windows compatible and publicly available through direct download do not exist for JDK 8 and 11 so we use instead cached versions hosted on the Scalar container registry.
+      # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
+      SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
+      SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Sql Server 2017
+        uses: rails-sqlserver/setup-mssql@v1
+        with:
+          components: sqlcmd,sqlengine
+          sa-password: "SqlServer17"
+          version: 2017
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -1029,34 +1032,45 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         uses: actions/setup-java@v4
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to Oracle container registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
         with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
         run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+          $container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
+          docker cp "${container_id}:oracle-jdk.exe" .
+          docker rm "$container_id"
+          Write-Host "Install Oracle JDK"
+          Start-Process "oracle-jdk.exe" -NoNewWindow -Wait -ArgumentList "/s"
+          Write-Host "Oracle JDK installation successful"
+          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+            $jdk_root_dir = "jdk-1.8"
+          } else {
+            $jdk_root_dir = "jdk-11"
+          }
+          echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver17 SqlServer17 10 3
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer17 10 3
+        shell: bash
         timeout-minutes: 1
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password
+        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=no_superuser" "-Dscalardb.jdbc.password=no_superuser_password"
 
       - name: Upload Gradle test reports
         if: always()
@@ -1111,7 +1125,7 @@ jobs:
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver19 SqlServer19 10 3
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer19 10 3 sqlserver19
         timeout-minutes: 1
 
       - name: Setup Gradle
@@ -1173,7 +1187,7 @@ jobs:
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh sqlserver22 SqlServer22 10 3
+        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer22 10 3 sqlserver22
         timeout-minutes: 1
 
       - name: Setup Gradle
