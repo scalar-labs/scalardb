@@ -456,8 +456,12 @@ public enum CoreError implements ScalarDbError {
       "Getting data neither in the read set nor the delete set is not allowed",
       "",
       ""),
-  CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
-      Category.USER_ERROR, "0106", "Reading already-written data is not allowed", "", ""),
+  CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0106",
+      "Reading already-written or already-deleted data is not allowed",
+      "",
+      ""),
   CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0107",

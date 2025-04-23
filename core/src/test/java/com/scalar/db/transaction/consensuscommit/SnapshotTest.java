@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -806,86 +805,6 @@ public class SnapshotTest {
     assertThat(entryIterator.hasNext()).isFalse();
   }
 
-  @Test
-  public void getResults_ScanContainedInScanSetGivenAndPutInWriteSet_ShouldReturnProperResults()
-      throws CrudException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Put put = preparePutForMergeTest();
-    Scan scan = prepareScan();
-
-    TransactionResult result1 = prepareResult(ANY_ID);
-    TransactionResult result2 = mock(TransactionResult.class);
-    TransactionResult result3 = mock(TransactionResult.class);
-    Snapshot.Key key1 = new Snapshot.Key(put);
-    Snapshot.Key key2 = mock(Snapshot.Key.class);
-    Snapshot.Key key3 = mock(Snapshot.Key.class);
-    scanSet.put(scan, ImmutableMap.of(key1, result1, key2, result2, key3, result3));
-
-    snapshot.putIntoWriteSet(key1, put);
-
-    // Act
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
-
-    // Assert
-    assertThat(results).isPresent();
-
-    Iterator<Map.Entry<Snapshot.Key, TransactionResult>> entryIterator =
-        results.get().entrySet().iterator();
-
-    Map.Entry<Snapshot.Key, TransactionResult> entry = entryIterator.next();
-    assertThat(entry.getKey()).isEqualTo(key1);
-    assertMergedResultIsEqualTo(entry.getValue());
-
-    entry = entryIterator.next();
-    assertThat(entry.getKey()).isEqualTo(key2);
-    assertThat(entry.getValue()).isEqualTo(result2);
-
-    entry = entryIterator.next();
-    assertThat(entry.getKey()).isEqualTo(key3);
-    assertThat(entry.getValue()).isEqualTo(result3);
-
-    assertThat(entryIterator.hasNext()).isFalse();
-  }
-
-  @Test
-  public void getResults_ScanContainedInScanSetGivenAndDeleteInDeleteSet_ShouldReturnProperResults()
-      throws CrudException {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-    Delete delete = prepareDelete();
-    Scan scan = prepareScan();
-
-    TransactionResult result1 = prepareResult(ANY_ID);
-    TransactionResult result2 = mock(TransactionResult.class);
-    TransactionResult result3 = mock(TransactionResult.class);
-    Snapshot.Key key1 = new Snapshot.Key(delete);
-    Snapshot.Key key2 = mock(Snapshot.Key.class);
-    Snapshot.Key key3 = mock(Snapshot.Key.class);
-    scanSet.put(scan, ImmutableMap.of(key1, result1, key2, result2, key3, result3));
-
-    snapshot.putIntoDeleteSet(key1, delete);
-
-    // Act
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
-
-    // Assert
-    assertThat(results).isPresent();
-
-    Iterator<Map.Entry<Snapshot.Key, TransactionResult>> entryIterator =
-        results.get().entrySet().iterator();
-
-    Map.Entry<Snapshot.Key, TransactionResult> entry = entryIterator.next();
-    assertThat(entry.getKey()).isEqualTo(key2);
-    assertThat(entry.getValue()).isEqualTo(result2);
-
-    entry = entryIterator.next();
-    assertThat(entry.getKey()).isEqualTo(key3);
-    assertThat(entry.getValue()).isEqualTo(result3);
-
-    assertThat(entryIterator.hasNext()).isFalse();
-  }
-
   private void assertMergedResultIsEqualTo(TransactionResult result) {
     assertThat(result.getValues())
         .isEqualTo(
@@ -1342,6 +1261,26 @@ public class SnapshotTest {
 
   @Test
   public void
+      verify_ScanGivenAndDeleteKeyAlreadyPresentInDeleteSet_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Delete delete = prepareDelete();
+    Snapshot.Key deleteKey = new Snapshot.Key(delete);
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+    Scan scan = prepareScan();
+    TransactionResult result = prepareResult(ANY_ID);
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+
+    // Act Assert
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
       verify_ScanGivenAndPutKeyAlreadyPresentInScanSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
@@ -1351,11 +1290,10 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoReadSet(key, Optional.of(result));
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1370,10 +1308,9 @@ public class SnapshotTest {
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareScan();
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1394,10 +1331,9 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1419,10 +1355,9 @@ public class SnapshotTest {
             .consistency(Consistency.LINEARIZABLE)
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
             .build();
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1462,18 +1397,13 @@ public class SnapshotTest {
             // ["text1", "text2")
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
-    snapshot.putIntoScanSet(scan1, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan2, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan3, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan4, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan5, Collections.emptyMap());
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
-    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2));
-    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3));
-    Throwable thrown4 = catchThrowable(() -> snapshot.verify(scan4));
-    Throwable thrown5 = catchThrowable(() -> snapshot.verify(scan5));
+    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1, Collections.emptyMap()));
+    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2, Collections.emptyMap()));
+    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3, Collections.emptyMap()));
+    Throwable thrown4 = catchThrowable(() -> snapshot.verify(scan4, Collections.emptyMap()));
+    Throwable thrown5 = catchThrowable(() -> snapshot.verify(scan5, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1513,14 +1443,11 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    snapshot.putIntoScanSet(scan1, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan2, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan3, Collections.emptyMap());
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
-    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2));
-    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3));
+    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1, Collections.emptyMap()));
+    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2, Collections.emptyMap()));
+    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1558,14 +1485,11 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    snapshot.putIntoScanSet(scan1, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan2, Collections.emptyMap());
-    snapshot.putIntoScanSet(scan3, Collections.emptyMap());
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1));
-    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2));
-    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3));
+    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1, Collections.emptyMap()));
+    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2, Collections.emptyMap()));
+    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1588,10 +1512,10 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1618,10 +1542,10 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1659,10 +1583,10 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1703,10 +1627,10 @@ public class SnapshotTest {
             .build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1727,10 +1651,10 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scanAll, result);
-    snapshot.putIntoScanSet(scanAll, Collections.singletonMap(key, result));
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scanAll, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1752,10 +1676,10 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME_2);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scanAll, result);
-    snapshot.putIntoScanSet(scanAll, Collections.singletonMap(key, result));
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scanAll));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scanAll, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1771,10 +1695,10 @@ public class SnapshotTest {
     Scan scan = prepareCrossPartitionScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1790,10 +1714,10 @@ public class SnapshotTest {
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1809,10 +1733,10 @@ public class SnapshotTest {
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1843,10 +1767,9 @@ public class SnapshotTest {
                             ConditionBuilder.column(ANY_NAME_8).isNullInt()))
                     .build())
             .build();
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1866,10 +1789,9 @@ public class SnapshotTest {
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
             .or(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_4))
             .build();
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1877,7 +1799,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      validate_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
+      verify_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1889,10 +1811,9 @@ public class SnapshotTest {
             .where(ConditionBuilder.column(ANY_NAME_3).isLikeText("text%"))
             .and(ConditionBuilder.column(ANY_NAME_4).isNotLikeText("text"))
             .build();
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1912,10 +1833,9 @@ public class SnapshotTest {
             .where(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_1))
             .or(ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_1))
             .build();
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1930,10 +1850,9 @@ public class SnapshotTest {
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = Scan.newBuilder(prepareCrossPartitionScan()).clearConditions().build();
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan));
+    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);

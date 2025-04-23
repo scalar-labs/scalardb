@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -204,14 +203,7 @@ public class Snapshot {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
-
-    Map<Key, TransactionResult> results = new LinkedHashMap<>();
-    for (Entry<Snapshot.Key, TransactionResult> entry : scanSet.get(scan).entrySet()) {
-      mergeResult(entry.getKey(), Optional.of(entry.getValue()))
-          .ifPresent(result -> results.put(entry.getKey(), result));
-    }
-
-    return Optional.of(results);
+    return Optional.of(scanSet.get(scan));
   }
 
   private Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
@@ -257,13 +249,6 @@ public class Snapshot {
     }
   }
 
-  public void verify(Scan scan) {
-    if (isWriteSetOverlappedWith(scan)) {
-      throw new IllegalArgumentException(
-          CoreError.CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_DATA_NOT_ALLOWED.buildMessage());
-    }
-  }
-
   public void to(MutationComposer composer)
       throws ExecutionException, PreparationConflictException {
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
@@ -278,15 +263,43 @@ public class Snapshot {
     }
   }
 
-  private boolean isWriteSetOverlappedWith(Scan scan) {
+  /**
+   * Verifies if this scan does not overlap previous writes or deletes using the actual scan result.
+   * Because we support arbitrary conditions in the where clause of a scan (not only ScanAll, but
+   * also Scan and ScanWithIndex), we cannot determine whether the scan results will include a
+   * record whose key is the same as the key specified in the previous writes or deletes, without
+   * knowing the obtained keys in the actual scan. With this check, users can avoid seeing
+   * unexpected scan results that have not included previous writes or deletes yet.
+   *
+   * @param scan the scan to be verified
+   * @param results the results of the scan
+   */
+  public void verify(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
+    if (isWriteSetOrDeleteSetOverlappedWith(scan, results)) {
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED
+              .buildMessage());
+    }
+  }
+
+  private boolean isWriteSetOrDeleteSetOverlappedWith(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results) {
+    // Check if the scan is overlapped with the delete set
+    for (Map.Entry<Key, Delete> entry : deleteSet.entrySet()) {
+      if (results.containsKey(entry.getKey())) {
+        return true;
+      }
+    }
+
+    // Check if the scan is overlapped with the write set
     if (scan instanceof ScanWithIndex) {
-      return isWriteSetOverlappedWith((ScanWithIndex) scan);
+      return isWriteSetOverlappedWith((ScanWithIndex) scan, results);
     } else if (scan instanceof ScanAll) {
-      return isWriteSetOverlappedWith((ScanAll) scan);
+      return isWriteSetOverlappedWith((ScanAll) scan, results);
     }
 
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      if (scanSet.get(scan).containsKey(entry.getKey())) {
+      if (results.containsKey(entry.getKey())) {
         return true;
       }
 
@@ -347,9 +360,10 @@ public class Snapshot {
     return false;
   }
 
-  private boolean isWriteSetOverlappedWith(ScanWithIndex scan) {
+  private boolean isWriteSetOverlappedWith(
+      ScanWithIndex scan, Map<Snapshot.Key, TransactionResult> results) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      if (scanSet.get(scan).containsKey(entry.getKey())) {
+      if (results.containsKey(entry.getKey())) {
         return true;
       }
 
@@ -374,7 +388,8 @@ public class Snapshot {
     return false;
   }
 
-  private boolean isWriteSetOverlappedWith(ScanAll scan) {
+  private boolean isWriteSetOverlappedWith(
+      ScanAll scan, Map<Snapshot.Key, TransactionResult> results) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       // We need to consider three cases here to prevent scan-after-write.
       //   1) A put operation overlaps the scan range regardless of the update (put) results.
@@ -390,7 +405,7 @@ public class Snapshot {
       // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
 
       // Check for cases 1 and 2
-      if (scanSet.get(scan).containsKey(entry.getKey())) {
+      if (results.containsKey(entry.getKey())) {
         return true;
       }
 
