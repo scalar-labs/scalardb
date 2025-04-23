@@ -448,7 +448,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
     DistributedTransaction transaction = manager.begin();
@@ -816,7 +816,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
     DistributedTransaction transaction = manager.begin();
