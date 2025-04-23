@@ -544,7 +544,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           Selection s, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
             storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
@@ -1015,7 +1015,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           Selection s, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
             storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
