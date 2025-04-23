@@ -125,6 +125,7 @@ public class SingleFileImportLogger extends AbstractImportLogger {
   @Override
   protected void logError(String errorMessage, Exception exception) {
     LOGGER.error(errorMessage, exception);
+    throw new RuntimeException(errorMessage, exception);
   }
 
   /**
