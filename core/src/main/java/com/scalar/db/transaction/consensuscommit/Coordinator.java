@@ -72,15 +72,32 @@ public class Coordinator {
     keyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
+  /**
+   * Gets the coordinator state by ID. If the ID is a full ID for the coordinator group commit, it
+   * will look up the state using the parent ID and the child ID. Otherwise, it will look up the
+   * state only by ID.
+   *
+   * @param id the ID of the coordinator state
+   * @return the coordinator state
+   * @throws CoordinatorException if the coordinator state cannot be retrieved
+   */
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
     if (keyManipulator.isFullKey(id)) {
       return getStateForGroupCommit(id);
     }
 
-    Get get = createGetWith(id);
-    return get(get);
+    return getStateOnlyById(id);
   }
 
+  /**
+   * Gets the coordinator state for a group commit by ID. It first looks up the state using the
+   * parent ID and then checks if the child ID is contained in the state. If the child ID is not
+   * found, it will look up the state using the full ID.
+   *
+   * @param fullId the full ID for the coordinator group commit
+   * @return the coordinator state
+   * @throws CoordinatorException if the coordinator state cannot be retrieved
+   */
   @VisibleForTesting
   Optional<Coordinator.State> getStateForGroupCommit(String fullId) throws CoordinatorException {
     // Scan with the parent ID for a normal group that contains multiple transactions.
@@ -88,8 +105,7 @@ public class Coordinator {
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
-    Get get = createGetWith(parentId);
-    Optional<State> state = get(get);
+    Optional<State> state = getStateOnlyById(parentId);
     // The current implementation is optimized for cases where most transactions are
     // group-committed. It first looks up a transaction state using the parent ID with a single read
     // operation. If no matching transaction state is found (i.e., the transaction was delayed and
@@ -106,7 +122,20 @@ public class Coordinator {
       return stateContainingTargetTxId;
     }
 
-    return get(createGetWith(fullId));
+    return getStateOnlyById(fullId);
+  }
+
+  /**
+   * Gets the coordinator state only by ID, without considering the parent child IDs. The scope of
+   * this method is public, but it's only for internal use.
+   *
+   * @param id the ID of the coordinator state
+   * @return the coordinator state
+   * @throws CoordinatorException if the coordinator state cannot be retrieved
+   */
+  public Optional<Coordinator.State> getStateOnlyById(String id) throws CoordinatorException {
+    Get get = createGetWith(id);
+    return get(get);
   }
 
   public void putState(Coordinator.State state) throws CoordinatorException {
@@ -367,8 +396,8 @@ public class Coordinator {
       return createdAt;
     }
 
-    @VisibleForTesting
-    List<String> getChildIds() {
+    @Nonnull
+    public List<String> getChildIds() {
       return childIds;
     }
 
