@@ -11,9 +11,19 @@ ScalarDB is a universal HTAP engine. It achieves ACID transactions and real-time
   <a href='https://www.youtube.com/watch?v=lW6nCEJV-gs' target="_blank"><img src='docs/images/scalardb-video-preview.png' width='70%'></a>
 </p>
 
-## Docs
+## Quickstart
 
-See our [User Documentation](https://scalardb.scalar-labs.com/docs/latest/).
+1. Start running transactions.
+   - **Get started with ScalarDB Core:** To set up a basic application by using Java, see [Getting Started with ScalarDB](https://scalardb.scalar-labs.com/docs/latest/getting-started-with-scalardb).
+   - **Get started with ScalarDB Cluster (for enterprise customers):** To set up a basic application that uses ScalarDB Cluster through the Java API, see [Getting Started with ScalarDB Cluster](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/getting-started-with-scalardb-cluster).
+2. To set up and run various samples instances, see the [list of ScalarDB sample applications](https://scalardb.scalar-labs.com/docs/latest/scalardb-samples/).
+3. Learn about the [configurations for ScalarDB Core](https://scalardb.scalar-labs.com/docs/latest/configurations) and the [configurations for ScalarDB Cluster](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-cluster-configurations).
+4. Learn about features, such as:
+   - [User authentication/authorization](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-auth-with-sql)
+   - [Attribute-based access control](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/authorize-with-abac)
+   - [Vector search](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/getting-started-with-vector-search)
+
+For additional documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/latest/).
 
 ## Install
 
