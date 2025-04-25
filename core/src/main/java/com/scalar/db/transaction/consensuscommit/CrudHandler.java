@@ -323,6 +323,7 @@ public class CrudHandler {
       TransactionTableMetadata metadata =
           tableMetadataManager.getTransactionTableMetadata(operation);
       if (metadata == null) {
+        assert operation.forFullTableName().isPresent();
         throw new IllegalArgumentException(
             CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
       }
