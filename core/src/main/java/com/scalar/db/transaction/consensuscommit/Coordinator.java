@@ -361,6 +361,10 @@ public class Coordinator {
       this(id, state, System.currentTimeMillis());
     }
 
+    public State(String id, List<String> childIds, TransactionState state) {
+      this(id, childIds, state, System.currentTimeMillis());
+    }
+
     @VisibleForTesting
     State(String id, List<String> childIds, TransactionState state, long createdAt) {
       this.id = checkNotNull(id);
@@ -396,6 +400,7 @@ public class Coordinator {
       return createdAt;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     @Nonnull
     public List<String> getChildIds() {
       return childIds;
