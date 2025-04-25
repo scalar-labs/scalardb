@@ -24,9 +24,18 @@ public class MergeIntoQuery implements UpsertQuery {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
+  private final String dualTableName;
+
+  public static MergeIntoQuery createForOracle(Builder builder) {
+    return new MergeIntoQuery(builder, "DUAL");
+  }
+
+  public static MergeIntoQuery createForDb2(Builder builder) {
+    return new MergeIntoQuery(builder, "SYSIBM.DUAL");
+  }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public MergeIntoQuery(Builder builder) {
+  private MergeIntoQuery(Builder builder, String dualTableName) {
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
@@ -34,6 +43,7 @@ public class MergeIntoQuery implements UpsertQuery {
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     columns = builder.columns;
+    this.dualTableName = dualTableName;
   }
 
   @Override
@@ -51,7 +61,9 @@ public class MergeIntoQuery implements UpsertQuery {
         .append(rdbEngine.encloseFullTableName(schema, table))
         .append(" t1 USING (SELECT ")
         .append(makeUsingSelectSqlString(enclosedKeyNames))
-        .append(" FROM DUAL) t2 ON (")
+        .append(" FROM ")
+        .append(dualTableName)
+        .append(") t2 ON (")
         .append(makePrimaryKeyConditionsSqlString(enclosedKeyNames))
         .append(")");
     if (!columns.isEmpty()) {

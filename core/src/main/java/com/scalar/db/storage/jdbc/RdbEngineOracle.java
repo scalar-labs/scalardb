@@ -161,7 +161,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new MergeIntoQuery(builder);
+    return MergeIntoQuery.createForOracle(builder);
   }
 
   @Override
@@ -374,7 +374,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR2(%s)", charLength);
   }
 

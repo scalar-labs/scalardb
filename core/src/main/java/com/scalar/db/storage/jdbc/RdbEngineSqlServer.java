@@ -329,7 +329,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }
 

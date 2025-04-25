@@ -1578,6 +1578,160 @@ jobs:
           name: yugabytedb_2_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
+  integration-test-for-jdbc-db2-12-1:
+    name: Db2 12.1 integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    services:
+      db2:
+        image: icr.io/db2_community/db2:12.1.1.0
+        env:
+          DB2INSTANCE: db2inst1
+          DB2INST1_PASSWORD: db2inst1
+          DBNAME: test_db
+          LICENSE: accept
+        ports:
+          - 50000:50000
+        options: --privileged --name db2
+
+    strategy:
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        run: |
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 10
+        run : |
+          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+          do
+            echo "Container is not yet ready"
+            sleep 5s
+          done
+          echo "Container is ready"
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db2_12.1_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-jdbc-db2-11-5:
+    name: Db2 11.5 integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    services:
+      db2:
+        image: icr.io/db2_community/db2:11.5.9.0
+        env:
+          DB2INSTANCE: db2inst1
+          DB2INST1_PASSWORD: db2inst1
+          DBNAME: test_db
+          LICENSE: accept
+        ports:
+          - 50000:50000
+        options: --privileged --name db2
+
+    strategy:
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        run: |
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 10
+        run: |
+          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+          do
+            echo "Container is not yet ready"
+            sleep 5s
+          done
+          echo "Container is ready"
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db2_11.5_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestJdbc
+
   integration-test-for-multi-storage:
     name: Multi-storage integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
