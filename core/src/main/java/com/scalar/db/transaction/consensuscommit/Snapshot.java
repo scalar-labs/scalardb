@@ -277,7 +277,7 @@ public class Snapshot {
   public void verify(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
     if (isWriteSetOrDeleteSetOverlappedWith(scan, results)) {
       throw new IllegalArgumentException(
-          CoreError.CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED
+          CoreError.CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED
               .buildMessage());
     }
   }
