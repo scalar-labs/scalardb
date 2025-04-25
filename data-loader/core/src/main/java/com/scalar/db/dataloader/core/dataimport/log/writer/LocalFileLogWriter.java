@@ -51,7 +51,7 @@ public class LocalFileLogWriter implements LogWriter {
    * @throws IOException if an I/O error occurs while writing the record
    */
   @Override
-  public void write(@Nullable JsonNode sourceRecord) throws IOException {
+  public synchronized void write(@Nullable JsonNode sourceRecord) throws IOException {
     if (sourceRecord == null) {
       return;
     }
@@ -64,7 +64,7 @@ public class LocalFileLogWriter implements LogWriter {
    * @throws IOException if an I/O error occurs while flushing
    */
   @Override
-  public void flush() throws IOException {
+  public synchronized void flush() throws IOException {
     logWriter.flush();
   }
 
@@ -75,7 +75,7 @@ public class LocalFileLogWriter implements LogWriter {
    * @throws IOException if an I/O error occurs while closing the writer
    */
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     if (logWriter.isClosed()) {
       return;
     }

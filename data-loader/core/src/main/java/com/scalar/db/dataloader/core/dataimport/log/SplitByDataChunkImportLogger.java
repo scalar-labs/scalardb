@@ -108,10 +108,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
       throws IOException {
     JsonNode jsonNode = OBJECT_MAPPER.valueToTree(target);
     LogWriter writer = initializeLogWriterIfNeeded(logFileType, dataChunkId);
-    synchronized (writer) {
-      writer.write(jsonNode);
-      writer.flush();
-    }
+    writer.write(jsonNode);
   }
 
   /**
@@ -155,13 +152,10 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
   @Override
   protected void logTransactionBatch(ImportTransactionBatchResult batchResult) {
     LogFileType logFileType = batchResult.isSuccess() ? LogFileType.SUCCESS : LogFileType.FAILURE;
-    try (LogWriter logWriter =
-        initializeLogWriterIfNeeded(logFileType, batchResult.getDataChunkId())) {
+    try {
+      LogWriter logWriter = initializeLogWriterIfNeeded(logFileType, batchResult.getDataChunkId());
       JsonNode jsonNode = createFilteredTransactionBatchLogJsonNode(batchResult);
-      synchronized (logWriter) {
-        logWriter.write(jsonNode);
-        logWriter.flush();
-      }
+      logWriter.write(jsonNode);
     } catch (IOException e) {
       logError("Failed to write a transaction batch record to a split mode log file", e);
     }
