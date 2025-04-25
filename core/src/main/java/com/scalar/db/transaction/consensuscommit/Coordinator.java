@@ -86,7 +86,7 @@ public class Coordinator {
       return getStateForGroupCommit(id);
     }
 
-    return getStateOnlyById(id);
+    return getStateByIdOnly(id);
   }
 
   /**
@@ -105,7 +105,7 @@ public class Coordinator {
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
-    Optional<State> state = getStateOnlyById(parentId);
+    Optional<State> state = getStateByIdOnly(parentId);
     // The current implementation is optimized for cases where most transactions are
     // group-committed. It first looks up a transaction state using the parent ID with a single read
     // operation. If no matching transaction state is found (i.e., the transaction was delayed and
@@ -122,7 +122,7 @@ public class Coordinator {
       return stateContainingTargetTxId;
     }
 
-    return getStateOnlyById(fullId);
+    return getStateByIdOnly(fullId);
   }
 
   /**
@@ -133,7 +133,7 @@ public class Coordinator {
    * @return the coordinator state
    * @throws CoordinatorException if the coordinator state cannot be retrieved
    */
-  public Optional<Coordinator.State> getStateOnlyById(String id) throws CoordinatorException {
+  public Optional<Coordinator.State> getStateByIdOnly(String id) throws CoordinatorException {
     Get get = createGetWith(id);
     return get(get);
   }

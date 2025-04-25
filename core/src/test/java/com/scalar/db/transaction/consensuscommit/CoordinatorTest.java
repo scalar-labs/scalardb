@@ -103,7 +103,7 @@ public class CoordinatorTest {
   }
 
   @Test
-  public void getStateOnlyById_NormalTransactionIdGiven_ShouldReturnStateUsingIt()
+  public void getStateByIdOnly_NormalTransactionIdGiven_ShouldReturnStateUsingItOnly()
       throws ExecutionException, CoordinatorException {
     // Arrange
     Result result = mock(Result.class);
@@ -118,7 +118,7 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getStateOnlyById(ANY_ID_1);
+    Optional<Coordinator.State> state = coordinator.getStateByIdOnly(ANY_ID_1);
 
     // Assert
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
@@ -129,7 +129,7 @@ public class CoordinatorTest {
   }
 
   @Test
-  public void getStateOnlyById_GroupCommitParentIdGiven_ShouldReturnStateUsingIt()
+  public void getStateByIdOnly_GroupCommitParentIdGiven_ShouldReturnStateUsingItOnly()
       throws ExecutionException, CoordinatorException {
     // Arrange
     CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -154,7 +154,7 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getStateOnlyById(parentId);
+    Optional<Coordinator.State> state = coordinator.getStateByIdOnly(parentId);
 
     // Assert
     assertThat(state.get().getId()).isEqualTo(parentId);
@@ -165,7 +165,7 @@ public class CoordinatorTest {
   }
 
   @Test
-  public void getStateOnlyById_GroupCommitFullIdGiven_ShouldReturnStateUsingIt()
+  public void getStateByIdOnly_GroupCommitFullIdGiven_ShouldReturnStateUsingItOnly()
       throws ExecutionException, CoordinatorException {
     // Arrange
     CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -185,7 +185,7 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getStateOnlyById(fullId);
+    Optional<Coordinator.State> state = coordinator.getStateByIdOnly(fullId);
 
     // Assert
     assertThat(state.get().getId()).isEqualTo(fullId);
