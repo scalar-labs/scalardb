@@ -191,7 +191,6 @@ public class SingleFileImportLogger extends AbstractImportLogger {
    */
   private void writeImportTaskResultDetailToLogs(ImportTaskResult importTaskResult)
       throws IOException {
-    JsonNode jsonNode;
     for (ImportTargetResult target : importTaskResult.getTargets()) {
       if (config.isLogSuccessRecords()
           && target.getStatus().equals(ImportTargetResultStatus.SAVED)) {
