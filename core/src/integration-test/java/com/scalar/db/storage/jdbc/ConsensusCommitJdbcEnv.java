@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.common.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import java.util.Properties;
 
 public final class ConsensusCommitJdbcEnv {

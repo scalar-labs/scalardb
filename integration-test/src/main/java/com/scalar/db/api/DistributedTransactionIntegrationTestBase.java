@@ -57,6 +57,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -273,15 +275,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(result.isPresent()).isFalse();
   }
 
-  @Test
-  public void scan_ScanGivenForCommittedRecord_ShouldReturnRecords() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForCommittedRecord_ShouldReturnRecords(ScanType scanType)
+      throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan = prepareScan(1, 0, 2);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -291,9 +295,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertResult(1, 2, results.get(2));
   }
 
-  @Test
-  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
@@ -303,7 +308,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build();
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -320,9 +325,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
   }
 
-  @Test
-  public void scan_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
@@ -333,7 +339,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .withProjection(BALANCE);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -354,16 +360,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
   }
 
-  @Test
-  public void scan_ScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan = prepareScan(1, 0, 2).withOrdering(Ordering.desc(ACCOUNT_TYPE));
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -384,16 +391,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(results.get(2).getInt(SOME_COLUMN)).isEqualTo(0);
   }
 
-  @Test
-  public void scan_ScanWithLimitGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithLimitGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan = prepareScan(1, 0, 2).withLimit(2);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -424,15 +432,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(result.isPresent()).isFalse();
   }
 
-  @Test
-  public void scan_ScanGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForNonExisting_ShouldReturnEmpty(ScanType scanType)
+      throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan = prepareScan(0, 4, 6);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -484,8 +494,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(result2).isEqualTo(result1);
   }
 
-  @Test
-  public void scan_ScanGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForIndexColumn_ShouldReturnRecords(ScanType scanType)
+      throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
@@ -517,8 +529,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build());
 
     // Act
-    List<Result> results1 = transaction.scan(scanBuiltByConstructor);
-    List<Result> results2 = transaction.scan(scanBuiltByBuilder);
+    List<Result> results1 = scanOrGetScanner(transaction, scanBuiltByConstructor, scanType);
+    List<Result> results2 = scanOrGetScanner(transaction, scanBuiltByBuilder, scanType);
     transaction.commit();
 
     // Assert
@@ -526,9 +538,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
     TestUtils.assertResultsContainsExactlyInAnyOrder(results2, expectedResults);
   }
 
-  @Test
-  public void scan_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
@@ -541,7 +554,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .build();
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -554,8 +567,9 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(results.get(0).getInt(SOME_COLUMN)).isEqualTo(6);
   }
 
-  @Test
-  public void scan_ScanAllGivenForCommittedRecord_ShouldReturnRecords()
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllGivenForCommittedRecord_ShouldReturnRecords(ScanType scanType)
       throws TransactionException {
     // Arrange
     populateRecords();
@@ -563,7 +577,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     ScanAll scanAll = prepareScanAll();
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.commit();
 
     // Assert
@@ -583,9 +597,10 @@ public abstract class DistributedTransactionIntegrationTestBase {
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
-  @Test
-  public void scan_ScanAllGivenWithLimit_ShouldReturnLimitedAmountOfRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllGivenWithLimit_ShouldReturnLimitedAmountOfRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     insert(prepareInsert(1, 1), prepareInsert(1, 2), prepareInsert(2, 1), prepareInsert(3, 0));
 
@@ -593,7 +608,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     ScanAll scanAll = prepareScanAll().withLimit(2);
 
     // Act
-    List<Result> results = scanAllTransaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(scanAllTransaction, scanAll, scanType);
     scanAllTransaction.commit();
 
     // Assert
@@ -623,16 +638,17 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(results).hasSize(2);
   }
 
-  @Test
-  public void scan_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
     ScanAll scanAll = prepareScanAll().withProjection(ACCOUNT_TYPE).withProjection(BALANCE);
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.commit();
 
     // Assert
@@ -651,14 +667,16 @@ public abstract class DistributedTransactionIntegrationTestBase {
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
-  @Test
-  public void scan_ScanAllGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllGivenForNonExisting_ShouldReturnEmpty(ScanType scanType)
+      throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.start();
     ScanAll scanAll = prepareScanAll();
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.commit();
 
     // Assert
@@ -1048,17 +1066,18 @@ public abstract class DistributedTransactionIntegrationTestBase {
     assertThat(result.get().isNull(SOME_COLUMN)).isTrue();
   }
 
-  @Test
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
   public void
-      scan_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
-          throws TransactionException {
+      scanOrGetScanner_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns(
+          ScanType scanType) throws TransactionException {
     // Arrange
     populateSingleRecord();
     DistributedTransaction transaction = manager.begin();
     Scan scan = prepareScan(0, 0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.commit();
 
     // Assert
@@ -1070,17 +1089,18 @@ public abstract class DistributedTransactionIntegrationTestBase {
         });
   }
 
-  @Test
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
   public void
-      scan_ScanAllWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
-          throws TransactionException {
+      scanOrGetScanner_ScanAllWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns(
+          ScanType scanType) throws TransactionException {
     // Arrange
     populateSingleRecord();
     DistributedTransaction transaction = manager.begin();
     ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.commit();
 
     // Assert
@@ -1207,6 +1227,29 @@ public abstract class DistributedTransactionIntegrationTestBase {
               () -> {
                 DistributedTransaction tx = managerWithDefaultNamespace.start();
                 tx.scan(scan);
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void getScanner_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
+      Scan scan = Scan.newBuilder().table(TABLE).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TransactionCrudOperable.Scanner scanner = tx.getScanner(scan);
+                scanner.all();
+                scanner.close();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -2311,6 +2354,30 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void manager_getScanner_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    // Arrange
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
+      Scan scan = Scan.newBuilder().table(TABLE).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                TransactionManagerCrudOperable.Scanner scanner =
+                    managerWithDefaultNamespace.getScanner(scan);
+                scanner.all();
+                scanner.close();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
   public void manager_put_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
@@ -2729,5 +2796,36 @@ public abstract class DistributedTransactionIntegrationTestBase {
           TimestampColumn.of(TIMESTAMP_COL, LocalDateTime.of(1970, 1, 1, accountId, accountType)));
     }
     return columns.build();
+  }
+
+  protected List<Result> scanOrGetScanner(
+      DistributedTransaction transaction, Scan scan, ScanType scanType) throws CrudException {
+    if (scanType == ScanType.SCAN) {
+      return transaction.scan(scan);
+    }
+
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      switch (scanType) {
+        case SCANNER_ONE:
+          List<Result> results = new ArrayList<>();
+          while (true) {
+            Optional<Result> result = scanner.one();
+            if (!result.isPresent()) {
+              return results;
+            }
+            results.add(result.get());
+          }
+        case SCANNER_ALL:
+          return scanner.all();
+        default:
+          throw new AssertionError();
+      }
+    }
+  }
+
+  public enum ScanType {
+    SCAN,
+    SCANNER_ONE,
+    SCANNER_ALL
   }
 }
