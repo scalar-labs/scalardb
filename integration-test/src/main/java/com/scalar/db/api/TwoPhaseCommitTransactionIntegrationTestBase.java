@@ -57,6 +57,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -312,15 +314,17 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(result.isPresent()).isFalse();
   }
 
-  @Test
-  public void scan_ScanGivenForCommittedRecord_ShouldReturnRecords() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForCommittedRecord_ShouldReturnRecords(ScanType scanType)
+      throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -332,9 +336,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertResult(1, 2, results.get(2));
   }
 
-  @Test
-  public void scan_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithConjunctionsGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
@@ -344,7 +349,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build();
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -363,9 +368,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(results.get(1).getInt(SOME_COLUMN)).isEqualTo(2);
   }
 
-  @Test
-  public void scan_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithProjectionsGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
@@ -376,7 +382,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .withProjection(BALANCE);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -399,16 +405,17 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(results.get(2).contains(SOME_COLUMN)).isFalse();
   }
 
-  @Test
-  public void scan_ScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1).withOrdering(Ordering.desc(ACCOUNT_TYPE));
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -431,16 +438,17 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(results.get(2).getInt(SOME_COLUMN)).isEqualTo(0);
   }
 
-  @Test
-  public void scan_ScanWithLimitGivenForCommittedRecord_ShouldReturnRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanWithLimitGivenForCommittedRecord_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1).withLimit(2);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -475,15 +483,17 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(result.isPresent()).isFalse();
   }
 
-  @Test
-  public void scan_ScanGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForNonExisting_ShouldReturnEmpty(ScanType scanType)
+      throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
     Scan scan = prepareScan(0, 4, 4, namespace1, TABLE_1);
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -541,8 +551,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(result2).isEqualTo(result1);
   }
 
-  @Test
-  public void scan_ScanGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForIndexColumn_ShouldReturnRecords(ScanType scanType)
+      throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.start();
@@ -574,8 +586,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .build());
 
     // Act
-    List<Result> results1 = transaction.scan(scanBuiltByConstructor);
-    List<Result> results2 = transaction.scan(scanBuiltByBuilder);
+    List<Result> results1 = scanOrGetScanner(transaction, scanBuiltByConstructor, scanType);
+    List<Result> results2 = scanOrGetScanner(transaction, scanBuiltByBuilder, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -1118,8 +1130,9 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(state).isEqualTo(TransactionState.ABORTED);
   }
 
-  @Test
-  public void scan_ScanAllGivenForCommittedRecord_ShouldReturnRecords()
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllGivenForCommittedRecord_ShouldReturnRecords(ScanType scanType)
       throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
@@ -1127,7 +1140,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -1149,9 +1162,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
 
-  @Test
-  public void scan_ScanAllGivenWithLimit_ShouldReturnLimitedAmountOfRecords()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllGivenWithLimit_ShouldReturnLimitedAmountOfRecords(
+      ScanType scanType) throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction putTransaction = manager1.begin();
     insert(
@@ -1167,7 +1181,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1).withLimit(2);
 
     // Act
-    List<Result> results = scanAllTransaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(scanAllTransaction, scanAll, scanType);
     scanAllTransaction.prepare();
     scanAllTransaction.validate();
     scanAllTransaction.commit();
@@ -1199,9 +1213,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(results).hasSize(2);
   }
 
-  @Test
-  public void scan_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllWithProjectionsGiven_ShouldRetrieveSpecifiedValues(
+      ScanType scanType) throws TransactionException {
     // Arrange
     populateRecords(manager1, namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -1209,7 +1224,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         prepareScanAll(namespace1, TABLE_1).withProjection(ACCOUNT_TYPE).withProjection(BALANCE);
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -1235,14 +1250,16 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         });
   }
 
-  @Test
-  public void scan_ScanAllGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanAllGivenForNonExisting_ShouldReturnEmpty(ScanType scanType)
+      throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -1274,10 +1291,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     assertThat(result.get().isNull(SOME_COLUMN)).isTrue();
   }
 
-  @Test
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
   public void
-      scan_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
-          throws TransactionException {
+      scanOrGetScanner_ScanWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns(
+          ScanType scanType) throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
     populateSingleRecord(namespace1, TABLE_1);
@@ -1286,7 +1304,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
-    List<Result> results = transaction.scan(scan);
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -1300,10 +1318,11 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         });
   }
 
-  @Test
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
   public void
-      scan_ScanAllWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns()
-          throws TransactionException {
+      scanOrGetScanner_ScanAllWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns(
+          ScanType scanType) throws TransactionException {
     // Arrange
     populateSingleRecord(namespace1, TABLE_1);
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -1311,7 +1330,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
         prepareScanAll(namespace1, TABLE_1).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
 
     // Act
-    List<Result> results = transaction.scan(scanAll);
+    List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
@@ -1413,8 +1432,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Get get =
@@ -1427,8 +1446,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.get(get);
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -1439,8 +1460,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void scan_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
@@ -1448,8 +1469,35 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.scan(scan);
+                tx.prepare();
+                tx.validate();
+                tx.commit();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void getScanner_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
+      Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
+                TransactionCrudOperable.Scanner scanner = tx.getScanner(scan);
+                scanner.all();
+                scanner.close();
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -1460,8 +1508,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void put_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Put put =
@@ -1476,8 +1524,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.put(put);
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -1488,8 +1538,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void insert_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Insert insert =
@@ -1503,8 +1553,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.insert(insert);
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -1515,8 +1567,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void upsert_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Upsert upsert =
@@ -1530,8 +1582,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.upsert(upsert);
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -1542,8 +1596,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void update_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Update update =
@@ -1557,8 +1611,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.update(update);
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -1569,8 +1625,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void delete_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Delete delete =
@@ -1583,8 +1639,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.delete(delete);
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -1595,8 +1653,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void mutate_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Mutation putAsMutation1 =
@@ -1617,8 +1675,10 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       // Act Assert
       Assertions.assertThatCode(
               () -> {
-                DistributedTransaction tx = managerWithDefaultNamespace.start();
+                TwoPhaseCommitTransaction tx = managerWithDefaultNamespace.start();
                 tx.mutate(ImmutableList.of(putAsMutation1, deleteAsMutation2));
+                tx.prepare();
+                tx.validate();
                 tx.commit();
               })
           .doesNotThrowAnyException();
@@ -2558,8 +2618,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void manager_get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Get get =
@@ -2579,8 +2639,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   public void manager_scan_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
@@ -2592,11 +2652,34 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
+  public void manager_getScanner_DefaultNamespaceGiven_ShouldWorkProperly()
+      throws TransactionException {
+    Properties properties = getProperties1(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
+      // Arrange
+      populateRecords(manager1, namespace1, TABLE_1);
+      Scan scan = Scan.newBuilder().table(TABLE_1).all().build();
+
+      // Act Assert
+      Assertions.assertThatCode(
+              () -> {
+                TransactionManagerCrudOperable.Scanner scanner =
+                    managerWithDefaultNamespace.getScanner(scan);
+                scanner.all();
+                scanner.close();
+              })
+          .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
   public void manager_put_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Put put =
@@ -2619,8 +2702,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Insert insert =
@@ -2642,8 +2725,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Upsert upsert =
@@ -2665,8 +2748,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Update update =
@@ -2688,8 +2771,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Delete delete =
@@ -2710,8 +2793,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
-    try (DistributedTransactionManager managerWithDefaultNamespace =
-        TransactionFactory.create(properties).getTransactionManager()) {
+    try (TwoPhaseCommitTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTwoPhaseCommitTransactionManager()) {
       // Arrange
       populateRecords(manager1, namespace1, TABLE_1);
       Mutation putAsMutation1 =
@@ -3039,5 +3122,36 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
           TimestampColumn.of(TIMESTAMP_COL, LocalDateTime.of(1970, 1, 1, accountId, accountType)));
     }
     return columns.build();
+  }
+
+  protected List<Result> scanOrGetScanner(
+      TwoPhaseCommitTransaction transaction, Scan scan, ScanType scanType) throws CrudException {
+    if (scanType == ScanType.SCAN) {
+      return transaction.scan(scan);
+    }
+
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      switch (scanType) {
+        case SCANNER_ONE:
+          List<Result> results = new ArrayList<>();
+          while (true) {
+            Optional<Result> result = scanner.one();
+            if (!result.isPresent()) {
+              return results;
+            }
+            results.add(result.get());
+          }
+        case SCANNER_ALL:
+          return scanner.all();
+        default:
+          throw new AssertionError();
+      }
+    }
+  }
+
+  public enum ScanType {
+    SCAN,
+    SCANNER_ONE,
+    SCANNER_ALL
   }
 }
