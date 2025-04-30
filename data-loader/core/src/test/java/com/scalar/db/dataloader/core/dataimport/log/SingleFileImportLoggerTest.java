@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 class SingleFileImportLoggerTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SingleFileImportLoggerTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(SingleFileImportLoggerTest.class);
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
 
   @TempDir Path tempDir;
@@ -64,7 +64,7 @@ class SingleFileImportLoggerTest {
     try {
       Files.deleteIfExists(file);
     } catch (IOException e) {
-      LOGGER.error("Failed to delete file: {}", file, e);
+      logger.error("Failed to delete file: {}", file, e);
     }
   }
 
