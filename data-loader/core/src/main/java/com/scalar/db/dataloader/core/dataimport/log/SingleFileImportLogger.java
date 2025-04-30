@@ -33,7 +33,7 @@ public class SingleFileImportLogger extends AbstractImportLogger {
   protected static final String SUMMARY_LOG_FILE_NAME = "summary.log";
   protected static final String SUCCESS_LOG_FILE_NAME = "success.json";
   protected static final String FAILURE_LOG_FILE_NAME = "failure.json";
-  private static final Logger LOGGER = LoggerFactory.getLogger(SingleFileImportLogger.class);
+  private static final Logger logger = LoggerFactory.getLogger(SingleFileImportLogger.class);
   private volatile LogWriter summaryLogWriter;
   private final LogWriter successLogWriter;
   private final LogWriter failureLogWriter;
@@ -124,7 +124,7 @@ public class SingleFileImportLogger extends AbstractImportLogger {
    */
   @Override
   protected void logError(String errorMessage, Exception exception) {
-    LOGGER.error(errorMessage, exception);
+    logger.error(errorMessage, exception);
     throw new RuntimeException(errorMessage, exception);
   }
 
