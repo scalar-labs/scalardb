@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /** Utility class for handling ScalarDB table metadata operations. */
+@SuppressWarnings("SameNameButDifferent")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TableMetadataUtil {
 

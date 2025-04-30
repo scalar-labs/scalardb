@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 
+@SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public class ProducerTaskFactory {
 

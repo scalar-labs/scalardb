@@ -38,6 +38,7 @@ import lombok.RequiredArgsConstructor;
  * functionality to import data into single or multiple tables based on the provided import options
  * and control file configurations.
  */
+@SuppressWarnings({"SameNameButDifferent"})
 @RequiredArgsConstructor
 public abstract class ImportTask {
 
@@ -148,7 +149,8 @@ public abstract class ImportTask {
               copyNode);
       targetResults.add(result);
     }
-    return targetResults;
+    // Wrapped in unmodifiable list to fix MixedMutabilityReturnType error-prone warning
+    return Collections.unmodifiableList(targetResults);
   }
 
   /**

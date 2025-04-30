@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
  * it creates. It's annotated with Lombok's {@code @AllArgsConstructor} to automatically generate a
  * constructor that initializes the configuration field.
  */
+@SuppressWarnings("SameNameButDifferent")
 @AllArgsConstructor
 public class DefaultLogWriterFactory implements LogWriterFactory {
 

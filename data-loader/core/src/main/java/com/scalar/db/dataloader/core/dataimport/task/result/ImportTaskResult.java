@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value
 @JsonDeserialize(builder = ImportTaskResult.ImportTaskResultBuilder.class)

@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
  * A validator for ensuring that export options are consistent with the ScalarDB table metadata and
  * follow the defined constraints.
  */
+@SuppressWarnings("SameNameButDifferent")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ExportOptionsValidator {
 
