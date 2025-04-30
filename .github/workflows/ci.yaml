@@ -1714,7 +1714,7 @@ jobs:
 
       - name: Wait for the container to be ready
         timeout-minutes: 10
-        run : |
+        run: |
           while ! docker logs db2 2>&1 | grep -q "Setup has completed"
           do
             echo "Container is not yet ready"

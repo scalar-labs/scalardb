@@ -673,8 +673,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String dataType = rdbEngine.getDataTypeForEngine(scalarDbColumnType);
     if (metadata.getPartitionKeyNames().contains(columnName)
         || metadata.getClusteringKeyNames().contains(columnName)) {
-      String keyDataTYpe = rdbEngine.getDataTypeForKey(scalarDbColumnType);
-      return Optional.ofNullable(keyDataTYpe).orElse(dataType);
+      String keyDataType = rdbEngine.getDataTypeForKey(scalarDbColumnType);
+      return Optional.ofNullable(keyDataType).orElse(dataType);
     } else if (metadata.getSecondaryIndexNames().contains(columnName)) {
       String indexDataType = rdbEngine.getDataTypeForSecondaryIndex(scalarDbColumnType);
       return Optional.ofNullable(indexDataType).orElse(dataType);

@@ -278,21 +278,16 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public void throwIfDuplicatedIndexWarning(@Nullable SQLWarning warning) throws SQLException {
-    while (warning != null) {
-      if (warning.getErrorCode() == 605) {
-        // Only a warning is raised when the index already exists but no exception is thrown by the
-        // driver.
-        // To match the behavior of other storages, we throw an exception in this case.
-        //
-        // SQL error code 605: The index name already exists
-        throw new SQLException(
-            warning.getMessage(),
-            warning.getSQLState(),
-            warning.getErrorCode(),
-            warning.getCause());
-      }
-      warning = warning.getNextWarning();
+  public void throwIfDuplicatedIndexWarning(SQLWarning warning) throws SQLException {
+    assert warning != null;
+    if (warning.getErrorCode() == 605) {
+      // Only a warning is raised when the index already exists but no exception is thrown by the
+      // driver.
+      // To match the behavior of other storages, we throw an exception in this case.
+      //
+      // SQL error code 605: The index name already exists
+      throw new SQLException(
+          warning.getMessage(), warning.getSQLState(), warning.getErrorCode(), warning.getCause());
     }
   }
 

@@ -223,7 +223,7 @@ public interface RdbEngineStrategy {
    * @param warning the SQLWarning to check
    * @throws SQLException if the warning is a duplicate index warning
    */
-  default void throwIfDuplicatedIndexWarning(@Nullable SQLWarning warning) throws SQLException {
+  default void throwIfDuplicatedIndexWarning(SQLWarning warning) throws SQLException {
     // Do nothing
   }
 }
