@@ -17,6 +17,7 @@ import lombok.Value;
  * <p>This class is immutable and uses the Builder pattern for construction. It encapsulates all
  * required parameters and dependencies for processing data imports in ScalarDB.
  */
+@SuppressWarnings("SameNameButDifferent")
 @Builder
 @Value
 public class ImportProcessorParams {

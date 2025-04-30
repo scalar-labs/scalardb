@@ -5,7 +5,8 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 
-/** Batch status details */
+/** Batch status details. */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value
 public class ImportTransactionBatchStatus {

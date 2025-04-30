@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Value;
 
 /** Transaction batch result */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value
 @JsonDeserialize(builder = ImportTransactionBatchResult.ImportTransactionBatchResultBuilder.class)

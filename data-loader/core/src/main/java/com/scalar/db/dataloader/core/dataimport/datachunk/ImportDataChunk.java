@@ -4,7 +4,8 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 
-/** * Import data chunk data */
+/** * Import data chunk data. */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Data
 @Builder
 public class ImportDataChunk {

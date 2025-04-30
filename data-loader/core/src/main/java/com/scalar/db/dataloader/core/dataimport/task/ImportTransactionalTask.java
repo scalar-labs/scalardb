@@ -3,8 +3,6 @@ package com.scalar.db.dataloader.core.dataimport.task;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Result;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
-import com.scalar.db.exception.transaction.AbortException;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.util.List;
@@ -82,25 +80,5 @@ public class ImportTransactionalTask extends ImportTask {
       List<Column<?>> columns)
       throws ScalarDBDaoException {
     params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, transaction);
-  }
-
-  /**
-   * Aborts the active ScalarDB transaction if it has not been committed.
-   *
-   * <p>This method provides a safe way to abort an active transaction, handling any abort-related
-   * exceptions by wrapping them in a {@link TransactionException}.
-   *
-   * @param tx the transaction to be aborted. If null, this method does nothing
-   * @throws TransactionException if an error occurs during the abort operation or if the underlying
-   *     abort operation fails
-   */
-  private void abortActiveTransaction(DistributedTransaction tx) throws TransactionException {
-    if (tx != null) {
-      try {
-        tx.abort();
-      } catch (AbortException e) {
-        throw new TransactionException(e.getMessage(), tx.getId());
-      }
-    }
   }
 }

@@ -35,6 +35,7 @@ import lombok.NonNull;
  *   <li>Notifying listeners of various import events
  * </ul>
  */
+@SuppressWarnings("SameNameButDifferent")
 @AllArgsConstructor
 public class ImportManager implements ImportEventListener {
 

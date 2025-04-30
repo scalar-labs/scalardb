@@ -12,6 +12,7 @@ import lombok.Setter;
  * table name, and field mappings. This class is used to define how data from a control file maps to
  * a specific table in ScalarDB.
  */
+@SuppressWarnings("SameNameButDifferent")
 @Getter
 @Setter
 public class ControlFileTable {

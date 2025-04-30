@@ -16,14 +16,11 @@ import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class JsonProducerTask extends ProducerTask {
 
   private final DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
   private final boolean prettyPrintJson;
-  private static final Logger logger = LoggerFactory.getLogger(JsonProducerTask.class);
 
   /**
    * Class constructor

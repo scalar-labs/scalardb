@@ -6,7 +6,8 @@ import java.time.Instant;
 import lombok.Builder;
 import lombok.Data;
 
-/** * A DTO to store import data chunk details */
+/** * A DTO to store import data chunk details. */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Data
 @Builder
 @JsonDeserialize(builder = ImportDataChunkStatus.ImportDataChunkStatusBuilder.class)

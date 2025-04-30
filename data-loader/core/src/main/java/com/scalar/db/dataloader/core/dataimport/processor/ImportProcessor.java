@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
  * supports both transactional and non-transactional (storage) modes and provides event notification
  * capabilities for monitoring the import process.
  */
+@SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public abstract class ImportProcessor {
 
