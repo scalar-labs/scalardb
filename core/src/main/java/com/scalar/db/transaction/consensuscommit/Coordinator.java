@@ -86,7 +86,7 @@ public class Coordinator {
       return getStateForGroupCommit(id);
     }
 
-    return getStateByIdOnly(id);
+    return getStateInternal(id);
   }
 
   /**
@@ -105,7 +105,7 @@ public class Coordinator {
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
-    Optional<State> state = getStateByIdOnly(parentId);
+    Optional<State> state = getStateByParentId(parentId);
     // The current implementation is optimized for cases where most transactions are
     // group-committed. It first looks up a transaction state using the parent ID with a single read
     // operation. If no matching transaction state is found (i.e., the transaction was delayed and
@@ -122,20 +122,41 @@ public class Coordinator {
       return stateContainingTargetTxId;
     }
 
-    return getStateByIdOnly(fullId);
+    return getStateByFullId(fullId);
+  }
+
+  private Optional<Coordinator.State> getStateInternal(String id) throws CoordinatorException {
+    Get get = createGetWith(id);
+    return get(get);
   }
 
   /**
-   * Gets the coordinator state only by ID, without considering the parent child IDs. The scope of
-   * this method is public, but it's only for internal use.
+   * Gets the coordinator state by the parent ID for the coordinator group commit. Note: The scope
+   * of this method has public visibility, but is intended for internal use. Also, the method only
+   * calls {@link #getStateInternal(String)} with the parent ID, but it exists as a separate method
+   * for clarifying this specific use case.
    *
-   * @param id the ID of the coordinator state
+   * @param parentId the parent ID of the coordinator state for the coordinator group commit
    * @return the coordinator state
    * @throws CoordinatorException if the coordinator state cannot be retrieved
    */
-  public Optional<Coordinator.State> getStateByIdOnly(String id) throws CoordinatorException {
-    Get get = createGetWith(id);
-    return get(get);
+  public Optional<Coordinator.State> getStateByParentId(String parentId)
+      throws CoordinatorException {
+    return getStateInternal(parentId);
+  }
+
+  /**
+   * Gets the coordinator state by the full ID for the coordinator group commit. Note: The scope of
+   * this method has public visibility, but is intended for internal use. Also, the method only
+   * calls {@link #getStateInternal(String)} with the parent ID, but it exists as a separate method
+   * for clarifying this specific use case.
+   *
+   * @param fullId the parent ID of the coordinator state for the coordinator group commit
+   * @return the coordinator state
+   * @throws CoordinatorException if the coordinator state cannot be retrieved
+   */
+  public Optional<Coordinator.State> getStateByFullId(String fullId) throws CoordinatorException {
+    return getStateInternal(fullId);
   }
 
   public void putState(Coordinator.State state) throws CoordinatorException {
