@@ -274,7 +274,7 @@ public class Snapshot {
    * @param scan the scan to be verified
    * @param results the results of the scan
    */
-  public void verify(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
+  public void verifyNoOverlap(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
     if (isWriteSetOrDeleteSetOverlappedWith(scan, results)) {
       throw new IllegalArgumentException(
           CoreError.CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED

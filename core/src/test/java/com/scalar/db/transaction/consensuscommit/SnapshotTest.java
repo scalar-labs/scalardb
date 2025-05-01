@@ -1261,7 +1261,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanGivenAndDeleteKeyAlreadyPresentInDeleteSet_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanGivenAndDeleteKeyAlreadyPresentInDeleteSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Delete delete = prepareDelete();
@@ -1273,7 +1273,7 @@ public class SnapshotTest {
 
     // Act Assert
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1281,7 +1281,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanGivenAndPutKeyAlreadyPresentInScanSet_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanGivenAndPutKeyAlreadyPresentInScanSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -1293,7 +1293,7 @@ public class SnapshotTest {
 
     // Act Assert
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1301,7 +1301,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePutWithPartitionKeyOnly();
@@ -1310,7 +1310,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1318,7 +1318,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1333,7 +1333,7 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1341,7 +1341,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanWithNoRangeGivenButPutInWriteSetNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
+      verifyNoOverlap_ScanWithNoRangeGivenButPutInWriteSetNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -1357,7 +1357,7 @@ public class SnapshotTest {
             .build();
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1365,7 +1365,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1399,11 +1399,16 @@ public class SnapshotTest {
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1, Collections.emptyMap()));
-    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2, Collections.emptyMap()));
-    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3, Collections.emptyMap()));
-    Throwable thrown4 = catchThrowable(() -> snapshot.verify(scan4, Collections.emptyMap()));
-    Throwable thrown5 = catchThrowable(() -> snapshot.verify(scan5, Collections.emptyMap()));
+    Throwable thrown1 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan1, Collections.emptyMap()));
+    Throwable thrown2 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan2, Collections.emptyMap()));
+    Throwable thrown3 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan3, Collections.emptyMap()));
+    Throwable thrown4 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan4, Collections.emptyMap()));
+    Throwable thrown5 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan5, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1415,7 +1420,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1445,9 +1450,12 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1, Collections.emptyMap()));
-    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2, Collections.emptyMap()));
-    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3, Collections.emptyMap()));
+    Throwable thrown1 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan1, Collections.emptyMap()));
+    Throwable thrown2 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan2, Collections.emptyMap()));
+    Throwable thrown3 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan3, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1457,7 +1465,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1487,9 +1495,12 @@ public class SnapshotTest {
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    Throwable thrown1 = catchThrowable(() -> snapshot.verify(scan1, Collections.emptyMap()));
-    Throwable thrown2 = catchThrowable(() -> snapshot.verify(scan2, Collections.emptyMap()));
-    Throwable thrown3 = catchThrowable(() -> snapshot.verify(scan3, Collections.emptyMap()));
+    Throwable thrown1 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan1, Collections.emptyMap()));
+    Throwable thrown2 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan2, Collections.emptyMap()));
+    Throwable thrown3 =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan3, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
@@ -1498,7 +1509,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verify_ScanWithIndexGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
+  public void verifyNoOverlap_ScanWithIndexGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1515,14 +1526,15 @@ public class SnapshotTest {
 
     // Act
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void verify_ScanWithIndexGivenAndPutInWriteSetInDifferentTable_ShouldNotThrowException() {
+  public void
+      verifyNoOverlap_ScanWithIndexGivenAndPutInWriteSetInDifferentTable_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put =
@@ -1545,14 +1557,14 @@ public class SnapshotTest {
 
     // Act Assert
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
-  public void verify_ScanWithIndexAndPutWithSameIndexKeyGiven_ShouldThrowException() {
+  public void verifyNoOverlap_ScanWithIndexAndPutWithSameIndexKeyGiven_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put1 =
@@ -1586,7 +1598,7 @@ public class SnapshotTest {
 
     // Act
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1594,7 +1606,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanWithIndexAndPutWithSameIndexKeyGivenButNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
+      verifyNoOverlap_ScanWithIndexAndPutWithSameIndexKeyGivenButNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put1 =
@@ -1630,14 +1642,14 @@ public class SnapshotTest {
 
     // Act
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
-  public void verify_ScanAllGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
+  public void verifyNoOverlap_ScanAllGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1654,7 +1666,8 @@ public class SnapshotTest {
 
     // Act Assert
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scanAll, Collections.singletonMap(key, result)));
+        catchThrowable(
+            () -> snapshot.verifyNoOverlap(scanAll, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1662,7 +1675,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_ScanAllGivenAndPutInWriteSetNotOverlappingWithScanAll_ShouldNotThrowException() {
+      verifyNoOverlap_ScanAllGivenAndPutInWriteSetNotOverlappingWithScanAll_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -1679,14 +1692,15 @@ public class SnapshotTest {
 
     // Act Assert
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scanAll, Collections.singletonMap(key, result)));
+        catchThrowable(
+            () -> snapshot.verifyNoOverlap(scanAll, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
-  public void verify_CrossPartitionScanGivenAndPutInSameTable_ShouldThrowException() {
+  public void verifyNoOverlap_CrossPartitionScanGivenAndPutInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1698,14 +1712,15 @@ public class SnapshotTest {
 
     // Act
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void verify_CrossPartitionScanGivenAndPutInDifferentNamespace_ShouldNotThrowException() {
+  public void
+      verifyNoOverlap_CrossPartitionScanGivenAndPutInDifferentNamespace_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1717,14 +1732,15 @@ public class SnapshotTest {
 
     // Act
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
-  public void verify_CrossPartitionScanGivenAndPutInDifferentTable_ShouldNotThrowException() {
+  public void
+      verifyNoOverlap_CrossPartitionScanGivenAndPutInDifferentTable_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1736,7 +1752,7 @@ public class SnapshotTest {
 
     // Act
     Throwable thrown =
-        catchThrowable(() -> snapshot.verify(scan, Collections.singletonMap(key, result)));
+        catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.singletonMap(key, result)));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1744,7 +1760,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_CrossPartitionScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePutWithIntColumns();
@@ -1769,7 +1785,7 @@ public class SnapshotTest {
             .build();
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1777,7 +1793,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_CrossPartitionScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1791,7 +1807,7 @@ public class SnapshotTest {
             .build();
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1799,7 +1815,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1813,7 +1829,7 @@ public class SnapshotTest {
             .build();
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
@@ -1821,7 +1837,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_CrossPartitionScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
@@ -1835,7 +1851,7 @@ public class SnapshotTest {
             .build();
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
@@ -1843,7 +1859,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      verify_CrossPartitionScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePutWithIntColumns();
@@ -1852,7 +1868,7 @@ public class SnapshotTest {
     Scan scan = Scan.newBuilder(prepareCrossPartitionScan()).clearConditions().build();
 
     // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verify(scan, Collections.emptyMap()));
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);

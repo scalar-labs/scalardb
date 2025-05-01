@@ -121,7 +121,7 @@ public class CrudHandler {
     List<String> originalProjections = new ArrayList<>(originalScan.getProjections());
     Scan scan = (Scan) prepareStorageSelection(originalScan);
     Map<Snapshot.Key, TransactionResult> results = scanInternal(scan);
-    snapshot.verify(scan, results);
+    snapshot.verifyNoOverlap(scan, results);
 
     TableMetadata metadata = getTableMetadata(scan);
     return results.values().stream()

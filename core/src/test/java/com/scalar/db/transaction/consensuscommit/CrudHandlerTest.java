@@ -360,7 +360,7 @@ public class CrudHandlerTest {
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
     verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, expected));
-    verify(snapshot).verify(scan, ImmutableMap.of(key, expected));
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -568,7 +568,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      scan_CrossPartitionScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndValidateThenReturn()
+      scan_CrossPartitionScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndVerifyNoOverlapThenReturn()
           throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
@@ -585,7 +585,7 @@ public class CrudHandlerTest {
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
     verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, transactionResult));
-    verify(snapshot).verify(scan, ImmutableMap.of(key, transactionResult));
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, transactionResult));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(
@@ -594,7 +594,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      scan_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorValidateButThrowUncommittedRecordException()
+      scan_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorVerifyNoOverlapButThrowUncommittedRecordException()
           throws ExecutionException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
@@ -614,7 +614,7 @@ public class CrudHandlerTest {
             });
 
     verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), ArgumentMatchers.any());
-    verify(snapshot, never()).verify(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
   }
 
   @Test
