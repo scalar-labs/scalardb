@@ -284,20 +284,93 @@ public class Snapshot {
 
   private boolean isWriteSetOrDeleteSetOverlappedWith(
       Scan scan, Map<Snapshot.Key, TransactionResult> results) {
-    // Check if the scan is overlapped with the delete set
+    if (isDeleteSetOverlappedWith(results)) {
+      return true;
+    }
+
+    if (scan instanceof ScanWithIndex) {
+      return isWriteSetOverlappedWith((ScanWithIndex) scan, results);
+    } else if (scan instanceof ScanAll) {
+      return isWriteSetOverlappedWith((ScanAll) scan, results);
+    } else {
+      return isWriteSetOverlappedWith(scan, results);
+    }
+  }
+
+  private boolean isDeleteSetOverlappedWith(Map<Snapshot.Key, TransactionResult> results) {
     for (Map.Entry<Key, Delete> entry : deleteSet.entrySet()) {
       if (results.containsKey(entry.getKey())) {
         return true;
       }
     }
+    return false;
+  }
 
-    // Check if the scan is overlapped with the write set
-    if (scan instanceof ScanWithIndex) {
-      return isWriteSetOverlappedWith((ScanWithIndex) scan, results);
-    } else if (scan instanceof ScanAll) {
-      return isWriteSetOverlappedWith((ScanAll) scan, results);
+  private boolean isWriteSetOverlappedWith(
+      ScanWithIndex scanWithIndex, Map<Snapshot.Key, TransactionResult> results) {
+    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      if (results.containsKey(entry.getKey())) {
+        return true;
+      }
+
+      Put put = entry.getValue();
+      if (!put.forNamespace().equals(scanWithIndex.forNamespace())
+          || !put.forTable().equals(scanWithIndex.forTable())) {
+        continue;
+      }
+
+      if (!areConjunctionsOverlapped(put, scanWithIndex)) {
+        continue;
+      }
+
+      Map<String, Column<?>> columns = getAllColumns(put);
+      Column<?> indexColumn = scanWithIndex.getPartitionKey().getColumns().get(0);
+      String indexColumnName = indexColumn.getName();
+      if (columns.containsKey(indexColumnName)
+          && columns.get(indexColumnName).equals(indexColumn)) {
+        return true;
+      }
     }
+    return false;
+  }
 
+  private boolean isWriteSetOverlappedWith(
+      ScanAll scanAll, Map<Snapshot.Key, TransactionResult> results) {
+    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      // We need to consider three cases here to prevent scan-after-write.
+      //   1) A put operation overlaps the scan range regardless of the update (put) results.
+      //   2) A put operation does not overlap the scan range as a result of the update.
+      //   3) A put operation overlaps the scan range as a result of the update.
+      // See the following examples. Assume that we have a table with two columns whose names are
+      // "key" and "value" and two records in the table: (key=1, value=2) and (key=2, value=3).
+      // Case 2 covers a transaction that puts (1, 4) and then scans "where value < 3". In this
+      // case, there is no overlap, but we intentionally prohibit it due to the consistency and
+      // simplicity of snapshot management. We can find case 2 using the scan results.
+      // Case 3 covers a transaction that puts (2, 2) and then scans "where value < 3". In this
+      // case, we cannot find the overlap using the scan results since the database is not updated
+      // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
+
+      // Check for cases 1 and 2
+      if (results.containsKey(entry.getKey())) {
+        return true;
+      }
+
+      // Check for case 3
+      Put put = entry.getValue();
+      if (!put.forNamespace().equals(scanAll.forNamespace())
+          || !put.forTable().equals(scanAll.forTable())) {
+        continue;
+      }
+
+      if (areConjunctionsOverlapped(put, scanAll)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isWriteSetOverlappedWith(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       if (results.containsKey(entry.getKey())) {
         return true;
@@ -355,69 +428,6 @@ public class Snapshot {
             || writtenKey.compareTo(endKey) < 0) {
           return true;
         }
-      }
-    }
-    return false;
-  }
-
-  private boolean isWriteSetOverlappedWith(
-      ScanWithIndex scan, Map<Snapshot.Key, TransactionResult> results) {
-    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      if (results.containsKey(entry.getKey())) {
-        return true;
-      }
-
-      Put put = entry.getValue();
-      if (!put.forNamespace().equals(scan.forNamespace())
-          || !put.forTable().equals(scan.forTable())) {
-        continue;
-      }
-
-      if (!areConjunctionsOverlapped(put, scan)) {
-        continue;
-      }
-
-      Map<String, Column<?>> columns = getAllColumns(put);
-      Column<?> indexColumn = scan.getPartitionKey().getColumns().get(0);
-      String indexColumnName = indexColumn.getName();
-      if (columns.containsKey(indexColumnName)
-          && columns.get(indexColumnName).equals(indexColumn)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean isWriteSetOverlappedWith(
-      ScanAll scan, Map<Snapshot.Key, TransactionResult> results) {
-    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      // We need to consider three cases here to prevent scan-after-write.
-      //   1) A put operation overlaps the scan range regardless of the update (put) results.
-      //   2) A put operation does not overlap the scan range as a result of the update.
-      //   3) A put operation overlaps the scan range as a result of the update.
-      // See the following examples. Assume that we have a table with two columns whose names are
-      // "key" and "value" and two records in the table: (key=1, value=2) and (key=2, value=3).
-      // Case 2 covers a transaction that puts (1, 4) and then scans "where value < 3". In this
-      // case, there is no overlap, but we intentionally prohibit it due to the consistency and
-      // simplicity of snapshot management. We can find case 2 using the scan results.
-      // Case 3 covers a transaction that puts (2, 2) and then scans "where value < 3". In this
-      // case, we cannot find the overlap using the scan results since the database is not updated
-      // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
-
-      // Check for cases 1 and 2
-      if (results.containsKey(entry.getKey())) {
-        return true;
-      }
-
-      // Check for case 3
-      Put put = entry.getValue();
-      if (!put.forNamespace().equals(scan.forNamespace())
-          || !put.forTable().equals(scan.forTable())) {
-        continue;
-      }
-
-      if (areConjunctionsOverlapped(put, scan)) {
-        return true;
       }
     }
     return false;
