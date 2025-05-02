@@ -95,7 +95,7 @@ public abstract class AbstractImportLogger implements ImportEventListener {
    * @return true if logging should be skipped, false otherwise
    */
   protected boolean shouldSkipLoggingSuccess(ImportTransactionBatchResult batchResult) {
-    return batchResult.isSuccess() && !config.isLogSuccessRecords();
+    return batchResult.isSuccess() && !config.isLogSuccessRecordsEnabled();
   }
 
   /**
@@ -130,7 +130,7 @@ public abstract class AbstractImportLogger implements ImportEventListener {
               .dataChunkId(taskResult.getDataChunkId());
 
       // Adds the raw record if the configuration is set to log raw source data
-      if (config.isLogRawSourceRecords()) {
+      if (config.isLogRawSourceRecordsEnabled()) {
         builder.rawRecord(taskResult.getRawRecord());
       }
       ImportTaskResult modifiedTaskResult = builder.build();
