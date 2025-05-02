@@ -224,7 +224,6 @@ public class SingleFileImportLogger extends AbstractImportLogger {
       closeLogWriter(summaryLogWriter);
       closeLogWriter(successLogWriter);
       closeLogWriter(failureLogWriter);
-      summaryLogWriter = null;
     }
   }
 }
