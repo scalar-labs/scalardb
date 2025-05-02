@@ -935,25 +935,25 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, sql, null);
   }
 
-  static void execute(Connection connection, String sql, @Nullable SQLWarningHandler handler)
+  static void execute(Connection connection, String sql, @Nullable SqlWarningHandler handler)
       throws SQLException {
     if (Strings.isNullOrEmpty(sql)) {
       return;
     }
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
-      throwSQLWarningIfNeeded(handler, stmt);
+      throwSqlWarningIfNeeded(handler, stmt);
     }
   }
 
-  private static void throwSQLWarningIfNeeded(SQLWarningHandler handler, Statement stmt)
+  private static void throwSqlWarningIfNeeded(SqlWarningHandler handler, Statement stmt)
       throws SQLException {
     if (handler == null) {
       return;
     }
     SQLWarning warning = stmt.getWarnings();
     while (warning != null) {
-      handler.throwSQLWarningIfNeeded(warning);
+      handler.throwSqlWarningIfNeeded(warning);
       warning = warning.getNextWarning();
     }
   }
@@ -963,7 +963,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   static void execute(
-      Connection connection, String[] sqls, @Nullable SQLWarningHandler warningHandler)
+      Connection connection, String[] sqls, @Nullable SqlWarningHandler warningHandler)
       throws SQLException {
     for (String sql : sqls) {
       execute(connection, sql, warningHandler);
@@ -1150,7 +1150,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @FunctionalInterface
-  interface SQLWarningHandler {
-    void throwSQLWarningIfNeeded(SQLWarning warning) throws SQLException;
+  interface SqlWarningHandler {
+    void throwSqlWarningIfNeeded(SQLWarning warning) throws SQLException;
   }
 }

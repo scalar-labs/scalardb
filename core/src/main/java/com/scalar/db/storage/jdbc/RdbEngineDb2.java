@@ -351,6 +351,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
   public String getDataTypeForSecondaryIndex(DataType dataType) {
     switch (dataType) {
       case TEXT:

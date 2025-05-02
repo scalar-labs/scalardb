@@ -42,8 +42,10 @@ public interface RdbEngineStrategy {
 
   String getDataTypeForEngine(DataType dataType);
 
+  @Nullable
   String getDataTypeForKey(DataType dataType);
 
+  @Nullable
   default String getDataTypeForSecondaryIndex(DataType dataType) {
     return getDataTypeForKey(dataType);
   }
