@@ -848,6 +848,13 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0186", "The CSV row: %s does not match header: %s.", "", ""),
   DATA_LOADER_JSON_CONTENT_START_ERROR(
       Category.USER_ERROR, "0187", "Expected JSON file content to be an array", "", ""),
+  REPLICATION_NOT_ENABLED(
+      Category.USER_ERROR,
+      "0188",
+      // TODO: Update the message once the licence type is determined.
+      "The replication feature is not enabled. To use this feature, you must enable it",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
