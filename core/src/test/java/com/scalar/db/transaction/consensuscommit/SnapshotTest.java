@@ -1464,7 +1464,7 @@ public class SnapshotTest {
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+    verify(storage).scan(scanWithProjectionsWithoutLimit);
   }
 
   @Test
