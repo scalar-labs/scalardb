@@ -77,8 +77,7 @@ class CsvProducerTaskTest {
   }
 
   @Test
-  void
-      process_withValidResultList_withPartialProjectionsAndMetadata_shouldReturnValidCsvString() {
+  void process_withValidResultList_withPartialProjectionsAndMetadata_shouldReturnValidCsvString() {
     projectedColumns = UnitTestUtils.getPartialColumnsListWithMetadata();
     csvProducerTask = new CsvProducerTask(true, projectedColumns, mockMetadata, columnData, ",");
     String expectedOutput =
