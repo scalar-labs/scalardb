@@ -62,7 +62,7 @@ class CsvProducerTaskTest {
   }
 
   @Test
-  void process_withValidResultList_withPartialProjections_shouldReturnValidJsonLineString() {
+  void process_withValidResultList_withPartialProjections_shouldReturnValidCsvString() {
     projectedColumns = UnitTestUtils.getPartialColumnsListWithoutMetadata();
     csvProducerTask = new CsvProducerTask(false, projectedColumns, mockMetadata, columnData, ",");
     String expectedOutput =
@@ -78,7 +78,7 @@ class CsvProducerTaskTest {
 
   @Test
   void
-      process_withValidResultList_withPartialProjectionsAndMetadata_shouldReturnValidJsonLineString() {
+      process_withValidResultList_withPartialProjectionsAndMetadata_shouldReturnValidCsvString() {
     projectedColumns = UnitTestUtils.getPartialColumnsListWithMetadata();
     csvProducerTask = new CsvProducerTask(true, projectedColumns, mockMetadata, columnData, ",");
     String expectedOutput =
@@ -93,7 +93,7 @@ class CsvProducerTaskTest {
 
   @Test
   void
-      process_withValidResultListWithNoProjectionSpecifiedWithoutMetadata_shouldReturnValidJsonLineString() {
+      process_withValidResultListWithNoProjectionSpecifiedWithoutMetadata_shouldReturnValidCsvString() {
     csvProducerTask =
         new CsvProducerTask(false, Collections.emptyList(), mockMetadata, columnData, ",");
     String expectedOutput =
@@ -108,7 +108,7 @@ class CsvProducerTaskTest {
 
   @Test
   void
-      process_withValidResultListWithNoProjectionSpecifiedWithMetadata_shouldReturnValidJsonLineString() {
+      process_withValidResultListWithNoProjectionSpecifiedWithMetadata_shouldReturnValidCsvString() {
     csvProducerTask =
         new CsvProducerTask(true, Collections.emptyList(), mockMetadata, columnData, ",");
     String expectedOutput =
