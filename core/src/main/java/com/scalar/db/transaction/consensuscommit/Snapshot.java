@@ -264,12 +264,30 @@ public class Snapshot {
   }
 
   /**
-   * Verifies if this scan does not overlap previous writes or deletes using the actual scan result.
-   * Because we support arbitrary conditions in the where clause of a scan (not only ScanAll, but
-   * also Scan and ScanWithIndex), we cannot determine whether the scan results will include a
-   * record whose key is the same as the key specified in the previous writes or deletes, without
-   * knowing the obtained keys in the actual scan. With this check, users can avoid seeing
-   * unexpected scan results that have not included previous writes or deletes yet.
+   * Verifies that the scan does not overlap with the previous write or delete operations of the
+   * same transaction to prevent incorrect results.
+   *
+   * <p>For instance, consider the following records in the database, where X is the partition key
+   * and Y is the clustering key: R1(X=1, Y=1), R2(X=1, Y=2), R3(X=1, Y=3), and R4(X=1, Y=4).
+   *
+   * <p>If a transaction performs a write (insert) operation for a new record R5(X=1, Y=5) followed
+   * by a scan operation with partition key X=1, the overlap check is crucial. Without this check,
+   * the scan might return {R1, R2, R3, R4}, which is incorrect. The correct result should include
+   * the newly inserted record, yielding {R1, R2, R3, R4, R5}.
+   *
+   * <p>Similarly, if a transaction deletes R1(X=1, Y=1) and then issues a scan operation with
+   * partition key X=1 and a limit of 3, the result without the overlap check would incorrectly
+   * return {R2, R3}. The correct result should be {R2, R3, R4}.
+   *
+   * <p>These examples illustrate basic cases, but the situation becomes more complex when
+   * considering the ordering of results and limit constraints. Therefore, ScalarDB currently avoids
+   * such overlaps instead of attempting to handle more intricate scenarios.
+   *
+   * <p>The use of scanned results, in addition to the specified scan range, is necessary because we
+   * support arbitrary conditions in the WHERE clause of scan operations with Scan, ScanAll, and
+   * ScanWithIndex. Specifically, without knowing the keys obtained in the actual scan, it is
+   * impossible to determine whether the scanned results include any records that match the keys
+   * from previous writes or deletes.
    *
    * @param scan the scan to be verified
    * @param results the results of the scan
