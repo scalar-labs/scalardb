@@ -2803,26 +2803,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
-    // Arrange
-    DistributedTransaction transaction = manager.begin();
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
-    transaction.commit();
-
-    // Act
-    DistributedTransaction transaction1 = manager.begin();
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    List<Result> resultBefore = transaction1.scan(scan);
-    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
-    List<Result> resultAfter = transaction1.scan(scan);
-    assertThatCode(transaction1::commit).doesNotThrowAnyException();
-
-    // Assert
-    assertThat(resultBefore.size()).isEqualTo(1);
-    assertThat(resultAfter.size()).isEqualTo(0);
-  }
-
-  @Test
   public void delete_PutCalledBefore_ShouldDelete() throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
@@ -3074,24 +3054,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_DeleteGivenBefore_ShouldScan() throws TransactionException {
+  public void scan_DeleteGivenBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
-    // Act
+    // Act Assert
     DistributedTransaction transaction1 = manager.begin();
     transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     Scan scan = prepareScan(0, 0, 1, namespace1, TABLE_1);
-    List<Result> results = transaction1.scan(scan);
-    assertThatCode(transaction1::commit).doesNotThrowAnyException();
-
-    // Assert
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThatThrownBy(() -> transaction1.scan(scan)).isInstanceOf(IllegalArgumentException.class);
+    transaction1.rollback();
   }
 
   @Test
@@ -3119,42 +3095,21 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scanAll_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
-    // Arrange
-    DistributedTransaction transaction = manager.begin();
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
-    transaction.commit();
-
-    // Act
-    DistributedTransaction transaction1 = manager.begin();
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    List<Result> resultBefore = transaction1.scan(scanAll);
-    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
-    List<Result> resultAfter = transaction1.scan(scanAll);
-    assertThatCode(transaction1::commit).doesNotThrowAnyException();
-
-    // Assert
-    assertThat(resultBefore.size()).isEqualTo(1);
-    assertThat(resultAfter.size()).isEqualTo(0);
-  }
-
-  @Test
-  public void scanAll_DeleteGivenBefore_ShouldScanAll() throws TransactionException {
+  public void scanAll_DeleteGivenBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
     transaction.put(preparePut(0, 1, namespace1, TABLE_1).withIntValue(BALANCE, 1));
     transaction.commit();
 
-    // Act
+    // Act Assert
     DistributedTransaction transaction1 = manager.begin();
     transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    List<Result> results = transaction1.scan(scanAll);
-    assertThatCode(transaction1::commit).doesNotThrowAnyException();
-
-    // Assert
-    assertThat(results.size()).isEqualTo(1);
+    assertThatThrownBy(() -> transaction1.scan(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+    transaction1.rollback();
   }
 
   @Test

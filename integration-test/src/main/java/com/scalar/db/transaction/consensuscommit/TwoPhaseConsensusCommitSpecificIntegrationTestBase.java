@@ -2591,32 +2591,6 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
-    // Arrange
-    TwoPhaseCommitTransaction transaction = manager1.begin();
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
-    transaction.prepare();
-    transaction.commit();
-
-    // Act Assert
-    TwoPhaseCommitTransaction transaction1 = manager1.begin();
-    List<Result> resultBefore = transaction1.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
-    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
-    List<Result> resultAfter = transaction1.scan(prepareScan(0, 0, 0, namespace1, TABLE_1));
-
-    assertThatCode(
-            () -> {
-              transaction1.prepare();
-              transaction1.commit();
-            })
-        .doesNotThrowAnyException();
-
-    // Assert
-    assertThat(resultBefore.size()).isEqualTo(1);
-    assertThat(resultAfter.size()).isEqualTo(0);
-  }
-
-  @Test
   public void delete_PutCalledBefore_ShouldDelete() throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -2700,7 +2674,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_DeleteGivenBefore_ShouldScan() throws TransactionException {
+  public void scan_DeleteGivenBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
@@ -2708,20 +2683,12 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction.prepare();
     transaction.commit();
 
-    // Act
+    // Act Assert
     TwoPhaseCommitTransaction transaction1 = manager1.begin();
     transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     Scan scan = prepareScan(0, 0, 1, namespace1, TABLE_1);
-    List<Result> results = transaction1.scan(scan);
-    assertThatCode(
-            () -> {
-              transaction1.prepare();
-              transaction1.commit();
-            })
-        .doesNotThrowAnyException();
-
-    // Assert
-    assertThat(results.size()).isEqualTo(1);
+    assertThatThrownBy(() -> transaction1.scan(scan)).isInstanceOf(IllegalArgumentException.class);
+    transaction1.rollback();
   }
 
   @Test
@@ -2809,33 +2776,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scanAll_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
-    // Arrange
-    TwoPhaseCommitTransaction transaction = manager1.begin();
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
-    transaction.prepare();
-    transaction.commit();
-
-    // Act
-    TwoPhaseCommitTransaction transaction1 = manager1.begin();
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    List<Result> resultBefore = transaction1.scan(scanAll);
-    transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
-    List<Result> resultAfter = transaction1.scan(scanAll);
-    assertThatCode(
-            () -> {
-              transaction1.prepare();
-              transaction1.commit();
-            })
-        .doesNotThrowAnyException();
-
-    // Assert
-    assertThat(resultBefore.size()).isEqualTo(1);
-    assertThat(resultAfter.size()).isEqualTo(0);
-  }
-
-  @Test
-  public void scanAll_DeleteGivenBefore_ShouldScanAll() throws TransactionException {
+  public void scanAll_DeleteGivenBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
@@ -2843,20 +2785,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction.prepare();
     transaction.commit();
 
-    // Act
+    // Act Assert
     TwoPhaseCommitTransaction transaction1 = manager1.begin();
     transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    List<Result> results = transaction1.scan(scanAll);
-    assertThatCode(
-            () -> {
-              transaction1.prepare();
-              transaction1.commit();
-            })
-        .doesNotThrowAnyException();
-
-    // Assert
-    assertThat(results.size()).isEqualTo(1);
+    assertThatThrownBy(() -> transaction1.scan(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+    transaction1.rollback();
   }
 
   @Test
