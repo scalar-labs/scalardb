@@ -31,7 +31,6 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -62,7 +61,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -514,7 +512,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           Selection s, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
             storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
@@ -589,9 +587,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             TransactionState.COMMITTED,
             commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -677,9 +673,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         TransactionState.ABORTED,
         commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -925,7 +919,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           Selection s, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
             storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
@@ -997,9 +991,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         TransactionState.COMMITTED,
         commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -1076,9 +1068,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         TransactionState.ABORTED,
         commitType);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -2029,7 +2019,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void
-      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
+      commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
           String namespace1, String table1, String namespace2, String table2)
           throws TransactionException {
     // Arrange
@@ -2037,83 +2027,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         Arrays.asList(
             preparePut(0, 0, namespace1, table1).withValue(BALANCE, 1),
             preparePut(0, 1, namespace2, table2).withValue(BALANCE, 1));
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     transaction.put(puts);
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    DistributedTransaction transaction2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Get get1_1 = prepareGet(0, 1, namespace2, table2);
-    Optional<Result> result1 = transaction1.get(get1_1);
-    assertThat(result1).isPresent();
-    int current1 = getBalance(result1.get());
-    Get get1_2 = prepareGet(0, 0, namespace1, table1);
-    transaction1.get(get1_2);
-    Get get2_1 = prepareGet(0, 0, namespace1, table1);
-    Optional<Result> result2 = transaction2.get(get2_1);
-    assertThat(result2).isPresent();
-    int current2 = getBalance(result2.get());
-    Get get2_2 = prepareGet(0, 1, namespace2, table2);
-    transaction2.get(get2_2);
-    Put put1 = preparePut(0, 0, namespace1, table1).withValue(BALANCE, current1 + 1);
-    transaction1.put(put1);
-    Put put2 = preparePut(0, 1, namespace2, table2).withValue(BALANCE, current2 + 1);
-    transaction2.put(put2);
-    transaction1.commit();
-    Throwable thrown = catchThrowable(transaction2::commit);
-
-    // Assert
-    transaction = manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    result1 = transaction.get(get1_1);
-    assertThat(result1).isPresent();
-    assertThat(getBalance(result1.get())).isEqualTo(1);
-    result2 = transaction.get(get2_1);
-    assertThat(result2).isPresent();
-    assertThat(getBalance(result2.get())).isEqualTo(2);
-    transaction.commit();
-
-    assertThat(thrown).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsInSameTableWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException()
-          throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace1, TABLE_1);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsInDifferentTablesWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException()
-          throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace2, TABLE_2);
-  }
-
-  private void
-      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-          String namespace1, String table1, String namespace2, String table2)
-          throws TransactionException {
-    // Arrange
-    List<Put> puts =
-        Arrays.asList(
-            preparePut(0, 0, namespace1, table1).withValue(BALANCE, 1),
-            preparePut(0, 1, namespace2, table2).withValue(BALANCE, 1));
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    transaction.put(puts);
-    transaction.commit();
-
-    // Act
-    DistributedTransaction transaction1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
 
     Get get1_1 = prepareGet(0, 1, namespace2, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
@@ -2135,7 +2055,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Throwable thrown = catchThrowable(transaction2::commit);
 
     // Assert
-    transaction = manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    transaction = manager.begin(Isolation.SERIALIZABLE);
     result1 = transaction.get(get1_1);
     assertThat(result1).isPresent();
     assertThat(getBalance(result1.get())).isEqualTo(1);
@@ -2149,149 +2069,34 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      commit_WriteSkewOnExistingRecordsInSameTableWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+      commit_WriteSkewOnExistingRecordsInSameTableWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
           throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
+    commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
   @Test
   public void
-      commit_WriteSkewOnExistingRecordsInDifferentTablesWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+      commit_WriteSkewOnExistingRecordsInDifferentTablesWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
           throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
+    commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         namespace1, TABLE_1, namespace2, TABLE_2);
-  }
-
-  private void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-          String namespace1, String table1, String namespace2, String table2)
-          throws TransactionException {
-    // Arrange
-    // no records
-
-    // Act
-    DistributedTransaction transaction1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    DistributedTransaction transaction2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Get get1_1 = prepareGet(0, 1, namespace2, table2);
-    Optional<Result> result1 = transaction1.get(get1_1);
-    Get get1_2 = prepareGet(0, 0, namespace1, table1);
-    transaction1.get(get1_2);
-    int current1 = 0;
-    Get get2_1 = prepareGet(0, 0, namespace1, table1);
-    Optional<Result> result2 = transaction2.get(get2_1);
-    Get get2_2 = prepareGet(0, 1, namespace2, table2);
-    transaction2.get(get2_2);
-    int current2 = 0;
-    Put put1 = preparePut(0, 0, namespace1, table1).withValue(BALANCE, current1 + 1);
-    transaction1.put(put1);
-    Put put2 = preparePut(0, 1, namespace2, table2).withValue(BALANCE, current2 + 1);
-    transaction2.put(put2);
-    Throwable thrown1 = catchThrowable(transaction1::commit);
-    Throwable thrown2 = catchThrowable(transaction2::commit);
-
-    // Assert
-    assertThat(result1.isPresent()).isFalse();
-    assertThat(result2.isPresent()).isFalse();
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    result1 = transaction.get(get1_1);
-    assertThat(result1.isPresent()).isFalse();
-    result2 = transaction.get(get2_1);
-    assertThat(result2).isPresent();
-    assertThat(getBalance(result2.get())).isEqualTo(1);
-    transaction.commit();
-
-    assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
-          throws TransactionException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace1, TABLE_1);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsInDifferentTablesWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
-          throws TransactionException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace2, TABLE_2);
-  }
-
-  private void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly(
-          String namespace1, String table1, String namespace2, String table2)
-          throws TransactionException, CoordinatorException {
-    // Arrange
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
-    coordinator.putState(state);
-
-    // Act
-    DistributedTransaction transaction1 =
-        manager.begin(ANY_ID_1, Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Get get1_1 = prepareGet(0, 1, namespace2, table2);
-    Optional<Result> result1 = transaction1.get(get1_1);
-    Get get1_2 = prepareGet(0, 0, namespace1, table1);
-    Optional<Result> result2 = transaction1.get(get1_2);
-    int current1 = 0;
-    Put put1 = preparePut(0, 0, namespace1, table1).withValue(BALANCE, current1 + 1);
-    transaction1.put(put1);
-    Throwable thrown1 = catchThrowable(transaction1::commit);
-
-    // Assert
-    assertThat(result1.isPresent()).isFalse();
-    assertThat(result2.isPresent()).isFalse();
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    result1 = transaction.get(get1_1);
-    result2 = transaction.get(get1_2);
-    assertThat(result1.isPresent()).isFalse();
-    assertThat(result2.isPresent()).isFalse();
-    transaction.commit();
-
-    assertThat(thrown1).isInstanceOf(CommitException.class);
   }
 
   private boolean isGroupCommitEnabled() {
     return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
   }
 
-  @Test
-  @DisabledIf("isGroupCommitEnabled")
-  public void
-      commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
-          throws TransactionException, CoordinatorException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly(
-        namespace1, TABLE_1, namespace1, TABLE_1);
-  }
-
-  @Test
-  @DisabledIf("isGroupCommitEnabled")
-  public void
-      commit_WriteSkewOnNonExistingRecordsInDifferentTableWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
-          throws TransactionException, CoordinatorException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly(
-        namespace1, TABLE_1, namespace2, TABLE_2);
-  }
-
   private void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
+      commit_WriteSkewOnNonExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
           String namespace1, String table1, String namespace2, String table2)
           throws TransactionException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
     Get get1_1 = prepareGet(0, 1, namespace2, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, namespace1, table1);
@@ -2312,8 +2117,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     result1 = transaction.get(get1_1);
     assertThat(result1.isPresent()).isFalse();
     result2 = transaction.get(get2_1);
@@ -2327,32 +2131,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
+      commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializable_OneShouldCommitTheOtherShouldThrowCommitException()
           throws TransactionException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
+    commit_WriteSkewOnNonExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
   @Test
   public void
-      commit_WriteSkewOnNonExistingRecordsInDifferentTablesWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
+      commit_WriteSkewOnNonExistingRecordsInDifferentTablesWithSerializable_OneShouldCommitTheOtherShouldThrowCommitException()
           throws TransactionException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
+    commit_WriteSkewOnNonExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
   @Test
   public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitConflictException()
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    DistributedTransaction transaction2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
     List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
@@ -2367,46 +2169,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     assertThat(results1).isEmpty();
     assertThat(results2).isEmpty();
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
-    Optional<Result> result2 = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
-    assertThat(result1.isPresent()).isFalse();
-    assertThat(result2.isPresent()).isFalse();
-    transaction.commit();
-
-    assertThat(thrown1).isInstanceOf(CommitConflictException.class);
-    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    // no records
-
-    // Act
-    DistributedTransaction transaction1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
-    int count1 = results1.size();
-    List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
-    int count2 = results2.size();
-    Put put1 = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1);
-    transaction1.put(put1);
-    Put put2 = preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, count2 + 1);
-    transaction2.put(put2);
-    Throwable thrown1 = catchThrowable(transaction1::commit);
-    Throwable thrown2 = catchThrowable(transaction2::commit);
-
-    // Assert
-    assertThat(results1).isEmpty();
-    assertThat(results2).isEmpty();
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result1.isPresent()).isTrue();
     assertThat(getBalance(result1.get())).isEqualTo(1);
@@ -2420,23 +2183,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitConflictException()
+      commit_WriteSkewWithScanOnExistingRecordsWithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
     List<Put> puts =
         Arrays.asList(
             preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1),
             preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     transaction.put(puts);
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
     List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
@@ -2449,7 +2209,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Throwable thrown2 = catchThrowable(transaction2::commit);
 
     // Assert
-    transaction = manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    transaction = manager.begin(Isolation.SERIALIZABLE);
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result1).isPresent();
     assertThat(getBalance(result1.get())).isEqualTo(3);
@@ -2463,14 +2223,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scanAndCommit_MultipleScansGivenInTransactionWithExtraRead_ShouldCommitProperly()
+  public void scanAndCommit_MultipleScansGivenInTransactionWithSerializable_ShouldCommitProperly()
       throws TransactionException {
     // Arrange
     populateRecords(namespace1, TABLE_1);
 
     // Act Assert
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     transaction.scan(prepareScan(0, namespace1, TABLE_1));
     transaction.scan(prepareScan(1, namespace1, TABLE_1));
     assertThatCode(transaction::commit).doesNotThrowAnyException();
@@ -3234,8 +2993,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws TransactionException {
     // Arrange
     populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     Get get =
         Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
             .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
@@ -3259,8 +3017,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws TransactionException {
     // Arrange
     populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     Get get =
         Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
             .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
@@ -3444,10 +3201,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Arrange
 
     // Act
-    DistributedTransaction failingTxn =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction successTxn =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction failingTxn = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction successTxn = manager.begin(Isolation.SERIALIZABLE);
     failingTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
     failingTxn.put(preparePut(0, 0, namespace1, TABLE_1));
     successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
@@ -3482,10 +3237,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnabledIf("isGroupCommitEnabled")
   void put_WhenAllTransactionsAbort_ShouldBeAbortedProperly() throws Exception {
     // Act
-    DistributedTransaction failingTxn1 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction failingTxn2 =
-        manager.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction failingTxn1 = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction failingTxn2 = manager.begin(Isolation.SERIALIZABLE);
 
     doThrow(PreparationConflictException.class).when(commit).prepare(any());
 

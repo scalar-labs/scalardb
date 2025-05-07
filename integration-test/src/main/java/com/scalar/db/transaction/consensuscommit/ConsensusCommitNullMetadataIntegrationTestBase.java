@@ -21,7 +21,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -639,7 +638,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
     DistributedTransaction transaction = manager.begin();
@@ -707,9 +706,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
         current,
         TransactionState.COMMITTED);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -784,9 +781,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -1007,7 +1002,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
     DistributedTransaction transaction = manager.begin();
@@ -1075,9 +1070,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
         current,
         TransactionState.COMMITTED);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -1143,9 +1136,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
 
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->

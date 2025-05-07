@@ -458,11 +458,11 @@ public enum CoreError implements ScalarDbError {
       ""),
   CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
       Category.USER_ERROR, "0106", "Reading already-written data is not allowed", "", ""),
-  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_EXTRA_READ(
+  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0107",
       "The transaction is not validated."
-          + " When using the EXTRA_READ serializable strategy, you need to call validate()"
+          + " When using the SERIALIZABLE isolation level, you need to call validate()"
           + " before calling commit()",
       "",
       ""),
@@ -824,6 +824,37 @@ public enum CoreError implements ScalarDbError {
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
       Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
+  DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY(
+      Category.USER_ERROR, "0179", "Could not find the partition key", "", ""),
+  DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS(
+      Category.USER_ERROR,
+      "0180",
+      "The source record needs to contain all fields if the UPSERT turns into an INSERT",
+      "",
+      ""),
+  DATA_LOADER_DATA_ALREADY_EXISTS(Category.USER_ERROR, "0181", "Record already exists", "", ""),
+  DATA_LOADER_DATA_NOT_FOUND(Category.USER_ERROR, "0182", "Record was not found", "", ""),
+  DATA_LOADER_COULD_NOT_FIND_CLUSTERING_KEY(
+      Category.USER_ERROR, "0183", "Could not find the clustering key", "", ""),
+  DATA_LOADER_TABLE_METADATA_MISSING(
+      Category.USER_ERROR, "0184", "No table metadata found", "", ""),
+  DATA_LOADER_MISSING_SOURCE_FIELD(
+      Category.USER_ERROR,
+      "0185",
+      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "",
+      ""),
+  DATA_LOADER_CSV_DATA_MISMATCH(
+      Category.USER_ERROR, "0186", "The CSV row: %s does not match header: %s.", "", ""),
+  DATA_LOADER_JSON_CONTENT_START_ERROR(
+      Category.USER_ERROR, "0187", "Expected JSON file content to be an array", "", ""),
+  REPLICATION_NOT_ENABLED(
+      Category.USER_ERROR,
+      "0188",
+      // TODO: Update the message once the licence type is determined.
+      "The replication feature is not enabled. To use this feature, you must enable it",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -905,13 +936,7 @@ public enum CoreError implements ScalarDbError {
       "The condition on the column '%s' is not satisfied",
       "",
       ""),
-  CONSENSUS_COMMIT_READING_EMPTY_RECORDS_IN_EXTRA_WRITE(
-      Category.CONCURRENCY_ERROR,
-      "0021",
-      "Reading empty records might cause a write skew anomaly, so the transaction has been aborted for safety purposes",
-      "",
-      ""),
-  CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND_IN_EXTRA_READ(
+  CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND(
       Category.CONCURRENCY_ERROR,
       "0022",
       "An anti-dependency was found. The transaction has been aborted",
@@ -1087,6 +1112,20 @@ public enum CoreError implements ScalarDbError {
       "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
+  DATA_LOADER_CSV_FILE_READ_FAILED(
+      Category.INTERNAL_ERROR, "0049", "Failed to read CSV file. Details: %s.", "", ""),
+  DATA_LOADER_CSV_FILE_HEADER_READ_FAILED(
+      Category.INTERNAL_ERROR, "0050", "Failed to CSV read header line. Details: %s.", "", ""),
+  DATA_LOADER_DATA_CHUNK_PROCESS_FAILED(
+      Category.INTERNAL_ERROR,
+      "0051",
+      "Data chunk processing was interrupted. Details: %s",
+      "",
+      ""),
+  DATA_LOADER_JSON_FILE_READ_FAILED(
+      Category.INTERNAL_ERROR, "0052", "Failed to read JSON file. Details: %s.", "", ""),
+  DATA_LOADER_JSONLINES_FILE_READ_FAILED(
+      Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
 
   //
   // Errors for the unknown transaction status error category

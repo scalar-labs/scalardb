@@ -17,7 +17,6 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
-import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -419,7 +418,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           SelectionType selectionType)
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.PREPARED, prepared_at, null);
 
@@ -488,9 +487,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.PREPARED, current, TransactionState.COMMITTED);
 
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -567,9 +564,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.PREPARED, current, TransactionState.ABORTED);
 
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -799,7 +794,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
           SelectionType selectionType)
           throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.DELETED, prepared_at, null);
 
@@ -868,9 +863,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.DELETED, current, TransactionState.COMMITTED);
 
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -941,9 +934,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     populatePreparedRecordAndCoordinatorStateRecordForStorage1(
         TransactionState.DELETED, current, TransactionState.ABORTED);
 
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager1.begin()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager1.begin();
 
     transaction.setBeforeRecoveryHook(
         () ->
@@ -2009,7 +2000,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowPreparationException()
+      commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowValidationException()
           throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction1 = manager1.begin();
@@ -2021,85 +2012,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction1.commit();
     transaction2.commit();
 
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
-
     // Act Assert
-    TwoPhaseCommitTransaction tx1Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
+    TwoPhaseCommitTransaction tx1Sub1 = manager1.begin(Isolation.SERIALIZABLE);
+    TwoPhaseCommitTransaction tx1Sub2 = manager2.join(tx1Sub1.getId(), Isolation.SERIALIZABLE);
     Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isPresent();
     int current1 = getBalance(result.get());
     tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
-    TwoPhaseCommitTransaction tx2Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
-    result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result).isPresent();
-    int current2 = getBalance(result.get());
-    tx2Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    tx2Sub2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, current2 + 1));
-
-    tx1Sub1.prepare();
-    tx1Sub2.prepare();
-    tx1Sub1.commit();
-    tx1Sub2.commit();
-
-    assertThatThrownBy(
-            () -> {
-              tx2Sub1.prepare();
-              tx2Sub2.prepare();
-            })
-        .isInstanceOf(PreparationException.class);
-    tx2Sub1.rollback();
-    tx2Sub2.rollback();
-
-    // Assert
-    transaction1 = manager1.begin();
-    transaction2 = manager2.join(transaction1.getId());
-
-    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result).isPresent();
-    assertThat(getBalance(result.get())).isEqualTo(current1 + 1);
-    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    assertThat(result).isPresent();
-    assertThat(getBalance(result.get())).isEqualTo(current2);
-
-    transaction1.prepare();
-    transaction2.prepare();
-    transaction1.commit();
-    transaction2.commit();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowValidationException()
-          throws TransactionException {
-    // Arrange
-    TwoPhaseCommitTransaction transaction1 = manager1.begin();
-    TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
-    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
-    transaction2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, 1));
-    transaction1.prepare();
-    transaction2.prepare();
-    transaction1.commit();
-    transaction2.commit();
-
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
-
-    // Act Assert
-    TwoPhaseCommitTransaction tx1Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
-    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    assertThat(result).isPresent();
-    int current1 = getBalance(result.get());
-    tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
-
-    TwoPhaseCommitTransaction tx2Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
+    TwoPhaseCommitTransaction tx2Sub1 = manager1.begin(Isolation.SERIALIZABLE);
+    TwoPhaseCommitTransaction tx2Sub2 = manager2.join(tx2Sub1.getId(), Isolation.SERIALIZABLE);
     result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isPresent();
     int current2 = getBalance(result.get());
@@ -2143,126 +2066,21 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowPreparationException()
+      commit_WriteSkewOnNonExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowValidationException()
           throws TransactionException {
     // Arrange
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
 
-    // Act Assert
-    TwoPhaseCommitTransaction tx1Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
+    // Act
+    TwoPhaseCommitTransaction tx1Sub1 = manager1.begin(Isolation.SERIALIZABLE);
+    TwoPhaseCommitTransaction tx1Sub2 = manager2.join(tx1Sub1.getId(), Isolation.SERIALIZABLE);
     Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
     assertThat(result).isNotPresent();
     int current1 = 0;
     tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
 
-    TwoPhaseCommitTransaction tx2Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
-    result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result).isNotPresent();
-    int current2 = 0;
-    tx2Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    tx2Sub2.put(preparePut(1, 0, namespace2, TABLE_2).withValue(BALANCE, current2 + 1));
-
-    tx1Sub1.prepare();
-    tx1Sub2.prepare();
-    tx1Sub1.commit();
-    tx1Sub2.commit();
-
-    assertThatThrownBy(
-            () -> {
-              tx2Sub1.prepare();
-              tx2Sub2.prepare();
-            })
-        .isInstanceOf(PreparationException.class);
-    tx2Sub1.rollback();
-    tx2Sub2.rollback();
-
-    // Assert
-    TwoPhaseCommitTransaction transaction1 = manager1.begin();
-    TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
-
-    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result).isPresent();
-    assertThat(getBalance(result.get())).isEqualTo(current1 + 1);
-    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    assertThat(result).isNotPresent();
-
-    transaction1.prepare();
-    transaction2.prepare();
-    transaction1.commit();
-    transaction2.commit();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
-          throws TransactionException, CoordinatorException {
-    // Arrange
-    State state = new State(ANY_ID_1, TransactionState.ABORTED);
-    coordinatorForStorage1.putState(state);
-
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
-
-    // Act
-    TwoPhaseCommitTransaction txSub1 = manager1.begin(ANY_ID_1, isolation, strategy);
-    TwoPhaseCommitTransaction txSub2 = manager2.join(txSub1.getId(), isolation, strategy);
-
-    Optional<Result> result = txSub2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    assertThat(result).isNotPresent();
-    result = txSub1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result).isNotPresent();
-    int current1 = 0;
-    txSub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
-
-    assertThatThrownBy(
-            () -> {
-              txSub1.prepare();
-              txSub2.prepare();
-              txSub1.commit();
-              txSub2.commit();
-            })
-        .isInstanceOf(CommitException.class);
-    txSub1.rollback();
-    txSub2.rollback();
-
-    // Assert
-    TwoPhaseCommitTransaction transaction1 = manager1.begin();
-    TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
-
-    result = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result).isNotPresent();
-    result = transaction2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    assertThat(result).isNotPresent();
-
-    transaction1.prepare();
-    transaction2.prepare();
-    transaction1.commit();
-    transaction2.commit();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowValidationException()
-          throws TransactionException {
-    // Arrange
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
-
-    // Act
-    TwoPhaseCommitTransaction tx1Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx1Sub2 = manager2.join(tx1Sub1.getId(), isolation, strategy);
-    Optional<Result> result = tx1Sub2.get(prepareGet(1, 0, namespace2, TABLE_2));
-    assertThat(result).isNotPresent();
-    int current1 = 0;
-    tx1Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    tx1Sub1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, current1 + 1));
-
-    TwoPhaseCommitTransaction tx2Sub1 = manager1.begin(isolation, strategy);
-    TwoPhaseCommitTransaction tx2Sub2 = manager2.join(tx2Sub1.getId(), isolation, strategy);
+    TwoPhaseCommitTransaction tx2Sub1 = manager1.begin(Isolation.SERIALIZABLE);
+    TwoPhaseCommitTransaction tx2Sub2 = manager2.join(tx2Sub1.getId(), Isolation.SERIALIZABLE);
     result = tx2Sub1.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(result).isNotPresent();
     int current2 = 0;
@@ -2305,58 +2123,18 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowPreparationException()
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowValidationException()
           throws TransactionException {
     // Arrange
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_WRITE;
 
     // Act Assert
-    TwoPhaseCommitTransaction transaction1 = manager1.begin(isolation, strategy);
+    TwoPhaseCommitTransaction transaction1 = manager1.begin(Isolation.SERIALIZABLE);
     List<Result> results = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results).isEmpty();
     int count1 = 0;
     transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1));
 
-    TwoPhaseCommitTransaction transaction2 = manager1.begin(isolation, strategy);
-    results = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
-    assertThat(results).isEmpty();
-    int count2 = 0;
-    transaction2.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, count2 + 1));
-
-    assertThatThrownBy(transaction1::prepare).isInstanceOf(PreparationException.class);
-    transaction1.rollback();
-
-    assertThatThrownBy(transaction2::prepare).isInstanceOf(PreparationException.class);
-    transaction2.rollback();
-
-    // Assert
-    TwoPhaseCommitTransaction transaction = manager1.begin();
-    Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result).isNotPresent();
-    result = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
-    assertThat(result).isNotPresent();
-
-    transaction.prepare();
-    transaction.commit();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowValidationException()
-          throws TransactionException {
-    // Arrange
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
-
-    // Act Assert
-    TwoPhaseCommitTransaction transaction1 = manager1.begin(isolation, strategy);
-    List<Result> results = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
-    assertThat(results).isEmpty();
-    int count1 = 0;
-    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1));
-
-    TwoPhaseCommitTransaction transaction2 = manager1.begin(isolation, strategy);
+    TwoPhaseCommitTransaction transaction2 = manager1.begin(Isolation.SERIALIZABLE);
     results = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results).isEmpty();
     int count2 = 0;
@@ -2388,7 +2166,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowValidationException()
+      commit_WriteSkewWithScanOnExistingRecordsWithSerializable_ShouldThrowValidationException()
           throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
@@ -2397,17 +2175,14 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     transaction.prepare();
     transaction.commit();
 
-    Isolation isolation = Isolation.SERIALIZABLE;
-    SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
-
     // Act Assert
-    TwoPhaseCommitTransaction transaction1 = manager1.begin(isolation, strategy);
+    TwoPhaseCommitTransaction transaction1 = manager1.begin(Isolation.SERIALIZABLE);
     List<Result> results = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results.size()).isEqualTo(2);
     int count1 = results.size();
     transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1));
 
-    TwoPhaseCommitTransaction transaction2 = manager1.begin(isolation, strategy);
+    TwoPhaseCommitTransaction transaction2 = manager1.begin(Isolation.SERIALIZABLE);
     results = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     assertThat(results.size()).isEqualTo(2);
     int count2 = results.size();
@@ -2439,14 +2214,13 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scanAndCommit_MultipleScansGivenInTransactionWithExtraRead_ShouldCommitProperly()
+  public void scanAndCommit_MultipleScansGivenInTransactionWithSerializable_ShouldCommitProperly()
       throws TransactionException {
     // Arrange
     populate(manager1, namespace1, TABLE_1);
 
     // Act Assert
-    TwoPhaseCommitTransaction transaction =
-        manager1.begin(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    TwoPhaseCommitTransaction transaction = manager1.begin(Isolation.SERIALIZABLE);
     transaction.scan(prepareScan(0, namespace1, TABLE_1));
     transaction.scan(prepareScan(1, namespace1, TABLE_1));
     assertThatCode(
