@@ -7,7 +7,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.schemaloader.SchemaLoaderImportIntegrationTestBase;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@DisabledIf("isSqlite")
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
 
   private static final Logger logger =
@@ -79,6 +79,20 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
               + "PRIMARY KEY("
               + rdbEngine.enclose("pk")
               + "))";
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      sql =
+          "CREATE TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + "("
+              + rdbEngine.enclose("pk")
+              + " CHAR(8) NOT NULL,"
+              + rdbEngine.enclose("col1")
+              + " CHAR(8),"
+              + rdbEngine.enclose("col2")
+              + " TIMESTAMP,"
+              + "PRIMARY KEY("
+              + rdbEngine.enclose("pk")
+              + "))";
     } else {
       throw new AssertionError();
     }
@@ -96,8 +110,8 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
       return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMP);
     } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isSqlServer(rdbEngine)) {
       return ImmutableMap.of("col1", DataType.TEXT);
-    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
-      return Collections.emptyMap();
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMPTZ);
     } else {
       throw new AssertionError();
     }
@@ -120,6 +134,10 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
           .build();
     } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isSqlServer(rdbEngine)) {
       return metadata.build();
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return metadata
+          .addColumn("col2", hasTypeOverride ? DataType.TIMESTAMPTZ : DataType.TIMESTAMP)
+          .build();
     } else {
       throw new AssertionError();
     }
@@ -137,8 +155,8 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
       nonImportableDataType = "INT";
     } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       nonImportableDataType = "MONEY";
-    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
-      nonImportableDataType = "TEXT";
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      nonImportableDataType = "XML";
     } else {
       throw new AssertionError();
     }
@@ -147,7 +165,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
             + rdbEngine.encloseFullTableName(namespace, table)
             + "("
             + rdbEngine.enclose("pk")
-            + " CHAR(8),"
+            + " CHAR(8) NOT NULL,"
             + rdbEngine.enclose("col")
             + " "
             + nonImportableDataType
@@ -163,14 +181,12 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
 
   @Test
   @Override
-  @DisabledIf("isSqlite")
   public void importTables_ImportableTablesGiven_ShouldImportProperly() throws Exception {
     super.importTables_ImportableTablesGiven_ShouldImportProperly();
   }
 
   @Test
   @Override
-  @DisabledIf("isSqlite")
   public void importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly()
       throws Exception {
     super.importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly();
@@ -194,7 +210,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   }
 
   @SuppressWarnings("unused")
-  private boolean isSqlite() {
+  private static boolean isSqlite() {
     return JdbcEnv.isSqlite();
   }
 
