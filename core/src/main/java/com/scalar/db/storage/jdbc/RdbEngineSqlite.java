@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.sqlite.SQLiteErrorCode;
 import org.sqlite.SQLiteException;
 
@@ -110,6 +111,7 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
   public String getDataTypeForKey(DataType dataType) {
     return null;
   }
@@ -141,7 +143,7 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return "TEXT";
   }
 

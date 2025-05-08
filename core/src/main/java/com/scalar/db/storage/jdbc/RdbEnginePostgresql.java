@@ -219,6 +219,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
   public String getDataTypeForKey(DataType dataType) {
     // The number 10485760 is due to the maximum length of the character column.
     // https://www.postgresql.org/docs/15/datatype-character.html
@@ -345,7 +346,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }
 
