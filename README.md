@@ -21,11 +21,13 @@ To learn more, see [ScalarDB Overview](https://scalardb.scalar-labs.com/docs/lat
 2. To set up and run various samples instances, see the [list of ScalarDB sample applications](https://scalardb.scalar-labs.com/docs/latest/scalardb-samples).
 3. Learn about the [configurations for ScalarDB Core](https://scalardb.scalar-labs.com/docs/latest/configurations) and the [configurations for ScalarDB Cluster](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-cluster-configurations).
 4. Learn about features, such as:
+5. Learn about ScalarDB and its features:
+   - [ScalarDB design](https://scalardb.scalar-labs.com/docs/latest/design)
    - [User authentication/authorization](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-auth-with-sql) (for enterprise customers)
    - [Attribute-based access control](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/authorize-with-abac) (for enterprise customers)
    - [Vector search](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/getting-started-with-vector-search) (for enterprise customers)
 
-For additional documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/latest/).
+For additional documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/latest).
 
 ## Install
 
