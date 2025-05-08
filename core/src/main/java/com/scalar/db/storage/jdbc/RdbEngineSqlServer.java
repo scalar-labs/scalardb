@@ -18,6 +18,7 @@ import java.time.LocalTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,6 +201,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
   public String getDataTypeForKey(DataType dataType) {
     // SQL Server does not require any change in column data types when making indices.
     return null;
@@ -329,7 +331,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }
 
