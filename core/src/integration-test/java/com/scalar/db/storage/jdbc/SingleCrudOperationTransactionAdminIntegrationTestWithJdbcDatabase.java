@@ -9,10 +9,13 @@ import org.junit.jupiter.api.condition.DisabledIf;
 
 public class SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
     extends SingleCrudOperationTransactionAdminIntegrationTestBase {
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProps(String testName) {
-    return JdbcEnv.getProperties(testName);
+    Properties properties = JdbcEnv.getProperties(testName);
+    rdbEngine = RdbEngineFactory.create(new JdbcConfig(new DatabaseConfig(properties)));
+    return properties;
   }
 
   @Override
@@ -94,5 +97,14 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
   @DisabledIf("isSqlite")
   public void createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {
     super.createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException();
+  }
+
+  @Override
+  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
+    // "admin.createIndex()" for TEXT and BLOB columns fails (the "create index" query runs
+    // indefinitely) on the Db2 community edition docker version which we use for the CI.
+    // However, the index creation is successful on Db2 hosted on IBM Cloud.
+    // So we disable these tests until the issue with the Db2 community edition is resolved.
+    return !JdbcTestUtils.isDb2(rdbEngine);
   }
 }

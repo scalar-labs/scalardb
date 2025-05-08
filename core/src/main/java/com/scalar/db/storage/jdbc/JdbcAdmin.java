@@ -193,23 +193,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + "("
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " "
-            + getTextType(128)
+            + getTextType(128, true)
             + ","
             + enclose(METADATA_COL_COLUMN_NAME)
             + " "
-            + getTextType(128)
+            + getTextType(128, true)
             + ","
             + enclose(METADATA_COL_DATA_TYPE)
             + " "
-            + getTextType(20)
+            + getTextType(20, false)
             + " NOT NULL,"
             + enclose(METADATA_COL_KEY_TYPE)
             + " "
-            + getTextType(20)
+            + getTextType(20, false)
             + ","
             + enclose(METADATA_COL_CLUSTERING_ORDER)
             + " "
-            + getTextType(10)
+            + getTextType(10, false)
             + ","
             + enclose(METADATA_COL_INDEXED)
             + " "
@@ -234,8 +234,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private String getTextType(int charLength) {
-    return rdbEngine.getTextType(charLength);
+  private String getTextType(int charLength, boolean isKey) {
+    return rdbEngine.getTextType(charLength, isKey);
   }
 
   private String getBooleanType() {
@@ -609,17 +609,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * @return a vendor DB data type
    */
   private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
-    HashSet<String> keysAndIndexes =
-        Sets.newHashSet(
-            Iterables.concat(
-                metadata.getPartitionKeyNames(),
-                metadata.getClusteringKeyNames(),
-                metadata.getSecondaryIndexNames()));
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
 
     String dataType = rdbEngine.getDataTypeForEngine(scalarDbColumnType);
-    if (keysAndIndexes.contains(columnName)) {
-      String indexDataType = rdbEngine.getDataTypeForKey(scalarDbColumnType);
+    if (metadata.getPartitionKeyNames().contains(columnName)
+        || metadata.getClusteringKeyNames().contains(columnName)) {
+      String keyDataType = rdbEngine.getDataTypeForKey(scalarDbColumnType);
+      return Optional.ofNullable(keyDataType).orElse(dataType);
+    } else if (metadata.getSecondaryIndexNames().contains(columnName)) {
+      String indexDataType = rdbEngine.getDataTypeForSecondaryIndex(scalarDbColumnType);
       return Optional.ofNullable(indexDataType).orElse(dataType);
     } else {
       return dataType;
@@ -662,7 +660,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    String columnTypeForKey = rdbEngine.getDataTypeForKey(indexType);
+    String columnTypeForKey = rdbEngine.getDataTypeForSecondaryIndex(indexType);
     if (columnTypeForKey == null) {
       // The column type does not need to be altered to be compatible with being secondary index
       return;
@@ -676,7 +674,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    String columnTypeForKey = rdbEngine.getDataTypeForKey(indexType);
+    String columnTypeForKey = rdbEngine.getDataTypeForSecondaryIndex(indexType);
     if (columnTypeForKey == null) {
       // The column type is already the type for a regular column. It was not altered to be
       // compatible with being a secondary index, so no alteration is necessary.
