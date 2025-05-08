@@ -39,6 +39,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
   protected static final String SUMMARY_LOG_FILE_NAME_FORMAT = "data_chunk_%s_summary.json";
   protected static final String FAILURE_LOG_FILE_NAME_FORMAT = "data_chunk_%s_failure.json";
   protected static final String SUCCESS_LOG_FILE_NAME_FORMAT = "data_chunk_%s_success.json";
+
   private static final Logger logger = LoggerFactory.getLogger(SplitByDataChunkImportLogger.class);
   private final Map<Integer, LogWriter> summaryLogWriters = new ConcurrentHashMap<>();
   private final Map<Integer, LogWriter> successLogWriters = new ConcurrentHashMap<>();
