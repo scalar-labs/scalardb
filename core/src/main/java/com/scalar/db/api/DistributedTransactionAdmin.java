@@ -8,7 +8,8 @@ import java.util.Map;
  * An administrative interface for distributed transaction implementations. The user can execute
  * administrative operations with it like createNamespace/createTable/getTableMetadata.
  */
-public interface DistributedTransactionAdmin extends Admin, AuthAdmin, AbacAdmin, AutoCloseable {
+public interface DistributedTransactionAdmin
+    extends Admin, AuthAdmin, AbacAdmin, ReplicationAdmin, AutoCloseable {
 
   /**
    * Creates coordinator namespace and tables.
