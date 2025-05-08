@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 public class LocalFileLogWriter implements LogWriter {
   private final JsonGenerator logWriter;
   private final DataLoaderObjectMapper objectMapper;
+  private boolean isEndArrayWritten = false;
 
   /**
    * Creates an instance of LocalFileLogWriter with the specified file path and configuration.
@@ -79,7 +80,10 @@ public class LocalFileLogWriter implements LogWriter {
     if (logWriter.isClosed()) {
       return;
     }
-    logWriter.writeEndArray();
+    if (!isEndArrayWritten) {
+      logWriter.writeEndArray();
+      isEndArrayWritten = true;
+    }
     logWriter.flush();
     logWriter.close();
   }
