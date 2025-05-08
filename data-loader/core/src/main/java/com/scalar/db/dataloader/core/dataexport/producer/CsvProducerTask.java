@@ -78,7 +78,8 @@ public class CsvProducerTask extends ProducerTask {
         String columnName = iterator.next();
 
         // Skip the field if it can be ignored based on check
-        boolean columnNotProjected = !projectedColumnsSet.contains(columnName);
+        boolean columnNotProjected =
+            !projectedColumnsSet.isEmpty() && !projectedColumnsSet.contains(columnName);
         boolean isMetadataColumn =
             ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata);
         if (columnNotProjected || (!includeMetadata && isMetadataColumn)) {
