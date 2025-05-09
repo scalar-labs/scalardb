@@ -20,7 +20,6 @@ To learn more, see [ScalarDB Overview](https://scalardb.scalar-labs.com/docs/lat
    - **Get started with ScalarDB Cluster (for enterprise customers):** To set up a basic application that uses ScalarDB Cluster through the Java API, see [Getting Started with ScalarDB Cluster](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/getting-started-with-scalardb-cluster).
 2. To set up and run various samples instances, see the [list of ScalarDB sample applications](https://scalardb.scalar-labs.com/docs/latest/scalardb-samples).
 3. Learn about the [configurations for ScalarDB Core](https://scalardb.scalar-labs.com/docs/latest/configurations) and the [configurations for ScalarDB Cluster](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-cluster-configurations).
-4. Learn about features, such as:
 5. Learn about ScalarDB and its features:
    - [ScalarDB design](https://scalardb.scalar-labs.com/docs/latest/design)
    - [User authentication/authorization](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-auth-with-sql) (for enterprise customers)
