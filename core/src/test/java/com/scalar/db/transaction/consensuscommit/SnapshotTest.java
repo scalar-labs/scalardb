@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.ConditionalExpression;
@@ -45,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -93,7 +95,7 @@ public class SnapshotTest {
   private Snapshot snapshot;
   private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
   private ConcurrentMap<Get, Optional<TransactionResult>> getSet;
-  private Map<Scan, Map<Snapshot.Key, TransactionResult>> scanSet;
+  private Map<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
 
@@ -509,7 +511,8 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    Map<Snapshot.Key, TransactionResult> expected = Collections.singletonMap(key, result);
+    LinkedHashMap<Snapshot.Key, TransactionResult> expected =
+        Maps.newLinkedHashMap(Collections.singletonMap(key, result));
 
     // Act
     snapshot.putIntoScanSet(scan, expected);
@@ -779,7 +782,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
 
     // Act
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+    Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
 
     // Assert
     assertThat(results.isPresent()).isFalse();
@@ -798,10 +801,11 @@ public class SnapshotTest {
     Snapshot.Key key1 = mock(Snapshot.Key.class);
     Snapshot.Key key2 = mock(Snapshot.Key.class);
     Snapshot.Key key3 = mock(Snapshot.Key.class);
-    scanSet.put(scan, ImmutableMap.of(key1, result1, key2, result2, key3, result3));
+    scanSet.put(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
     // Act
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+    Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
 
     // Assert
     assertThat(results).isPresent();
@@ -1035,7 +1039,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID + "x");
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
@@ -1060,7 +1064,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Scanner scanner = mock(Scanner.class);
@@ -1087,7 +1091,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID);
     Scanner scanner = mock(Scanner.class);
@@ -1112,7 +1116,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID + "x");
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.emptyMap()));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
@@ -1141,7 +1145,7 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    snapshot.putIntoScanSet(scan, ImmutableMap.of(key2, result2));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
@@ -1169,7 +1173,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.emptyMap()));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
@@ -1197,7 +1201,7 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    snapshot.putIntoScanSet(scan, ImmutableMap.of(key2, result2));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
@@ -1225,7 +1229,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.empty());
@@ -1254,7 +1258,8 @@ public class SnapshotTest {
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     Snapshot.Key key1 = new Snapshot.Key(scan, result1);
     Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    snapshot.putIntoScanSet(scan, ImmutableMap.of(key1, result1, key2, result2));
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
 
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1323,8 +1328,12 @@ public class SnapshotTest {
     Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
     Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
 
-    snapshot.putIntoScanSet(scan1, Collections.singletonMap(key1, new TransactionResult(result1)));
-    snapshot.putIntoScanSet(scan2, Collections.singletonMap(key2, new TransactionResult(result2)));
+    snapshot.putIntoScanSet(
+        scan1,
+        Maps.newLinkedHashMap(Collections.singletonMap(key1, new TransactionResult(result1))));
+    snapshot.putIntoScanSet(
+        scan2,
+        Maps.newLinkedHashMap(Collections.singletonMap(key2, new TransactionResult(result2))));
 
     DistributedStorage storage = mock(DistributedStorage.class);
 
@@ -1412,7 +1421,7 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x");
     TransactionResult result2 = prepareResult(ANY_ID + "x");
     Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key1, result1));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
         Scan.newBuilder(scan)
@@ -1444,7 +1453,7 @@ public class SnapshotTest {
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
     TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    snapshot.putIntoScanSet(scan, ImmutableMap.of(key1, result1));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
         Scan.newBuilder(scan)
@@ -1478,7 +1487,7 @@ public class SnapshotTest {
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
     TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
     Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    snapshot.putIntoScanSet(scan, ImmutableMap.of(key1, result1));
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
         Scan.newBuilder(scan)
@@ -1512,7 +1521,8 @@ public class SnapshotTest {
     TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_4);
     Snapshot.Key key1 = new Snapshot.Key(scan, result1);
     Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    snapshot.putIntoScanSet(scan, ImmutableMap.of(key1, result1, key2, result2));
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
         Scan.newBuilder(scan)
@@ -1547,7 +1557,8 @@ public class SnapshotTest {
     TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_4);
     Snapshot.Key key1 = new Snapshot.Key(scan, result1);
     Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    snapshot.putIntoScanSet(scan, ImmutableMap.of(key1, result1, key2, result2));
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
         Scan.newBuilder(scan)

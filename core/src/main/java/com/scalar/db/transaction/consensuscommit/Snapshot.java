@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,7 +57,7 @@ public class Snapshot {
   private final ParallelExecutor parallelExecutor;
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
   private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
-  private final Map<Scan, Map<Key, TransactionResult>> scanSet;
+  private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
@@ -84,7 +85,7 @@ public class Snapshot {
       ParallelExecutor parallelExecutor,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
       ConcurrentMap<Get, Optional<TransactionResult>> getSet,
-      Map<Scan, Map<Key, TransactionResult>> scanSet,
+      Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
     this.id = id;
@@ -121,7 +122,7 @@ public class Snapshot {
     getSet.put(get, result);
   }
 
-  public void putIntoScanSet(Scan scan, Map<Key, TransactionResult> results) {
+  public void putIntoScanSet(Scan scan, LinkedHashMap<Key, TransactionResult> results) {
     scanSet.put(scan, results);
   }
 
@@ -199,7 +200,8 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<Map<Snapshot.Key, TransactionResult>> getResults(Scan scan) throws CrudException {
+  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan)
+      throws CrudException {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -479,7 +481,7 @@ public class Snapshot {
     List<ParallelExecutorTask> tasks = new ArrayList<>();
 
     // Scan set is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Scan, Map<Key, TransactionResult>> entry : scanSet.entrySet()) {
+    for (Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>> entry : scanSet.entrySet()) {
       tasks.add(() -> validateScanResults(storage, entry.getKey(), entry.getValue()));
     }
 
@@ -530,7 +532,7 @@ public class Snapshot {
    * @throws ValidationConflictException if the scan results are changed by another transaction
    */
   private void validateScanResults(
-      DistributedStorage storage, Scan scan, Map<Key, TransactionResult> results)
+      DistributedStorage storage, Scan scan, LinkedHashMap<Key, TransactionResult> results)
       throws ExecutionException, ValidationConflictException {
     Scanner scanner = null;
     try {
