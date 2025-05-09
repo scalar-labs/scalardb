@@ -3,13 +3,13 @@ package com.scalar.db.dataloader.core.dataexport;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import java.io.IOException;
 import java.io.Writer;
 
 public class JsonExportManager extends ExportManager {
   public JsonExportManager(
-      DistributedStorage storage, ScalarDBDao dao, ProducerTaskFactory producerTaskFactory) {
+      DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
     super(storage, dao, producerTaskFactory);
   }
 
