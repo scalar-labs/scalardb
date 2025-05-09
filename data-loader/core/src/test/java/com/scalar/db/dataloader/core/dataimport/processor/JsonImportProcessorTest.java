@@ -28,7 +28,6 @@ import org.mockito.Mockito;
 
 class JsonImportProcessorTest {
   @Mock private ImportProcessorParams params;
-  @Mock ScalarDbMode scalarDbMode;
   @Mock ImportOptions importOptions;
   @Mock Map<String, TableMetadata> tableMetadataByTableName;
   @Mock TableColumnDataTypes tableColumnDataTypes;
@@ -58,6 +57,8 @@ class JsonImportProcessorTest {
             .dataChunkSize(5)
             .tableName("table")
             .logMode(LogMode.SINGLE_FILE)
+            .maxThreads(8)
+            .dataChunkQueueSize(256)
             .build();
     Mockito.when(
             dao.get(
@@ -86,7 +87,6 @@ class JsonImportProcessorTest {
             .dao(dao)
             .distributedStorage(distributedStorage)
             .distributedTransactionManager(distributedTransactionManager)
-            .scalarDbMode(scalarDbMode)
             .tableColumnDataTypes(tableColumnDataTypes)
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();
@@ -106,7 +106,6 @@ class JsonImportProcessorTest {
             .dao(dao)
             .distributedStorage(distributedStorage)
             .distributedTransactionManager(distributedTransactionManager)
-            .scalarDbMode(scalarDbMode)
             .tableColumnDataTypes(tableColumnDataTypes)
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();

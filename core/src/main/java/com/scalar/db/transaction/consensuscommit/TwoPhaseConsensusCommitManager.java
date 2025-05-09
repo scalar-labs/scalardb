@@ -17,7 +17,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
+import com.scalar.db.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -26,7 +26,6 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.service.StorageFactory;
@@ -42,8 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class TwoPhaseConsensusCommitManager
-    extends ActiveTransactionManagedTwoPhaseCommitTransactionManager {
+public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransactionManager {
 
   private static final Logger logger =
       LoggerFactory.getLogger(TwoPhaseConsensusCommitManager.class);
@@ -130,54 +128,43 @@ public class TwoPhaseConsensusCommitManager
   }
 
   @Override
-  public TwoPhaseCommitTransaction begin() throws TransactionException {
+  public TwoPhaseCommitTransaction begin() {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation());
   }
 
   @Override
-  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction begin(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
-    return begin(txId, config.getIsolation(), config.getSerializableStrategy());
+    return begin(txId, config.getIsolation());
   }
 
   @VisibleForTesting
-  TwoPhaseCommitTransaction begin(Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
+  TwoPhaseCommitTransaction begin(Isolation isolation) {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, isolation, strategy);
+    return begin(txId, isolation);
   }
 
   @VisibleForTesting
-  TwoPhaseCommitTransaction begin(String txId, Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
+  TwoPhaseCommitTransaction begin(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    return createNewTransaction(txId, isolation, strategy, true);
+    return createNewTransaction(txId, isolation);
   }
 
   @Override
-  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction join(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
-    return join(txId, config.getIsolation(), config.getSerializableStrategy());
+    return join(txId, config.getIsolation());
   }
 
   @VisibleForTesting
-  TwoPhaseCommitTransaction join(String txId, Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
+  TwoPhaseCommitTransaction join(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    // If the transaction associated with the specified transaction ID is active, resume it
-    if (isTransactionActive(txId)) {
-      return resume(txId);
-    }
-
-    return createNewTransaction(txId, isolation, strategy, true);
+    return createNewTransaction(txId, isolation);
   }
 
-  private TwoPhaseCommitTransaction createNewTransaction(
-      String txId, Isolation isolation, SerializableStrategy strategy, boolean decorate)
-      throws TransactionException {
-    Snapshot snapshot =
-        new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
+  private TwoPhaseCommitTransaction createNewTransaction(String txId, Isolation isolation) {
+    Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
             storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
@@ -186,7 +173,7 @@ public class TwoPhaseConsensusCommitManager
         new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
-    return decorate ? decorate(transaction) : transaction;
+    return transaction;
   }
 
   @Override
@@ -278,15 +265,7 @@ public class TwoPhaseConsensusCommitManager
   private <R> R executeTransaction(
       ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction)
       throws CrudException, UnknownTransactionStatusException {
-    TwoPhaseCommitTransaction transaction;
-    try {
-      transaction = beginInternal();
-    } catch (TransactionNotFoundException e) {
-      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    } catch (TransactionException e) {
-      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    }
-
+    TwoPhaseCommitTransaction transaction = begin();
     try {
       R result = throwableFunction.apply(transaction);
       transaction.prepare();
@@ -307,13 +286,6 @@ public class TwoPhaseConsensusCommitManager
       rollbackTransaction(transaction);
       throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
-  }
-
-  @VisibleForTesting
-  TwoPhaseCommitTransaction beginInternal() throws TransactionException {
-    String txId = UUID.randomUUID().toString();
-    return createNewTransaction(
-        txId, config.getIsolation(), config.getSerializableStrategy(), false);
   }
 
   private void rollbackTransaction(TwoPhaseCommitTransaction transaction) {
