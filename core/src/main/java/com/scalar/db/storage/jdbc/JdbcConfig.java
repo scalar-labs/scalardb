@@ -53,8 +53,11 @@ public class JdbcConfig {
       PREFIX + "mysql.variable_key_column_size";
   public static final String ORACLE_VARIABLE_KEY_COLUMN_SIZE =
       PREFIX + "oracle.variable_key_column_size";
+  public static final String DB2_VARIABLE_KEY_COLUMN_SIZE = PREFIX + "db2.variable_key_column_size";
   public static final String ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "oracle.time_column.default_date_component";
+  public static final String DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
+      PREFIX + "db2.time_column.default_date_component";
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
@@ -69,8 +72,8 @@ public class JdbcConfig {
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
 
-  // MySQL and Oracle have limitations regarding the total size of key columns. Thus, we should set
-  // a small but enough key column size so that users can create multiple key columns without
+  // MySQL, Oracle and Db2 have limitations regarding the total size of key columns. Thus, we should
+  // set a small but enough key column size so that users can create multiple key columns without
   // exceeding the limit and changing the default. Since we found the old default size of 64 bytes
   // was small for some applications, we changed it based on the following specifications. See the
   // official documents for details.
@@ -79,10 +82,15 @@ public class JdbcConfig {
   // different settings are used.
   // 2) In Oracle, the maximum total size of key columns is approximately 75% of the database block
   // size minus some overhead. The default block size is 8KB, and it is typically 4kB or 8kB. Thus,
-  // the maximum size can be similar to the MySQL.
+  // the maximum size can be similar to MySQL.
+  // 3) In Db2, the maximum total size of key columns is indexPageSize/4, since the default page
+  // size is 4KB, the default key column size is 1024 bytes. So the maximum size can be similar to
+  // MySQL.
+  //
   // See the official documents for details.
   // https://dev.mysql.com/doc/refman/8.0/en/innodb-limits.html
   // https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/logical-database-limits.html
+  // https://www.ibm.com/docs/en/db2/12.1.0?topic=sql-xml-limits
   public static final int DEFAULT_VARIABLE_KEY_COLUMN_SIZE = 128;
   // As the partition key `tx_id` of the coordinator state table, we need a UUID string plus a
   // 25-byte prefix for the group commit feature; thus, we set 64 bytes as the minimum.
@@ -92,6 +100,12 @@ public class JdbcConfig {
   // stores every value of the TIME type with the same date component columns for ease of
   // comparison and sorting. The default date component is 1970-01-01.
   public static final String DEFAULT_ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
+
+  // In Db2, to store a date with a fractional second, the timestamp type is used since Db2 TIME
+  // type does not provide fractional seconds. So ScalarDB stores every value of the TIME type with
+  // the same date component columns for ease of comparison and sorting. The default date component
+  // is 1970-01-01.
+  public static final String DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
 
   private final String jdbcUrl;
   @Nullable private final String username;
@@ -116,8 +130,10 @@ public class JdbcConfig {
 
   private final int mysqlVariableKeyColumnSize;
   private final int oracleVariableKeyColumnSize;
+  private final int db2VariableKeyColumnSize;
 
   private final LocalDate oracleTimeColumnDefaultDateComponent;
+  private final LocalDate db2TimeColumnDefaultDateComponent;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -216,8 +232,15 @@ public class JdbcConfig {
             ORACLE_VARIABLE_KEY_COLUMN_SIZE,
             DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
 
+    db2VariableKeyColumnSize =
+        getInt(
+            databaseConfig.getProperties(),
+            DB2_VARIABLE_KEY_COLUMN_SIZE,
+            DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+
     if (mysqlVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE
-        || oracleVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE) {
+        || oracleVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE
+        || db2VariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE) {
       throw new IllegalArgumentException(CoreError.INVALID_VARIABLE_KEY_COLUMN_SIZE.buildMessage());
     }
 
@@ -230,6 +253,14 @@ public class JdbcConfig {
     oracleTimeColumnDefaultDateComponent =
         LocalDate.parse(
             oracleTimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
+    String db2TimeColumnDefaultDateComponentString =
+        getString(
+            databaseConfig.getProperties(),
+            DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT,
+            DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
+    assert db2TimeColumnDefaultDateComponentString != null;
+    db2TimeColumnDefaultDateComponent =
+        LocalDate.parse(db2TimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
 
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
@@ -319,7 +350,15 @@ public class JdbcConfig {
     return oracleVariableKeyColumnSize;
   }
 
+  public int getDb2VariableKeyColumnSize() {
+    return db2VariableKeyColumnSize;
+  }
+
   public LocalDate getOracleTimeColumnDefaultDateComponent() {
     return oracleTimeColumnDefaultDateComponent;
+  }
+
+  public LocalDate getDb2TimeColumnDefaultDateComponent() {
+    return db2TimeColumnDefaultDateComponent;
   }
 }
