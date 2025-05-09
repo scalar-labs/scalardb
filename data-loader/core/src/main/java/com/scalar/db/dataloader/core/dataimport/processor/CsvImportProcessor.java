@@ -69,6 +69,7 @@ public class CsvImportProcessor extends ImportProcessor {
     ExecutorService dataChunkExecutor = Executors.newSingleThreadExecutor();
     BlockingQueue<ImportDataChunk> dataChunkQueue =
         new LinkedBlockingQueue<>(params.getImportOptions().getDataChunkQueueSize());
+
     try {
       CompletableFuture<Void> readerFuture =
           CompletableFuture.runAsync(
