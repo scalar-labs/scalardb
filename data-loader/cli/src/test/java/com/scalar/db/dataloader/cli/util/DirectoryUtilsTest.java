@@ -30,26 +30,26 @@ class DirectoryUtilsTest {
   @Test
   void validateTargetDirectory_ValidDirectory_NoExceptionThrown()
       throws DirectoryValidationException {
-    DirectoryUtils.validateTargetDirectory(tempDir.toString());
+    DirectoryUtils.validateOrCreateTargetDirectory(tempDir.toString());
   }
 
   @Test
-  void validateTargetDirectory_DirectoryDoesNotExist_CreatesDirectory()
+  void validateOrCreateTargetDirectory_DirectoryDoesNotExist_CreatesDirectory()
       throws DirectoryValidationException {
     Path newDirectory = Paths.get(tempDir.toString(), "newDir");
-    DirectoryUtils.validateTargetDirectory(newDirectory.toString());
+    DirectoryUtils.validateOrCreateTargetDirectory(newDirectory.toString());
     assertTrue(Files.exists(newDirectory));
   }
 
   @Test
-  void validateTargetDirectory_DirectoryNotWritable_ThrowsException() throws IOException {
+  void validateOrCreateTargetDirectory_DirectoryNotWritable_ThrowsException() throws IOException {
     Path readOnlyDirectory = Files.createDirectory(Paths.get(tempDir.toString(), "readOnlyDir"));
     readOnlyDirectory.toFile().setWritable(false);
 
     assertThrows(
         DirectoryValidationException.class,
         () -> {
-          DirectoryUtils.validateTargetDirectory(readOnlyDirectory.toString());
+          DirectoryUtils.validateOrCreateTargetDirectory(readOnlyDirectory.toString());
         });
   }
 
@@ -58,16 +58,16 @@ class DirectoryUtilsTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> {
-          DirectoryUtils.validateTargetDirectory(null);
+          DirectoryUtils.validateOrCreateTargetDirectory(null);
         });
   }
 
   @Test
-  void validateTargetDirectory_EmptyDirectory_ThrowsException() {
+  void validateOrCreateTargetDirectory_EmptyDirectory_ThrowsException() {
     assertThrows(
         IllegalArgumentException.class,
         () -> {
-          DirectoryUtils.validateTargetDirectory("");
+          DirectoryUtils.validateOrCreateTargetDirectory("");
         });
   }
 

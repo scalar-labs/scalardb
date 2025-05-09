@@ -49,9 +49,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   private void validateDirectory(String directoryPath) throws DirectoryValidationException {
     // If the directory path is null or empty, use the current working directory
     if (directoryPath == null || directoryPath.isEmpty()) {
-      DirectoryUtils.validateTargetDirectory(DirectoryUtils.getCurrentWorkingDirectory());
+      DirectoryUtils.validateOrCreateTargetDirectory(DirectoryUtils.getCurrentWorkingDirectory());
     } else {
-      DirectoryUtils.validateTargetDirectory(directoryPath);
+      DirectoryUtils.validateOrCreateTargetDirectory(directoryPath);
     }
   }
 
