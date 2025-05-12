@@ -1,7 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNextTxVersion;
 
@@ -73,13 +72,10 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       if (result.isDeemedAsCommitted()) {
         // record is deemed-commit state
         putBuilder.condition(
-            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
-                .and(ConditionBuilder.column(VERSION).isNullInt())
-                .build());
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText()).build());
       } else {
         putBuilder.condition(
             ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
-                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
                 .build());
       }
     } else { // initial record or insert mode enabled
@@ -113,13 +109,10 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       // check if the record is not interrupted by other conflicting transactions
       if (result.isDeemedAsCommitted()) {
         putBuilder.condition(
-            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
-                .and(ConditionBuilder.column(VERSION).isNullInt())
-                .build());
+            ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText()).build());
       } else {
         putBuilder.condition(
             ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(result.getId()))
-                .and(ConditionBuilder.column(VERSION).isEqualToInt(version))
                 .build());
       }
     } else {
