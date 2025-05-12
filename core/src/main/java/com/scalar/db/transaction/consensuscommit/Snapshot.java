@@ -497,9 +497,9 @@ public class Snapshot {
       tasks.add(
           () -> {
             Optional<TransactionResult> originalResult = getSet.get(get);
-            // Only get tx_id and tx_version columns because we use only them to compare
+            // Only get the tx_id column because we use only them to compare
             get.clearProjections();
-            get.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+            get.withProjection(Attribute.ID);
 
             // Check if a read record is not changed
             Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
@@ -537,9 +537,9 @@ public class Snapshot {
       throws ExecutionException, ValidationConflictException {
     Scanner scanner = null;
     try {
-      // Only get tx_id, tx_version and primary key columns because we use only them to compare
+      // Only get tx_id and primary key columns because we use only them to compare
       scan.clearProjections();
-      scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+      scan.withProjection(Attribute.ID);
       ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
 
       if (scan.getLimit() == 0) {
@@ -653,8 +653,7 @@ public class Snapshot {
   }
 
   private boolean isChanged(TransactionResult latestResult, TransactionResult result) {
-    return !Objects.equals(latestResult.getId(), result.getId())
-        || latestResult.getVersion() != result.getVersion();
+    return !Objects.equals(latestResult.getId(), result.getId());
   }
 
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
