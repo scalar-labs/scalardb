@@ -6,6 +6,7 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperation
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Iterators;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -554,12 +555,7 @@ public class Snapshot {
       Optional<Result> latestResult = scanner.one();
 
       Iterator<Entry<Key, TransactionResult>> resultsIterator = results.entrySet().iterator();
-      Entry<Key, TransactionResult> resultsEntry;
-      if (resultsIterator.hasNext()) {
-        resultsEntry = resultsIterator.next();
-      } else {
-        resultsEntry = null;
-      }
+      Entry<Key, TransactionResult> resultsEntry = Iterators.getNext(resultsIterator, null);
 
       // Compare the scan results with the latest scan results
       while (latestResult.isPresent() && resultsEntry != null) {
@@ -576,11 +572,7 @@ public class Snapshot {
             // The record is updated by this transaction
 
             // Skip the record
-            if (resultsIterator.hasNext()) {
-              resultsEntry = resultsIterator.next();
-            } else {
-              resultsEntry = null;
-            }
+            resultsEntry = Iterators.getNext(resultsIterator, null);
           } else {
             // The record is inserted/deleted by this transaction
           }
@@ -605,12 +597,7 @@ public class Snapshot {
         // Proceed to the next record
         //
         latestResult = scanner.one();
-
-        if (resultsIterator.hasNext()) {
-          resultsEntry = resultsIterator.next();
-        } else {
-          resultsEntry = null;
-        }
+        resultsEntry = Iterators.getNext(resultsIterator, null);
       }
 
       if (resultsEntry != null) {
