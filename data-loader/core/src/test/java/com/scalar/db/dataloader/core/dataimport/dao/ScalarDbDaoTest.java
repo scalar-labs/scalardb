@@ -11,14 +11,14 @@ import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class ScalarDBDaoTest {
+class ScalarDbDaoTest {
 
   private static final int TEST_VALUE_INT_MIN = 1;
-  private ScalarDBDao dao;
+  private ScalarDbDao dao;
 
   @BeforeEach
   void setUp() {
-    this.dao = new ScalarDBDao();
+    this.dao = new ScalarDbDao();
   }
 
   @Test
