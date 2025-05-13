@@ -893,6 +893,9 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0195", "Failed to create the directory: %s", "", ""),
   DATA_LOADER_PATH_IS_NOT_A_DIRECTORY(
       Category.USER_ERROR, "0196", "Path exists but is not a directory: %s", "", ""),
+  DATA_LOADER_FILE_PATH_IS_BLANK(
+      Category.USER_ERROR, "0197", "File path must not be blank.", "", ""),
+  DATA_LOADER_FILE_NOT_FOUND(Category.USER_ERROR, "0198", "File not found: %s", "", ""),
 
   //
   // Errors for the concurrency error category
