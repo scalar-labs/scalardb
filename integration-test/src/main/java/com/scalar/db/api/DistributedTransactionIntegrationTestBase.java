@@ -198,6 +198,22 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void get_GetGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.beginReadOnly();
+    Get get = prepareGet(2, 3);
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.commit();
+
+    // Assert
+    assertResult(2, 3, result);
+  }
+
+  @Test
   public void get_GetWithProjectionGivenForCommittedRecord_ShouldReturnRecord()
       throws TransactionException {
     // Arrange
@@ -282,6 +298,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
+    Scan scan = prepareScan(1, 0, 2);
+
+    // Act
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(3);
+    assertResult(1, 0, results.get(0));
+    assertResult(1, 1, results.get(1));
+    assertResult(1, 2, results.get(2));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.beginReadOnly();
     Scan scan = prepareScan(1, 0, 2);
 
     // Act
