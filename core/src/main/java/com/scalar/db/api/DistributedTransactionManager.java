@@ -82,6 +82,34 @@ public interface DistributedTransactionManager
       throws TransactionNotFoundException, TransactionException;
 
   /**
+   * Begins a new transaction in read-only mode.
+   *
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to begin due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
+   *     transaction due to nontransient faults
+   */
+  DistributedTransaction beginReadOnly() throws TransactionNotFoundException, TransactionException;
+
+  /**
+   * Begins a new transaction with the specified transaction ID in read-only mode. It is users'
+   * responsibility to guarantee uniqueness of the ID, so it is not recommended to use this method
+   * unless you know exactly what you are doing.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to begin due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
+   *     transaction due to nontransient faults
+   */
+  DistributedTransaction beginReadOnly(String txId)
+      throws TransactionNotFoundException, TransactionException;
+
+  /**
    * Starts a new transaction. This method is an alias of {@link #begin()}.
    *
    * @return {@link DistributedTransaction}
@@ -110,6 +138,39 @@ public interface DistributedTransactionManager
   default DistributedTransaction start(String txId)
       throws TransactionNotFoundException, TransactionException {
     return begin(txId);
+  }
+
+  /**
+   * Starts a new transaction in read-only mode. This method is an alias of {@link
+   * #beginReadOnly()}.
+   *
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to start due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction startReadOnly()
+      throws TransactionNotFoundException, TransactionException {
+    return beginReadOnly();
+  }
+
+  /**
+   * Starts a new transaction with the specified transaction ID in read-only mode. This method is an
+   * alias of {@link #beginReadOnly(String)}.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to start due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction startReadOnly(String txId)
+      throws TransactionNotFoundException, TransactionException {
+    return beginReadOnly(txId);
   }
 
   /**

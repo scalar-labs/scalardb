@@ -923,6 +923,12 @@ public enum CoreError implements ScalarDbError {
       "Some scanners were not closed. All scanners must be closed before preparing the transaction.",
       "",
       ""),
+  MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
+      Category.USER_ERROR,
+      "0207",
+      "Mutations are not allowed in read-only transactions. Transaction ID: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
