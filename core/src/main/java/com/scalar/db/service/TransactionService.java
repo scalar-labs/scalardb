@@ -82,6 +82,16 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction beginReadOnly() throws TransactionException {
+    return manager.beginReadOnly();
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+    return manager.beginReadOnly(txId);
+  }
+
+  @Override
   public DistributedTransaction start() throws TransactionException {
     return manager.start();
   }
@@ -89,6 +99,16 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction start(String txId) throws TransactionException {
     return manager.start(txId);
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly() throws TransactionException {
+    return manager.startReadOnly();
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId) throws TransactionException {
+    return manager.startReadOnly(txId);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */

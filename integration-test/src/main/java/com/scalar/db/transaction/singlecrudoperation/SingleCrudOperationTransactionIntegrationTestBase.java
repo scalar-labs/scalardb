@@ -58,6 +58,11 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
+  public void get_GetGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecord() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
   public void get_GetWithProjectionGivenForCommittedRecord_ShouldReturnRecord() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
@@ -75,6 +80,13 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @ParameterizedTest
   @EnumSource(ScanType.class)
   public void scanOrGetScanner_ScanGivenForCommittedRecord_ShouldReturnRecords(ScanType scanType) {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecords(
+      ScanType scanType) {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
