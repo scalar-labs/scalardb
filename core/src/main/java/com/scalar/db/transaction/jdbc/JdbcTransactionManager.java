@@ -18,6 +18,7 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
+import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
@@ -36,6 +37,7 @@ import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.ThrowableFunction;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
@@ -90,14 +92,39 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   @Override
   public DistributedTransaction begin() throws TransactionException {
     String txId = UUID.randomUUID().toString();
-    return begin(txId);
+    return begin(txId, false);
   }
 
   @Override
   public DistributedTransaction begin(String txId) throws TransactionException {
+    return begin(txId, false);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly() throws TransactionException {
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, true);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+    return begin(txId, true);
+  }
+
+  private DistributedTransaction begin(String txId, boolean readOnly) throws TransactionException {
     try {
-      JdbcTransaction transaction =
-          new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
+      Connection connection = dataSource.getConnection();
+
+      DistributedTransaction transaction;
+      if (readOnly) {
+        rdbEngine.setReadOnly(connection, true);
+        transaction =
+            new ReadOnlyDistributedTransaction(
+                new JdbcTransaction(txId, jdbcService, connection, rdbEngine));
+      } else {
+        transaction = new JdbcTransaction(txId, jdbcService, connection, rdbEngine);
+      }
+
       getNamespace().ifPresent(transaction::withNamespace);
       getTable().ifPresent(transaction::withTable);
       return transaction;
@@ -107,16 +134,6 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
           e,
           null);
     }
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly() {
-    throw new UnsupportedOperationException("implement later");
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly(String txId) {
-    throw new UnsupportedOperationException("implement later");
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -173,19 +190,19 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
 
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)));
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)), true);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
+    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)), true);
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
     DistributedTransaction transaction;
     try {
-      transaction = begin();
+      transaction = beginReadOnly();
     } catch (TransactionNotFoundException e) {
       throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (TransactionException e) {
@@ -277,7 +294,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.put(copyAndSetTargetToIfNot(put));
           return null;
-        });
+        },
+        false);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -288,7 +306,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.put(copyAndSetTargetToIfNot(puts));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -297,7 +316,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.insert(copyAndSetTargetToIfNot(insert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -306,7 +326,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.upsert(copyAndSetTargetToIfNot(upsert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -315,7 +336,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.update(copyAndSetTargetToIfNot(update));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -324,7 +346,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.delete(copyAndSetTargetToIfNot(delete));
           return null;
-        });
+        },
+        false);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -335,7 +358,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.delete(copyAndSetTargetToIfNot(deletes));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -345,15 +369,21 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         t -> {
           t.mutate(copyAndSetTargetToIfNot(mutations));
           return null;
-        });
+        },
+        false);
   }
 
   private <R> R executeTransaction(
-      ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction)
+      ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction,
+      boolean readOnly)
       throws CrudException, UnknownTransactionStatusException {
     DistributedTransaction transaction;
     try {
-      transaction = begin();
+      if (readOnly) {
+        transaction = beginReadOnly();
+      } else {
+        transaction = begin();
+      }
     } catch (TransactionNotFoundException e) {
       throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
     } catch (TransactionException e) {
