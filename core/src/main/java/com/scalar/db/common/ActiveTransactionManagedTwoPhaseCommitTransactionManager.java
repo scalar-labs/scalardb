@@ -85,23 +85,9 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
   }
 
   @Override
-  public TwoPhaseCommitTransaction begin() throws TransactionException {
-    return new ActiveTransaction(super.begin());
-  }
-
-  @Override
-  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
-    return new ActiveTransaction(super.begin(txId));
-  }
-
-  @Override
-  public TwoPhaseCommitTransaction start() throws TransactionException {
-    return new ActiveTransaction(super.start());
-  }
-
-  @Override
-  public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
-    return new ActiveTransaction(super.start(txId));
+  protected TwoPhaseCommitTransaction decorateTransactionOnBeginOrStart(
+      TwoPhaseCommitTransaction transaction) throws TransactionException {
+    return new ActiveTransaction(transaction);
   }
 
   @Override
