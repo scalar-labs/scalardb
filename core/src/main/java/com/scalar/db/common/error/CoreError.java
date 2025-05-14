@@ -848,6 +848,44 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0186", "The CSV row: %s does not match header: %s.", "", ""),
   DATA_LOADER_JSON_CONTENT_START_ERROR(
       Category.USER_ERROR, "0187", "Expected JSON file content to be an array", "", ""),
+  REPLICATION_NOT_ENABLED(
+      Category.USER_ERROR,
+      "0188",
+      // TODO: Update the message once the licence type is determined.
+      "The replication feature is not enabled. To use this feature, you must enable it",
+      "",
+      ""),
+  DATA_LOADER_IMPORT_TARGET_MISSING(
+      Category.USER_ERROR,
+      "0189",
+      "Missing option: either '--namespace' and'--table' or '--control-file' options must be specified.",
+      "",
+      ""),
+  DATA_LOADER_MISSING_IMPORT_FILE(
+      Category.USER_ERROR,
+      "0190",
+      "The file '%s' specified by the argument '%s' does not exist.",
+      "",
+      ""),
+  DATA_LOADER_LOG_DIRECTORY_WRITE_ACCESS_DENIED(
+      Category.USER_ERROR, "0191", "Cannot write to the log directory: %s", "", ""),
+  DATA_LOADER_LOG_DIRECTORY_CREATION_FAILED(
+      Category.USER_ERROR, "0192", "Failed to create the log directory: %s", "", ""),
+  DATA_LOADER_INVALID_CONTROL_FILE(
+      Category.USER_ERROR, "0193", "Failed to parse the control file: %s", "", ""),
+  DATA_LOADER_DIRECTORY_WRITE_ACCESS(
+      Category.USER_ERROR,
+      "0194",
+      "No permission to create or write files in the directory: %s",
+      "",
+      ""),
+  DATA_LOADER_DIRECTORY_CREATION_FAILED(
+      Category.USER_ERROR, "0195", "Failed to create the directory: %s", "", ""),
+  DATA_LOADER_PATH_IS_NOT_A_DIRECTORY(
+      Category.USER_ERROR, "0196", "Path exists but is not a directory: %s", "", ""),
+  DATA_LOADER_FILE_PATH_IS_BLANK(
+      Category.USER_ERROR, "0197", "File path must not be blank.", "", ""),
+  DATA_LOADER_FILE_NOT_FOUND(Category.USER_ERROR, "0198", "File not found: %s", "", ""),
 
   //
   // Errors for the concurrency error category
