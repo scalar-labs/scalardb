@@ -5,15 +5,29 @@
 ---
 
 ## What is ScalarDB?
-ScalarDB is a cross-database HTAP engine. It achieves ACID transactions and real-time analytics across diverse databases to simplify the complexity of managing multiple databases.
+ScalarDB is a universal HTAP engine. It achieves ACID transactions and real-time analytics across diverse databases to simplify the complexity of managing multiple databases.
 
 <p align="center">
   <a href='https://www.youtube.com/watch?v=lW6nCEJV-gs' target="_blank"><img src='docs/images/scalardb-video-preview.png' width='70%'></a>
 </p>
 
-## Docs
+To learn more, see [ScalarDB Overview](https://scalardb.scalar-labs.com/docs/latest/overview).
 
-See our [User Documentation](https://scalardb.scalar-labs.com/docs/latest/).
+## Quickstart
+
+1. Start running transactions.
+   - **Get started with ScalarDB Core:** To set up a basic application by using Java, see [Getting Started with ScalarDB](https://scalardb.scalar-labs.com/docs/latest/getting-started-with-scalardb).
+   - **Get started with ScalarDB Cluster (for enterprise customers):** To set up a basic application that uses ScalarDB Cluster through the Java API, see [Getting Started with ScalarDB Cluster](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/getting-started-with-scalardb-cluster).
+2. To set up and run various samples instances, see the [list of ScalarDB sample applications](https://scalardb.scalar-labs.com/docs/latest/scalardb-samples).
+3. Learn about the [configurations for ScalarDB Core](https://scalardb.scalar-labs.com/docs/latest/configurations) and the [configurations for ScalarDB Cluster](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-cluster-configurations).
+4. Learn about ScalarDB and its features:
+   - [ScalarDB design](https://scalardb.scalar-labs.com/docs/latest/design)
+   - [User authentication/authorization](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-auth-with-sql) (for enterprise customers)
+   - [Attribute-based access control](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/authorize-with-abac) (for enterprise customers)
+   - [Vector search](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/getting-started-with-vector-search) (for enterprise customers)
+   - For a comprehensive list of features, see [ScalarDB Features](https://scalardb.scalar-labs.com/docs/latest/features).
+
+For additional documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/latest).
 
 ## Install
 
@@ -43,12 +57,6 @@ This library is mainly maintained by the Scalar Engineering Team, but of course 
 * For asking questions, finding answers and helping other users, please go to [stackoverflow](https://stackoverflow.com/) and use [scalardb](https://stackoverflow.com/questions/tagged/scalardb) tag.
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
 
-Here are the contributors we are especially thankful for:
-- [Toshihiro Suzuki](https://github.com/brfrn169) - created [Phoenix adapter](https://github.com/scalar-labs/scalardb-phoenix) for ScalarDB
-- [Yonezawa-T2](https://github.com/Yonezawa-T2) - reported bugs around Serializable and proposed a new Serializable strategy (now named Extra-Read)
-
-## Development
-
 ### Pre-commit hook
 
 This project uses [pre-commit](https://pre-commit.com/) to automate code format and so on as much as possible. If you're interested in the development of ScalarDB, please [install pre-commit](https://pre-commit.com/#installation) and the git hook script as follows.
@@ -60,6 +68,15 @@ $ pre-commit install
 ```
 
 The code formatter is automatically executed when committing files. A commit will fail and be formatted by the formatter when any invalid code format is detected. Try to commit the change again.
+
+### Exception and log message guidelines
+
+All the exception and log messages in this project are consistent with the following guidelines:
+
+- The first character is capitalized.
+- The message does not end with a punctuation mark.
+
+When contributing to this project, please follow these guidelines.
 
 ## License
 
