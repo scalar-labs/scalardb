@@ -9,7 +9,7 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTableFieldMapping;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.dataloader.core.dataimport.processor.TableColumnDataTypes;
 import com.scalar.db.dataloader.core.dataimport.task.mapping.ImportDataMapping;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTargetResult;
@@ -250,7 +250,7 @@ public abstract class ImportTask {
       optionalScalarDBResult =
           getDataRecord(
               namespace, table, optionalPartitionKey.get(), optionalClusteringKey.orElse(null));
-    } catch (ScalarDBDaoException e) {
+    } catch (ScalarDbDaoException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
@@ -337,7 +337,7 @@ public abstract class ImportTask {
           .status(ImportTargetResultStatus.SAVED)
           .build();
 
-    } catch (ScalarDBDaoException e) {
+    } catch (ScalarDbDaoException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
@@ -444,11 +444,11 @@ public abstract class ImportTask {
    * @param partitionKey the partition key for the record
    * @param clusteringKey the clustering key for the record (can be null)
    * @return Optional containing the Result if found, empty if not found
-   * @throws ScalarDBDaoException if there is an error accessing the database
+   * @throws ScalarDbDaoException if there is an error accessing the database
    */
   protected abstract Optional<Result> getDataRecord(
       String namespace, String tableName, Key partitionKey, Key clusteringKey)
-      throws ScalarDBDaoException;
+      throws ScalarDbDaoException;
 
   /**
    * Saves a record to the database, either as an insert or update operation.
@@ -458,7 +458,7 @@ public abstract class ImportTask {
    * @param partitionKey the partition key for the record
    * @param clusteringKey the clustering key for the record (can be null)
    * @param columns the columns and their values to be saved
-   * @throws ScalarDBDaoException if there is an error saving to the database
+   * @throws ScalarDbDaoException if there is an error saving to the database
    */
   protected abstract void saveRecord(
       String namespace,
@@ -466,5 +466,5 @@ public abstract class ImportTask {
       Key partitionKey,
       Key clusteringKey,
       List<Column<?>> columns)
-      throws ScalarDBDaoException;
+      throws ScalarDbDaoException;
 }

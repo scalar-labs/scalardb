@@ -449,15 +449,17 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED(
-      Category.USER_ERROR, "0104", "Writing already-deleted data is not allowed", "", ""),
-  CONSENSUS_COMMIT_GETTING_DATA_NEITHER_IN_READ_SET_NOR_DELETE_SET_NOT_ALLOWED(
       Category.USER_ERROR,
-      "0105",
-      "Getting data neither in the read set nor the delete set is not allowed",
+      "0104",
+      "Writing data already-deleted by the same transaction is not allowed",
       "",
       ""),
-  CONSENSUS_COMMIT_READING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
-      Category.USER_ERROR, "0106", "Reading already-written data is not allowed", "", ""),
+  CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0106",
+      "Scanning data already-written or already-deleted by the same transaction is not allowed",
+      "",
+      ""),
   CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0107",
@@ -667,9 +669,17 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_INSERTING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
-      Category.USER_ERROR, "0146", "Inserting already-written data is not allowed", "", ""),
+      Category.USER_ERROR,
+      "0146",
+      "Inserting data already-written by the same transaction is not allowed",
+      "",
+      ""),
   CONSENSUS_COMMIT_DELETING_ALREADY_INSERTED_DATA_NOT_ALLOWED(
-      Category.USER_ERROR, "0147", "Deleting already-inserted data is not allowed", "", ""),
+      Category.USER_ERROR,
+      "0147",
+      "Deleting data already-inserted by the same transaction is not allowed",
+      "",
+      ""),
   DATA_LOADER_INVALID_COLUMN_NON_EXISTENT(
       Category.USER_ERROR,
       "0148",
@@ -848,6 +858,13 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0186", "The CSV row: %s does not match header: %s.", "", ""),
   DATA_LOADER_JSON_CONTENT_START_ERROR(
       Category.USER_ERROR, "0187", "Expected JSON file content to be an array", "", ""),
+  REPLICATION_NOT_ENABLED(
+      Category.USER_ERROR,
+      "0188",
+      // TODO: Update the message once the licence type is determined.
+      "The replication feature is not enabled. To use this feature, you must enable it",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

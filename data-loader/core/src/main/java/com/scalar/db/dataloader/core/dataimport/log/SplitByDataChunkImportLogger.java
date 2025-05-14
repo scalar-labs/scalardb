@@ -64,7 +64,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
    */
   @Override
   public void onTaskComplete(ImportTaskResult taskResult) {
-    if (!config.isLogSuccessRecords() && !config.isLogRawSourceRecords()) return;
+    if (!config.isLogSuccessRecordsEnabled() && !config.isLogRawSourceRecordsEnabled()) return;
     try {
       writeImportTaskResultDetailToLogs(taskResult);
     } catch (IOException e) {
@@ -83,9 +83,10 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
       throws IOException {
     for (ImportTargetResult target : importTaskResult.getTargets()) {
       ImportTargetResultStatus status = target.getStatus();
-      if (status.equals(ImportTargetResultStatus.SAVED) && config.isLogSuccessRecords()) {
+      if (status.equals(ImportTargetResultStatus.SAVED) && config.isLogSuccessRecordsEnabled()) {
         writeLog(target, LogFileType.SUCCESS, importTaskResult.getDataChunkId());
-      } else if (!status.equals(ImportTargetResultStatus.SAVED) && config.isLogRawSourceRecords()) {
+      } else if (!status.equals(ImportTargetResultStatus.SAVED)
+          && config.isLogRawSourceRecordsEnabled()) {
         writeLog(target, LogFileType.FAILURE, importTaskResult.getDataChunkId());
       }
     }

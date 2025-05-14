@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.core.dataexport.producer;
 
+import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
@@ -67,7 +68,8 @@ public class JsonLineProducerTask extends ProducerTask {
     // Loop through all the columns and to the json object
     for (String columnName : tableColumns) {
       // Skip the field if it can be ignored based on check
-      boolean columnNotProjected = !projectedColumnsSet.contains(columnName);
+      boolean columnNotProjected =
+          !projectedColumnsSet.isEmpty() && !projectedColumnsSet.contains(columnName);
       boolean isMetadataColumn =
           ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata);
       if (columnNotProjected || (!includeMetadata && isMetadataColumn)) {
@@ -91,6 +93,7 @@ public class JsonLineProducerTask extends ProducerTask {
       ObjectNode objectNode, Result result, String columnName, DataType dataType) {
 
     if (result.isNull(columnName)) {
+      objectNode.putIfAbsent(columnName, NullNode.getInstance());
       return;
     }
 

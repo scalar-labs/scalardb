@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.dataloader.core.ScalarDBMode;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportEventListener;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
@@ -50,7 +50,7 @@ public abstract class ImportProcessor {
    *
    * <p>This method reads data from the provided {@link BufferedReader}, processes it in chunks, and
    * batches transactions according to the specified sizes. The processing can be done in either
-   * transactional or storage mode, depending on the configured {@link ScalarDBMode}.
+   * transactional or storage mode, depending on the configured {@link ScalarDbMode}.
    *
    * @param dataChunkSize the number of records to include in each data chunk for parallel
    *     processing
@@ -291,7 +291,7 @@ public abstract class ImportProcessor {
 
   /**
    * Processes a complete data chunk using parallel execution. The processing mode (transactional or
-   * storage) is determined by the configured {@link ScalarDBMode}.
+   * storage) is determined by the configured {@link ScalarDbMode}.
    *
    * @param dataChunk the data chunk to process
    * @param transactionBatchSize the size of transaction batches (used only in transaction mode)
@@ -307,7 +307,7 @@ public abstract class ImportProcessor {
             .build();
     notifyDataChunkStarted(status);
     ImportDataChunkStatus importDataChunkStatus;
-    if (params.getScalarDBMode() == ScalarDBMode.TRANSACTION) {
+    if (params.getScalarDbMode() == ScalarDbMode.TRANSACTION) {
       importDataChunkStatus = processDataChunkWithTransactions(dataChunk, transactionBatchSize);
     } else {
       importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk);

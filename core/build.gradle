@@ -107,6 +107,7 @@ dependencies {
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteDriverVersion}"
     implementation "com.yugabyte:jdbc-yugabytedb:${yugabyteDriverVersion}"
+    implementation "com.ibm.db2:jcc:${db2DriverVersion}"
     implementation ("org.mariadb.jdbc:mariadb-java-client:${mariadDbDriverVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }

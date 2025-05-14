@@ -9,8 +9,8 @@ import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidationException;
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidator;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
 import java.io.BufferedWriter;
@@ -34,7 +34,7 @@ public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
   private final DistributedStorage storage;
-  private final ScalarDBDao dao;
+  private final ScalarDbDao dao;
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
 
@@ -116,7 +116,7 @@ public abstract class ExportManager {
       } finally {
         bufferedWriter.flush();
       }
-    } catch (ExportOptionsValidationException | IOException | ScalarDBDaoException e) {
+    } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
     }
     return exportReport;
@@ -216,11 +216,11 @@ public abstract class ExportManager {
    * @param dao ScalarDB dao object
    * @param storage distributed storage object
    * @return created scanner
-   * @throws ScalarDBDaoException throws if any issue occurs in creating scanner object
+   * @throws ScalarDbDaoException throws if any issue occurs in creating scanner object
    */
   private Scanner createScanner(
-      ExportOptions exportOptions, ScalarDBDao dao, DistributedStorage storage)
-      throws ScalarDBDaoException {
+      ExportOptions exportOptions, ScalarDbDao dao, DistributedStorage storage)
+      throws ScalarDbDaoException {
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
     if (isScanAll) {
       return dao.createScanner(
