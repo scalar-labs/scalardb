@@ -10,6 +10,7 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -227,5 +228,9 @@ public interface RdbEngineStrategy {
    */
   default void throwIfDuplicatedIndexWarning(SQLWarning warning) throws SQLException {
     // Do nothing
+  }
+
+  default void setReadOnly(Connection connection, boolean readOnly) throws SQLException {
+    connection.setReadOnly(readOnly);
   }
 }

@@ -63,6 +63,8 @@ public final class JdbcUtils {
               }
             });
 
+    dataSource.setDefaultReadOnly(false);
+
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
