@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.task;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Result;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.util.List;
@@ -55,13 +55,13 @@ public class ImportStorageTask extends ImportTask {
    * @param clusteringKey the clustering key for further record identification within the partition
    * @return an {@link Optional} containing the {@link Result} if the record exists, otherwise an
    *     empty {@link Optional}
-   * @throws ScalarDBDaoException if an error occurs during the retrieval operation, such as
+   * @throws ScalarDbDaoException if an error occurs during the retrieval operation, such as
    *     connection issues or invalid table/namespace
    */
   @Override
   protected Optional<Result> getDataRecord(
       String namespace, String tableName, Key partitionKey, Key clusteringKey)
-      throws ScalarDBDaoException {
+      throws ScalarDbDaoException {
     return params.getDao().get(namespace, tableName, partitionKey, clusteringKey, this.storage);
   }
 
@@ -77,7 +77,7 @@ public class ImportStorageTask extends ImportTask {
    * @param partitionKey the partition key determining where the record will be stored
    * @param clusteringKey the clustering key for organizing records within the partition
    * @param columns the list of columns containing the record's data to be saved
-   * @throws ScalarDBDaoException if an error occurs during the save operation, such as connection
+   * @throws ScalarDbDaoException if an error occurs during the save operation, such as connection
    *     issues, invalid data types, or constraint violations
    */
   @Override
@@ -87,7 +87,7 @@ public class ImportStorageTask extends ImportTask {
       Key partitionKey,
       Key clusteringKey,
       List<Column<?>> columns)
-      throws ScalarDBDaoException {
+      throws ScalarDbDaoException {
     params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, this.storage);
   }
 }
