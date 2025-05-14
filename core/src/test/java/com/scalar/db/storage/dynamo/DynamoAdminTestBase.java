@@ -1243,20 +1243,23 @@ public abstract class DynamoAdminTestBase {
     when(scanResponse.lastEvaluatedKey())
         .thenReturn(lastEvaluatedKeyFirstIteration)
         .thenReturn(lastEvaluatedKeySecondIteration);
+    String ns1 = getNamespacePrefixConfig().orElse("") + "ns1";
+    String ns2 = getNamespacePrefixConfig().orElse("") + "ns2";
+    when(scanResponse.count()).thenReturn(2);
     when(scanResponse.items())
         .thenReturn(
             ImmutableList.of(
                 ImmutableMap.of(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s("ns1.tbl1").build())))
+                    AttributeValue.builder().s(ns1 + ".tbl1").build())))
         .thenReturn(
             ImmutableList.of(
                 ImmutableMap.of(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s("ns1.tbl2").build()),
+                    AttributeValue.builder().s(ns1 + ".tbl2").build()),
                 ImmutableMap.of(
                     DynamoAdmin.METADATA_ATTR_TABLE,
-                    AttributeValue.builder().s("ns2.tbl3").build())));
+                    AttributeValue.builder().s(ns2 + ".tbl3").build())));
 
     // Act
     Set<String> actual = admin.getNamespaceNames();
