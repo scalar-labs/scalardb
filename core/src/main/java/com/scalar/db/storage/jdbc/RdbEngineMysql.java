@@ -225,6 +225,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
   public String getDataTypeForKey(DataType dataType) {
     switch (dataType) {
       case TEXT:
@@ -368,7 +369,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }
 

@@ -6,12 +6,10 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.error.CoreError;
@@ -19,7 +17,6 @@ import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.List;
 import java.util.Optional;
@@ -33,69 +30,9 @@ public class StateManagedDistributedTransactionManager
   }
 
   @Override
-  public DistributedTransaction begin() throws TransactionException {
-    return new StateManagedTransaction(super.begin());
-  }
-
-  @Override
-  public DistributedTransaction begin(String txId) throws TransactionException {
-    return new StateManagedTransaction(super.begin(txId));
-  }
-
-  @Override
-  public DistributedTransaction start() throws TransactionException {
-    return new StateManagedTransaction(super.start());
-  }
-
-  @Override
-  public DistributedTransaction start(String txId) throws TransactionException {
-    return new StateManagedTransaction(super.start(txId));
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @Deprecated
-  @Override
-  public DistributedTransaction start(Isolation isolation) throws TransactionException {
-    return new StateManagedTransaction(super.start(isolation));
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @Deprecated
-  @Override
-  public DistributedTransaction start(String txId, Isolation isolation)
-      throws TransactionException {
-    return new StateManagedTransaction(super.start(txId, isolation));
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @Deprecated
-  @Override
-  public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
-    return new StateManagedTransaction(super.start(isolation, strategy));
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @Deprecated
-  @Override
-  public DistributedTransaction start(SerializableStrategy strategy) throws TransactionException {
-    return new StateManagedTransaction(super.start(strategy));
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @Deprecated
-  @Override
-  public DistributedTransaction start(String txId, SerializableStrategy strategy)
-      throws TransactionException {
-    return new StateManagedTransaction(super.start(txId, strategy));
-  }
-
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
-  @Deprecated
-  @Override
-  public DistributedTransaction start(
-      String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
-    return new StateManagedTransaction(super.start(txId, isolation, strategy));
+  protected DistributedTransaction decorateTransactionOnBeginOrStart(
+      DistributedTransaction transaction) {
+    return new StateManagedTransaction(transaction);
   }
 
   /**

@@ -3,8 +3,8 @@ package com.scalar.db.dataloader.core.dataimport;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.ScalarDBMode;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
+import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessor;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory;
@@ -43,7 +43,7 @@ public class ImportManager implements ImportEventListener {
   @NonNull private final ImportOptions importOptions;
   private final ImportProcessorFactory importProcessorFactory;
   private final List<ImportEventListener> listeners = new ArrayList<>();
-  private final ScalarDBMode scalarDBMode;
+  private final ScalarDbMode scalarDbMode;
   private final DistributedStorage distributedStorage;
   private final DistributedTransactionManager distributedTransactionManager;
   private final ConcurrentHashMap<Integer, ImportDataChunkStatus> importDataChunkStatusMap =
@@ -62,10 +62,10 @@ public class ImportManager implements ImportEventListener {
   public ConcurrentHashMap<Integer, ImportDataChunkStatus> startImport() {
     ImportProcessorParams params =
         ImportProcessorParams.builder()
-            .scalarDBMode(scalarDBMode)
+            .scalarDbMode(scalarDbMode)
             .importOptions(importOptions)
             .tableMetadataByTableName(tableMetadata)
-            .dao(new ScalarDBDao())
+            .dao(new ScalarDbDao())
             .distributedTransactionManager(distributedTransactionManager)
             .distributedStorage(distributedStorage)
             .tableColumnDataTypes(getTableColumnDataTypes())

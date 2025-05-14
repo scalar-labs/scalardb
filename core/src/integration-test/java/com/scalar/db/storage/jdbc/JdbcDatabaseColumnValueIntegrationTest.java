@@ -43,6 +43,14 @@ public class JdbcDatabaseColumnValueIntegrationTest
       // don't allow empty value since Oracle treats empty value as NULL
       return TestUtils.getColumnWithMinValue(columnName, dataType, false);
     }
+    if (JdbcTestUtils.isDb2(rdbEngine)) {
+      if (dataType == DataType.FLOAT) {
+        return JdbcTestUtils.getMinDb2FloatValue(columnName);
+      }
+      if (dataType == DataType.DOUBLE) {
+        return JdbcTestUtils.getMinDb2DoubleValue(columnName);
+      }
+    }
     return super.getColumnWithMinValue(columnName, dataType);
   }
 

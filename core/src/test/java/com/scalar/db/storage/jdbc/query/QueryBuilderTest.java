@@ -335,6 +335,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case YUGABYTE:
       case MARIADB:
+      case DB2:
         expectedQuery =
             "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
@@ -354,6 +355,8 @@ public class QueryBuilderTest {
             "SELECT c1,c2 FROM \"n1$t1\" WHERE p1=? AND c1>=? AND c1<=? "
                 + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     preparedStatement = mock(PreparedStatement.class);
     query =
@@ -1318,6 +1321,12 @@ public class QueryBuilderTest {
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
         break;
+      case DB2:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM SYSIBM.DUAL) t2 ON (t1.p1=t2.p1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
+        break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
@@ -1329,6 +1338,8 @@ public class QueryBuilderTest {
             "INSERT INTO \"n1$t1\" (p1,v1,v2,v3) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     query =
         queryBuilder
@@ -1353,6 +1364,7 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
       case SQL_SERVER:
+      case DB2:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "v1Value");
         verify(preparedStatement).setString(3, "v2Value");
@@ -1362,6 +1374,8 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(7, "v2Value");
         verify(preparedStatement).setString(8, "v3Value");
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
 
     preparedStatement = mock(PreparedStatement.class);
@@ -1385,6 +1399,13 @@ public class QueryBuilderTest {
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
         break;
+      case DB2:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM SYSIBM.DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
+        break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
@@ -1397,6 +1418,8 @@ public class QueryBuilderTest {
             "INSERT INTO \"n1$t1\" (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
                 + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     query =
         queryBuilder
@@ -1422,6 +1445,7 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
       case SQL_SERVER:
+      case DB2:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         verify(preparedStatement).setString(3, "v1Value");
@@ -1433,6 +1457,8 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(9, "v2Value");
         verify(preparedStatement).setString(10, "v3Value");
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
 
     columns.put("v4", TextColumn.of("v4", "v4Value"));
@@ -1458,6 +1484,14 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) "
                 + "VALUES (?,?,?,?,?,?,?,?)";
         break;
+      case DB2:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM SYSIBM.DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) "
+                + "VALUES (?,?,?,?,?,?,?,?)";
+        break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
@@ -1470,6 +1504,8 @@ public class QueryBuilderTest {
             "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     query =
         queryBuilder
@@ -1502,6 +1538,7 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
       case SQL_SERVER:
+      case DB2:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1519,6 +1556,8 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(15, "v3Value");
         verify(preparedStatement).setString(16, "v4Value");
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
 
     columns.put("v5", TextColumn.ofNull("v5"));
@@ -1544,6 +1583,14 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
                 + "VALUES (?,?,?,?,?,?,?,?,?)";
         break;
+      case DB2:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM SYSIBM.DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
+                + "VALUES (?,?,?,?,?,?,?,?,?)";
+        break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
@@ -1557,6 +1604,8 @@ public class QueryBuilderTest {
             "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     query =
         queryBuilder
@@ -1591,6 +1640,7 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
       case SQL_SERVER:
+      case DB2:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1610,6 +1660,8 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(17, "v4Value");
         verify(preparedStatement).setNull(18, Types.VARCHAR);
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
   }
 
@@ -1638,6 +1690,11 @@ public class QueryBuilderTest {
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
         break;
+      case DB2:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM SYSIBM.DUAL) t2 ON (t1.p1=t2.p1) "
+                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
+        break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
@@ -1646,6 +1703,8 @@ public class QueryBuilderTest {
       case SQLITE:
         expectedQuery = "INSERT INTO \"n1$t1\" (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     query =
         queryBuilder
@@ -1664,9 +1723,12 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
       case SQL_SERVER:
+      case DB2:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p1Value");
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
 
     preparedStatement = mock(PreparedStatement.class);
@@ -1685,6 +1747,12 @@ public class QueryBuilderTest {
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
         break;
+      case DB2:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM SYSIBM.DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
+        break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
@@ -1694,6 +1762,8 @@ public class QueryBuilderTest {
       case SQLITE:
         expectedQuery = "INSERT INTO \"n1$t1\" (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     query =
         queryBuilder
@@ -1716,11 +1786,14 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
       case SQL_SERVER:
+      case DB2:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
         verify(preparedStatement).setString(3, "p1Value");
         verify(preparedStatement).setString(4, "c1Value");
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
 
     preparedStatement = mock(PreparedStatement.class);
@@ -1741,6 +1814,12 @@ public class QueryBuilderTest {
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
         break;
+      case DB2:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM SYSIBM.DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
+        break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
@@ -1752,6 +1831,8 @@ public class QueryBuilderTest {
             "INSERT INTO \"n1$t1\" (p1,p2,c1,c2) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO NOTHING";
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
     query =
         queryBuilder
@@ -1776,6 +1857,7 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
       case SQL_SERVER:
+      case DB2:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");
         verify(preparedStatement).setString(3, "c1Value");
@@ -1785,6 +1867,8 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(7, "c1Value");
         verify(preparedStatement).setString(8, "c2Value");
         break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
   }
 

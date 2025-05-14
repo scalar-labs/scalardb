@@ -557,31 +557,31 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Act
       admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME4, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME5, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME6, options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
       }
-      admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME10, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME11, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME12, options);
       if (isTimestampTypeSupported()) {
         admin.createIndex(namespace1, TABLE4, COL_NAME13, options);
       }
+      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
+        admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
+        admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
+      }
 
       // Assert
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
       }
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME9)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME10)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME11)).isTrue();
@@ -589,22 +589,16 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME13)).isTrue();
       }
+      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
+      }
 
       Set<String> actualSecondaryIndexNames =
           admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames();
       assertThat(actualSecondaryIndexNames)
-          .contains(
-              COL_NAME2,
-              COL_NAME3,
-              COL_NAME4,
-              COL_NAME5,
-              COL_NAME6,
-              COL_NAME8,
-              COL_NAME9,
-              COL_NAME10,
-              COL_NAME11,
-              COL_NAME12);
-      int indexCount = 10;
+          .contains(COL_NAME2, COL_NAME4, COL_NAME5, COL_NAME9, COL_NAME10, COL_NAME11, COL_NAME12);
+      int indexCount = 8;
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(actualSecondaryIndexNames).contains(COL_NAME7);
         indexCount++;
@@ -612,6 +606,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         assertThat(actualSecondaryIndexNames).contains(COL_NAME13);
         indexCount++;
+      }
+      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME3, COL_NAME8);
+        indexCount += 2;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
 
@@ -701,7 +699,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata metadata =
+      TableMetadata.Builder metadataBuilder =
           TableMetadata.newBuilder()
               .addColumn(COL_NAME1, DataType.INT)
               .addColumn(COL_NAME2, DataType.INT)
@@ -712,6 +710,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(COL_NAME7, DataType.BOOLEAN)
               .addColumn(COL_NAME8, DataType.BLOB)
               .addColumn(COL_NAME9, DataType.TEXT)
+              .addColumn(COL_NAME10, DataType.DATE)
+              .addColumn(COL_NAME11, DataType.TIME)
+              .addColumn(COL_NAME12, DataType.TIMESTAMPTZ)
               .addPartitionKey(COL_NAME1)
               .addSecondaryIndex(COL_NAME2)
               .addSecondaryIndex(COL_NAME3)
@@ -720,14 +721,19 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addSecondaryIndex(COL_NAME6)
               .addSecondaryIndex(COL_NAME8)
               .addSecondaryIndex(COL_NAME9)
-              .addSecondaryIndex(COL_NAME9)
-              .build();
+              .addSecondaryIndex(COL_NAME10)
+              .addSecondaryIndex(COL_NAME11)
+              .addSecondaryIndex(COL_NAME12);
       if (isIndexOnBooleanColumnSupported()) {
-        metadata = TableMetadata.newBuilder(metadata).addSecondaryIndex(COL_NAME7).build();
+        metadataBuilder.addSecondaryIndex(COL_NAME7).build();
       }
-      admin.createTable(namespace1, TABLE4, metadata, options);
+      if (isTimestampTypeSupported()) {
+        metadataBuilder.addColumn(COL_NAME13, DataType.TIMESTAMP);
+        metadataBuilder.addSecondaryIndex(COL_NAME13);
+      }
+      admin.createTable(namespace1, TABLE4, metadataBuilder.build(), options);
       storage = storageFactory.getStorage();
-      storage.put(
+      PutBuilder.Buildable put =
           Put.newBuilder()
               .namespace(namespace1)
               .table(TABLE4)
@@ -740,7 +746,18 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .booleanValue(COL_NAME7, true)
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
-              .build());
+              .dateValue(COL_NAME10, LocalDate.of(2020, 6, 2))
+              .timeValue(COL_NAME11, LocalTime.of(12, 2, 6, 123_456_000))
+              .timestampTZValue(
+                  COL_NAME12,
+                  LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000))
+                      .toInstant(ZoneOffset.UTC));
+      if (isTimestampTypeSupported()) {
+        put.timestampValue(
+            COL_NAME13,
+            LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000)));
+      }
+      storage.put(put.build());
 
       // Act
       admin.dropIndex(namespace1, TABLE4, COL_NAME2);
@@ -752,6 +769,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         admin.dropIndex(namespace1, TABLE4, COL_NAME7);
       }
       admin.dropIndex(namespace1, TABLE4, COL_NAME8);
+      admin.dropIndex(namespace1, TABLE4, COL_NAME10);
+      admin.dropIndex(namespace1, TABLE4, COL_NAME11);
+      admin.dropIndex(namespace1, TABLE4, COL_NAME12);
+      if (isTimestampTypeSupported()) {
+        admin.dropIndex(namespace1, TABLE4, COL_NAME13);
+      }
 
       // Assert
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isFalse();
@@ -763,6 +786,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isFalse();
       assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
           .containsOnly(COL_NAME9);
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME10)).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME11)).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME12)).isFalse();
+      if (isTimestampTypeSupported()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME13)).isFalse();
+      }
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
       if (storage != null) {
@@ -894,6 +923,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
     return true;
   }
 }

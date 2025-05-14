@@ -5,6 +5,9 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
+import com.scalar.db.storage.jdbc.JdbcTestUtils;
+import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -12,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 public class JdbcTransactionAdminIntegrationTest
     extends DistributedTransactionAdminIntegrationTestBase {
+  RdbEngineStrategy rdbEngine;
 
   @Override
   protected String getTestName() {
@@ -23,6 +27,7 @@ public class JdbcTransactionAdminIntegrationTest
     Properties properties = new Properties();
     properties.putAll(JdbcEnv.getProperties(testName));
     properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, JdbcConfig.TRANSACTION_MANAGER_NAME);
+    rdbEngine = RdbEngineFactory.create(new JdbcConfig(new DatabaseConfig(properties)));
     return properties;
   }
 
@@ -87,5 +92,14 @@ public class JdbcTransactionAdminIntegrationTest
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
+    // "admin.createIndex()" for TEXT and BLOB columns fails (the "create index" query runs
+    // indefinitely) on the Db2 community edition docker version which we use for the CI.
+    // However, the index creation is successful on Db2 hosted on IBM Cloud.
+    // So we disable these tests until the issue with the Db2 community edition is resolved.
+    return !JdbcTestUtils.isDb2(rdbEngine);
   }
 }

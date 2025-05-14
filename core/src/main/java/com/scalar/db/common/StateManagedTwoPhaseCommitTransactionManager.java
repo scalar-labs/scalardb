@@ -18,7 +18,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
 import java.util.List;
@@ -33,23 +32,9 @@ public class StateManagedTwoPhaseCommitTransactionManager
   }
 
   @Override
-  public TwoPhaseCommitTransaction begin() throws TransactionException {
-    return new StateManagedTransaction(super.begin());
-  }
-
-  @Override
-  public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
-    return new StateManagedTransaction(super.begin(txId));
-  }
-
-  @Override
-  public TwoPhaseCommitTransaction start() throws TransactionException {
-    return new StateManagedTransaction(super.start());
-  }
-
-  @Override
-  public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
-    return new StateManagedTransaction(super.start(txId));
+  protected TwoPhaseCommitTransaction decorateTransactionOnBeginOrStart(
+      TwoPhaseCommitTransaction transaction) {
+    return new StateManagedTransaction(transaction);
   }
 
   /**

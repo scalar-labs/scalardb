@@ -133,7 +133,6 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
 
   @BeforeEach
   protected void setUp() throws Exception {
-
     createTable();
   }
 

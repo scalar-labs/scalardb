@@ -103,6 +103,73 @@ public class CoordinatorTest {
   }
 
   @Test
+  public void getStateByParentId_GroupCommitParentIdGiven_ShouldReturnStateUsingItParent()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childIdsStr =
+        String.join(
+            ",",
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString());
+
+    Result result = mock(Result.class);
+    when(result.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
+    when(result.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, childIdsStr)));
+    when(result.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.ABORTED.get())));
+    when(result.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Coordinator.State> state = coordinator.getStateByParentId(parentId);
+
+    // Assert
+    assertThat(state.get().getId()).isEqualTo(parentId);
+    assertThat(state.get().getChildIds()).isEqualTo(Arrays.asList(childIdsStr.split(",")));
+    assertThat(state.get().getChildIdsAsString()).isEqualTo(childIdsStr);
+    Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
+  }
+
+  @Test
+  public void getStateByFullId_GroupCommitFullIdGiven_ShouldReturnStateUsingItParent()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String fullId =
+        keyManipulator.fullKey(keyManipulator.generateParentKey(), UUID.randomUUID().toString());
+
+    Result result = mock(Result.class);
+    when(result.getValue(Attribute.ID))
+        .thenReturn(Optional.of(new TextValue(Attribute.ID, fullId)));
+    when(result.getValue(Attribute.CHILD_IDS))
+        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
+    when(result.getValue(Attribute.STATE))
+        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.ABORTED.get())));
+    when(result.getValue(Attribute.CREATED_AT))
+        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Coordinator.State> state = coordinator.getStateByFullId(fullId);
+
+    // Assert
+    assertThat(state.get().getId()).isEqualTo(fullId);
+    assertThat(state.get().getChildIds()).isEmpty();
+    assertThat(state.get().getChildIdsAsString()).isEmpty();
+    Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
+  }
+
+  @Test
   public void putState_StateGiven_ShouldPutWithCorrectValues()
       throws ExecutionException, CoordinatorException {
     // Arrange

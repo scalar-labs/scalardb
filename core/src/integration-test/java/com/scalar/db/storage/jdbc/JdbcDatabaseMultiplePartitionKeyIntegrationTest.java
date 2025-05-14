@@ -58,6 +58,14 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
     }
+    if (JdbcTestUtils.isDb2(rdbEngine)) {
+      if (dataType == DataType.FLOAT) {
+        return JdbcTestUtils.getMinDb2FloatValue(columnName);
+      }
+      if (dataType == DataType.DOUBLE) {
+        return JdbcTestUtils.getMinDb2DoubleValue(columnName);
+      }
+    }
     return super.getColumnWithMinValue(columnName, dataType);
   }
 

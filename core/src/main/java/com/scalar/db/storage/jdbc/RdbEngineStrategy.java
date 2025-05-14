@@ -14,13 +14,16 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -39,7 +42,13 @@ public interface RdbEngineStrategy {
 
   String getDataTypeForEngine(DataType dataType);
 
+  @Nullable
   String getDataTypeForKey(DataType dataType);
+
+  @Nullable
+  default String getDataTypeForSecondaryIndex(DataType dataType) {
+    return getDataTypeForKey(dataType);
+  }
 
   DataType getDataTypeForScalarDb(
       JDBCType type,
@@ -51,7 +60,7 @@ public interface RdbEngineStrategy {
 
   int getSqlTypes(DataType dataType);
 
-  String getTextType(int charLength);
+  String getTextType(int charLength, boolean isKey);
 
   String computeBooleanValue(boolean value);
 
@@ -202,4 +211,21 @@ public interface RdbEngineStrategy {
   }
 
   RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
+
+  default String getProjectionsSqlForSelectQuery(TableMetadata metadata, List<String> projections) {
+    if (projections.isEmpty()) {
+      return "*";
+    }
+    return projections.stream().map(this::enclose).collect(Collectors.joining(","));
+  }
+
+  /**
+   * Throws an exception if the given SQLWarning is a duplicate index warning.
+   *
+   * @param warning the SQLWarning to check
+   * @throws SQLException if the warning is a duplicate index warning
+   */
+  default void throwIfDuplicatedIndexWarning(SQLWarning warning) throws SQLException {
+    // Do nothing
+  }
 }

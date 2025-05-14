@@ -25,6 +25,8 @@ public final class RdbEngineFactory {
       return new RdbEngineYugabyte();
     } else if (jdbcUrl.startsWith("jdbc:mariadb:")) {
       return new RdbEngineMariaDB();
+    } else if (jdbcUrl.startsWith("jdbc:db2:")) {
+      return new RdbEngineDb2(config);
     } else {
       throw new IllegalArgumentException(
           CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(jdbcUrl));
