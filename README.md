@@ -25,7 +25,7 @@ To learn more, see [ScalarDB Overview](https://scalardb.scalar-labs.com/docs/lat
    - [User authentication/authorization](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/scalardb-auth-with-sql) (for enterprise customers)
    - [Attribute-based access control](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/authorize-with-abac) (for enterprise customers)
    - [Vector search](https://scalardb.scalar-labs.com/docs/latest/scalardb-cluster/getting-started-with-vector-search) (for enterprise customers)
-   - For a comprehensive list of features, see [Features](https://scalardb.scalar-labs.com/docs/latest/features).
+   - For a comprehensive list of features, see [ScalarDB Features](https://scalardb.scalar-labs.com/docs/latest/features).
 
 For additional documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/latest).
 
