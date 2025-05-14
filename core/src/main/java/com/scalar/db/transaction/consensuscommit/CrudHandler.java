@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -120,7 +119,7 @@ public class CrudHandler {
   public List<Result> scan(Scan originalScan) throws CrudException {
     List<String> originalProjections = new ArrayList<>(originalScan.getProjections());
     Scan scan = (Scan) prepareStorageSelection(originalScan);
-    Map<Snapshot.Key, TransactionResult> results = scanInternal(scan);
+    LinkedHashMap<Snapshot.Key, TransactionResult> results = scanInternal(scan);
     snapshot.verifyNoOverlap(scan, results);
 
     TableMetadata metadata = getTableMetadata(scan);
@@ -129,13 +128,15 @@ public class CrudHandler {
         .collect(Collectors.toList());
   }
 
-  private Map<Snapshot.Key, TransactionResult> scanInternal(Scan scan) throws CrudException {
-    Optional<Map<Snapshot.Key, TransactionResult>> resultsInSnapshot = snapshot.getResults(scan);
+  private LinkedHashMap<Snapshot.Key, TransactionResult> scanInternal(Scan scan)
+      throws CrudException {
+    Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> resultsInSnapshot =
+        snapshot.getResults(scan);
     if (resultsInSnapshot.isPresent()) {
       return resultsInSnapshot.get();
     }
 
-    Map<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+    LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
 
     Scanner scanner = null;
     try {
