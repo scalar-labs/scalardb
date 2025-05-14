@@ -66,6 +66,7 @@ public class JdbcUtilsTest {
     assertThat(dataSource.getAutoCommitOnReturn()).isEqualTo(true);
     assertThat(dataSource.getDefaultTransactionIsolation())
         .isEqualTo(Connection.TRANSACTION_SERIALIZABLE);
+    assertThat(dataSource.getDefaultReadOnly()).isFalse();
 
     assertThat(dataSource.getMinIdle()).isEqualTo(10);
     assertThat(dataSource.getMaxIdle()).isEqualTo(20);
@@ -109,6 +110,7 @@ public class JdbcUtilsTest {
     assertThat(dataSource.getAutoCommitOnReturn()).isEqualTo(false);
     assertThat(dataSource.getDefaultTransactionIsolation())
         .isEqualTo(Connection.TRANSACTION_READ_COMMITTED);
+    assertThat(dataSource.getDefaultReadOnly()).isFalse();
 
     assertThat(dataSource.getMinIdle()).isEqualTo(30);
     assertThat(dataSource.getMaxIdle()).isEqualTo(40);
