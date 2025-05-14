@@ -549,30 +549,31 @@ public class Snapshot {
         scanner = storage.scan(Scan.newBuilder(scan).limit(0).build());
       }
 
-      //
-      // Initialize the iterators for the scan results and the latest scan results
-      //
+      // Initialize the iterator for the latest scan results
       Optional<Result> latestResult = scanner.one();
 
-      Iterator<Entry<Key, TransactionResult>> resultsIterator = results.entrySet().iterator();
-      Entry<Key, TransactionResult> resultsEntry = Iterators.getNext(resultsIterator, null);
+      // Initialize the iterator for the original scan results
+      Iterator<Entry<Key, TransactionResult>> originalResultIterator =
+          results.entrySet().iterator();
+      Entry<Key, TransactionResult> originalResultEntry =
+          Iterators.getNext(originalResultIterator, null);
 
-      // Compare the scan results with the latest scan results
-      while (latestResult.isPresent() && resultsEntry != null) {
+      // Compare the records of the iterators
+      while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
         Key key = new Key(scan, latestTxResult);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
 
-          // Skip the record
+          // Skip the record of the latest scan results
           latestResult = scanner.one();
 
-          if (resultsEntry.getKey().equals(key)) {
+          if (originalResultEntry.getKey().equals(key)) {
             // The record is updated by this transaction
 
-            // Skip the record
-            resultsEntry = Iterators.getNext(resultsIterator, null);
+            // Skip the record of the original scan results
+            originalResultEntry = Iterators.getNext(originalResultIterator, null);
           } else {
             // The record is inserted/deleted by this transaction
           }
@@ -580,27 +581,22 @@ public class Snapshot {
           continue;
         }
 
-        //
-        // Compare the records of the scan results and the latest scan results
-        //
-        if (!resultsEntry.getKey().equals(key)) {
+        // Compare the records of the original scan results and the latest scan results
+        if (!originalResultEntry.getKey().equals(key)) {
           // The record is inserted/deleted by another transaction
           throwExceptionDueToAntiDependency();
         }
-
-        if (isChanged(latestTxResult, resultsEntry.getValue())) {
+        if (isChanged(latestTxResult, originalResultEntry.getValue())) {
           // The record is updated by another transaction
           throwExceptionDueToAntiDependency();
         }
 
-        //
         // Proceed to the next record
-        //
         latestResult = scanner.one();
-        resultsEntry = Iterators.getNext(resultsIterator, null);
+        originalResultEntry = Iterators.getNext(originalResultIterator, null);
       }
 
-      if (resultsEntry != null) {
+      if (originalResultEntry != null) {
         // Some of the records of the scan results are deleted by another transaction
         throwExceptionDueToAntiDependency();
       }
