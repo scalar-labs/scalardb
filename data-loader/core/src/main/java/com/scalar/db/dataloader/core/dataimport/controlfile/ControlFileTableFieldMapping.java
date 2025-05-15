@@ -10,6 +10,7 @@ import lombok.Setter;
  * This class defines how data from a specific field in the input source should be mapped to the
  * corresponding column in the database.
  */
+@SuppressWarnings("SameNameButDifferent")
 @Getter
 @Setter
 public class ControlFileTableFieldMapping {
