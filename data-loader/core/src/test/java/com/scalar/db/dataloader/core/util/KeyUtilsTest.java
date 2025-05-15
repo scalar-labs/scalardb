@@ -11,6 +11,7 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import com.scalar.db.dataloader.core.UnitTestUtils;
+import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -22,9 +23,11 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -228,5 +231,21 @@ class KeyUtilsTest {
     assertEquals(
         "Optional[Key{BigIntColumn{name=col1, value=9007199254740992, hasNullValue=false}}]",
         key.toString());
+  }
+
+  @Test
+  void parseMultipleKeyValues_withValidColumns_ShouldReturnValidKey()
+      throws ColumnParsingException {
+    String c1 = UnitTestUtils.TEST_COLUMN_2_CK;
+    ColumnKeyValue k1 = new ColumnKeyValue(c1, "1");
+    String c2 = UnitTestUtils.TEST_COLUMN_3_CK;
+    ColumnKeyValue k2 = new ColumnKeyValue(c2, "false");
+    List<ColumnKeyValue> columnKeyValueList = new ArrayList<>();
+    columnKeyValueList.add(k1);
+    columnKeyValueList.add(k2);
+    Key key =
+        KeyUtils.parseMultipleKeyValues(
+            columnKeyValueList, UnitTestUtils.createTestTableMetadata());
+    assertEquals(c1, key.getColumnName(0));
   }
 }

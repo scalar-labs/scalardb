@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 /** This class tests the DirectoryValidationUtil class. */
 class DirectoryUtilsTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryUtilsTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(DirectoryUtilsTest.class);
 
   @TempDir Path tempDir;
 
@@ -81,7 +81,7 @@ class DirectoryUtilsTest {
     try {
       Files.deleteIfExists(file);
     } catch (IOException e) {
-      LOGGER.error("Failed to delete file: {}", file, e);
+      logger.error("Failed to delete file: {}", file, e);
     }
   }
 }
