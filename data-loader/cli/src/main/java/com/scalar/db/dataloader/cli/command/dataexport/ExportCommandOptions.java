@@ -56,7 +56,7 @@ public class ExportCommandOptions {
   @CommandLine.Option(
       names = {"--format", "-fmt"},
       paramLabel = "<FORMAT>",
-      description = "Format of the exported data file (json, csv, tsv) (default: json)",
+      description = "Format of the exported data file (json, csv, jsonl) (default: json)",
       defaultValue = "json")
   protected FileFormat outputFormat;
 
@@ -123,13 +123,13 @@ public class ExportCommandOptions {
   @CommandLine.Option(
       names = {"--delimiter"},
       paramLabel = "<DELIMITER>",
-      defaultValue = ";",
-      description = "Delimiter character for CSV/TSV files (default: comma for CSV, tab for TSV)")
+      defaultValue = ",",
+      description = "Delimiter character for CSV files (default: comma)")
   protected String delimiter;
 
   @CommandLine.Option(
       names = {"--no-header", "-nh"},
-      description = "Exclude header row in CSV/TSV files (default: false)",
+      description = "Exclude header row in CSV files (default: false)",
       defaultValue = "false")
   protected boolean excludeHeader;
 
