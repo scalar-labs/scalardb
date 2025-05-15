@@ -28,8 +28,8 @@ class DefaultLogWriterFactoryTest {
         new DefaultLogWriterFactory(
             ImportLoggerConfig.builder()
                 .prettyPrint(false)
-                .isLogSuccessRecords(false)
-                .isLogRawSourceRecords(false)
+                .isLogSuccessRecordsEnabled(false)
+                .isLogRawSourceRecordsEnabled(false)
                 .logDirectoryPath("path")
                 .build());
     LogWriter logWriter = defaultLogWriterFactory.createLogWriter(filePath);

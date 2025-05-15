@@ -559,6 +559,52 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void createReplicationTables(Map<String, String> options) throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables(options);
+  }
+
+  @Override
+  public void createReplicationTables(boolean ifNotExist, Map<String, String> options)
+      throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables(ifNotExist, options);
+  }
+
+  @Override
+  public void createReplicationTables(boolean ifNotExist) throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables(ifNotExist);
+  }
+
+  @Override
+  public void createReplicationTables() throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables();
+  }
+
+  @Override
+  public void dropReplicationTables() throws ExecutionException {
+    distributedTransactionAdmin.dropReplicationTables();
+  }
+
+  @Override
+  public void dropReplicationTables(boolean ifExist) throws ExecutionException {
+    distributedTransactionAdmin.dropReplicationTables(ifExist);
+  }
+
+  @Override
+  public void truncateReplicationTables() throws ExecutionException {
+    distributedTransactionAdmin.truncateReplicationTables();
+  }
+
+  @Override
+  public void repairReplicationTables(Map<String, String> options) throws ExecutionException {
+    distributedTransactionAdmin.repairReplicationTables(options);
+  }
+
+  @Override
+  public boolean replicationTablesExist() throws ExecutionException {
+    return distributedTransactionAdmin.replicationTablesExist();
+  }
+
+  @Override
   public void close() {
     distributedTransactionAdmin.close();
   }

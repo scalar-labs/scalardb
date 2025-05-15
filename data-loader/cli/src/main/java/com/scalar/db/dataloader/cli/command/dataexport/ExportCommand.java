@@ -18,7 +18,7 @@ import com.scalar.db.dataloader.core.dataexport.ExportOptions;
 import com.scalar.db.dataloader.core.dataexport.JsonExportManager;
 import com.scalar.db.dataloader.core.dataexport.JsonLineExportManager;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
@@ -59,9 +59,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
           new TableMetadataService(storageFactory.getStorageAdmin());
-      ScalarDBDao scalarDBDao = new ScalarDBDao();
+      ScalarDbDao scalarDbDao = new ScalarDbDao();
 
-      ExportManager exportManager = createExportManager(storageFactory, scalarDBDao, outputFormat);
+      ExportManager exportManager = createExportManager(storageFactory, scalarDbDao, outputFormat);
 
       TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
 
@@ -118,17 +118,17 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   private ExportManager createExportManager(
-      StorageFactory storageFactory, ScalarDBDao scalarDBDao, FileFormat fileFormat) {
+      StorageFactory storageFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
     DistributedStorage storage = storageFactory.getStorage();
     switch (fileFormat) {
       case JSON:
-        return new JsonExportManager(storage, scalarDBDao, taskFactory);
+        return new JsonExportManager(storage, scalarDbDao, taskFactory);
       case JSONL:
-        return new JsonLineExportManager(storage, scalarDBDao, taskFactory);
+        return new JsonLineExportManager(storage, scalarDbDao, taskFactory);
       case CSV:
-        return new CsvExportManager(storage, scalarDBDao, taskFactory);
+        return new CsvExportManager(storage, scalarDbDao, taskFactory);
       default:
         throw new AssertionError("Invalid file format" + fileFormat);
     }

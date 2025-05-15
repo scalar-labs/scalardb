@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 class SingleFileImportLoggerTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SingleFileImportLoggerTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(SingleFileImportLoggerTest.class);
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
 
   @TempDir Path tempDir;
@@ -42,8 +42,8 @@ class SingleFileImportLoggerTest {
     ImportLoggerConfig importLoggerConfig =
         ImportLoggerConfig.builder()
             .prettyPrint(false)
-            .isLogSuccessRecords(false)
-            .isLogRawSourceRecords(false)
+            .isLogSuccessRecordsEnabled(false)
+            .isLogRawSourceRecordsEnabled(false)
             .logDirectoryPath("path")
             .build();
     logWriterFactory = new DefaultLogWriterFactory(importLoggerConfig);
@@ -64,7 +64,7 @@ class SingleFileImportLoggerTest {
     try {
       Files.deleteIfExists(file);
     } catch (IOException e) {
-      LOGGER.error("Failed to delete file: {}", file, e);
+      logger.error("Failed to delete file: {}", file, e);
     }
   }
 
@@ -84,8 +84,8 @@ class SingleFileImportLoggerTest {
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(tempDir.toString() + "/")
-            .isLogRawSourceRecords(true)
-            .isLogSuccessRecords(logSuccessRecords)
+            .isLogRawSourceRecordsEnabled(true)
+            .isLogSuccessRecordsEnabled(logSuccessRecords)
             .build();
     SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
 
@@ -199,8 +199,8 @@ class SingleFileImportLoggerTest {
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(tempDir.toString() + "/")
-            .isLogRawSourceRecords(true)
-            .isLogSuccessRecords(true)
+            .isLogRawSourceRecordsEnabled(true)
+            .isLogSuccessRecordsEnabled(true)
             .build();
     SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
 

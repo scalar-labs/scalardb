@@ -67,8 +67,17 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
       return Stream.of(
           Arguments.of(allColumnNames.subList(0, allColumnNames.size() / 2)),
           Arguments.of(allColumnNames.subList(allColumnNames.size() / 2, allColumnNames.size())));
-    } else {
-      return Stream.of(Arguments.of(allColumnNames));
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      // Db2 requires an even smaller number of conditions to be able to process the query so we
+      // split the conditions into 3 parts
+      Collections.shuffle(allColumnNames, random.get());
+      return Stream.of(
+          Arguments.of(allColumnNames.subList(0, allColumnNames.size() / 3)),
+          Arguments.of(
+              allColumnNames.subList(allColumnNames.size() / 3, allColumnNames.size() / 3 * 2)),
+          Arguments.of(
+              allColumnNames.subList(allColumnNames.size() / 3 * 2, allColumnNames.size())));
     }
+    return Stream.of(Arguments.of(allColumnNames));
   }
 }

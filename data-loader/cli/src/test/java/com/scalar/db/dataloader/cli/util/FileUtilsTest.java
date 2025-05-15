@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.cli.util;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.common.error.CoreError;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 
@@ -20,13 +21,13 @@ public class FileUtilsTest {
   void validateFilePath_withInvalidFilePath_shouldThrowException() {
     assertThatThrownBy(() -> FileUtils.validateFilePath(currentPath + "/demo"))
         .isInstanceOf(InvalidFilePathException.class)
-        .hasMessage("File not found: " + currentPath + "/demo");
+        .hasMessage(CoreError.DATA_LOADER_FILE_NOT_FOUND.buildMessage(currentPath + "/demo"));
   }
 
   @Test
   void validateFilePath_withBlankFilePath_shouldThrowException() {
     assertThatThrownBy(() -> FileUtils.validateFilePath(""))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("File path must not be blank.");
+        .hasMessage(CoreError.DATA_LOADER_FILE_PATH_IS_BLANK.buildMessage());
   }
 }
