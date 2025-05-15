@@ -1261,8 +1261,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
       for (Map<String, AttributeValue> tableMetadata : scanResponse.items()) {
         String fullTableName = tableMetadata.get(METADATA_ATTR_TABLE).s();
-        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
-        nonPrefixedNamespaceNames.add(namespaceName);
+        String prefixedNamespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+        String nonPrefixedNamespaceName = prefixedNamespaceName.substring(namespacePrefix.length());
+        nonPrefixedNamespaceNames.add(nonPrefixedNamespaceName);
       }
     } while (!lastEvaluatedKey.isEmpty());
 
