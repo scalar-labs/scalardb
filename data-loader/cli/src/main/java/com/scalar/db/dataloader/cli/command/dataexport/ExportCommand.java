@@ -44,7 +44,7 @@ import picocli.CommandLine.Spec;
 public class ExportCommand extends ExportCommandOptions implements Callable<Integer> {
 
   private static final String EXPORT_FILE_NAME_FORMAT = "export_%s.%s_%s.%s";
-  private static final Logger LOGGER = LoggerFactory.getLogger(ExportCommand.class);
+  private static final Logger logger = LoggerFactory.getLogger(ExportCommand.class);
 
   @Spec CommandSpec spec;
 
@@ -81,7 +81,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       String filePath =
           getOutputAbsoluteFilePath(
               outputDirectory, outputFileName, exportOptions.getOutputFileFormat());
-      LOGGER.info("Exporting data to file: {}", filePath);
+      logger.info("Exporting data to file: {}", filePath);
 
       try (BufferedWriter writer =
           Files.newBufferedWriter(Paths.get(filePath), Charset.defaultCharset(), CREATE, APPEND)) {
@@ -89,15 +89,15 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       }
 
     } catch (DirectoryValidationException e) {
-      LOGGER.error("Invalid output directory path: {}", outputDirectory);
+      logger.error("Invalid output directory path: {}", outputDirectory);
       return 1;
     } catch (InvalidFilePathException e) {
-      LOGGER.error(
+      logger.error(
           "The ScalarDB connection settings file path is invalid or the file is missing: {}",
           scalarDbPropertiesFilePath);
       return 1;
     } catch (TableMetadataException e) {
-      LOGGER.error("Failed to retrieve table metadata: {}", e.getMessage());
+      logger.error("Failed to retrieve table metadata: {}", e.getMessage());
       return 1;
     }
     return 0;
