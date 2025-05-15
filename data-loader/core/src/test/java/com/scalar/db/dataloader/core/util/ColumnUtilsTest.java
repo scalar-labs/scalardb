@@ -184,6 +184,25 @@ class ColumnUtilsTest {
             columnName, "table", "ns"),
         exception.getMessage());
   }
+  /**
+   * Tests that attempting to create a date time column with an invalid format throws a
+   * DateTimeParseException with appropriate error message.
+   */
+  @Test
+  void createColumnFromValue_invalidNumberFormat_throwsDateTimeParseException() {
+    String columnName = "timestampColumn";
+    String value = "not_a_timestamp";
+    ColumnInfo columnInfo =
+        ColumnInfo.builder().namespace("ns").tableName("table").columnName(columnName).build();
+    ColumnParsingException exception =
+        assertThrows(
+            ColumnParsingException.class,
+            () -> ColumnUtils.createColumnFromValue(DataType.TIMESTAMP, columnInfo, value));
+    assertEquals(
+        CoreError.DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
+            columnName, "table", "ns"),
+        exception.getMessage());
+  }
 
   /**
    * Tests the extraction of columns from a ScalarDB Result object. Verifies that all columns are
