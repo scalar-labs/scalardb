@@ -68,22 +68,27 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
 
   @Override
   public TwoPhaseCommitTransaction begin() throws TransactionException {
-    return transactionManager.begin();
+    return decorateTransactionOnBeginOrStart(transactionManager.begin());
   }
 
   @Override
   public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
-    return transactionManager.begin(txId);
+    return decorateTransactionOnBeginOrStart(transactionManager.begin(txId));
   }
 
   @Override
   public TwoPhaseCommitTransaction start() throws TransactionException {
-    return transactionManager.start();
+    return decorateTransactionOnBeginOrStart(transactionManager.start());
   }
 
   @Override
   public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
-    return transactionManager.start(txId);
+    return decorateTransactionOnBeginOrStart(transactionManager.start(txId));
+  }
+
+  protected TwoPhaseCommitTransaction decorateTransactionOnBeginOrStart(
+      TwoPhaseCommitTransaction transaction) throws TransactionException {
+    return transaction;
   }
 
   @Override
