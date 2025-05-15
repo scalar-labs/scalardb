@@ -13,7 +13,7 @@ public class ScanOrderingConverterTest {
   ScanOrderingConverter scanOrderingConverter = new ScanOrderingConverter();
 
   @Test
-  public void callConvert_withInvalidValue_shouldThrowException() {
+  void callConvert_withInvalidValue_shouldThrowException() {
     String value = "id ASC";
     IllegalArgumentException thrown =
         assertThrows(
@@ -24,7 +24,7 @@ public class ScanOrderingConverterTest {
   }
 
   @Test
-  public void callConvert_withValidValueAndOrderAscending_shouldReturnScanOrdering() {
+  void callConvert_withValidValueAndOrderAscending_shouldReturnScanOrdering() {
     String value = "id=ASC,age=DESC";
     List<Scan.Ordering> expectedOrder = new ArrayList<>();
     expectedOrder.add(new Scan.Ordering("id", Scan.Ordering.Order.ASC));
@@ -33,7 +33,7 @@ public class ScanOrderingConverterTest {
   }
 
   @Test
-  public void callConvert_withValidValueAndOrderDescending_shouldReturnScanOrdering() {
+  void callConvert_withValidValueAndOrderDescending_shouldReturnScanOrdering() {
     String value = "id=desc";
     List<Scan.Ordering> expectedOrder =
         Collections.singletonList(new Scan.Ordering("id", Scan.Ordering.Order.DESC));

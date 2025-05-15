@@ -12,7 +12,7 @@ public class MultiColumnKeyValueConverterTest {
   MultiColumnKeyValueConverter multiColumnKeyValueConverter = new MultiColumnKeyValueConverter();
 
   @Test
-  public void convert_withInvalidValue_ShouldThrowError() {
+  void convert_withInvalidValue_ShouldThrowError() {
     String value = "id 15";
     IllegalArgumentException thrown =
         assertThrows(
@@ -23,7 +23,7 @@ public class MultiColumnKeyValueConverterTest {
   }
 
   @Test
-  public void convert_withValidValue_ShouldReturnColumnKeyValue() {
+  void convert_withValidValue_ShouldReturnColumnKeyValue() {
     String value = "id=15";
     ColumnKeyValue expectedOrder = new ColumnKeyValue("id", "15");
     Assertions.assertEquals(
