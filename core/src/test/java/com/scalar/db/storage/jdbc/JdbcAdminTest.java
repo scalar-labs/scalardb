@@ -23,6 +23,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -273,6 +274,11 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c4")
             .build();
     assertThat(actualMetadata).isEqualTo(expectedMetadata);
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatements);
   }
 
@@ -2191,6 +2197,11 @@ public class JdbcAdminTest {
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
 
     // Assert
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatement);
     assertThat(actualTableNames).containsExactly(table1, table2);
     verify(preparedStatement).setString(1, namespace + ".%");
@@ -2259,6 +2270,11 @@ public class JdbcAdminTest {
     // Assert
     assertThat(admin.namespaceExists(namespace)).isTrue();
 
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(selectStatement).setString(1, namespace);
@@ -2949,21 +2965,25 @@ public class JdbcAdminTest {
     Set<String> actualNamespaceNames = admin.getNamespaceNames();
 
     // Assert
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(mockPreparedStatement).executeQuery();
     assertThat(actualNamespaceNames).containsOnly(namespace1, namespace2);
   }
 
-  @Test
-  public void getImportTableMetadata_ForX_ShouldWorkProperly()
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void getImportTableMetadata_ForX_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
-    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
-      if (rdbEngine.equals(RdbEngine.SQLITE)) {
-        getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
-      } else {
-        getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
-            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-      }
+    if (rdbEngine.equals(RdbEngine.SQLITE)) {
+      getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
+    } else {
+      getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
+          rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
     }
   }
 
@@ -3030,6 +3050,7 @@ public class JdbcAdminTest {
         .execute(expectedCheckTableExistStatement);
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
+    verify(connection).setReadOnly(true);
     verify(rdbEngineStrategy)
         .getDataTypeForScalarDb(
             any(JDBCType.class),

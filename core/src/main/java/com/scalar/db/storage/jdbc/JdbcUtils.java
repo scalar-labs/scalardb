@@ -63,6 +63,8 @@ public final class JdbcUtils {
               }
             });
 
+    dataSource.setDefaultReadOnly(false);
+
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
@@ -89,6 +91,9 @@ public final class JdbcUtils {
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
+
+    dataSource.setDefaultReadOnly(false);
+
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getTableMetadataConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getTableMetadataConnectionPoolMaxTotal());
@@ -113,6 +118,9 @@ public final class JdbcUtils {
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
+
+    dataSource.setDefaultReadOnly(false);
+
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getAdminConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
