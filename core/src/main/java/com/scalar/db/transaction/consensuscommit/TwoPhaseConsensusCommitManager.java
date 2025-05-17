@@ -170,7 +170,12 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
+            storage,
+            snapshot,
+            tableMetadataManager,
+            isIncludeMetadataEnabled,
+            parallelExecutor,
+            false);
 
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);

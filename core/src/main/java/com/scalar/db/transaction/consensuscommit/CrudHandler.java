@@ -45,6 +45,10 @@ public class CrudHandler {
   private final boolean isIncludeMetadataEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
   private final ParallelExecutor parallelExecutor;
+
+  // Whether the transaction is in read-only mode or not.
+  private final boolean readOnly;
+
   private final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -53,13 +57,15 @@ public class CrudHandler {
       Snapshot snapshot,
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      boolean readOnly) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.mutationConditionsValidator = new MutationConditionsValidator(snapshot.getId());
     this.parallelExecutor = parallelExecutor;
+    this.readOnly = readOnly;
   }
 
   @VisibleForTesting
@@ -69,13 +75,15 @@ public class CrudHandler {
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
       MutationConditionsValidator mutationConditionsValidator,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      boolean readOnly) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.mutationConditionsValidator = mutationConditionsValidator;
     this.parallelExecutor = parallelExecutor;
+    this.readOnly = readOnly;
   }
 
   public Optional<Result> get(Get originalGet) throws CrudException {
@@ -109,9 +117,9 @@ public class CrudHandler {
         // transaction read it first. However, we update it only if a get operation has no
         // conjunction or the result exists. This is because we don’t know whether the record
         // actually exists or not due to the conjunction.
-        snapshot.putIntoReadSet(key, result);
+        putIntoReadSetInSnapshot(key, result);
       }
-      snapshot.putIntoGetSet(get, result); // for re-read and validation
+      snapshot.putIntoGetSet(get, result);
       return;
     }
     throw new UncommittedRecordException(
@@ -125,7 +133,7 @@ public class CrudHandler {
     List<String> originalProjections = new ArrayList<>(originalScan.getProjections());
     Scan scan = (Scan) prepareStorageSelection(originalScan);
     LinkedHashMap<Snapshot.Key, TransactionResult> results = scanInternal(scan);
-    snapshot.verifyNoOverlap(scan, results);
+    verifyNoOverlap(scan, results);
 
     TableMetadata metadata = getTableMetadata(scan);
     return results.values().stream()
@@ -191,7 +199,7 @@ public class CrudHandler {
     // We always update the read set to create before image by using the latest record (result)
     // because another conflicting transaction might have updated the record after this
     // transaction read it first.
-    snapshot.putIntoReadSet(key, Optional.of(result));
+    putIntoReadSetInSnapshot(key, Optional.of(result));
   }
 
   public TransactionCrudOperable.Scanner getScanner(Scan originalScan) throws CrudException {
@@ -222,6 +230,20 @@ public class CrudHandler {
       if (!scanner.isClosed()) {
         scanner.close();
       }
+    }
+  }
+
+  private void putIntoReadSetInSnapshot(Snapshot.Key key, Optional<TransactionResult> result) {
+    // In read-only mode, we don't need to put the result into the read set
+    if (!readOnly) {
+      snapshot.putIntoReadSet(key, result);
+    }
+  }
+
+  private void verifyNoOverlap(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
+    // In read-only mode, we don't need to verify the overlap
+    if (!readOnly) {
+      snapshot.verifyNoOverlap(scan, results);
     }
   }
 
@@ -470,7 +492,7 @@ public class CrudHandler {
         snapshot.putIntoScannerSet(scan, results);
       }
 
-      snapshot.verifyNoOverlap(scan, results);
+      verifyNoOverlap(scan, results);
     }
 
     @Override
@@ -532,7 +554,7 @@ public class CrudHandler {
     @Override
     public void close() {
       closed = true;
-      snapshot.verifyNoOverlap(scan, results);
+      verifyNoOverlap(scan, results);
     }
 
     @Override
