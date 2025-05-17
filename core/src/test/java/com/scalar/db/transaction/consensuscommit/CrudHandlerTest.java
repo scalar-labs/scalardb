@@ -98,7 +98,8 @@ public class CrudHandlerTest {
             tableMetadataManager,
             false,
             mutationConditionsValidator,
-            parallelExecutor);
+            parallelExecutor,
+            false);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
@@ -214,6 +215,44 @@ public class CrudHandlerTest {
 
   @Test
   public void
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_InReadOnlyMode_ShouldReturnFromStorageAndUpdateSnapshot()
+          throws CrudException, ExecutionException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true);
+
+    Get get = prepareGet();
+    Get getForStorage = toGetForStorageFrom(get);
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(storage.get(getForStorage)).thenReturn(expected);
+    when(snapshot.getResult(key, getForStorage)).thenReturn(transactionResult);
+
+    // Act
+    Optional<Result> result = handler.get(get);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
+  }
+
+  @Test
+  public void
       get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ShouldThrowUncommittedRecordException()
           throws ExecutionException {
     // Arrange
@@ -311,7 +350,8 @@ public class CrudHandlerTest {
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
+    handler =
+        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
 
     // Act
@@ -375,6 +415,46 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
     verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_ResultGivenFromStorage_InReadOnlyMode_ShouldUpdateSnapshotAndReturn(
+      ScanType scanType) throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+    TransactionResult expected = new TransactionResult(result);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -464,7 +544,8 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     TransactionResult expected = new TransactionResult(result);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
+    handler =
+        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -531,7 +612,8 @@ public class CrudHandlerTest {
     Scan scan = toScanForStorageFrom(prepareScan());
     result = prepareResult(TransactionState.COMMITTED);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
+    handler =
+        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -596,7 +678,8 @@ public class CrudHandlerTest {
             new HashMap<>(),
             deleteSet,
             new ArrayList<>());
-    handler = new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor);
+    handler =
+        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     } else {

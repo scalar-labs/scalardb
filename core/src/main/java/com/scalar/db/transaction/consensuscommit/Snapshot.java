@@ -58,14 +58,28 @@ public class Snapshot {
   private final Isolation isolation;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-  private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
-  private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
-  private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
-  private final Map<Key, Put> writeSet;
-  private final Map<Key, Delete> deleteSet;
 
-  // The scanner set used to store information about scanners that are not fully scanned
+  // The read set stores information about the records that are read in this transaction. This is
+  // used as a previous version for write operations.
+  private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
+
+  // The get set stores information about the records retrieved by Get operations in this
+  // transaction. This is used for validation and snapshot read.
+  private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
+
+  // The scan set stores information about the records retrieved by Scan operations in this
+  // transaction. This is used for validation and snapshot read.
+  private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
+
+  // The scanner set stores information about scanners that are not fully scanned. This is used for
+  // validation.
   private final List<ScannerInfo> scannerSet;
+
+  // The write set stores information about writes in this transaction.
+  private final Map<Key, Put> writeSet;
+
+  // The delete set stores information about deletes in this transaction.
+  private final Map<Key, Delete> deleteSet;
 
   public Snapshot(
       String id,
