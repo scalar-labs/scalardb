@@ -43,7 +43,7 @@ import picocli.CommandLine.Spec;
 @CommandLine.Command(name = "export", description = "export data from a ScalarDB table")
 public class ExportCommand extends ExportCommandOptions implements Callable<Integer> {
 
-  private static final String EXPORT_FILE_NAME_FORMAT = "export_%s.%s_%s.%s";
+  private static final String EXPORT_FILE_NAME_FORMAT = "export.%s.%s.%s.%s";
   private static final Logger logger = LoggerFactory.getLogger(ExportCommand.class);
 
   @Spec CommandSpec spec;

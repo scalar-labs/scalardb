@@ -36,7 +36,7 @@ public class ExportCommandOptions {
       names = {"--output-file", "-o"},
       paramLabel = "<FILE_NAME>",
       description =
-          "Name of the output file for the exported data (default: <table_name>.<format>)")
+          "Name of the output file for the exported data (default: export.<namespace>.<table>.<timestamp>.<format>)")
   protected String outputFileName;
 
   @CommandLine.Option(

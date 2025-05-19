@@ -896,6 +896,18 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_FILE_PATH_IS_BLANK(
       Category.USER_ERROR, "0197", "File path must not be blank.", "", ""),
   DATA_LOADER_FILE_NOT_FOUND(Category.USER_ERROR, "0198", "File not found: %s", "", ""),
+  DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT(
+      Category.USER_ERROR, "0200", "Key-value cannot be null or empty", "", ""),
+  DATA_LOADER_INVALID_KEY_VALUE_INPUT(
+      Category.USER_ERROR, "0201", "Invalid key-value format: %s", "", ""),
+  DATA_LOADER_INVALID_COLUMN_ORDER_FORMAT(
+      Category.USER_ERROR, "0202", "Invalid column order format: %s", "", ""),
+
+  DATA_LOADER_SPLIT_INPUT_VALUE_NULL(
+      Category.USER_ERROR, "0202", "Invalid column order format: %s", "", ""),
+
+  DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL(
+      Category.USER_ERROR, "0202", "Invalid column order format: %s", "", ""),
 
   //
   // Errors for the concurrency error category

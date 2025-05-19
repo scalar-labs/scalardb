@@ -3,6 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.scalar.db.api.Scan;
+import com.scalar.db.common.error.CoreError;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,7 +21,8 @@ public class ScanOrderingConverterTest {
             IllegalArgumentException.class,
             () -> scanOrderingConverter.convert(value),
             "Expected to throw exception");
-    Assertions.assertEquals("Invalid column order format: id ASC", thrown.getMessage());
+    Assertions.assertEquals(
+        CoreError.DATA_LOADER_INVALID_COLUMN_ORDER_FORMAT.buildMessage(value), thrown.getMessage());
   }
 
   @Test
