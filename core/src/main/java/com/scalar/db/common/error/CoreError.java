@@ -903,11 +903,10 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_COLUMN_ORDER_FORMAT(
       Category.USER_ERROR, "0202", "Invalid column order format: %s", "", ""),
 
-  DATA_LOADER_SPLIT_INPUT_VALUE_NULL(
-      Category.USER_ERROR, "0202", "Invalid column order format: %s", "", ""),
+  DATA_LOADER_SPLIT_INPUT_VALUE_NULL(Category.USER_ERROR, "0203", "Value must not be null", "", ""),
 
   DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL(
-      Category.USER_ERROR, "0202", "Invalid column order format: %s", "", ""),
+      Category.USER_ERROR, "0204", "Delimiter must not be null", "", ""),
 
   //
   // Errors for the concurrency error category
