@@ -826,12 +826,6 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_FILE_PATH_IS_BLANK(
       Category.USER_ERROR, "0197", "File path must not be blank.", "", ""),
   DATA_LOADER_FILE_NOT_FOUND(Category.USER_ERROR, "0198", "File not found: %s", "", ""),
-  DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE(
-      Category.USER_ERROR,
-      "0199",
-      "Invalid date time value specified for column %s in table %s in namespace %s.",
-      "",
-      ""),
 
   //
   // Errors for the concurrency error category
