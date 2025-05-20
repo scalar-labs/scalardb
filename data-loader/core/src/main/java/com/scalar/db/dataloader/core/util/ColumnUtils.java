@@ -17,7 +17,6 @@ import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
@@ -110,11 +109,6 @@ public final class ColumnUtils {
     } catch (NumberFormatException e) {
       throw new ColumnParsingException(
           CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
-              columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
-          e);
-    } catch (DateTimeParseException e) {
-      throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
               columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     } catch (IllegalArgumentException e) {
