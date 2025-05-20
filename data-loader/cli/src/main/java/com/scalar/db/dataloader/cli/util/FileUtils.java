@@ -15,7 +15,7 @@ public class FileUtils {
    */
   public static void validateFilePath(String filePath) throws InvalidFilePathException {
     if (StringUtils.isBlank(filePath)) {
-      throw new IllegalArgumentException(CoreError.DATA_LOADER_FILE_PATH_IS_BLANK.buildMessage());
+      throw new InvalidFilePathException(CoreError.DATA_LOADER_FILE_PATH_IS_BLANK.buildMessage());
     }
     Path pathToCheck = Paths.get(filePath);
 
