@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
@@ -359,7 +360,7 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
-    verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, expected));
+    verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
     verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
@@ -407,7 +408,7 @@ public class CrudHandlerTest {
     Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
     when(snapshot.getResults(scanForStorage))
         .thenReturn(Optional.empty())
-        .thenReturn(Optional.of(ImmutableMap.of(key, expected)));
+        .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, expected))));
     when(snapshot.getResult(key)).thenReturn(Optional.of(expected));
 
     // Act
@@ -416,7 +417,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
-    verify(snapshot).putIntoScanSet(scanForStorage, ImmutableMap.of(key, expected));
+    verify(snapshot)
+        .putIntoScanSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
     assertThat(results1.size()).isEqualTo(1);
     assertThat(results1.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -584,7 +586,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
-    verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, transactionResult));
+    verify(snapshot)
+        .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
     verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, transactionResult));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
