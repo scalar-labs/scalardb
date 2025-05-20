@@ -66,6 +66,7 @@ public class JdbcUtilsTest {
     assertThat(dataSource.getAutoCommitOnReturn()).isEqualTo(true);
     assertThat(dataSource.getDefaultTransactionIsolation())
         .isEqualTo(Connection.TRANSACTION_SERIALIZABLE);
+    assertThat(dataSource.getDefaultReadOnly()).isFalse();
 
     assertThat(dataSource.getMinIdle()).isEqualTo(10);
     assertThat(dataSource.getMaxIdle()).isEqualTo(20);
@@ -109,6 +110,7 @@ public class JdbcUtilsTest {
     assertThat(dataSource.getAutoCommitOnReturn()).isEqualTo(false);
     assertThat(dataSource.getDefaultTransactionIsolation())
         .isEqualTo(Connection.TRANSACTION_READ_COMMITTED);
+    assertThat(dataSource.getDefaultReadOnly()).isFalse();
 
     assertThat(dataSource.getMinIdle()).isEqualTo(30);
     assertThat(dataSource.getMaxIdle()).isEqualTo(40);
@@ -180,6 +182,8 @@ public class JdbcUtilsTest {
     assertThat(tableMetadataDataSource.getUsername()).isEqualTo("user");
     assertThat(tableMetadataDataSource.getPassword()).isEqualTo("oracle");
 
+    assertThat(tableMetadataDataSource.getDefaultReadOnly()).isFalse();
+
     assertThat(tableMetadataDataSource.getMinIdle()).isEqualTo(100);
     assertThat(tableMetadataDataSource.getMaxIdle()).isEqualTo(200);
     assertThat(tableMetadataDataSource.getMaxTotal()).isEqualTo(300);
@@ -211,6 +215,8 @@ public class JdbcUtilsTest {
     assertThat(adminDataSource.getUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
     assertThat(adminDataSource.getUsername()).isEqualTo("user");
     assertThat(adminDataSource.getPassword()).isEqualTo("sqlserver");
+
+    assertThat(adminDataSource.getDefaultReadOnly()).isFalse();
 
     assertThat(adminDataSource.getMinIdle()).isEqualTo(100);
     assertThat(adminDataSource.getMaxIdle()).isEqualTo(200);
