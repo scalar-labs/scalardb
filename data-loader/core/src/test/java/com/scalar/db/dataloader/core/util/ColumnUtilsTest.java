@@ -189,7 +189,7 @@ class ColumnUtilsTest {
    * DateTimeParseException with appropriate error message.
    */
   @Test
-  void createColumnFromValue_invalidNumberFormat_throwsDateTimeParseException() {
+  void createColumnFromValue_invalidDateTimeFormat_throwsDateTimeParseException() {
     String columnName = "timestampColumn";
     String value = "not_a_timestamp";
     ColumnInfo columnInfo =
