@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.ConditionalExpression;
@@ -45,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -93,7 +95,7 @@ public class SnapshotTest {
   private Snapshot snapshot;
   private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
   private ConcurrentMap<Get, Optional<TransactionResult>> getSet;
-  private Map<Scan, Map<Snapshot.Key, TransactionResult>> scanSet;
+  private Map<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
 
@@ -135,10 +137,19 @@ public class SnapshotTest {
   }
 
   private TransactionResult prepareResult(String txId) {
+    return prepareResult(txId, ANY_TEXT_1, ANY_TEXT_2);
+  }
+
+  private TransactionResult prepareResult(
+      String txId, String partitionKeyColumnValue, String clusteringKeyColumnValue) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
-            .put(ANY_NAME_1, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-            .put(ANY_NAME_2, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .put(
+                ANY_NAME_1,
+                ScalarDbUtils.toColumn(new TextValue(ANY_NAME_1, partitionKeyColumnValue)))
+            .put(
+                ANY_NAME_2,
+                ScalarDbUtils.toColumn(new TextValue(ANY_NAME_2, clusteringKeyColumnValue)))
             .put(ANY_NAME_3, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_3, ANY_TEXT_3)))
             .put(ANY_NAME_4, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_4, ANY_TEXT_4)))
             .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(txId)))
@@ -186,6 +197,16 @@ public class SnapshotTest {
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
+  }
+
+  private Scan prepareScanWithLimit(int limit) {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .limit(limit)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Scan prepareCrossPartitionScan() {
@@ -490,7 +511,8 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result);
-    Map<Snapshot.Key, TransactionResult> expected = Collections.singletonMap(key, result);
+    LinkedHashMap<Snapshot.Key, TransactionResult> expected =
+        Maps.newLinkedHashMap(Collections.singletonMap(key, result));
 
     // Act
     snapshot.putIntoScanSet(scan, expected);
@@ -760,7 +782,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
 
     // Act
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+    Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
 
     // Assert
     assertThat(results.isPresent()).isFalse();
@@ -779,10 +801,11 @@ public class SnapshotTest {
     Snapshot.Key key1 = mock(Snapshot.Key.class);
     Snapshot.Key key2 = mock(Snapshot.Key.class);
     Snapshot.Key key3 = mock(Snapshot.Key.class);
-    scanSet.put(scan, ImmutableMap.of(key1, result1, key2, result2, key3, result3));
+    scanSet.put(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
     // Act
-    Optional<Map<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
+    Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
 
     // Assert
     assertThat(results).isPresent();
@@ -947,7 +970,6 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(txResult));
     snapshot.putIntoGetSet(get, Optional.of(txResult));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -970,7 +992,6 @@ public class SnapshotTest {
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(txResult));
     snapshot.putIntoGetSet(get, Optional.of(txResult));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -994,7 +1015,6 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Get get = prepareAnotherGet();
     Put put = preparePut();
-    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.empty());
     snapshot.putIntoGetSet(get, Optional.empty());
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -1017,15 +1037,12 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
-    Put put = preparePut();
-    TransactionResult txResult = prepareResult(ANY_ID);
+    TransactionResult txResult = prepareResult(ANY_ID + "x");
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.putIntoReadSet(key, Optional.of(txResult));
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
-    when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
+    when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
     Scan scanWithProjections =
         prepareScan()
             .withProjections(
@@ -1045,17 +1062,13 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
-    Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult);
-    snapshot.putIntoReadSet(key, Optional.of(txResult));
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, txResult));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Scanner scanner = mock(Scanner.class);
-    when(scanner.iterator())
-        .thenReturn(Collections.singletonList((Result) changedTxResult).iterator());
+    when(scanner.one()).thenReturn(Optional.of(changedTxResult)).thenReturn(Optional.empty());
     Scan scanWithProjections =
         prepareScan()
             .withProjections(
@@ -1071,19 +1084,186 @@ public class SnapshotTest {
   }
 
   @Test
+  public void toSerializable_ScanSetUpdatedByMySelf_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScan();
+    TransactionResult txResult = prepareResult(ANY_ID);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult changedTxResult = prepareResult(ANY_ID);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(changedTxResult)).thenReturn(Optional.empty());
+    Scan scanWithProjections =
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
   public void toSerializable_ScanSetExtended_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
-    Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID + "x");
-    snapshot.putIntoScanSet(scan, Collections.emptyMap());
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.emptyMap()));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
-    when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
+    when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
+    Scan scanWithProjections =
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanSetWithMultipleRecordsExtended_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScan();
+    TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    Scan scanWithProjections =
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
+  public void toSerializable_ScanSetExtendedByMySelf_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScan();
+    TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.emptyMap()));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult txResult = new TransactionResult(result);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
+    Scan scanWithProjections =
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanSetWithMultipleRecordsExtendedByMySelf_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScan();
+    TransactionResult result1 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    Scan scanWithProjections =
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
+  public void toSerializable_ScanSetDeleted_ShouldThrowValidationConflictException()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScan();
+    TransactionResult txResult = prepareResult(ANY_ID);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.empty());
+    Scan scanWithProjections =
+        prepareScan()
+            .withProjections(
+                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanSetWithMultipleRecordsDeleted_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScan();
+    TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
     Scan scanWithProjections =
         prepareScan()
             .withProjections(
@@ -1148,15 +1328,17 @@ public class SnapshotTest {
     Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
     Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
 
-    snapshot.putIntoScanSet(scan1, Collections.singletonMap(key1, new TransactionResult(result1)));
-    snapshot.putIntoScanSet(scan2, Collections.singletonMap(key2, new TransactionResult(result2)));
-    snapshot.putIntoReadSet(key1, Optional.of(new TransactionResult(result1)));
-    snapshot.putIntoReadSet(key2, Optional.of(new TransactionResult(result2)));
+    snapshot.putIntoScanSet(
+        scan1,
+        Maps.newLinkedHashMap(Collections.singletonMap(key1, new TransactionResult(result1))));
+    snapshot.putIntoScanSet(
+        scan2,
+        Maps.newLinkedHashMap(Collections.singletonMap(key2, new TransactionResult(result2))));
 
     DistributedStorage storage = mock(DistributedStorage.class);
 
     Scanner scanner1 = mock(Scanner.class);
-    when(scanner1.iterator()).thenReturn(Collections.singletonList(result1).iterator());
+    when(scanner1.one()).thenReturn(Optional.of(result1)).thenReturn(Optional.empty());
     Scan scan1WithProjections =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
@@ -1168,7 +1350,7 @@ public class SnapshotTest {
     when(storage.scan(scan1WithProjections)).thenReturn(scanner1);
 
     Scanner scanner2 = mock(Scanner.class);
-    when(scanner2.iterator()).thenReturn(Collections.singletonList(result2).iterator());
+    when(scanner2.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
     Scan scan2WithProjections =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
@@ -1192,7 +1374,6 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult txResult = new TransactionResult(result);
-    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(result));
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -1216,7 +1397,6 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult changedResult = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(get), Optional.of(result));
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -1233,30 +1413,171 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializable_ScannedResultDeleted_ShouldThrowValidationConflictException()
+  public void toSerializable_ScanWithLimitInScanSet_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
-    Scan scan = prepareScan();
-    TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
-    snapshot.putIntoReadSet(key, Optional.of(result));
-    snapshot.putIntoScanSet(scan, Collections.singletonMap(key, result));
+    Scan scan = prepareScanWithLimit(1);
+    TransactionResult result1 = prepareResult(ANY_ID + "x");
+    TransactionResult result2 = prepareResult(ANY_ID + "x");
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjections =
+    Scan scanWithProjectionsWithoutLimit =
         Scan.newBuilder(scan)
             .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
+            .limit(0)
             .build();
     Scanner scanner = mock(Scanner.class);
-    when(scanner.iterator()).thenReturn(Collections.emptyIterator());
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjectionsWithoutLimit);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRange_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScanWithLimit(1);
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
+    TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjectionsWithoutLimit =
+        Scan.newBuilder(scan)
+            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
+            .limit(0)
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(insertedResult))
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanWithProjectionsWithoutLimit);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRangeByMySelf_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScanWithLimit(1);
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
+    TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjectionsWithoutLimit =
+        Scan.newBuilder(scan)
+            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
+            .limit(0)
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(insertedResult))
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjectionsWithoutLimit);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRange_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScanWithLimit(3);
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_4);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjectionsWithoutLimit =
+        Scan.newBuilder(scan)
+            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
+            .limit(0)
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(insertedResult))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanWithProjectionsWithoutLimit);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRangeByMySelf_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScanWithLimit(3);
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
+    TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_4);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjectionsWithoutLimit =
+        Scan.newBuilder(scan)
+            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
+            .limit(0)
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(insertedResult))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjectionsWithoutLimit);
   }
 
   @Test
