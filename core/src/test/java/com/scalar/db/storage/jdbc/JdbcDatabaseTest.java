@@ -71,6 +71,7 @@ public class JdbcDatabaseTest {
     jdbcDatabase.get(get);
 
     // Assert
+    verify(connection).setReadOnly(true);
     verify(jdbcService).get(any(), any());
     verify(connection).close();
   }
@@ -89,6 +90,7 @@ public class JdbcDatabaseTest {
               jdbcDatabase.get(get);
             })
         .isInstanceOf(ExecutionException.class);
+    verify(connection).setReadOnly(true);
     verify(connection).close();
   }
 
@@ -104,6 +106,7 @@ public class JdbcDatabaseTest {
     scanner.close();
 
     // Assert
+    verify(connection).setReadOnly(true);
     verify(jdbcService).getScanner(any(), any());
     verify(connection).close();
   }
@@ -122,6 +125,7 @@ public class JdbcDatabaseTest {
               jdbcDatabase.scan(scan);
             })
         .isInstanceOf(ExecutionException.class);
+    verify(connection).setReadOnly(true);
     verify(connection).close();
   }
 

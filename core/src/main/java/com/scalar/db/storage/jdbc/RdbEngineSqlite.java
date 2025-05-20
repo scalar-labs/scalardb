@@ -13,6 +13,7 @@ import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -335,5 +336,10 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   @Override
   public RdbEngineTimeTypeStrategy<Integer, Long, Long, Long> getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public void setReadOnly(Connection connection, boolean readOnly) {
+    // Do nothing. SQLite does not support read-only mode.
   }
 }
