@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -53,6 +55,8 @@ import java.util.Set;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -285,6 +289,11 @@ public abstract class JdbcAdminTestBase {
             .addSecondaryIndex("c4")
             .build();
     assertThat(actualMetadata).isEqualTo(expectedMetadata);
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatements);
   }
 
@@ -1702,6 +1711,11 @@ public abstract class JdbcAdminTestBase {
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
 
     // Assert
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatement);
     assertThat(actualTableNames).containsExactly(table1, table2);
     verify(preparedStatement).setString(1, namespace + ".%");
@@ -1771,6 +1785,11 @@ public abstract class JdbcAdminTestBase {
     // Assert
     assertThat(admin.namespaceExists(namespace)).isTrue();
 
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(selectStatement).setString(1, namespace + namespacePlaceholderSuffix);
@@ -2772,16 +2791,15 @@ public abstract class JdbcAdminTestBase {
     }
   }
 
-  @Test
-  public void getImportTableMetadata_ForX_ShouldWorkProperly()
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void getImportTableMetadata_ForX_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
-    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
-      if (rdbEngine.equals(RdbEngine.SQLITE)) {
-        getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
-      } else {
-        getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
-            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-      }
+    if (rdbEngine.equals(RdbEngine.SQLITE)) {
+      getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
+    } else {
+      getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
+          rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
     }
   }
 
@@ -2848,6 +2866,7 @@ public abstract class JdbcAdminTestBase {
         .execute(expectedCheckTableExistStatement);
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
+    verify(connection).setReadOnly(true);
     verify(rdbEngineStrategy)
         .getDataTypeForScalarDb(
             any(JDBCType.class),
@@ -3310,6 +3329,11 @@ public abstract class JdbcAdminTestBase {
     Set<String> actual = admin.getNamespaceNames();
 
     // Assert
+    if (rdbEngine.equals(RdbEngine.SQLITE)) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).createStatement();
     verify(getTableMetadataNamespacesStatementMock)
         .executeQuery(getTableMetadataNamespacesStatement);

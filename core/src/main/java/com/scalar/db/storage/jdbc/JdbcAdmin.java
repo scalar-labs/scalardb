@@ -394,6 +394,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     boolean tableExists = false;
 
     try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
       if (!namespaceExistsInternal(connection, metadataSchema)) {
         return null;
       }
@@ -459,6 +461,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
 
@@ -545,19 +549,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + " WHERE "
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " LIKE ?";
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(selectTablesOfNamespaceStatement)) {
-      String prefix = namespace + ".";
-      preparedStatement.setString(1, prefix + "%");
-      try (ResultSet results = preparedStatement.executeQuery()) {
-        Set<String> tableNames = new HashSet<>();
-        while (results.next()) {
-          String tableName =
-              results.getString(METADATA_COL_FULL_TABLE_NAME).substring(prefix.length());
-          tableNames.add(tableName);
+    try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
+      try (PreparedStatement preparedStatement =
+          connection.prepareStatement(selectTablesOfNamespaceStatement)) {
+        String prefix = namespace + ".";
+        preparedStatement.setString(1, prefix + "%");
+        try (ResultSet results = preparedStatement.executeQuery()) {
+          Set<String> tableNames = new HashSet<>();
+          while (results.next()) {
+            String tableName =
+                results.getString(METADATA_COL_FULL_TABLE_NAME).substring(prefix.length());
+            tableNames.add(tableName);
+          }
+          return tableNames;
         }
-        return tableNames;
       }
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
@@ -576,6 +583,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
       return namespaceExistsInternal(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException("Checking if the namespace exists failed", e);
@@ -804,18 +813,21 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " FROM "
             + encloseFullTableName(metadataSchema, METADATA_TABLE);
-    try (Connection connection = dataSource.getConnection();
-        Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
-      Set<String> namespaceOfExistingTables = new HashSet<>();
-      while (rs.next()) {
-        String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
-        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
-        namespaceOfExistingTables.add(namespaceName);
-      }
-      namespaceOfExistingTables.add(metadataSchema);
+    try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
 
-      return namespaceOfExistingTables;
+      try (Statement stmt = connection.createStatement();
+          ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
+        Set<String> namespaceOfExistingTables = new HashSet<>();
+        while (rs.next()) {
+          String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
+          String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+          namespaceOfExistingTables.add(namespaceName);
+        }
+        namespaceOfExistingTables.add(metadataSchema);
+
+        return namespaceOfExistingTables;
+      }
     } catch (SQLException e) {
       // An exception will be thrown if the namespace table does not exist when executing the select
       // query
