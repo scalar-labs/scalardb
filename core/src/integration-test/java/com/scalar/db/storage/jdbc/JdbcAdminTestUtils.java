@@ -116,6 +116,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
       return true;
     } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       sql = "SELECT 1 FROM sys.schemas WHERE name = ?";
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      sql = "SELECT 1 FROM syscat.schemata WHERE schemaname = ?";
     } else {
       throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
     }

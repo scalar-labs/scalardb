@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core.dataexport;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.io.IOException;
@@ -13,7 +13,7 @@ import java.util.List;
 
 public class CsvExportManager extends ExportManager {
   public CsvExportManager(
-      DistributedStorage storage, ScalarDBDao dao, ProducerTaskFactory producerTaskFactory) {
+      DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
     super(storage, dao, producerTaskFactory);
   }
 
