@@ -148,10 +148,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     return begin(txId, isolation);
   }
 
-  @VisibleForTesting
-  TwoPhaseCommitTransaction begin(String txId, Isolation isolation) {
+  private TwoPhaseCommitTransaction begin(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    return createNewTransaction(txId, isolation);
+    return begin(txId, isolation, false, false);
   }
 
   @Override
@@ -163,10 +162,12 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   @VisibleForTesting
   TwoPhaseCommitTransaction join(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    return createNewTransaction(txId, isolation);
+    return begin(txId, isolation, false, false);
   }
 
-  private TwoPhaseCommitTransaction createNewTransaction(String txId, Isolation isolation) {
+  @VisibleForTesting
+  TwoPhaseCommitTransaction begin(
+      String txId, Isolation isolation, boolean readOnly, boolean singleOperation) {
     Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
@@ -175,8 +176,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             isIncludeMetadataEnabled,
             parallelExecutor,
-            false);
-
+            readOnly,
+            singleOperation);
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
@@ -184,19 +185,24 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     return transaction;
   }
 
+  private TwoPhaseCommitTransaction beginSingleOperation(boolean readOnly) {
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, config.getIsolation(), readOnly, true);
+  }
+
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)));
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)), true);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
+    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)), true);
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    TwoPhaseCommitTransaction transaction = begin();
+    TwoPhaseCommitTransaction transaction = beginSingleOperation(true);
 
     TransactionCrudOperable.Scanner scanner;
     try {
@@ -286,7 +292,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.put(copyAndSetTargetToIfNot(put));
           return null;
-        });
+        },
+        false);
   }
 
   @Deprecated
@@ -296,7 +303,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.put(copyAndSetTargetToIfNot(puts));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -305,7 +313,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.insert(copyAndSetTargetToIfNot(insert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -314,7 +323,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.upsert(copyAndSetTargetToIfNot(upsert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -323,7 +333,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.update(copyAndSetTargetToIfNot(update));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -332,7 +343,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.delete(copyAndSetTargetToIfNot(delete));
           return null;
-        });
+        },
+        false);
   }
 
   @Deprecated
@@ -342,7 +354,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.delete(copyAndSetTargetToIfNot(deletes));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -352,13 +365,15 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.mutate(copyAndSetTargetToIfNot(mutations));
           return null;
-        });
+        },
+        false);
   }
 
   private <R> R executeTransaction(
-      ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction)
+      ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction,
+      boolean readOnly)
       throws CrudException, UnknownTransactionStatusException {
-    TwoPhaseCommitTransaction transaction = begin();
+    TwoPhaseCommitTransaction transaction = beginSingleOperation(readOnly);
     try {
       R result = throwableFunction.apply(transaction);
       transaction.prepare();
