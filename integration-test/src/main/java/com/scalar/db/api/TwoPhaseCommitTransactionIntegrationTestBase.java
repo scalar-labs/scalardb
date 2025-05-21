@@ -2609,6 +2609,49 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
+  public void manager_mutate_ShouldMutateRecords() throws TransactionException {
+    // Arrange
+    manager1.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    manager1.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 1)
+            .build();
+    Delete delete = prepareDelete(1, 0, namespace1, TABLE_1);
+
+    // Act
+    manager1.mutate(Arrays.asList(update, delete));
+
+    // Assert
+    Optional<Result> result1 = manager1.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> result2 = manager1.get(prepareGet(1, 0, namespace1, TABLE_1));
+
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(getBalance(result1.get())).isEqualTo(1);
+
+    assertThat(result2.isPresent()).isFalse();
+  }
+
+  @Test
   public void manager_get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties1(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace1);
