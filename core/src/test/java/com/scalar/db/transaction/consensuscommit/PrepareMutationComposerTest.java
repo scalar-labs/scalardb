@@ -2,9 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -182,10 +180,7 @@ public class PrepareMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     put.withConsistency(Consistency.LINEARIZABLE);
-    put.withCondition(
-        new PutIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ),
-            new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ)));
+    put.withCondition(new PutIf(new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ)));
     put.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
     put.withValue(Attribute.toIdValue(ANY_ID_3));
     put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
@@ -226,10 +221,7 @@ public class PrepareMutationComposerTest {
             .intValue(Attribute.BEFORE_STATE, null)
             .intValue(Attribute.BEFORE_VERSION, 0)
             .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2)
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
-                    .and(ConditionBuilder.column(VERSION).isNullInt())
-                    .build())
+            .condition(ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText()).build())
             .build();
     assertThat(actual).isEqualTo(expected);
   }
@@ -321,9 +313,7 @@ public class PrepareMutationComposerTest {
             .forTable(delete.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
-        new PutIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ),
-            new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ)));
+        new PutIf(new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ)));
     expected.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
     expected.withValue(Attribute.toIdValue(ANY_ID_3));
     expected.withValue(Attribute.toStateValue(TransactionState.DELETED));
@@ -368,10 +358,7 @@ public class PrepareMutationComposerTest {
             .intValue(Attribute.BEFORE_STATE, null)
             .intValue(Attribute.BEFORE_VERSION, 0)
             .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2)
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText())
-                    .and(ConditionBuilder.column(VERSION).isNullInt())
-                    .build())
+            .condition(ConditionBuilder.putIf(ConditionBuilder.column(ID).isNullText()).build())
             .build();
     assertThat(actual).isEqualTo(expected);
   }
