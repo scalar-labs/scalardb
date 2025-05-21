@@ -105,7 +105,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   private String getScalarDbPropertiesFilePath() {
-    if (configFilePath == null || configFilePath.trim().isEmpty()) {
+    if (StringUtils.isBlank(configFilePath)) {
       throw new IllegalArgumentException(
           CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage());
     }

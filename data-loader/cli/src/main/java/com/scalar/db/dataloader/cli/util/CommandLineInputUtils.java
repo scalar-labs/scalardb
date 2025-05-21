@@ -4,6 +4,7 @@ import com.scalar.db.common.error.CoreError;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 
 public class CommandLineInputUtils {
 
@@ -15,7 +16,7 @@ public class CommandLineInputUtils {
    * @throws IllegalArgumentException if the input is null, empty, or not in the expected format
    */
   public static Map.Entry<String, String> parseKeyValue(String keyValue) {
-    if (keyValue == null || keyValue.trim().isEmpty()) {
+    if (StringUtils.isBlank(keyValue)) {
       throw new IllegalArgumentException(
           CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
     }
