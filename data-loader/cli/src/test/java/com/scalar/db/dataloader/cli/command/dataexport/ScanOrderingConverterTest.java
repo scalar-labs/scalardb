@@ -22,7 +22,7 @@ public class ScanOrderingConverterTest {
             () -> scanOrderingConverter.convert(value),
             "Expected to throw exception");
     Assertions.assertEquals(
-        CoreError.DATA_LOADER_INVALID_COLUMN_ORDER_FORMAT.buildMessage(value), thrown.getMessage());
+        CoreError.DATA_LOADER_INVALID_KEY_VALUE_INPUT.buildMessage(value), thrown.getMessage());
   }
 
   @Test

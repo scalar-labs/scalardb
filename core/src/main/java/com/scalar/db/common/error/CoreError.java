@@ -906,15 +906,12 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0200", "Key-value cannot be null or empty", "", ""),
   DATA_LOADER_INVALID_KEY_VALUE_INPUT(
       Category.USER_ERROR, "0201", "Invalid key-value format: %s", "", ""),
-  DATA_LOADER_INVALID_COLUMN_ORDER_FORMAT(
-      Category.USER_ERROR, "0202", "Invalid column order format: %s", "", ""),
-
-  DATA_LOADER_SPLIT_INPUT_VALUE_NULL(Category.USER_ERROR, "0203", "Value must not be null", "", ""),
+  DATA_LOADER_SPLIT_INPUT_VALUE_NULL(Category.USER_ERROR, "0202", "Value must not be null", "", ""),
 
   DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL(
-      Category.USER_ERROR, "0204", "Delimiter must not be null", "", ""),
+      Category.USER_ERROR, "0203", "Delimiter must not be null", "", ""),
   DATA_LOADER_CONFIG_FILE_PATH_BLANK(
-      Category.USER_ERROR, "0205", "Config file path must not be blank", "", ""),
+      Category.USER_ERROR, "0204", "Config file path must not be blank", "", ""),
 
   //
   // Errors for the concurrency error category
