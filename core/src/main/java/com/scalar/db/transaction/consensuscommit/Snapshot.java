@@ -235,7 +235,7 @@ public class Snapshot {
     return Optional.of(scanSet.get(scan));
   }
 
-  private Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
+  public Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
       throws CrudException {
     if (deleteSet.containsKey(key)) {
       return Optional.empty();
@@ -249,7 +249,7 @@ public class Snapshot {
     }
   }
 
-  private Optional<TransactionResult> mergeResult(
+  public Optional<TransactionResult> mergeResult(
       Key key, Optional<TransactionResult> result, Set<Conjunction> conjunctions)
       throws CrudException {
     return mergeResult(key, result)
