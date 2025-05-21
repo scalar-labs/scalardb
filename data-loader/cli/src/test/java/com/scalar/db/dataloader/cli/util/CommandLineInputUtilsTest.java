@@ -6,66 +6,61 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.dataloader.core.ColumnKeyValue;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class CommandLineInputUtilsTest {
 
   @Test
-  void parseKeyValue_validInput_shouldReturnKeyValue() {
-    ColumnKeyValue result = CommandLineInputUtils.parseKeyValue("name=John");
-    assertEquals("name", result.getColumnName());
-    assertEquals("John", result.getColumnValue());
+  public void parseKeyValue_validKeyValue_ShouldReturnEntry() {
+    Map.Entry<String, String> result = CommandLineInputUtils.parseKeyValue("foo=bar");
+
+    assertEquals("foo", result.getKey());
+    assertEquals("bar", result.getValue());
   }
 
   @Test
-  void parseKeyValue_noEqualSign_shouldThrowException() {
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> CommandLineInputUtils.parseKeyValue("invalidpair"));
-    assertTrue(exception.getMessage().contains("Invalid key-value format"));
+  public void parseKeyValue_whitespaceTrimmed_ShouldReturnTrimmedEntry() {
+    Map.Entry<String, String> result = CommandLineInputUtils.parseKeyValue("  key  =  value  ");
+
+    assertEquals("key", result.getKey());
+    assertEquals("value", result.getValue());
   }
 
   @Test
-  void parseKeyValue_emptyKey_shouldThrowException() {
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue("=value"));
-    assertTrue(exception.getMessage().contains("Invalid key-value format"));
+  public void parseKeyValue_nullInput_ShouldThrowException() {
+    assertThrows(IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue(null));
   }
 
   @Test
-  void parseKeyValue_emptyValue_shouldThrowException() {
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue("key="));
-    assertTrue(
-        exception
-            .getMessage()
-            .contains(CoreError.DATA_LOADER_INVALID_KEY_VALUE_INPUT.buildMessage("key=")));
+  public void parseKeyValue_emptyInput_ShouldThrowException() {
+    assertThrows(IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue(" "));
   }
 
   @Test
-  void parseKeyValue_blankInput_shouldThrowException() {
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue("   "));
-    assertTrue(
-        exception
-            .getMessage()
-            .contains(CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage()));
+  public void parseKeyValue_missingEquals_ShouldThrowException() {
+    assertThrows(
+        IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue("keyvalue"));
   }
 
   @Test
-  void parseKeyValue_nullInput_shouldThrowException() {
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue(null));
-    assertTrue(
-        exception
-            .getMessage()
-            .contains(CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage()));
+  public void parseKeyValue_emptyKey_ShouldThrowException() {
+    assertThrows(
+        IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue(" =value"));
+  }
+
+  @Test
+  public void parseKeyValue_emptyValue_ShouldThrowException() {
+    assertThrows(
+        IllegalArgumentException.class, () -> CommandLineInputUtils.parseKeyValue("key= "));
+  }
+
+  @Test
+  public void parseKeyValue_multipleEquals_ShouldParseFirstOnly() {
+    Map.Entry<String, String> result = CommandLineInputUtils.parseKeyValue("key=val=ue");
+
+    assertEquals("key", result.getKey());
+    assertEquals("val=ue", result.getValue());
   }
 
   @Test

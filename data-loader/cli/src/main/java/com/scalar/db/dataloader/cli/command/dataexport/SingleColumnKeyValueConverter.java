@@ -3,6 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.parseKeyValue;
 
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import java.util.Map;
 import picocli.CommandLine;
 
 /**
@@ -20,6 +21,7 @@ public class SingleColumnKeyValueConverter implements CommandLine.ITypeConverter
    */
   @Override
   public ColumnKeyValue convert(String keyValue) {
-    return parseKeyValue(keyValue);
+    Map.Entry<String, String> data = parseKeyValue(keyValue);
+    return new ColumnKeyValue(data.getKey(), data.getValue());
   }
 }

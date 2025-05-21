@@ -1,7 +1,8 @@
 package com.scalar.db.dataloader.cli.util;
 
 import com.scalar.db.common.error.CoreError;
-import com.scalar.db.dataloader.core.ColumnKeyValue;
+import java.util.AbstractMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class CommandLineInputUtils {
@@ -10,10 +11,10 @@ public class CommandLineInputUtils {
    * Parses a single key-value pair from a string in the format "key=value".
    *
    * @param keyValue the key-value string to parse
-   * @return a {@link ColumnKeyValue} object representing the parsed key-value pair
+   * @return a {@link Map.Entry} representing the parsed key-value pair
    * @throws IllegalArgumentException if the input is null, empty, or not in the expected format
    */
-  public static ColumnKeyValue parseKeyValue(String keyValue) {
+  public static Map.Entry<String, String> parseKeyValue(String keyValue) {
     if (keyValue == null || keyValue.trim().isEmpty()) {
       throw new IllegalArgumentException(
           CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
@@ -25,8 +26,7 @@ public class CommandLineInputUtils {
       throw new IllegalArgumentException(
           CoreError.DATA_LOADER_INVALID_KEY_VALUE_INPUT.buildMessage(keyValue));
     }
-
-    return new ColumnKeyValue(parts[0].trim(), parts[1].trim());
+    return new AbstractMap.SimpleEntry<>(parts[0].trim(), parts[1].trim());
   }
 
   /**

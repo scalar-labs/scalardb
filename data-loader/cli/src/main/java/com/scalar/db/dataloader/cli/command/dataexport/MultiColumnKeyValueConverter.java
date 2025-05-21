@@ -1,12 +1,11 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
-import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.parseKeyValue;
-import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.splitByDelimiter;
-
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.cli.util.CommandLineInputUtils;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import picocli.CommandLine;
 
 /**
@@ -40,14 +39,9 @@ public class MultiColumnKeyValueConverter
       throw new IllegalArgumentException(
           CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
     }
-
-    List<ColumnKeyValue> columnKeyValueList = new ArrayList<>();
-    String[] columnValues = splitByDelimiter(keyValue, ",", 0);
-
-    for (String columnValue : columnValues) {
-      columnKeyValueList.add(parseKeyValue(columnValue));
-    }
-
-    return columnKeyValueList;
+    return Arrays.stream(CommandLineInputUtils.splitByDelimiter(keyValue, ",", 0))
+        .map(CommandLineInputUtils::parseKeyValue)
+        .map(entry -> new ColumnKeyValue(entry.getKey(), entry.getValue()))
+        .collect(Collectors.toList());
   }
 }
