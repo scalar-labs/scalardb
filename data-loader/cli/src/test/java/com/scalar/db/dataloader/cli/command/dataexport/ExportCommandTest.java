@@ -38,7 +38,7 @@ class ExportCommandTest {
             exportCommand::call,
             "Expected to throw FileNotFound exception as configuration path is invalid");
     Assertions.assertEquals(
-        CoreError.DATA_LOADER_FILE_PATH_IS_BLANK.buildMessage(), thrown.getMessage());
+        CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage(), thrown.getMessage());
   }
 
   @Test

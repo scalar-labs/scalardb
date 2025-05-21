@@ -5,6 +5,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import com.scalar.db.dataloader.cli.util.FileUtils;
@@ -104,6 +105,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   private String getScalarDbPropertiesFilePath() {
+    if (configFilePath == null || configFilePath.trim().isEmpty()) {
+      throw new IllegalArgumentException(
+          CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage());
+    }
     return Objects.equals(configFilePath, DEFAULT_CONFIG_FILE_NAME)
         ? Paths.get("").toAbsolutePath().resolve(DEFAULT_CONFIG_FILE_NAME).toString()
         : configFilePath;

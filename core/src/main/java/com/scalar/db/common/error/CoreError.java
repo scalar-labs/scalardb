@@ -913,6 +913,8 @@ public enum CoreError implements ScalarDbError {
 
   DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL(
       Category.USER_ERROR, "0204", "Delimiter must not be null", "", ""),
+  DATA_LOADER_CONFIG_FILE_PATH_BLANK(
+      Category.USER_ERROR, "0205", "Config file path must not be blank", "", ""),
 
   //
   // Errors for the concurrency error category
