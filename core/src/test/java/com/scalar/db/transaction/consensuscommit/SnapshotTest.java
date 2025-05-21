@@ -62,7 +62,6 @@ public class SnapshotTest {
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_TABLE_NAME_2 = "table2";
   private static final String ANY_ID = "id";
-  private static final int ANY_VERSION = 1;
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -153,7 +152,6 @@ public class SnapshotTest {
             .put(ANY_NAME_3, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_3, ANY_TEXT_3)))
             .put(ANY_NAME_4, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_4, ANY_TEXT_4)))
             .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(txId)))
-            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION)))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
@@ -166,7 +164,6 @@ public class SnapshotTest {
             .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3))
             .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
             .put(Attribute.ID, TextColumn.ofNull(Attribute.ID))
-            .put(Attribute.VERSION, IntColumn.ofNull(Attribute.VERSION))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
@@ -837,7 +834,6 @@ public class SnapshotTest {
                 .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_5))
                 .put(ANY_NAME_4, new TextValue(ANY_NAME_4, (String) null))
                 .put(Attribute.ID, Attribute.toIdValue(ANY_ID))
-                .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION))
                 .build());
     assertThat(result.getValue(ANY_NAME_1).isPresent()).isTrue();
     assertThat(result.getValue(ANY_NAME_1).get()).isEqualTo(new TextValue(ANY_NAME_1, ANY_TEXT_1));
@@ -850,20 +846,11 @@ public class SnapshotTest {
         .isEqualTo(new TextValue(ANY_NAME_4, (String) null));
     assertThat(result.getValue(Attribute.ID).isPresent()).isTrue();
     assertThat(result.getValue(Attribute.ID).get()).isEqualTo(Attribute.toIdValue(ANY_ID));
-    assertThat(result.getValue(Attribute.VERSION).isPresent()).isTrue();
-    assertThat(result.getValue(Attribute.VERSION).get())
-        .isEqualTo(Attribute.toVersionValue(ANY_VERSION));
 
     assertThat(result.getContainedColumnNames())
         .isEqualTo(
             new HashSet<>(
-                Arrays.asList(
-                    ANY_NAME_1,
-                    ANY_NAME_2,
-                    ANY_NAME_3,
-                    ANY_NAME_4,
-                    Attribute.ID,
-                    Attribute.VERSION)));
+                Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4, Attribute.ID)));
 
     assertThat(result.contains(ANY_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_NAME_1)).isFalse();
@@ -889,11 +876,6 @@ public class SnapshotTest {
     assertThat(result.isNull(Attribute.ID)).isFalse();
     assertThat(result.getText(Attribute.ID)).isEqualTo(ANY_ID);
     assertThat(result.getAsObject(Attribute.ID)).isEqualTo(ANY_ID);
-
-    assertThat(result.contains(Attribute.VERSION)).isTrue();
-    assertThat(result.isNull(Attribute.VERSION)).isFalse();
-    assertThat(result.getInt(Attribute.VERSION)).isEqualTo(ANY_VERSION);
-    assertThat(result.getAsObject(Attribute.VERSION)).isEqualTo(ANY_VERSION);
   }
 
   @Test
@@ -973,8 +955,7 @@ public class SnapshotTest {
     snapshot.putIntoGetSet(get, Optional.of(txResult));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    Get getWithProjections =
-        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    Get getWithProjections = prepareAnotherGet().withProjection(Attribute.ID);
     when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
@@ -996,8 +977,7 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
-    Get getWithProjections =
-        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    Get getWithProjections = prepareAnotherGet().withProjection(Attribute.ID);
     when(storage.get(getWithProjections)).thenReturn(Optional.of(changedTxResult));
 
     // Act Assert
@@ -1019,8 +999,7 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
-    Get getWithProjections =
-        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    Get getWithProjections = prepareAnotherGet().withProjection(Attribute.ID);
     when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
@@ -1044,9 +1023,7 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1070,9 +1047,7 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(changedTxResult)).thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1097,9 +1072,7 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(changedTxResult)).thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1122,9 +1095,7 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1153,9 +1124,7 @@ public class SnapshotTest {
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1179,9 +1148,7 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1209,9 +1176,7 @@ public class SnapshotTest {
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1234,9 +1199,7 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1265,9 +1228,7 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
     Scan scanWithProjections =
-        prepareScan()
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
@@ -1306,9 +1267,7 @@ public class SnapshotTest {
                     ANY_NAME_2,
                     TextColumn.of(ANY_NAME_2, ANY_TEXT_2),
                     Attribute.ID,
-                    ScalarDbUtils.toColumn(Attribute.toIdValue("id1")),
-                    Attribute.VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION))),
+                    ScalarDbUtils.toColumn(Attribute.toIdValue("id1"))),
                 TABLE_METADATA));
 
     Result result2 =
@@ -1320,9 +1279,7 @@ public class SnapshotTest {
                     ANY_NAME_2,
                     TextColumn.of(ANY_NAME_2, ANY_TEXT_1),
                     Attribute.ID,
-                    ScalarDbUtils.toColumn(Attribute.toIdValue("id2")),
-                    Attribute.VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION))),
+                    ScalarDbUtils.toColumn(Attribute.toIdValue("id2"))),
                 TABLE_METADATA));
 
     Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
@@ -1345,8 +1302,7 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+            .withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scan1WithProjections)).thenReturn(scanner1);
 
     Scanner scanner2 = mock(Scanner.class);
@@ -1357,8 +1313,7 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withProjections(
-                Arrays.asList(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2));
+            .withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
     when(storage.scan(scan2WithProjections)).thenReturn(scanner2);
 
     // Act Assert
@@ -1377,8 +1332,7 @@ public class SnapshotTest {
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    Get getWithProjections =
-        Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
+    Get getWithProjections = Get.newBuilder(get).projection(Attribute.ID).build();
     when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
@@ -1400,8 +1354,7 @@ public class SnapshotTest {
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    Get getWithProjections =
-        Get.newBuilder(get).projections(Attribute.ID, Attribute.VERSION).build();
+    Get getWithProjections = Get.newBuilder(get).projection(Attribute.ID).build();
     when(storage.get(getWithProjections)).thenReturn(Optional.of(changedResult));
 
     // Act Assert
@@ -1424,10 +1377,7 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan)
-            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
-            .limit(0)
-            .build();
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
@@ -1456,10 +1406,7 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan)
-            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
-            .limit(0)
-            .build();
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(insertedResult))
@@ -1490,10 +1437,7 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan)
-            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
-            .limit(0)
-            .build();
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(insertedResult))
@@ -1525,10 +1469,7 @@ public class SnapshotTest {
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan)
-            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
-            .limit(0)
-            .build();
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
@@ -1561,10 +1502,7 @@ public class SnapshotTest {
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan)
-            .projections(Attribute.ID, Attribute.VERSION, ANY_NAME_1, ANY_NAME_2)
-            .limit(0)
-            .build();
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
