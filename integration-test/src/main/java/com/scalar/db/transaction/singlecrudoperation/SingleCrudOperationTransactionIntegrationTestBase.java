@@ -453,6 +453,12 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
       "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
   @Override
   @Test
+  public void manager_mutate_ShouldMutateRecords() {}
+
+  @Disabled(
+      "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
+  @Override
+  @Test
   public void manager_mutate_DefaultNamespaceGiven_ShouldWorkProperly() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
