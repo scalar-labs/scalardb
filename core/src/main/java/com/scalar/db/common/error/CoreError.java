@@ -907,7 +907,6 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_KEY_VALUE_INPUT(
       Category.USER_ERROR, "0201", "Invalid key-value format: %s", "", ""),
   DATA_LOADER_SPLIT_INPUT_VALUE_NULL(Category.USER_ERROR, "0202", "Value must not be null", "", ""),
-
   DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL(
       Category.USER_ERROR, "0203", "Delimiter must not be null", "", ""),
   DATA_LOADER_CONFIG_FILE_PATH_BLANK(
