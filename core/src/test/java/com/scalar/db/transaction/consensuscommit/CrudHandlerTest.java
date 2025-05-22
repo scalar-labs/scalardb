@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
@@ -35,6 +36,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -358,8 +360,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
-    verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, expected));
-    verify(snapshot).verify(scan);
+    verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -406,7 +408,7 @@ public class CrudHandlerTest {
     Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
     when(snapshot.getResults(scanForStorage))
         .thenReturn(Optional.empty())
-        .thenReturn(Optional.of(ImmutableMap.of(key, expected)));
+        .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, expected))));
     when(snapshot.getResult(key)).thenReturn(Optional.of(expected));
 
     // Act
@@ -415,7 +417,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
-    verify(snapshot).putIntoScanSet(scanForStorage, ImmutableMap.of(key, expected));
+    verify(snapshot)
+        .putIntoScanSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
     assertThat(results1.size()).isEqualTo(1);
     assertThat(results1.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -508,7 +511,7 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void scan_CalledAfterDeleteUnderRealSnapshot_ShouldReturnResultsWithoutDeletedRecord()
+  public void scan_CalledAfterDeleteUnderRealSnapshot_ShouldThrowIllegalArgumentException()
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
@@ -555,32 +558,19 @@ public class CrudHandlerTest {
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
-    // Act
+    // Act Assert
     handler.delete(delete);
-    List<Result> results = handler.scan(scan);
-
-    // Assert
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0))
-        .isEqualTo(new FilteredResult(result, Collections.emptyList(), TABLE_METADATA, false));
 
     // check the delete set
     assertThat(deleteSet.size()).isEqualTo(1);
     assertThat(deleteSet).containsKey(new Snapshot.Key(delete));
 
-    // check if the scanned data is inserted correctly in the read set
-    assertThat(readSet.size()).isEqualTo(2);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result);
-    assertThat(readSet.get(key1).isPresent()).isTrue();
-    assertThat(readSet.get(key1).get()).isEqualTo(new TransactionResult(result));
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    assertThat(readSet.get(key2).isPresent()).isTrue();
-    assertThat(readSet.get(key2).get()).isEqualTo(new TransactionResult(result2));
+    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      scan_CrossPartitionScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndValidateThenReturn()
+      scan_CrossPartitionScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndVerifyNoOverlapThenReturn()
           throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
@@ -596,8 +586,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
-    verify(snapshot).putIntoScanSet(scan, ImmutableMap.of(key, transactionResult));
-    verify(snapshot).verify(scan);
+    verify(snapshot)
+        .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, transactionResult));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(
@@ -606,7 +597,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      scan_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorValidateButThrowUncommittedRecordException()
+      scan_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorVerifyNoOverlapButThrowUncommittedRecordException()
           throws ExecutionException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
@@ -626,7 +617,48 @@ public class CrudHandlerTest {
             });
 
     verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), ArgumentMatchers.any());
-    verify(snapshot, never()).verify(any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
+  }
+
+  @Test
+  public void
+      scan_RuntimeExceptionCausedByExecutionExceptionThrownByIteratorHasNext_ShouldThrowCrudException()
+          throws ExecutionException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    RuntimeException runtimeException = mock(RuntimeException.class);
+    when(runtimeException.getCause()).thenReturn(executionException);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(scanner.iterator()).thenReturn(iterator);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scan))
+        .isInstanceOf(CrudException.class)
+        .hasCause(executionException);
+  }
+
+  @Test
+  public void scan_RuntimeExceptionThrownByIteratorHasNext_ShouldThrowCrudException()
+      throws ExecutionException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    RuntimeException runtimeException = mock(RuntimeException.class);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(scanner.iterator()).thenReturn(iterator);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scan))
+        .isInstanceOf(CrudException.class)
+        .hasCause(runtimeException);
   }
 
   @Test

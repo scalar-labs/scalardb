@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDBMode;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import picocli.CommandLine;
@@ -15,7 +15,7 @@ public class ImportCommandOptions {
       description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
       paramLabel = "<MODE>",
       defaultValue = "STORAGE")
-  protected ScalarDBMode scalarDbMode;
+  protected ScalarDbMode scalarDbMode;
 
   @CommandLine.Option(
       names = {"--config", "-c"},

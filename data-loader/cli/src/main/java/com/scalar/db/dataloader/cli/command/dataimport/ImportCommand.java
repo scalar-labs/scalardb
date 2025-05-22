@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDBMode;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
@@ -56,8 +56,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(logDirectory)
-            .isLogRawSourceRecords(importOptions.isLogRawRecord())
-            .isLogSuccessRecords(importOptions.isLogSuccessRecords())
+            .isLogRawSourceRecordsEnabled(importOptions.isLogRawRecord())
+            .isLogSuccessRecordsEnabled(importOptions.isLogSuccessRecords())
             .prettyPrint(prettyPrint)
             .build();
     LogWriterFactory logWriterFactory = createLogWriterFactory(config);
@@ -132,7 +132,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     File configFile = new File(configFilePath);
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
     ImportManager importManager;
-    if (scalarDbMode == ScalarDBMode.TRANSACTION) {
+    if (scalarDbMode == ScalarDbMode.TRANSACTION) {
       ScalarDbTransactionManager scalarDbTransactionManager =
           new ScalarDbTransactionManager(TransactionFactory.create(configFile));
       importManager =
@@ -141,7 +141,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               reader,
               importOptions,
               importProcessorFactory,
-              ScalarDBMode.TRANSACTION,
+              ScalarDbMode.TRANSACTION,
               null,
               scalarDbTransactionManager.getDistributedTransactionManager());
     } else {
@@ -153,7 +153,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               reader,
               importOptions,
               importProcessorFactory,
-              ScalarDBMode.STORAGE,
+              ScalarDbMode.STORAGE,
               scalarDbStorageManger.getDistributedStorage(),
               null);
     }

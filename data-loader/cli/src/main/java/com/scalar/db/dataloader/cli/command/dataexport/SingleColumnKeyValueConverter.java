@@ -1,6 +1,9 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.parseKeyValue;
+
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import java.util.Map;
 import picocli.CommandLine;
 
 /**
@@ -18,26 +21,7 @@ public class SingleColumnKeyValueConverter implements CommandLine.ITypeConverter
    */
   @Override
   public ColumnKeyValue convert(String keyValue) {
-    if (keyValue == null || keyValue.trim().isEmpty()) {
-      throw new IllegalArgumentException("Key-value cannot be null or empty");
-    }
-    return parseKeyValue(keyValue);
-  }
-
-  /**
-   * Parses a single key-value pair from a string in the format "key=value".
-   *
-   * @param keyValue the key-value string to parse
-   * @return a {@link ColumnKeyValue} object representing the parsed key-value pair
-   * @throws IllegalArgumentException if the input is not in the expected format
-   */
-  private ColumnKeyValue parseKeyValue(String keyValue) {
-    String[] parts = keyValue.split("=", 2);
-
-    if (parts.length != 2 || parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) {
-      throw new IllegalArgumentException("Invalid key-value format: " + keyValue);
-    }
-
-    return new ColumnKeyValue(parts[0].trim(), parts[1].trim());
+    Map.Entry<String, String> data = parseKeyValue(keyValue);
+    return new ColumnKeyValue(data.getKey(), data.getValue());
   }
 }

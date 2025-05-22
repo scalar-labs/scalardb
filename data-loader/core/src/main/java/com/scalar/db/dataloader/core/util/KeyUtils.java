@@ -215,9 +215,10 @@ public final class KeyUtils {
   }
 
   /**
-   * Convert a keyValue, in the format of <key>=<value>, to a ScalarDB Key instance.
+   * Convert a list of ColumnKeyValue objects to a ScalarDB Key instance.
    *
-   * @param keyValues A list of key values in the format of <key>=<value>
+   * @param keyValues A list of ColumnKeyValue objects, where each object contains a column name and
+   *     its corresponding value
    * @param tableMetadata Metadata for one ScalarDB table
    * @return A new ScalarDB Key instance formatted by data type
    * @throws ColumnParsingException if there is an error parsing the column

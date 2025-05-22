@@ -1,8 +1,11 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.cli.util.CommandLineInputUtils;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import picocli.CommandLine;
 
 /**
@@ -33,33 +36,12 @@ public class MultiColumnKeyValueConverter
   @Override
   public List<ColumnKeyValue> convert(String keyValue) {
     if (keyValue == null || keyValue.trim().isEmpty()) {
-      throw new IllegalArgumentException("Key-value cannot be null or empty");
+      throw new IllegalArgumentException(
+          CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
     }
-
-    List<ColumnKeyValue> columnKeyValueList = new ArrayList<>();
-    String[] columnValues = keyValue.split(",");
-
-    for (String columnValue : columnValues) {
-      columnKeyValueList.add(parseKeyValue(columnValue));
-    }
-
-    return columnKeyValueList;
-  }
-
-  /**
-   * Parses a single key-value pair from a string in the format "key=value".
-   *
-   * @param keyValue the key-value string to parse
-   * @return a {@link ColumnKeyValue} object representing the parsed key-value pair
-   * @throws IllegalArgumentException if the input is not in the expected format
-   */
-  private ColumnKeyValue parseKeyValue(String keyValue) {
-    String[] parts = keyValue.split("=", 2);
-
-    if (parts.length != 2 || parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) {
-      throw new IllegalArgumentException("Invalid key-value format: " + keyValue);
-    }
-
-    return new ColumnKeyValue(parts[0].trim(), parts[1].trim());
+    return Arrays.stream(CommandLineInputUtils.splitByDelimiter(keyValue, ",", 0))
+        .map(CommandLineInputUtils::parseKeyValue)
+        .map(entry -> new ColumnKeyValue(entry.getKey(), entry.getValue()))
+        .collect(Collectors.toList());
   }
 }

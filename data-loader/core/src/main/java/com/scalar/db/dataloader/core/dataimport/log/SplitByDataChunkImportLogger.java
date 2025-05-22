@@ -40,7 +40,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
   protected static final String FAILURE_LOG_FILE_NAME_FORMAT = "data_chunk_%s_failure.json";
   protected static final String SUCCESS_LOG_FILE_NAME_FORMAT = "data_chunk_%s_success.json";
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SplitByDataChunkImportLogger.class);
+  private static final Logger logger = LoggerFactory.getLogger(SplitByDataChunkImportLogger.class);
   private final Map<Integer, LogWriter> summaryLogWriters = new ConcurrentHashMap<>();
   private final Map<Integer, LogWriter> successLogWriters = new ConcurrentHashMap<>();
   private final Map<Integer, LogWriter> failureLogWriters = new ConcurrentHashMap<>();
@@ -64,7 +64,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
    */
   @Override
   public void onTaskComplete(ImportTaskResult taskResult) {
-    if (!config.isLogSuccessRecords() && !config.isLogRawSourceRecords()) return;
+    if (!config.isLogSuccessRecordsEnabled() && !config.isLogRawSourceRecordsEnabled()) return;
     try {
       writeImportTaskResultDetailToLogs(taskResult);
     } catch (IOException e) {
@@ -83,9 +83,10 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
       throws IOException {
     for (ImportTargetResult target : importTaskResult.getTargets()) {
       ImportTargetResultStatus status = target.getStatus();
-      if (status.equals(ImportTargetResultStatus.SAVED) && config.isLogSuccessRecords()) {
+      if (status.equals(ImportTargetResultStatus.SAVED) && config.isLogSuccessRecordsEnabled()) {
         writeLog(target, LogFileType.SUCCESS, importTaskResult.getDataChunkId());
-      } else if (!status.equals(ImportTargetResultStatus.SAVED) && config.isLogRawSourceRecords()) {
+      } else if (!status.equals(ImportTargetResultStatus.SAVED)
+          && config.isLogRawSourceRecordsEnabled()) {
         writeLog(target, LogFileType.FAILURE, importTaskResult.getDataChunkId());
       }
     }
@@ -169,7 +170,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
    */
   @Override
   protected void logError(String errorMessage, Exception exception) {
-    LOGGER.error(errorMessage, exception);
+    logger.error(errorMessage, exception);
     throw new RuntimeException(errorMessage, exception);
   }
 

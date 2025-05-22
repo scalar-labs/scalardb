@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -79,7 +78,11 @@ public class CrudHandler {
     Get get = (Get) prepareStorageSelection(originalGet);
     Snapshot.Key key = new Snapshot.Key(get);
     readUnread(key, get);
-    return createGetResult(key, get, originalProjections);
+
+    TableMetadata metadata = getTableMetadata(get);
+    return snapshot
+        .getResult(key, get)
+        .map(r -> new FilteredResult(r, originalProjections, metadata, isIncludeMetadataEnabled));
   }
 
   @VisibleForTesting
@@ -113,61 +116,48 @@ public class CrudHandler {
         snapshot.getId());
   }
 
-  private Optional<Result> createGetResult(Snapshot.Key key, Get get, List<String> projections)
-      throws CrudException {
-    TableMetadata metadata = getTableMetadata(key.getNamespace(), key.getTable());
-    return snapshot
-        .getResult(key, get)
-        .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled));
-  }
-
-  public List<Result> scan(Scan scan) throws CrudException {
-    List<Result> results = scanInternal(scan);
-
-    // We verify if this scan does not overlap previous writes using the actual scan result. Because
-    // we support arbitrary conditions in the where clause of a scan (not only ScanAll, but also
-    // Scan and ScanWithIndex), we cannot determine whether the scan results will include a record
-    // whose key is the same as the key specified in the previous writes, without knowing the
-    // obtained keys in the actual scan. With this check, users can avoid seeing unexpected scan
-    // results that have not included previous writes yet.
-    snapshot.verify(scan);
-
-    return results;
-  }
-
-  private List<Result> scanInternal(Scan originalScan) throws CrudException {
+  public List<Result> scan(Scan originalScan) throws CrudException {
     List<String> originalProjections = new ArrayList<>(originalScan.getProjections());
     Scan scan = (Scan) prepareStorageSelection(originalScan);
+    LinkedHashMap<Snapshot.Key, TransactionResult> results = scanInternal(scan);
+    snapshot.verifyNoOverlap(scan, results);
 
-    Optional<Map<Snapshot.Key, TransactionResult>> resultsInSnapshot = snapshot.getResults(scan);
+    TableMetadata metadata = getTableMetadata(scan);
+    return results.values().stream()
+        .map(r -> new FilteredResult(r, originalProjections, metadata, isIncludeMetadataEnabled))
+        .collect(Collectors.toList());
+  }
+
+  private LinkedHashMap<Snapshot.Key, TransactionResult> scanInternal(Scan scan)
+      throws CrudException {
+    Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> resultsInSnapshot =
+        snapshot.getResults(scan);
     if (resultsInSnapshot.isPresent()) {
-      return createScanResults(scan, originalProjections, resultsInSnapshot.get());
+      return resultsInSnapshot.get();
     }
 
-    Map<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+    LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
 
     Scanner scanner = null;
     try {
       scanner = scanFromStorage(scan);
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
-        if (!result.isCommitted()) {
-          throw new UncommittedRecordException(
-              scan,
-              result,
-              CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
-              snapshot.getId());
-        }
-
         Snapshot.Key key = new Snapshot.Key(scan, r);
-
-        // We always update the read set to create before image by using the latest record (result)
-        // because another conflicting transaction might have updated the record after this
-        // transaction read it first.
-        snapshot.putIntoReadSet(key, Optional.of(result));
-
-        snapshot.getResult(key).ifPresent(value -> results.put(key, value));
+        processScanResult(key, scan, result);
+        results.put(key, result);
       }
+    } catch (RuntimeException e) {
+      Exception exception;
+      if (e.getCause() instanceof ExecutionException) {
+        exception = (ExecutionException) e.getCause();
+      } else {
+        exception = e;
+      }
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          exception,
+          snapshot.getId());
     } finally {
       if (scanner != null) {
         try {
@@ -177,19 +167,26 @@ public class CrudHandler {
         }
       }
     }
+
     snapshot.putIntoScanSet(scan, results);
 
-    return createScanResults(scan, originalProjections, results);
+    return results;
   }
 
-  private List<Result> createScanResults(
-      Scan scan, List<String> projections, Map<Snapshot.Key, TransactionResult> results)
+  private void processScanResult(Snapshot.Key key, Scan scan, TransactionResult result)
       throws CrudException {
-    assert scan.forNamespace().isPresent() && scan.forTable().isPresent();
-    TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
-    return results.values().stream()
-        .map(r -> new FilteredResult(r, projections, metadata, isIncludeMetadataEnabled))
-        .collect(Collectors.toList());
+    if (!result.isCommitted()) {
+      throw new UncommittedRecordException(
+          scan,
+          result,
+          CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
+          snapshot.getId());
+    }
+
+    // We always update the read set to create before image by using the latest record (result)
+    // because another conflicting transaction might have updated the record after this
+    // transaction read it first.
+    snapshot.putIntoReadSet(key, Optional.of(result));
   }
 
   public void put(Put put) throws CrudException {
@@ -322,14 +319,14 @@ public class CrudHandler {
     }
   }
 
-  private TableMetadata getTableMetadata(String namespace, String table) throws CrudException {
+  private TableMetadata getTableMetadata(Operation operation) throws CrudException {
     try {
       TransactionTableMetadata metadata =
-          tableMetadataManager.getTransactionTableMetadata(namespace, table);
+          tableMetadataManager.getTransactionTableMetadata(operation);
       if (metadata == null) {
+        assert operation.forFullTableName().isPresent();
         throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(
-                ScalarDbUtils.getFullTableName(namespace, table)));
+            CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
       }
       return metadata.getTableMetadata();
     } catch (ExecutionException e) {

@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import java.util.Collections;
 import org.junit.jupiter.api.Assertions;
@@ -12,18 +13,19 @@ public class MultiColumnKeyValueConverterTest {
   MultiColumnKeyValueConverter multiColumnKeyValueConverter = new MultiColumnKeyValueConverter();
 
   @Test
-  public void convert_withInvalidValue_ShouldThrowError() {
+  void convert_withInvalidValue_ShouldThrowError() {
     String value = "id 15";
     IllegalArgumentException thrown =
         assertThrows(
             IllegalArgumentException.class,
             () -> multiColumnKeyValueConverter.convert(value),
             "Expected to throw exception");
-    Assertions.assertEquals("Invalid key-value format: id 15", thrown.getMessage());
+    Assertions.assertEquals(
+        CoreError.DATA_LOADER_INVALID_KEY_VALUE_INPUT.buildMessage("id 15"), thrown.getMessage());
   }
 
   @Test
-  public void convert_withValidValue_ShouldReturnColumnKeyValue() {
+  void convert_withValidValue_ShouldReturnColumnKeyValue() {
     String value = "id=15";
     ColumnKeyValue expectedOrder = new ColumnKeyValue("id", "15");
     Assertions.assertEquals(

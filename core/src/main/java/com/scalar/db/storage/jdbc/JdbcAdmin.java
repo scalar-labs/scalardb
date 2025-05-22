@@ -23,6 +23,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.HashSet;
@@ -208,23 +209,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + "("
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " "
-            + getTextType(128)
+            + getTextType(128, true)
             + ","
             + enclose(METADATA_COL_COLUMN_NAME)
             + " "
-            + getTextType(128)
+            + getTextType(128, true)
             + ","
             + enclose(METADATA_COL_DATA_TYPE)
             + " "
-            + getTextType(20)
+            + getTextType(20, false)
             + " NOT NULL,"
             + enclose(METADATA_COL_KEY_TYPE)
             + " "
-            + getTextType(20)
+            + getTextType(20, false)
             + ","
             + enclose(METADATA_COL_CLUSTERING_ORDER)
             + " "
-            + getTextType(10)
+            + getTextType(10, false)
             + ","
             + enclose(METADATA_COL_INDEXED)
             + " "
@@ -268,7 +269,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         rdbEngine.createTableInternalSqlsAfterCreateTable(
             hasDifferentClusteringOrders(metadata), schema, table, metadata, ifNotExists);
     try {
-      execute(connection, stmts);
+      execute(connection, stmts, ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
     } catch (SQLException e) {
       if (!(ifNotExists && rdbEngine.isDuplicateIndexError(e))) {
         throw e;
@@ -276,8 +277,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private String getTextType(int charLength) {
-    return rdbEngine.getTextType(charLength);
+  private String getTextType(int charLength, boolean isKey) {
+    return rdbEngine.getTextType(charLength, isKey);
   }
 
   private String getBooleanType() {
@@ -436,40 +437,43 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
 
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(getSelectColumnsStatement())) {
-      preparedStatement.setString(1, getFullTableName(namespace, table));
+    try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
 
-      try (ResultSet resultSet = preparedStatement.executeQuery()) {
-        while (resultSet.next()) {
-          tableExists = true;
+      try (PreparedStatement preparedStatement =
+          connection.prepareStatement(getSelectColumnsStatement())) {
+        preparedStatement.setString(1, getFullTableName(namespace, table));
 
-          String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
-          DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
-          builder.addColumn(columnName, dataType);
+        try (ResultSet resultSet = preparedStatement.executeQuery()) {
+          while (resultSet.next()) {
+            tableExists = true;
 
-          boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
-          if (indexed) {
-            builder.addSecondaryIndex(columnName);
-          }
+            String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
+            DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
+            builder.addColumn(columnName, dataType);
 
-          String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
-          if (keyType == null) {
-            continue;
-          }
+            boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
+            if (indexed) {
+              builder.addSecondaryIndex(columnName);
+            }
 
-          switch (KeyType.valueOf(keyType)) {
-            case PARTITION:
-              builder.addPartitionKey(columnName);
-              break;
-            case CLUSTERING:
-              Scan.Ordering.Order clusteringOrder =
-                  Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
-              builder.addClusteringKey(columnName, clusteringOrder);
-              break;
-            default:
-              throw new AssertionError("Invalid key type: " + keyType);
+            String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
+            if (keyType == null) {
+              continue;
+            }
+
+            switch (KeyType.valueOf(keyType)) {
+              case PARTITION:
+                builder.addPartitionKey(columnName);
+                break;
+              case CLUSTERING:
+                Scan.Ordering.Order clusteringOrder =
+                    Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
+                builder.addClusteringKey(columnName, clusteringOrder);
+                break;
+              default:
+                throw new AssertionError("Invalid key type: " + keyType);
+            }
           }
         }
       }
@@ -506,6 +510,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
 
@@ -601,19 +607,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + " WHERE "
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " LIKE ?";
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(selectTablesOfNamespaceStatement)) {
-      String prefix = namespace + ".";
-      preparedStatement.setString(1, prefix + "%");
-      try (ResultSet results = preparedStatement.executeQuery()) {
-        Set<String> tableNames = new HashSet<>();
-        while (results.next()) {
-          String tableName =
-              results.getString(METADATA_COL_FULL_TABLE_NAME).substring(prefix.length());
-          tableNames.add(tableName);
+    try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
+      try (PreparedStatement preparedStatement =
+          connection.prepareStatement(selectTablesOfNamespaceStatement)) {
+        String prefix = namespace + ".";
+        preparedStatement.setString(1, prefix + "%");
+        try (ResultSet results = preparedStatement.executeQuery()) {
+          Set<String> tableNames = new HashSet<>();
+          while (results.next()) {
+            String tableName =
+                results.getString(METADATA_COL_FULL_TABLE_NAME).substring(prefix.length());
+            tableNames.add(tableName);
+          }
+          return tableNames;
         }
-        return tableNames;
       }
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
@@ -634,11 +643,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + " WHERE "
             + enclose(NAMESPACE_COL_NAMESPACE_NAME)
             + " = ?";
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement statement = connection.prepareStatement(selectQuery)) {
-      statement.setString(1, namespace);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        return resultSet.next();
+    try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
+      try (PreparedStatement statement = connection.prepareStatement(selectQuery)) {
+        statement.setString(1, namespace);
+        try (ResultSet resultSet = statement.executeQuery()) {
+          return resultSet.next();
+        }
       }
     } catch (SQLException e) {
       // An exception will be thrown if the namespaces table does not exist when executing the
@@ -667,17 +679,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * @return a vendor DB data type
    */
   private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
-    HashSet<String> keysAndIndexes =
-        Sets.newHashSet(
-            Iterables.concat(
-                metadata.getPartitionKeyNames(),
-                metadata.getClusteringKeyNames(),
-                metadata.getSecondaryIndexNames()));
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
 
     String dataType = rdbEngine.getDataTypeForEngine(scalarDbColumnType);
-    if (keysAndIndexes.contains(columnName)) {
-      String indexDataType = rdbEngine.getDataTypeForKey(scalarDbColumnType);
+    if (metadata.getPartitionKeyNames().contains(columnName)
+        || metadata.getClusteringKeyNames().contains(columnName)) {
+      String keyDataType = rdbEngine.getDataTypeForKey(scalarDbColumnType);
+      return Optional.ofNullable(keyDataType).orElse(dataType);
+    } else if (metadata.getSecondaryIndexNames().contains(columnName)) {
+      String indexDataType = rdbEngine.getDataTypeForSecondaryIndex(scalarDbColumnType);
       return Optional.ofNullable(indexDataType).orElse(dataType);
     } else {
       return dataType;
@@ -724,7 +734,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    String columnTypeForKey = rdbEngine.getDataTypeForKey(indexType);
+    String columnTypeForKey = rdbEngine.getDataTypeForSecondaryIndex(indexType);
     if (columnTypeForKey == null) {
       // The column type does not need to be altered to be compatible with being secondary index
       return;
@@ -738,7 +748,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, String table, String columnName)
       throws ExecutionException, SQLException {
     DataType indexType = getTableMetadata(namespace, table).getColumnDataType(columnName);
-    String columnTypeForKey = rdbEngine.getDataTypeForKey(indexType);
+    String columnTypeForKey = rdbEngine.getDataTypeForSecondaryIndex(indexType);
     if (columnTypeForKey == null) {
       // The column type is already the type for a regular column. It was not altered to be
       // compatible with being a secondary index, so no alteration is necessary.
@@ -887,7 +897,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       createIndexStatement = rdbEngine.tryAddIfNotExistsToCreateIndexSql(createIndexStatement);
     }
     try {
-      execute(connection, createIndexStatement);
+      execute(
+          connection,
+          createIndexStatement,
+          ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
     } catch (SQLException e) {
       // Suppress the exception thrown when the index already exists
       if (!(ifNotExists && rdbEngine.isDuplicateIndexError(e))) {
@@ -930,17 +943,41 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   static void execute(Connection connection, String sql) throws SQLException {
+    execute(connection, sql, null);
+  }
+
+  static void execute(Connection connection, String sql, @Nullable SqlWarningHandler handler)
+      throws SQLException {
     if (Strings.isNullOrEmpty(sql)) {
       return;
     }
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
+      throwSqlWarningIfNeeded(handler, stmt);
+    }
+  }
+
+  private static void throwSqlWarningIfNeeded(SqlWarningHandler handler, Statement stmt)
+      throws SQLException {
+    if (handler == null) {
+      return;
+    }
+    SQLWarning warning = stmt.getWarnings();
+    while (warning != null) {
+      handler.throwSqlWarningIfNeeded(warning);
+      warning = warning.getNextWarning();
     }
   }
 
   static void execute(Connection connection, String[] sqls) throws SQLException {
+    execute(connection, sqls, null);
+  }
+
+  static void execute(
+      Connection connection, String[] sqls, @Nullable SqlWarningHandler warningHandler)
+      throws SQLException {
     for (String sql : sqls) {
-      execute(connection, sql);
+      execute(connection, sql, warningHandler);
     }
   }
 
@@ -955,6 +992,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setReadOnly(connection, true);
+
       String selectQuery =
           "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
       Set<String> namespaces = new HashSet<>();
@@ -989,7 +1028,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               + "("
               + enclose(NAMESPACE_COL_NAMESPACE_NAME)
               + " "
-              + getTextType(128)
+              + getTextType(128, true)
               + ", "
               + "PRIMARY KEY ("
               + enclose(NAMESPACE_COL_NAMESPACE_NAME)
@@ -1121,5 +1160,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       throw new ExecutionException("Importing the namespace names of existing tables failed", e);
     }
+  }
+
+  @FunctionalInterface
+  interface SqlWarningHandler {
+    void throwSqlWarningIfNeeded(SQLWarning warning) throws SQLException;
   }
 }

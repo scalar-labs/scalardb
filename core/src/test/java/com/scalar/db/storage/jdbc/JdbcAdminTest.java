@@ -23,6 +23,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -89,7 +90,9 @@ public class JdbcAdminTest {
           RdbEngine.YUGABYTE,
           new RdbEngineYugabyte(),
           RdbEngine.MARIADB,
-          new RdbEngineMariaDB());
+          new RdbEngineMariaDB(),
+          RdbEngine.DB2,
+          new RdbEngineDb2());
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -142,6 +145,11 @@ public class JdbcAdminTest {
         when(sqlException.getErrorCode()).thenReturn(1);
         when(sqlException.getMessage()).thenReturn("no such table: ");
         break;
+      case DB2:
+        when(sqlException.getErrorCode()).thenReturn(-204);
+        break;
+      default:
+        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
   }
 
@@ -193,6 +201,16 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+  }
+
+  @Test
+  public void getTableMetadata_forDb2_ShouldReturnTableMetadata()
+      throws SQLException, ExecutionException {
+    getTableMetadata_forX_ShouldReturnTableMetadata(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
   }
 
   private void getTableMetadata_forX_ShouldReturnTableMetadata(
@@ -256,6 +274,11 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c4")
             .build();
     assertThat(actualMetadata).isEqualTo(expectedMetadata);
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatements);
   }
 
@@ -393,6 +416,20 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
+  }
+
+  @Test
+  public void createNamespace_forDb2_shouldExecuteCreateNamespaceStatement()
+      throws ExecutionException, SQLException {
+    createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+        RdbEngine.DB2,
+        Collections.singletonList("CREATE SCHEMA \"my_ns\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
   private void createNamespace_forX_shouldExecuteCreateNamespaceStatement(
@@ -555,6 +592,29 @@ public class JdbcAdminTest {
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
 
+  @Test
+  public void createTableInternal_ForDb2_ShouldCreateTableAndIndexes() throws SQLException {
+    when(config.getDb2VariableKeyColumnSize()).thenReturn(64);
+    createTableInternal_ForX_CreateTableAndIndexes(
+        new RdbEngineDb2(config),
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c4\" VARBINARY(64) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+  }
+
+  @Test
+  public void
+      createTableInternal_ForDb2WithModifiedKeyColumnSize_ShouldCreateTableAndIndexesWithModifiedKeyColumnSize()
+          throws SQLException {
+    createTableInternal_ForX_CreateTableAndIndexes(
+        RdbEngine.DB2,
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+  }
+
   private void createTableInternal_ForX_CreateTableAndIndexes(
       RdbEngine rdbEngine, String... expectedSqlStatements) throws SQLException {
     RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
@@ -658,6 +718,17 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
+  }
+
+  @Test
+  public void createTableInternal_IfNotExistsForDb2_ShouldCreateTableAndIndexesIfNotExists()
+      throws SQLException {
+    createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
+        RdbEngine.DB2,
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
   private void createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
@@ -787,6 +858,21 @@ public class JdbcAdminTest {
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,2)");
+  }
+
+  @Test
+  public void addTableMetadata_OverwriteMetadataForDb2_ShouldWorkProperly() throws Exception {
+    addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
   private void addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
@@ -952,6 +1038,34 @@ public class JdbcAdminTest {
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,2)");
+  }
+
+  @Test
+  public void addTableMetadata_ifNotExistsAndOverwriteMetadataForDb2_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "CREATE SCHEMA \"" + METADATA_SCHEMA + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\"("
+            + "\"full_table_name\" VARCHAR(128) NOT NULL,"
+            + "\"column_name\" VARCHAR(128) NOT NULL,"
+            + "\"data_type\" VARCHAR(20) NOT NULL,"
+            + "\"key_type\" VARCHAR(20),"
+            + "\"clustering_order\" VARCHAR(10),"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
   private void
@@ -1201,6 +1315,50 @@ public class JdbcAdminTest {
         "INSERT INTO \"scalardb$metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,FALSE,11)");
   }
 
+  @Test
+  public void addTableMetadata_ifNotExistsAndDoNotOverwriteMetadataForDb2_ShouldWorkProperly()
+      throws Exception {
+    addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "CREATE SCHEMA \"" + METADATA_SCHEMA + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\"("
+            + "\"full_table_name\" VARCHAR(128) NOT NULL,"
+            + "\"column_name\" VARCHAR(128) NOT NULL,"
+            + "\"data_type\" VARCHAR(20) NOT NULL,"
+            + "\"key_type\" VARCHAR(20),"
+            + "\"clustering_order\" VARCHAR(10),"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c8','DATE',NULL,NULL,false,8)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c9','TIME',NULL,NULL,false,9)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c10','TIMESTAMP',NULL,NULL,false,10)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c11','TIMESTAMPTZ',NULL,NULL,false,11)");
+  }
+
   private void addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
       RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
     // Arrange
@@ -1396,6 +1554,13 @@ public class JdbcAdminTest {
         RdbEngine.SQLITE, "DELETE FROM \"my_ns$foo_table\"");
   }
 
+  @Test
+  public void truncateTable_forDb2_shouldExecuteTruncateTableStatement()
+      throws SQLException, ExecutionException {
+    truncateTable_forX_shouldExecuteTruncateTableStatement(
+        RdbEngine.DB2, "TRUNCATE TABLE \"my_ns\".\"foo_table\" IMMEDIATE");
+  }
+
   private void truncateTable_forX_shouldExecuteTruncateTableStatement(
       RdbEngine rdbEngine, String expectedTruncateTableStatement)
       throws SQLException, ExecutionException {
@@ -1485,6 +1650,20 @@ public class JdbcAdminTest {
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
         "DROP TABLE \"" + METADATA_SCHEMA + "$metadata\"",
         "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
+  }
+
+  @Test
+  public void dropTable_forDb2WithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata()
+      throws Exception {
+    dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
+        RdbEngine.DB2,
+        "DROP TABLE \"my_ns\".\"foo_table\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
   }
 
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
@@ -1603,6 +1782,20 @@ public class JdbcAdminTest {
         "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
   }
 
+  @Test
+  public void
+      dropTable_forDb2WithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable()
+          throws Exception {
+    dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
+        RdbEngine.DB2,
+        "DROP TABLE \"my_ns\".\"foo_table\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
+  }
+
   private void
       dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
           RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
@@ -1703,6 +1896,19 @@ public class JdbcAdminTest {
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
         "DROP TABLE \"" + METADATA_SCHEMA + "\".\"namespaces\"",
         "DROP USER \"" + METADATA_SCHEMA + "\"");
+  }
+
+  @Test
+  public void dropNamespace_WithOnlyNamespaceSchemaLeftForDb2_shouldDropSchemaAndNamespacesTable()
+      throws Exception {
+    dropNamespace_WithOnlyNamespaceSchemaLeftForX_shouldDropSchemaAndNamespacesTable(
+        RdbEngine.DB2,
+        "DROP SCHEMA \"my_ns\" RESTRICT",
+        "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"namespaces\"",
+        "DROP SCHEMA \"" + METADATA_SCHEMA + "\" RESTRICT");
   }
 
   @Test
@@ -1857,6 +2063,16 @@ public class JdbcAdminTest {
         "SELECT * FROM \"" + METADATA_SCHEMA + "$namespaces\"");
   }
 
+  @Test
+  public void dropNamespace_WithOtherNamespaceLeftForDb2_shouldOnlyDropNamespace()
+      throws Exception {
+    dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
+        RdbEngine.DB2,
+        "DROP SCHEMA \"my_ns\" RESTRICT",
+        "DELETE FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?",
+        "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
+  }
+
   private void dropNamespace_WithOtherNamespaceLeftForX_shouldOnlyDropNamespace(
       RdbEngine rdbEngine,
       String dropNamespaceStatement,
@@ -1943,6 +2159,15 @@ public class JdbcAdminTest {
             + "$metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
+  @Test
+  public void getNamespaceTables_forDb2_ShouldReturnTableNames() throws Exception {
+    getNamespaceTables_forX_ShouldReturnTableNames(
+        RdbEngine.DB2,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
+  }
+
   private void getNamespaceTables_forX_ShouldReturnTableNames(
       RdbEngine rdbEngine, String expectedSelectStatement) throws Exception {
     // Arrange
@@ -1972,6 +2197,11 @@ public class JdbcAdminTest {
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
 
     // Assert
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatement);
     assertThat(actualTableNames).containsExactly(table1, table2);
     verify(preparedStatement).setString(1, namespace + ".%");
@@ -2014,6 +2244,13 @@ public class JdbcAdminTest {
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" WHERE \"namespace_name\" = ?");
   }
 
+  @Test
+  public void namespaceExists_forDb2WithExistingNamespace_shouldReturnTrue() throws Exception {
+    namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
+        RdbEngine.DB2,
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" WHERE \"namespace_name\" = ?");
+  }
+
   private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
       RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException, ExecutionException {
     // Arrange
@@ -2033,6 +2270,11 @@ public class JdbcAdminTest {
     // Assert
     assertThat(admin.namespaceExists(namespace)).isTrue();
 
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(selectStatement).setString(1, namespace);
@@ -2110,6 +2352,20 @@ public class JdbcAdminTest {
         "UPDATE \""
             + METADATA_SCHEMA
             + "$metadata\" SET \"indexed\"=TRUE WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
+  @Test
+  public void createIndex_ForColumnTypeWithoutRequiredAlterationForDb2_ShouldCreateIndexProperly()
+      throws Exception {
+    createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "UPDATE \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   private void createIndex_ForColumnTypeWithoutRequiredAlterationForX_ShouldCreateIndexProperly(
@@ -2204,6 +2460,22 @@ public class JdbcAdminTest {
   public void
       createIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldAlterColumnAndCreateIndexProperly() {
     // SQLite does not require column type change on CREATE INDEX.
+  }
+
+  @Test
+  public void
+      createIndex_forColumnTypeWithRequiredAlterationForDb2_ShouldAlterColumnAndCreateIndexProperly()
+          throws Exception {
+    createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(128)",
+        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "UPDATE \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   private void
@@ -2321,6 +2593,20 @@ public class JdbcAdminTest {
             + "$metadata\" SET \"indexed\"=FALSE WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
+  @Test
+  public void dropIndex_forColumnTypeWithoutRequiredAlterationForDb2_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "UPDATE \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
+  }
+
   private void dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
       RdbEngine rdbEngine,
       String expectedGetTableMetadataStatement,
@@ -2409,6 +2695,21 @@ public class JdbcAdminTest {
   @Test
   public void dropIndex_forColumnTypeWithRequiredAlterationForSqlite_ShouldDropIndexProperly() {
     // SQLite does not require column type change on CREATE INDEX.
+  }
+
+  @Test
+  public void dropIndex_forColumnTypeWithRequiredAlterationForDb2_ShouldDropIndexProperly()
+      throws Exception {
+    dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(32672)",
+        "UPDATE \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
   }
 
   private void dropIndex_forColumnTypeWithRequiredAlterationForX_ShouldDropIndexProperly(
@@ -2547,6 +2848,26 @@ public class JdbcAdminTest {
             + "$metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,FALSE,2)");
   }
 
+  @Test
+  public void addNewColumnToTable_ForDb2_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    addNewColumnToTable_ForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" ADD \"c2\" INT",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c2','INT',NULL,NULL,false,2)");
+  }
+
   private void addNewColumnToTable_ForX_ShouldWorkProperly(
       RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
@@ -2618,6 +2939,12 @@ public class JdbcAdminTest {
         RdbEngine.SQLITE, "SELECT * FROM \"" + METADATA_SCHEMA + "$" + "namespaces\"");
   }
 
+  @Test
+  public void getNamespaceNames_forDb2_ShouldReturnNamespaceNames() throws Exception {
+    getNamespaceNames_forX_ShouldReturnNamespaceNames(
+        RdbEngine.DB2, "SELECT * FROM \"" + METADATA_SCHEMA + "\".\"namespaces\"");
+  }
+
   private void getNamespaceNames_forX_ShouldReturnNamespaceNames(
       RdbEngine rdbEngine, String expectedSelectStatement) throws Exception {
     // Arrange
@@ -2638,21 +2965,25 @@ public class JdbcAdminTest {
     Set<String> actualNamespaceNames = admin.getNamespaceNames();
 
     // Assert
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(connection, never()).setReadOnly(anyBoolean());
+    } else {
+      verify(connection).setReadOnly(true);
+    }
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(mockPreparedStatement).executeQuery();
     assertThat(actualNamespaceNames).containsOnly(namespace1, namespace2);
   }
 
-  @Test
-  public void getImportTableMetadata_ForX_ShouldWorkProperly()
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void getImportTableMetadata_ForX_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
-    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
-      if (rdbEngine.equals(RdbEngine.SQLITE)) {
-        getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
-      } else {
-        getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
-            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-      }
+    if (rdbEngine.equals(RdbEngine.SQLITE)) {
+      getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
+    } else {
+      getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
+          rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
     }
   }
 
@@ -2719,6 +3050,7 @@ public class JdbcAdminTest {
         .execute(expectedCheckTableExistStatement);
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
+    verify(connection).setReadOnly(true);
     verify(rdbEngineStrategy)
         .getDataTypeForScalarDb(
             any(JDBCType.class),
@@ -3037,7 +3369,11 @@ public class JdbcAdminTest {
   }
 
   private RdbEngineStrategy getRdbEngineStrategy(RdbEngine rdbEngine) {
-    return RDB_ENGINES.getOrDefault(rdbEngine, new RdbEngineMysql());
+    RdbEngineStrategy engine = RDB_ENGINES.get(rdbEngine);
+    if (engine == null) {
+      throw new AssertionError("RdbEngineStrategy not found for " + rdbEngine);
+    }
+    return engine;
   }
 
   @Test
@@ -3097,6 +3433,20 @@ public class JdbcAdminTest {
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
+  }
+
+  @Test
+  public void repairNamespace_forDb2_shouldCreateNamespaceIfNotExistsAndUpsertMetadata()
+      throws ExecutionException, SQLException {
+    repairNamespace_forX_shouldWorkProperly(
+        RdbEngine.DB2,
+        Collections.singletonList("CREATE SCHEMA \"my_ns\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -3259,6 +3609,21 @@ public class JdbcAdminTest {
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
+  @Test
+  public void upgrade_ForDb2_ShouldInsertAllNamespacesFromMetadataTable()
+      throws SQLException, ExecutionException {
+    upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
+        RdbEngine.DB2,
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        ImmutableList.of("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
+  }
+
   private void upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
       RdbEngine rdbEngine,
       String tableMetadataExistStatement,
@@ -3301,8 +3666,7 @@ public class JdbcAdminTest {
 
     SQLException sqlException = mock(SQLException.class);
     mockUndefinedTableError(rdbEngine, sqlException);
-    when(namespacesTableExistsStatementMock.execute(namespacesTableExistsStatement))
-        .thenThrow(sqlException);
+    when(namespacesTableExistsStatementMock.execute(anyString())).thenThrow(sqlException);
 
     ResultSet resultSet1 =
         mockResultSet(
@@ -3464,6 +3828,20 @@ public class JdbcAdminTest {
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
+  @Test
+  public void
+      createNamespaceTableIfNotExists_forDb2_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists()
+          throws ExecutionException, SQLException {
+    createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
+        RdbEngine.DB2,
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
+        "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
+  }
+
   public void
       createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
           RdbEngine rdbEngine,
@@ -3551,6 +3929,10 @@ public class JdbcAdminTest {
         when(sqLiteException.getResultCode())
             .thenReturn(SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY);
         duplicateKeyException = sqLiteException;
+        break;
+      case DB2:
+        duplicateKeyException = mock(SQLException.class);
+        when(duplicateKeyException.getErrorCode()).thenReturn(-803);
         break;
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);

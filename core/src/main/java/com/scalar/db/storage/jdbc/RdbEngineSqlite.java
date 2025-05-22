@@ -13,6 +13,7 @@ import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -20,6 +21,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.sqlite.SQLiteErrorCode;
 import org.sqlite.SQLiteException;
 
@@ -116,6 +118,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
   public String getDataTypeForKey(DataType dataType) {
     return null;
   }
@@ -147,7 +150,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTextType(int charLength) {
+  public String getTextType(int charLength, boolean isKey) {
     return "TEXT";
   }
 
@@ -334,5 +337,10 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   @Override
   public RdbEngineTimeTypeStrategy<Integer, Long, Long, Long> getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public void setReadOnly(Connection connection, boolean readOnly) {
+    // Do nothing. SQLite does not support read-only mode.
   }
 }

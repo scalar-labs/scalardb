@@ -5,6 +5,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import com.scalar.db.dataloader.cli.util.FileUtils;
@@ -18,7 +19,7 @@ import com.scalar.db.dataloader.core.dataexport.ExportOptions;
 import com.scalar.db.dataloader.core.dataexport.JsonExportManager;
 import com.scalar.db.dataloader.core.dataexport.JsonLineExportManager;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
@@ -43,8 +44,8 @@ import picocli.CommandLine.Spec;
 @CommandLine.Command(name = "export", description = "export data from a ScalarDB table")
 public class ExportCommand extends ExportCommandOptions implements Callable<Integer> {
 
-  private static final String EXPORT_FILE_NAME_FORMAT = "export_%s.%s_%s.%s";
-  private static final Logger LOGGER = LoggerFactory.getLogger(ExportCommand.class);
+  private static final String EXPORT_FILE_NAME_FORMAT = "export.%s.%s.%s.%s";
+  private static final Logger logger = LoggerFactory.getLogger(ExportCommand.class);
 
   @Spec CommandSpec spec;
 
@@ -59,9 +60,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
           new TableMetadataService(storageFactory.getStorageAdmin());
-      ScalarDBDao scalarDBDao = new ScalarDBDao();
 
-      ExportManager exportManager = createExportManager(storageFactory, scalarDBDao, outputFormat);
+      ScalarDbDao scalarDbDao = new ScalarDbDao();
+
+      ExportManager exportManager = createExportManager(storageFactory, scalarDbDao, outputFormat);
 
       TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
 
@@ -81,7 +83,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       String filePath =
           getOutputAbsoluteFilePath(
               outputDirectory, outputFileName, exportOptions.getOutputFileFormat());
-      LOGGER.info("Exporting data to file: {}", filePath);
+      logger.info("Exporting data to file: {}", filePath);
 
       try (BufferedWriter writer =
           Files.newBufferedWriter(Paths.get(filePath), Charset.defaultCharset(), CREATE, APPEND)) {
@@ -89,21 +91,25 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       }
 
     } catch (DirectoryValidationException e) {
-      LOGGER.error("Invalid output directory path: {}", outputDirectory);
+      logger.error("Invalid output directory path: {}", outputDirectory);
       return 1;
     } catch (InvalidFilePathException e) {
-      LOGGER.error(
+      logger.error(
           "The ScalarDB connection settings file path is invalid or the file is missing: {}",
           scalarDbPropertiesFilePath);
       return 1;
     } catch (TableMetadataException e) {
-      LOGGER.error("Failed to retrieve table metadata: {}", e.getMessage());
+      logger.error("Failed to retrieve table metadata: {}", e.getMessage());
       return 1;
     }
     return 0;
   }
 
   private String getScalarDbPropertiesFilePath() {
+    if (StringUtils.isBlank(configFilePath)) {
+      throw new IllegalArgumentException(
+          CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage());
+    }
     return Objects.equals(configFilePath, DEFAULT_CONFIG_FILE_NAME)
         ? Paths.get("").toAbsolutePath().resolve(DEFAULT_CONFIG_FILE_NAME).toString()
         : configFilePath;
@@ -118,17 +124,17 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   private ExportManager createExportManager(
-      StorageFactory storageFactory, ScalarDBDao scalarDBDao, FileFormat fileFormat) {
+      StorageFactory storageFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
     DistributedStorage storage = storageFactory.getStorage();
     switch (fileFormat) {
       case JSON:
-        return new JsonExportManager(storage, scalarDBDao, taskFactory);
+        return new JsonExportManager(storage, scalarDbDao, taskFactory);
       case JSONL:
-        return new JsonLineExportManager(storage, scalarDBDao, taskFactory);
+        return new JsonLineExportManager(storage, scalarDbDao, taskFactory);
       case CSV:
-        return new CsvExportManager(storage, scalarDBDao, taskFactory);
+        return new CsvExportManager(storage, scalarDbDao, taskFactory);
       default:
         throw new AssertionError("Invalid file format" + fileFormat);
     }
