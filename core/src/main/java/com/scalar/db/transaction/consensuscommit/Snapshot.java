@@ -217,6 +217,14 @@ public class Snapshot {
     return getSet.containsKey(get);
   }
 
+  public boolean hasNoWritesAndDeletes() {
+    return writeSet.isEmpty() && deleteSet.isEmpty();
+  }
+
+  public boolean hasNoReads() {
+    return getSet.isEmpty() && scanSet.isEmpty() && scannerSet.isEmpty();
+  }
+
   public Optional<TransactionResult> getResult(Key key) throws CrudException {
     Optional<TransactionResult> result = readSet.getOrDefault(key, Optional.empty());
     return mergeResult(key, result);
