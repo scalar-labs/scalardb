@@ -60,7 +60,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
           new TableMetadataService(storageFactory.getStorageAdmin());
-
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager = createExportManager(storageFactory, scalarDbDao, outputFormat);
