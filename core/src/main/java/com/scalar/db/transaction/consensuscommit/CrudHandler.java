@@ -447,6 +447,10 @@ public class CrudHandler {
     return snapshot;
   }
 
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+
   private interface ConsensusCommitScanner extends TransactionCrudOperable.Scanner {
     boolean isClosed();
   }

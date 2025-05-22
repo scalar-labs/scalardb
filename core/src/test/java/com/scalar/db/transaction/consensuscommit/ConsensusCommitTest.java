@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -707,15 +708,32 @@ public class ConsensusCommitTest {
   public void commit_ProcessedCrudGiven_ShouldCommitWithSnapshot()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
-    doNothing().when(commit).commit(any(Snapshot.class));
+    doNothing().when(commit).commit(any(Snapshot.class), anyBoolean());
     when(crud.getSnapshot()).thenReturn(snapshot);
+    when(crud.isReadOnly()).thenReturn(false);
 
     // Act
     consensus.commit();
 
     // Assert
     verify(crud).readIfImplicitPreReadEnabled();
-    verify(commit).commit(snapshot);
+    verify(commit).commit(snapshot, false);
+  }
+
+  @Test
+  public void commit_ProcessedCrudGiven_InReadOnlyMode_ShouldCommitWithSnapshot()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    doNothing().when(commit).commit(any(Snapshot.class), anyBoolean());
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(crud.isReadOnly()).thenReturn(true);
+
+    // Act
+    consensus.commit();
+
+    // Assert
+    verify(crud).readIfImplicitPreReadEnabled();
+    verify(commit).commit(snapshot, true);
   }
 
   @Test
