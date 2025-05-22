@@ -3,11 +3,13 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,6 +31,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
+import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -141,6 +144,40 @@ public class ConsensusCommitManagerTest {
     assertThat(snapshot.getId()).isEqualTo(fullKey);
     assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
     verify(groupCommitter).reserve(ANY_TX_ID);
+    assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void
+      beginReadOnly_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommitManager managerWithGroupCommit =
+        new ConsensusCommitManager(
+            storage,
+            admin,
+            consensusCommitConfig,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recovery,
+            commit,
+            groupCommitter);
+
+    // Act
+    DistributedTransaction transaction = managerWithGroupCommit.beginReadOnly(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction.getId()).isEqualTo(ANY_TX_ID);
+    Snapshot snapshot =
+        ((ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction())
+            .getCrudHandler()
+            .getSnapshot();
+    assertThat(snapshot.getId()).isEqualTo(ANY_TX_ID);
+    assertThat(keyManipulator.isFullKey(transaction.getId())).isFalse();
+    verify(groupCommitter, never()).reserve(ANY_TX_ID);
     assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
   }
 
@@ -368,7 +405,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransactionManager manager =
         new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
-    doThrow(CommitException.class).when(commit).commit(any());
+    doThrow(CommitException.class).when(commit).commit(any(), anyBoolean());
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
@@ -447,7 +484,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransactionManager manager =
         new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
-    doThrow(CommitException.class).when(commit).commit(any());
+    doThrow(CommitException.class).when(commit).commit(any(), anyBoolean());
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {

@@ -222,7 +222,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId, Isolation isolation, boolean readOnly, boolean singleOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
-    if (isGroupCommitEnabled()) {
+    if (!readOnly && isGroupCommitEnabled()) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);
     }
