@@ -1,112 +1,56 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.scalar.db.dataloader.cli.exception.InvalidFileExtensionException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.FileFormat;
+import java.io.File;
 import java.nio.file.Paths;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import picocli.CommandLine;
 
 class ExportCommandTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ExportCommandTest.class);
-  @TempDir Path tempDir;
-
-  private ExportCommand exportCommand;
-
-  @BeforeEach
-  void setUp() {
-    exportCommand = new ExportCommand();
-    CommandLine cmd = new CommandLine(exportCommand);
-    exportCommand.spec = cmd.getCommandSpec();
-  }
-
   @AfterEach
-  public void cleanup() throws IOException {
-    cleanUpTempDir();
-  }
-
-  @Test
-  void call_WithValidOutputDirectory_ShouldReturnZero() throws Exception {
-    Path configFile = tempDir.resolve("config.properties");
-    Files.createFile(configFile);
-
-    Path outputDir = tempDir.resolve("output");
-    Files.createDirectory(outputDir);
-
-    exportCommand.outputFilePath = outputDir.toString();
-
-    assertEquals(0, exportCommand.call());
-  }
-
-  @Test
-  void call_WithInvalidOutputDirectory_ShouldThrowInvalidFileExtensionException()
-      throws IOException {
-    Path configFile = tempDir.resolve("config.properties");
-    Files.createFile(configFile);
-
-    Path outputDir = tempDir.resolve("output");
-    outputDir.toFile().setWritable(false);
-
-    exportCommand.outputFilePath = outputDir.toString();
-
-    assertThrows(InvalidFileExtensionException.class, () -> exportCommand.call());
-  }
-
-  @Test
-  void call_WithValidOutputFile_ShouldReturnZero() throws Exception {
-    Path configFile = tempDir.resolve("config.properties");
-    Files.createFile(configFile);
-
-    Path outputFile = tempDir.resolve("output.csv");
-
-    exportCommand.outputFilePath = outputFile.toString();
-
-    assertEquals(0, exportCommand.call());
-  }
-
-  @Test
-  void call_WithValidOutputFileInCurrentDirectory_ShouldReturnZero() throws Exception {
-    Path configFile = tempDir.resolve("config.properties");
-    Files.createFile(configFile);
-
-    Path outputFile = Paths.get("output.csv");
-
-    exportCommand.outputFilePath = outputFile.toString();
-
-    assertEquals(0, exportCommand.call());
-  }
-
-  @Test
-  void call_WithValidOutputFileWithoutDirectory_ShouldReturnZero() throws Exception {
-    Path configFile = tempDir.resolve("config.properties");
-    Files.createFile(configFile);
-
-    exportCommand.outputFilePath = "output.csv";
-
-    assertEquals(0, exportCommand.call());
-  }
-
-  private void cleanUpTempDir() throws IOException {
-    try (Stream<Path> paths = Files.list(tempDir)) {
-      paths.forEach(this::deleteFile);
+  void removeFileIfCreated() {
+    // To remove generated file if it is present
+    String filePath = Paths.get("").toAbsolutePath() + "/sample.json";
+    File file = new File(filePath);
+    if (file.exists()) {
+      file.deleteOnExit();
     }
   }
 
-  private void deleteFile(Path file) {
-    try {
-      Files.deleteIfExists(file);
-    } catch (IOException e) {
-      LOGGER.error("Failed to delete file: {}", file, e);
-    }
+  @Test
+  void call_withBlankScalarDBConfigurationFile_shouldThrowException() {
+    ExportCommand exportCommand = new ExportCommand();
+    exportCommand.configFilePath = "";
+    exportCommand.dataChunkSize = 100;
+    exportCommand.namespace = "scalar";
+    exportCommand.table = "asset";
+    exportCommand.outputDirectory = "";
+    exportCommand.outputFileName = "sample.json";
+    exportCommand.outputFormat = FileFormat.JSON;
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            exportCommand::call,
+            "Expected to throw FileNotFound exception as configuration path is invalid");
+    Assertions.assertEquals(
+        CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage(), thrown.getMessage());
+  }
+
+  @Test
+  void call_withInvalidScalarDBConfigurationFile_shouldReturnOne() throws Exception {
+    ExportCommand exportCommand = new ExportCommand();
+    exportCommand.configFilePath = "scalardb.properties";
+    exportCommand.dataChunkSize = 100;
+    exportCommand.namespace = "scalar";
+    exportCommand.table = "asset";
+    exportCommand.outputDirectory = "";
+    exportCommand.outputFileName = "sample.json";
+    exportCommand.outputFormat = FileFormat.JSON;
+    Assertions.assertEquals(1, exportCommand.call());
   }
 }
