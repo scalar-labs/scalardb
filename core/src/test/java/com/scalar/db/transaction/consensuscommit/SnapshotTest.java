@@ -89,6 +89,7 @@ public class SnapshotTest {
               .addColumn(ANY_NAME_4, DataType.TEXT)
               .addPartitionKey(ANY_NAME_1)
               .addClusteringKey(ANY_NAME_2)
+              .addSecondaryIndex(ANY_NAME_4)
               .build());
 
   private Snapshot snapshot;
@@ -186,6 +187,15 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME);
   }
 
+  private Get prepareGetWithIndex() {
+    Key indexKey = new Key(ANY_NAME_4, ANY_TEXT_1);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .indexKey(indexKey)
+        .build();
+  }
+
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
@@ -203,6 +213,15 @@ public class SnapshotTest {
         .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
         .limit(limit)
         .consistency(Consistency.LINEARIZABLE)
+        .build();
+  }
+
+  private Scan prepareScanWithIndex() {
+    Key indexKey = new Key(ANY_NAME_4, ANY_TEXT_1);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .indexKey(indexKey)
         .build();
   }
 
@@ -1008,6 +1027,83 @@ public class SnapshotTest {
 
     // Assert
     verify(storage).get(getWithProjections);
+  }
+
+  @Test
+  public void toSerializable_GetSetWithGetWithIndex_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Get getWithIndex = prepareGetWithIndex();
+    TransactionResult txResult = prepareResult(ANY_ID + "x");
+    snapshot.putIntoGetSet(getWithIndex, Optional.of(txResult));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithIndex =
+        prepareScanWithIndex().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
+    when(storage.scan(scanWithIndex)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithIndex);
+  }
+
+  @Test
+  public void
+      toSerializable_GetSetWithGetWithIndex_RecordInserted_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Get getWithIndex = prepareGetWithIndex();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_3);
+    snapshot.putIntoGetSet(getWithIndex, Optional.of(result1));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithIndex =
+        prepareScanWithIndex().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithIndex)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanWithIndex);
+  }
+
+  @Test
+  public void
+      toSerializable_GetSetWithGetWithIndex_RecordInsertedByMySelf_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Get getWithIndex = prepareGetWithIndex();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
+    TransactionResult result2 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_3);
+    snapshot.putIntoGetSet(getWithIndex, Optional.of(result1));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithIndex =
+        prepareScanWithIndex().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanWithIndex)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithIndex);
   }
 
   @Test
