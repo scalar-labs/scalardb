@@ -6,15 +6,24 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 
@@ -45,7 +54,8 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
   private void createGroupCommitterIfNotExists() {
     if (groupCommitter == null) {
-      groupCommitter = new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 60000, 10));
+      groupCommitter =
+          spy(new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 60000, 10)));
     }
   }
 
@@ -91,5 +101,76 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     List<String> fullIds = groupCommitFullIdsArgumentCaptor.getValue();
     assertThat(fullIds.size()).isEqualTo(1);
     assertThat(fullIds.get(0)).isEqualTo(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
+      boolean withSnapshotHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException {
+    super.commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(withSnapshotHook);
+
+    // Assert
+    verify(groupCommitter, never()).remove(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(boolean withSnapshotHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException {
+    super.commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(withSnapshotHook);
+
+    // Assert
+    verify(groupCommitter, never()).remove(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
+      boolean withSnapshotHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException {
+    // Arrange
+    groupCommitter.remove(anyId());
+    clearInvocations(groupCommitter);
+
+    super.commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
+        withSnapshotHook);
+
+    // Assert
+    verify(groupCommitter, never()).remove(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void
+      commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
+          boolean withSnapshotHook)
+          throws CommitException, UnknownTransactionStatusException, ExecutionException,
+              CoordinatorException, ValidationConflictException {
+
+    super.commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
+        withSnapshotHook);
+
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withSnapshotHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException {
+    super.commit_NoReadsInSnapshot_ShouldNotValidateRecords(withSnapshotHook);
+
+    // Assert
+    verify(groupCommitter, never()).remove(anyId());
   }
 }
