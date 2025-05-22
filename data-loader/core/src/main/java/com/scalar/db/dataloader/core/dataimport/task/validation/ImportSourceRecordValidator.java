@@ -9,6 +9,7 @@ import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+@SuppressWarnings("SameNameButDifferent")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ImportSourceRecordValidator {
 

@@ -11,6 +11,7 @@ import lombok.Setter;
  * Represents a control file that holds control file tables which contains the column mappings that
  * maps a source file column to the actual database table column.
  */
+@SuppressWarnings("SameNameButDifferent")
 @Getter
 @Setter
 public class ControlFile {

@@ -72,7 +72,6 @@ class CsvProducerTaskTest {
     List<Result> resultList = new ArrayList<>();
     resultList.add(result);
     String output = csvProducerTask.process(resultList);
-    System.out.println(output);
     Assertions.assertEquals(expectedOutput, output.trim());
   }
 
