@@ -18,6 +18,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -77,8 +78,11 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         && (result.getState().equals(TransactionState.PREPARED)
             || result.getState().equals(TransactionState.DELETED));
 
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
-    LinkedHashSet<String> beforeImageColumnNames = metadata.getBeforeImageColumnNames();
+    TransactionTableMetadata transactionTableMetadata =
+        tableMetadataManager.getTransactionTableMetadata(base);
+    LinkedHashSet<String> beforeImageColumnNames =
+        transactionTableMetadata.getBeforeImageColumnNames();
+    TableMetadata tableMetadata = transactionTableMetadata.getTableMetadata();
 
     List<Column<?>> columns = new ArrayList<>();
     result
@@ -98,9 +102,8 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
               }
             });
 
-    Key partitionKey = ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
-    Optional<Key> clusteringKey =
-        ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
+    Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+    Optional<Key> clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
 
     PutBuilder.Buildable putBuilder =
         Put.newBuilder()
@@ -114,6 +117,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
             .consistency(Consistency.LINEARIZABLE);
     clusteringKey.ifPresent(putBuilder::clusteringKey);
     columns.forEach(putBuilder::value);
+
+    // Set before image columns to null
+    setBeforeImageColumnsToNull(putBuilder, beforeImageColumnNames, tableMetadata);
 
     return putBuilder.build();
   }
