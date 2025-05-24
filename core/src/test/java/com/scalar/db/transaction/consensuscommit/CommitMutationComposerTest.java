@@ -1,8 +1,17 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREPARED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_VERSION;
+import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,24 +19,24 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.util.ScalarDbUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -42,19 +51,40 @@ public class CommitMutationComposerTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_NAME_4 = "name4";
+  private static final String ANY_NAME_5 = "name5";
+  private static final String ANY_NAME_6 = "name6";
+  private static final String ANY_NAME_7 = "name7";
+  private static final String ANY_NAME_8 = "name8";
+  private static final String ANY_NAME_9 = "name9";
+  private static final String ANY_NAME_10 = "name10";
+  private static final String ANY_NAME_11 = "name11";
+  private static final String ANY_NAME_12 = "name12";
+  private static final String ANY_NAME_13 = "name13";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
 
   private static final TableMetadata TABLE_METADATA =
-      TableMetadata.newBuilder()
-          .addColumn(ANY_NAME_1, DataType.TEXT)
-          .addColumn(ANY_NAME_2, DataType.TEXT)
-          .addColumn(ANY_NAME_3, DataType.INT)
-          .addPartitionKey(ANY_NAME_1)
-          .addClusteringKey(ANY_NAME_2)
-          .build();
+      ConsensusCommitUtils.buildTransactionTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.INT)
+              .addColumn(ANY_NAME_4, DataType.BOOLEAN)
+              .addColumn(ANY_NAME_5, DataType.BIGINT)
+              .addColumn(ANY_NAME_6, DataType.FLOAT)
+              .addColumn(ANY_NAME_7, DataType.DOUBLE)
+              .addColumn(ANY_NAME_8, DataType.TEXT)
+              .addColumn(ANY_NAME_9, DataType.BLOB)
+              .addColumn(ANY_NAME_10, DataType.DATE)
+              .addColumn(ANY_NAME_11, DataType.TIME)
+              .addColumn(ANY_NAME_12, DataType.TIMESTAMP)
+              .addColumn(ANY_NAME_13, DataType.TIMESTAMPTZ)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .build());
 
   @Mock private TransactionTableMetadataManager tableMetadataManager;
 
@@ -67,7 +97,7 @@ public class CommitMutationComposerTest {
     // Arrange
     composer = new CommitMutationComposer(ANY_ID, ANY_TIME_2, tableMetadataManager);
 
-    when(tableMetadataManager.getTransactionTableMetadata(any(Operation.class)))
+    when(tableMetadataManager.getTransactionTableMetadata(any()))
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
   }
 
@@ -102,12 +132,10 @@ public class CommitMutationComposerTest {
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
             .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
             .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
-            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID)))
-            .put(
-                Attribute.PREPARED_AT,
-                ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(ANY_TIME_1)))
-            .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(state)))
-            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(2)))
+            .put(Attribute.ID, TextColumn.of(ID, ANY_ID))
+            .put(Attribute.PREPARED_AT, BigIntColumn.of(PREPARED_AT, ANY_TIME_1))
+            .put(Attribute.STATE, IntColumn.of(STATE, state.get()))
+            .put(Attribute.VERSION, IntColumn.of(VERSION, 2))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
@@ -125,17 +153,37 @@ public class CommitMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     Put expected =
-        new Put(put.getPartitionKey(), put.getClusteringKey().orElse(null))
-            .forNamespace(put.forNamespace().get())
-            .forTable(put.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        new PutIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(
-                STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
-    expected.withValue(Attribute.toCommittedAtValue(ANY_TIME_2));
-    expected.withValue(Attribute.toStateValue(TransactionState.COMMITTED));
+        Put.newBuilder()
+            .namespace(put.forNamespace().get())
+            .table(put.forTable().get())
+            .partitionKey(put.getPartitionKey())
+            .clusteringKey(put.getClusteringKey().orElse(null))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(toStateValue(TransactionState.PREPARED).getAsInt()))
+                    .build())
+            .bigIntValue(COMMITTED_AT, ANY_TIME_2)
+            .intValue(STATE, TransactionState.COMMITTED.get())
+            .textValue(BEFORE_ID, null)
+            .intValue(BEFORE_STATE, null)
+            .intValue(BEFORE_VERSION, null)
+            .bigIntValue(BEFORE_PREPARED_AT, null)
+            .bigIntValue(BEFORE_COMMITTED_AT, null)
+            .intValue(BEFORE_PREFIX + ANY_NAME_3, null)
+            .booleanValue(BEFORE_PREFIX + ANY_NAME_4, null)
+            .bigIntValue(BEFORE_PREFIX + ANY_NAME_5, null)
+            .floatValue(BEFORE_PREFIX + ANY_NAME_6, null)
+            .doubleValue(BEFORE_PREFIX + ANY_NAME_7, null)
+            .textValue(BEFORE_PREFIX + ANY_NAME_8, null)
+            .blobValue(BEFORE_PREFIX + ANY_NAME_9, (byte[]) null)
+            .dateValue(BEFORE_PREFIX + ANY_NAME_10, null)
+            .timeValue(BEFORE_PREFIX + ANY_NAME_11, null)
+            .timestampValue(BEFORE_PREFIX + ANY_NAME_12, null)
+            .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
+            .build();
     assertThat(actual).isEqualTo(expected);
   }
 
@@ -217,17 +265,37 @@ public class CommitMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     Put expected =
-        new Put(get.getPartitionKey(), get.getClusteringKey().orElse(null))
-            .forNamespace(get.forNamespace().get())
-            .forTable(get.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        new PutIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(
-                STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
-    expected.withValue(Attribute.toCommittedAtValue(ANY_TIME_2));
-    expected.withValue(Attribute.toStateValue(TransactionState.COMMITTED));
+        Put.newBuilder()
+            .namespace(get.forNamespace().get())
+            .table(get.forTable().get())
+            .partitionKey(get.getPartitionKey())
+            .clusteringKey(get.getClusteringKey().orElse(null))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(TransactionState.PREPARED.get()))
+                    .build())
+            .bigIntValue(COMMITTED_AT, ANY_TIME_2)
+            .intValue(STATE, TransactionState.COMMITTED.get())
+            .textValue(BEFORE_ID, null)
+            .intValue(BEFORE_STATE, null)
+            .intValue(BEFORE_VERSION, null)
+            .bigIntValue(BEFORE_PREPARED_AT, null)
+            .bigIntValue(BEFORE_COMMITTED_AT, null)
+            .intValue(BEFORE_PREFIX + ANY_NAME_3, null)
+            .booleanValue(BEFORE_PREFIX + ANY_NAME_4, null)
+            .bigIntValue(BEFORE_PREFIX + ANY_NAME_5, null)
+            .floatValue(BEFORE_PREFIX + ANY_NAME_6, null)
+            .doubleValue(BEFORE_PREFIX + ANY_NAME_7, null)
+            .textValue(BEFORE_PREFIX + ANY_NAME_8, null)
+            .blobValue(BEFORE_PREFIX + ANY_NAME_9, (byte[]) null)
+            .dateValue(BEFORE_PREFIX + ANY_NAME_10, null)
+            .timeValue(BEFORE_PREFIX + ANY_NAME_11, null)
+            .timestampValue(BEFORE_PREFIX + ANY_NAME_12, null)
+            .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
+            .build();
     assertThat(actual).isEqualTo(expected);
   }
 
