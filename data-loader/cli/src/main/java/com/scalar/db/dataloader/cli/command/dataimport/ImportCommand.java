@@ -41,7 +41,7 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Spec;
 
-@CommandLine.Command(name = "import", description = "import data into a ScalarDB table")
+@CommandLine.Command(name = "import", description = "Import data into a ScalarDB table")
 public class ImportCommand extends ImportCommandOptions implements Callable<Integer> {
 
   /** Spec injected by PicoCli */
@@ -120,7 +120,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param reader buffered reader with source data
    * @param logWriterFactory log writer factory object
    * @param config import logging config
-   * @return ImportManger object
+   * @return ImportManager object
    */
   private ImportManager createImportManager(
       ImportOptions importOptions,
@@ -145,7 +145,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               null,
               scalarDbTransactionManager.getDistributedTransactionManager());
     } else {
-      ScalarDbStorageManager scalarDbStorageManger =
+      ScalarDbStorageManager scalarDbStorageManager =
           new ScalarDbStorageManager(StorageFactory.create(configFile));
       importManager =
           new ImportManager(
@@ -154,7 +154,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               importOptions,
               importProcessorFactory,
               ScalarDbMode.STORAGE,
-              scalarDbStorageManger.getDistributedStorage(),
+              scalarDbStorageManager.getDistributedStorage(),
               null);
     }
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
@@ -245,7 +245,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @throws ParameterException if the path is invalid
    */
   private Optional<ControlFile> parseControlFileFromPath(String controlFilePath) {
-    if (controlFilePath == null) {
+    if (StringUtils.isBlank(controlFilePath)) {
       return Optional.empty();
     }
     try {
