@@ -66,7 +66,8 @@ public class JsonLinesImportProcessor extends ImportProcessor {
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     // Reset the counter to 0 before starting a new import process.
     // Since the JVM is not restarted between API calls (as in a web application’s API server),
-    // failing to reset the counter would cause the next import to continue from the previous data chunk ID.
+    // failing to reset the counter would cause the next import to continue from the previous data
+    // chunk ID.
     dataChunkIdCounter.set(0);
     ExecutorService dataChunkExecutor = Executors.newSingleThreadExecutor();
     BlockingQueue<ImportDataChunk> dataChunkQueue =
