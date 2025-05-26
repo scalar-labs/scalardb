@@ -27,6 +27,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isTrue();
     assertThat(config.isAsyncCommitEnabled()).isFalse();
     assertThat(config.isAsyncRollbackEnabled()).isFalse();
+    assertThat(config.getRecoveryExecutorCount()).isEqualTo(128);
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
   }
@@ -151,6 +152,19 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.isAsyncCommitEnabled()).isFalse();
     assertThat(config.isAsyncRollbackEnabled()).isFalse(); // use the async commit value
+  }
+
+  @Test
+  public void constructor_PropertiesWithRecoveryExecutorCountGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.RECOVERY_EXECUTOR_COUNT, "256");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.getRecoveryExecutorCount()).isEqualTo(256);
   }
 
   @Test

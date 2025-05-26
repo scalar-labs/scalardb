@@ -24,10 +24,8 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -51,24 +49,19 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommit.class);
   private final CrudHandler crud;
   private final CommitHandler commit;
-  private final RecoveryHandler recovery;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
-  private Runnable beforeRecoveryHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ConsensusCommit(
       CrudHandler crud,
       CommitHandler commit,
-      RecoveryHandler recovery,
       ConsensusCommitMutationOperationChecker mutationOperationChecker,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
-    this.recovery = checkNotNull(recovery);
     this.mutationOperationChecker = mutationOperationChecker;
     this.groupCommitter = groupCommitter;
-    this.beforeRecoveryHook = () -> {};
   }
 
   @Override
@@ -78,63 +71,18 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    get = copyAndSetTargetToIfNot(get);
-    try {
-      return crud.get(get);
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(e);
-      throw e;
-    }
+    return crud.get(copyAndSetTargetToIfNot(get));
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    scan = copyAndSetTargetToIfNot(scan);
-    try {
-      return crud.scan(scan);
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(e);
-      throw e;
-    }
+    return crud.scan(copyAndSetTargetToIfNot(scan));
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
     scan = copyAndSetTargetToIfNot(scan);
-    Scanner scanner = crud.getScanner(scan);
-
-    return new Scanner() {
-      @Override
-      public Optional<Result> one() throws CrudException {
-        try {
-          return scanner.one();
-        } catch (UncommittedRecordException e) {
-          lazyRecovery(e);
-          throw e;
-        }
-      }
-
-      @Override
-      public List<Result> all() throws CrudException {
-        try {
-          return scanner.all();
-        } catch (UncommittedRecordException e) {
-          lazyRecovery(e);
-          throw e;
-        }
-      }
-
-      @Override
-      public void close() throws CrudException {
-        scanner.close();
-      }
-
-      @Nonnull
-      @Override
-      public Iterator<Result> iterator() {
-        return scanner.iterator();
-      }
-    };
+    return crud.getScanner(scan);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -143,12 +91,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   public void put(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
     checkMutation(put);
-    try {
-      crud.put(put);
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(e);
-      throw e;
-    }
+    crud.put(put);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -165,12 +108,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   public void delete(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
     checkMutation(delete);
-    try {
-      crud.delete(delete);
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(e);
-      throw e;
-    }
+    crud.delete(delete);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -196,12 +134,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     upsert = copyAndSetTargetToIfNot(upsert);
     Put put = ConsensusCommitUtils.createPutForUpsert(upsert);
     checkMutation(put);
-    try {
-      crud.put(put);
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(e);
-      throw e;
-    }
+    crud.put(put);
   }
 
   @Override
@@ -222,9 +155,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
       // If the condition is not specified, it means that the record does not exist. In this case,
       // we do nothing
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(e);
-      throw e;
     }
   }
 
@@ -257,9 +187,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     try {
       crud.readIfImplicitPreReadEnabled();
     } catch (CrudConflictException e) {
-      if (e instanceof UncommittedRecordException) {
-        lazyRecovery((UncommittedRecordException) e);
-      }
       throw new CommitConflictException(
           CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(),
           e,
@@ -267,6 +194,12 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     } catch (CrudException e) {
       throw new CommitException(
           CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(), e, getId());
+    }
+
+    try {
+      crud.waitForRecoveryCompletionIfNecessary();
+    } catch (CrudException e) {
+      throw new CommitException(e.getMessage(), e, getId());
     }
 
     commit.commit(crud.getSnapshot(), crud.isReadOnly());
@@ -293,22 +226,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   @VisibleForTesting
   CommitHandler getCommitHandler() {
     return commit;
-  }
-
-  @VisibleForTesting
-  RecoveryHandler getRecoveryHandler() {
-    return recovery;
-  }
-
-  @VisibleForTesting
-  void setBeforeRecoveryHook(Runnable beforeRecoveryHook) {
-    this.beforeRecoveryHook = beforeRecoveryHook;
-  }
-
-  private void lazyRecovery(UncommittedRecordException e) {
-    logger.debug("Recover uncommitted records: {}", e.getResults());
-    beforeRecoveryHook.run();
-    e.getResults().forEach(r -> recovery.recover(e.getSelection(), r));
   }
 
   private void checkMutation(Mutation mutation) throws CrudException {
