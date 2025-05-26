@@ -52,7 +52,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final TransactionTableMetadataManager tableMetadataManager;
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
-  private final RecoveryHandler recovery;
+  private final RecoveryExecutor recoveryExecutor;
   protected final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
@@ -71,7 +71,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    recoveryExecutor =
+        new RecoveryExecutor(
+            coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
@@ -90,7 +93,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    recoveryExecutor =
+        new RecoveryExecutor(
+            coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
@@ -106,7 +112,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       DatabaseConfig databaseConfig,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
-      RecoveryHandler recovery,
+      RecoveryExecutor recoveryExecutor,
       CommitHandler commit,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     super(databaseConfig);
@@ -118,7 +124,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
-    this.recovery = recovery;
+    this.recoveryExecutor = recoveryExecutor;
     this.commit = commit;
     this.groupCommitter = groupCommitter;
     this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
@@ -246,13 +252,14 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             isIncludeMetadataEnabled,
             parallelExecutor,
             readOnly,
             oneOperation);
     DistributedTransaction transaction =
-        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
+        new ConsensusCommit(crud, commit, mutationOperationChecker, groupCommitter);
     if (readOnly) {
       transaction = new ReadOnlyDistributedTransaction(transaction);
     }
@@ -511,6 +518,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     storage.close();
     admin.close();
     parallelExecutor.close();
+    recoveryExecutor.close();
     if (isGroupCommitEnabled()) {
       assert groupCommitter != null;
       groupCommitter.close();

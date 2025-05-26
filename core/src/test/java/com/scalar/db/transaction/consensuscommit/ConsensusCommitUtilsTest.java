@@ -2,9 +2,18 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitUtilsTest {
@@ -613,5 +622,82 @@ public class ConsensusCommitUtilsTest {
   void getNextTxVersion_LargeValueGiven_shouldReturnNextVersion() {
     // Act Assert
     assertThat(ConsensusCommitUtils.getNextTxVersion(100000)).isEqualTo(100001);
+  }
+
+  @Test
+  public void extractAfterImageColumnsFromBeforeImage_shouldExtractCorrectly() {
+    // Arrange
+    Map<String, Column<?>> columns = new HashMap<>();
+    Set<String> beforeImageColumnNames = new HashSet<>();
+    beforeImageColumnNames.add("before_balance");
+    beforeImageColumnNames.add("before_name");
+
+    Map<String, Column<?>> resultColumns = new HashMap<>();
+    resultColumns.put("before_balance", IntColumn.of("before_balance", 1000));
+    resultColumns.put("before_name", TextColumn.of("before_name", "Alice"));
+    resultColumns.put("account_id", IntColumn.of("account_id", 123)); // Not a before column
+
+    TransactionResult result = mock(TransactionResult.class);
+    when(result.getColumns()).thenReturn(resultColumns);
+
+    // Act
+    ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage(
+        columns, result, beforeImageColumnNames);
+
+    // Assert
+    assertThat(columns).hasSize(2);
+    assertThat(columns).containsKey("balance");
+    assertThat(columns).containsKey("name");
+    assertThat(columns.get("balance").getIntValue()).isEqualTo(1000);
+    assertThat(columns.get("name").getTextValue()).isEqualTo("Alice");
+    assertThat(columns).doesNotContainKey("account_id");
+  }
+
+  @Test
+  public void
+      extractAfterImageColumnsFromBeforeImage_versionColumnWithZero_shouldCreateNullVersion() {
+    // Arrange
+    Map<String, Column<?>> columns = new HashMap<>();
+    Set<String> beforeImageColumnNames = new HashSet<>();
+    beforeImageColumnNames.add("before_tx_version");
+
+    Map<String, Column<?>> resultColumns = new HashMap<>();
+    resultColumns.put("before_tx_version", IntColumn.of("before_tx_version", 0));
+
+    TransactionResult result = mock(TransactionResult.class);
+    when(result.getColumns()).thenReturn(resultColumns);
+
+    // Act
+    ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage(
+        columns, result, beforeImageColumnNames);
+
+    // Assert
+    assertThat(columns).hasSize(1);
+    assertThat(columns).containsKey("tx_version");
+    assertThat(columns.get("tx_version").hasNullValue()).isTrue();
+  }
+
+  @Test
+  public void extractAfterImageColumnsFromBeforeImage_versionColumnWithNonZero_shouldCopyValue() {
+    // Arrange
+    Map<String, Column<?>> columns = new HashMap<>();
+    Set<String> beforeImageColumnNames = new HashSet<>();
+    beforeImageColumnNames.add("before_tx_version");
+
+    Map<String, Column<?>> resultColumns = new HashMap<>();
+    resultColumns.put("before_tx_version", IntColumn.of("before_tx_version", 5));
+
+    TransactionResult result = mock(TransactionResult.class);
+    when(result.getColumns()).thenReturn(resultColumns);
+
+    // Act
+    ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage(
+        columns, result, beforeImageColumnNames);
+
+    // Assert
+    assertThat(columns).hasSize(1);
+    assertThat(columns).containsKey("tx_version");
+    assertThat(columns.get("tx_version").hasNullValue()).isFalse();
+    assertThat(columns.get("tx_version").getIntValue()).isEqualTo(5);
   }
 }

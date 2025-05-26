@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -217,6 +218,14 @@ public class Snapshot {
     return getSet.containsKey(get);
   }
 
+  public boolean containsKeyInWriteSet(Key key) {
+    return writeSet.containsKey(key);
+  }
+
+  public boolean containsKeyInDeleteSet(Key key) {
+    return deleteSet.containsKey(key);
+  }
+
   public boolean hasWritesOrDeletes() {
     return !writeSet.isEmpty() || !deleteSet.isEmpty();
   }
@@ -235,8 +244,7 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan)
-      throws CrudException {
+  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan) {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -723,13 +731,9 @@ public class Snapshot {
   }
 
   private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(operation);
-    if (metadata == null) {
-      assert operation.forFullTableName().isPresent();
-      throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
-    }
-    return metadata.getTableMetadata();
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, operation);
+    return transactionTableMetadata.getTableMetadata();
   }
 
   private boolean isChanged(

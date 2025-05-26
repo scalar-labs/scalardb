@@ -35,12 +35,9 @@ public class ConsensusCommitConfig {
 
   public static final String COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED =
       PREFIX + "coordinator.write_omission_on_read_only.enabled";
-
+  public static final String RECOVERY_EXECUTOR_COUNT = PREFIX + "recovery_executor_count";
   public static final String PARALLEL_IMPLICIT_PRE_READ =
       PREFIX + "parallel_implicit_pre_read.enabled";
-
-  public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
-
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
 
   public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
@@ -58,6 +55,9 @@ public class ConsensusCommitConfig {
       COORDINATOR_GROUP_COMMIT_PREFIX + "timeout_check_interval_millis";
   public static final String COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED =
       COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_monitor_log_enabled";
+
+  public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
+  public static final int DEFAULT_RECOVERY_EXECUTOR_COUNT = 128;
 
   public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY = 20;
   public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS = 40;
@@ -77,9 +77,8 @@ public class ConsensusCommitConfig {
   private final boolean asyncRollbackEnabled;
 
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
-
+  private final int recoveryExecutorCount;
   private final boolean parallelImplicitPreReadEnabled;
-
   private final boolean isIncludeMetadataEnabled;
 
   private final boolean coordinatorGroupCommitEnabled;
@@ -149,9 +148,12 @@ public class ConsensusCommitConfig {
     coordinatorWriteOmissionOnReadOnlyEnabled =
         getBoolean(properties, COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED, true);
 
-    parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
+    recoveryExecutorCount =
+        getInt(properties, RECOVERY_EXECUTOR_COUNT, DEFAULT_RECOVERY_EXECUTOR_COUNT);
 
     isIncludeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
+
+    parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
     coordinatorGroupCommitEnabled = getBoolean(properties, COORDINATOR_GROUP_COMMIT_ENABLED, false);
     coordinatorGroupCommitSlotCapacity =
@@ -221,6 +223,10 @@ public class ConsensusCommitConfig {
 
   public boolean isCoordinatorWriteOmissionOnReadOnlyEnabled() {
     return coordinatorWriteOmissionOnReadOnlyEnabled;
+  }
+
+  public int getRecoveryExecutorCount() {
+    return recoveryExecutorCount;
   }
 
   public boolean isParallelImplicitPreReadEnabled() {
