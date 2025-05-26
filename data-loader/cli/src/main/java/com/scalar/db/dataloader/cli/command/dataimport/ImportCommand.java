@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.FileFormat;
@@ -95,21 +96,22 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       throws IOException, TableMetadataException {
     File configFile = new File(configFilePath);
     StorageFactory storageFactory = StorageFactory.create(configFile);
-    TableMetadataService tableMetadataService =
-        new TableMetadataService(storageFactory.getStorageAdmin());
-    Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
-    if (controlFile != null) {
-      for (ControlFileTable table : controlFile.getTables()) {
+    try (DistributedStorageAdmin storageAdmin = storageFactory.getStorageAdmin()) {
+      TableMetadataService tableMetadataService = new TableMetadataService(storageAdmin);
+      Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
+      if (controlFile != null) {
+        for (ControlFileTable table : controlFile.getTables()) {
+          tableMetadataMap.put(
+              TableMetadataUtil.getTableLookupKey(table.getNamespace(), table.getTable()),
+              tableMetadataService.getTableMetadata(table.getNamespace(), table.getTable()));
+        }
+      } else {
         tableMetadataMap.put(
-            TableMetadataUtil.getTableLookupKey(table.getNamespace(), table.getTable()),
-            tableMetadataService.getTableMetadata(table.getNamespace(), table.getTable()));
+            TableMetadataUtil.getTableLookupKey(namespace, tableName),
+            tableMetadataService.getTableMetadata(namespace, tableName));
       }
-    } else {
-      tableMetadataMap.put(
-          TableMetadataUtil.getTableLookupKey(namespace, tableName),
-          tableMetadataService.getTableMetadata(namespace, tableName));
+      return tableMetadataMap;
     }
-    return tableMetadataMap;
   }
 
   /**
