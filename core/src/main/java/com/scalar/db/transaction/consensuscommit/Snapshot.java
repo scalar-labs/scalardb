@@ -7,6 +7,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
+import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -43,6 +44,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -489,24 +491,20 @@ public class Snapshot {
     // Get set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
       Get get = entry.getKey();
-      Key key = new Key(get);
-      if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
-        continue;
+
+      if (ScalarDbUtils.isSecondaryIndexSpecified(get, getTableMetadata(get))) {
+        // For Get with index
+        tasks.add(() -> validateGetWithIndexResult(storage, get, entry.getValue()));
+      } else {
+        // For other Get
+
+        Key key = new Key(get);
+        if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
+          continue;
+        }
+
+        tasks.add(() -> validateGetResult(storage, get, entry.getValue()));
       }
-
-      tasks.add(
-          () -> {
-            Optional<TransactionResult> originalResult = getSet.get(get);
-            // Only get the tx_id column because we use only them to compare
-            get.clearProjections();
-            get.withProjection(Attribute.ID);
-
-            // Check if a read record is not changed
-            Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
-            if (isChanged(latestResult, originalResult)) {
-              throwExceptionDueToAntiDependency();
-            }
-          });
     }
 
     parallelExecutor.validate(tasks, getId());
@@ -628,6 +626,48 @@ public class Snapshot {
           logger.warn("Failed to close the scanner", e);
         }
       }
+    }
+  }
+
+  private void validateGetWithIndexResult(
+      DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
+      throws ExecutionException, ValidationConflictException {
+    assert get.forNamespace().isPresent() && get.forTable().isPresent();
+
+    // If this transaction or another transaction inserts records into the index range,
+    // the Get with index operation may retrieve multiple records, which would result in
+    // an IllegalArgumentException. Therefore, we use Scan with index instead.
+    Scan scanWithIndex =
+        Scan.newBuilder()
+            .namespace(get.forNamespace().get())
+            .table(get.forTable().get())
+            .indexKey(get.getPartitionKey())
+            .whereOr(
+                get.getConjunctions().stream()
+                    .map(c -> ConditionSetBuilder.andConditionSet(c.getConditions()).build())
+                    .collect(Collectors.toSet()))
+            .consistency(get.getConsistency())
+            .attributes(get.getAttributes())
+            .build();
+
+    LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
+    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r), r));
+
+    // Validate the result to check if there is no anti-dependency
+    validateScanResults(storage, scanWithIndex, results);
+  }
+
+  private void validateGetResult(
+      DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
+      throws ExecutionException, ValidationConflictException {
+    // Only get the tx_id column because we use only them to compare
+    get.clearProjections();
+    get.withProjection(Attribute.ID);
+
+    // Check if a read record is not changed
+    Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
+    if (isChanged(latestResult, originalResult)) {
+      throwExceptionDueToAntiDependency();
     }
   }
 
