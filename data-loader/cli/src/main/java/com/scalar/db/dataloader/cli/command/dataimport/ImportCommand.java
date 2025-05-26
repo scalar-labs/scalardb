@@ -159,7 +159,9 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     }
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
-    } else importManager.addListener(new SingleFileImportLogger(config, logWriterFactory));
+    } else {
+      importManager.addListener(new SingleFileImportLogger(config, logWriterFactory));
+    }
     return importManager;
   }
 
