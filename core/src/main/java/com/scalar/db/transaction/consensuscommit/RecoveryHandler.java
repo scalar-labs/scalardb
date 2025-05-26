@@ -8,6 +8,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class RecoveryHandler {
-  static final long TRANSACTION_LIFETIME_MILLIS = 15000;
+  @VisibleForTesting static final long TRANSACTION_LIFETIME_MILLIS = 15000;
   private static final Logger logger = LoggerFactory.getLogger(RecoveryHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
@@ -33,17 +34,10 @@ public class RecoveryHandler {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
   }
 
-  // lazy recovery in read phase
-  public void recover(Selection selection, TransactionResult result) {
+  public void recover(
+      Selection selection, TransactionResult result, Optional<Coordinator.State> state)
+      throws ExecutionException, CoordinatorException {
     logger.debug("Recovering for {}", result.getId());
-
-    Optional<Coordinator.State> state;
-    try {
-      state = coordinator.getState(result.getId());
-    } catch (CoordinatorException e) {
-      logger.warn("Can't get coordinator state. Transaction ID: {}", result.getId(), e);
-      return;
-    }
 
     if (state.isPresent()) {
       if (state.get().getState().equals(TransactionState.COMMITTED)) {
@@ -57,53 +51,74 @@ public class RecoveryHandler {
   }
 
   @VisibleForTesting
-  void rollbackRecord(Selection selection, TransactionResult result) {
+  void rollbackRecord(Selection selection, TransactionResult result) throws ExecutionException {
     logger.debug(
         "Rollback for {}, {} mutated by {}",
         selection.getPartitionKey(),
         selection.getClusteringKey(),
         result.getId());
+
+    RollbackMutationComposer composer = createRollbackMutationComposer(selection, result);
+
     try {
-      RollbackMutationComposer composer =
-          new RollbackMutationComposer(result.getId(), storage, tableMetadataManager);
-      composer.add(selection, result);
       mutate(composer.get());
-    } catch (Exception e) {
-      logger.warn("Rolling back a record failed. Transaction ID: {}", result.getId(), e);
-      // ignore since the record is recovered lazily
+    } catch (NoMutationException ignored) {
+      // This can happen when the record has already been rolled back by another transaction. In
+      // this case, we just ignore it.
     }
   }
 
   @VisibleForTesting
-  void rollforwardRecord(Selection selection, TransactionResult result) {
+  RollbackMutationComposer createRollbackMutationComposer(
+      Selection selection, TransactionResult result) throws ExecutionException {
+    RollbackMutationComposer composer =
+        new RollbackMutationComposer(result.getId(), storage, tableMetadataManager);
+    composer.add(selection, result);
+    return composer;
+  }
+
+  @VisibleForTesting
+  void rollforwardRecord(Selection selection, TransactionResult result) throws ExecutionException {
     logger.debug(
         "Rollforward for {}, {} mutated by {}",
         selection.getPartitionKey(),
         selection.getClusteringKey(),
         result.getId());
+
+    CommitMutationComposer composer = createCommitMutationComposer(selection, result);
+
     try {
-      CommitMutationComposer composer =
-          new CommitMutationComposer(result.getId(), tableMetadataManager);
-      composer.add(selection, result);
       mutate(composer.get());
-    } catch (Exception e) {
-      logger.warn("Rolling forward a record failed. Transaction ID: {}", result.getId(), e);
-      // ignore since the record is recovered lazily
+    } catch (NoMutationException ignored) {
+      // This can happen when the record has already been committed by another transaction. In this
+      // case, we just ignore it.
     }
   }
 
-  private void abortIfExpired(Selection selection, TransactionResult result) {
-    long current = System.currentTimeMillis();
-    if (current <= result.getPreparedAt() + TRANSACTION_LIFETIME_MILLIS) {
+  @VisibleForTesting
+  CommitMutationComposer createCommitMutationComposer(Selection selection, TransactionResult result)
+      throws ExecutionException {
+    CommitMutationComposer composer =
+        new CommitMutationComposer(result.getId(), tableMetadataManager);
+    composer.add(selection, result);
+    return composer;
+  }
+
+  private void abortIfExpired(Selection selection, TransactionResult result)
+      throws CoordinatorException, ExecutionException {
+    if (!isTransactionExpired(result)) {
       return;
     }
 
     try {
       coordinator.putStateForLazyRecoveryRollback(result.getId());
-      rollbackRecord(selection, result);
-    } catch (CoordinatorException e) {
-      logger.warn("Coordinator tries to abort {}, but failed", result.getId(), e);
+    } catch (CoordinatorConflictException ignored) {
+      // This can happen when the record has already been rolled back by another transaction. In
+      // this case, we just ignore it.
+      return;
     }
+
+    rollbackRecord(selection, result);
   }
 
   private void mutate(List<Mutation> mutations) throws ExecutionException {
@@ -111,5 +126,10 @@ public class RecoveryHandler {
       return;
     }
     storage.mutate(mutations);
+  }
+
+  public boolean isTransactionExpired(TransactionResult result) {
+    long current = System.currentTimeMillis();
+    return current > result.getPreparedAt() + TRANSACTION_LIFETIME_MILLIS;
   }
 }

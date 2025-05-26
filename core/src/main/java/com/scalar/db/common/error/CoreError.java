@@ -1202,6 +1202,8 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
       Category.INTERNAL_ERROR, "0054", "Getting the scanner failed. Details: %s", "", ""),
+  CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED(
+      Category.INTERNAL_ERROR, "0055", "Recovering records failed. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category

@@ -63,7 +63,7 @@ public class ConsensusCommitManagerTest {
   @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
-  @Mock private RecoveryHandler recovery;
+  @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CommitHandler commit;
 
   private ConsensusCommitManager manager;
@@ -80,7 +80,7 @@ public class ConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit,
             null);
 
@@ -131,7 +131,7 @@ public class ConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit,
             groupCommitter);
 
@@ -162,7 +162,7 @@ public class ConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit,
             groupCommitter);
 
@@ -196,9 +196,6 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction1.getCommitHandler())
         .isEqualTo(transaction2.getCommitHandler())
         .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
   }
 
   @Test
@@ -309,9 +306,6 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction1.getCommitHandler())
         .isEqualTo(transaction2.getCommitHandler())
         .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
   }
 
   @Test

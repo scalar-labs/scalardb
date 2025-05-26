@@ -39,7 +39,7 @@ public abstract class AbstractMutationComposer implements MutationComposer {
     return ImmutableList.copyOf(mutations);
   }
 
-  protected void setNullToBeforeImageColumns(
+  static void setNullToBeforeImageColumns(
       PutBuilder.Buildable putBuilder,
       Set<String> beforeImageColumnNames,
       TableMetadata tableMetadata) {
