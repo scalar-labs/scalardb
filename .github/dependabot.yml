@@ -9,8 +9,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
     ignore:
       - dependency-name: "*"
         update-types: [ "version-update:semver-major" ]
@@ -26,8 +24,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3"
@@ -38,8 +34,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.15"
@@ -50,8 +44,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.14"
@@ -62,8 +54,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.13"
@@ -74,8 +64,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.12"
@@ -86,8 +74,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.11"
@@ -98,5 +84,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "scalar-labs/scalardb"

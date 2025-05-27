@@ -1,0 +1,23 @@
+name: Assign reviewer to dependabot PRs
+# This action assigns the ScalarDB team as reviewers when Dependabot opens a pull request.
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  assign-reviewer:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Assign ScalarDB team as reviewers for Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: gh pr edit $PR_NUMBER --repo $REPOSITORY --add-reviewer scalar-labs/scalardb
+
