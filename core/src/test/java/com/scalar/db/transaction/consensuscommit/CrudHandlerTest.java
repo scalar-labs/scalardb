@@ -56,6 +56,7 @@ public class CrudHandlerTest {
   private static final String ANY_ID_2 = "id2";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
+  private static final String ANY_NAME_3 = "name3";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
@@ -66,8 +67,10 @@ public class CrudHandlerTest {
           TableMetadata.newBuilder()
               .addColumn(ANY_NAME_1, DataType.TEXT)
               .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.TEXT)
               .addPartitionKey(ANY_NAME_1)
               .addClusteringKey(ANY_NAME_2)
+              .addSecondaryIndex(ANY_NAME_3)
               .build());
   private static final TransactionTableMetadata TRANSACTION_TABLE_METADATA =
       new TransactionTableMetadata(TABLE_METADATA);
@@ -928,6 +931,7 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage, never()).get(any());
+    verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), any(Optional.class));
     verify(snapshot, never()).putIntoGetSet(any(Get.class), any(Optional.class));
   }
 
@@ -1014,6 +1018,7 @@ public class CrudHandlerTest {
     // Assert
     verify(storage).get(any());
     verify(snapshot).putIntoReadSet(key, Optional.of(new TransactionResult(result)));
+    verify(snapshot).putIntoGetSet(getForKey, Optional.of(new TransactionResult(result)));
   }
 
   @Test
@@ -1045,6 +1050,88 @@ public class CrudHandlerTest {
             e -> {
               UncommittedRecordException exception = (UncommittedRecordException) e;
               assertThat(exception.getSelection()).isEqualTo(getForKey);
+              assertThat(exception.getResults().size()).isEqualTo(1);
+              assertThat(exception.getResults().get(0)).isEqualTo(result);
+            });
+  }
+
+  @Test
+  public void
+      readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_EmptyResultReturnedByStorage_ShouldCallAppropriateMethods()
+          throws CrudException, ExecutionException {
+    // Arrange
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
+            .build();
+    when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
+    when(storage.get(any())).thenReturn(Optional.empty());
+
+    // Act
+    handler.readUnread(null, getWithIndex);
+
+    // Assert
+    verify(storage).get(any());
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
+  }
+
+  @Test
+  public void
+      readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_CommittedRecordReturnedByStorage_ShouldCallAppropriateMethods()
+          throws CrudException, ExecutionException {
+    // Arrange
+    Result result = mock(Result.class);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getPartitionKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
+    when(result.getClusteringKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
+            .build();
+    when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
+
+    // Act
+    handler.readUnread(null, getWithIndex);
+
+    // Assert
+    verify(storage).get(any());
+    verify(snapshot)
+        .putIntoReadSet(
+            new Snapshot.Key(getWithIndex, result), Optional.of(new TransactionResult(result)));
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(new TransactionResult(result)));
+  }
+
+  @Test
+  public void
+      readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
+          throws ExecutionException {
+    // Arrange
+    Result result = mock(Result.class);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
+            .build();
+    when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.readUnread(null, getWithIndex))
+        .isInstanceOf(UncommittedRecordException.class)
+        .satisfies(
+            e -> {
+              UncommittedRecordException exception = (UncommittedRecordException) e;
+              assertThat(exception.getSelection()).isEqualTo(getWithIndex);
               assertThat(exception.getResults().size()).isEqualTo(1);
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });

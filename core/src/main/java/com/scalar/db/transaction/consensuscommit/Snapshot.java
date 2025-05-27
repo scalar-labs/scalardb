@@ -720,6 +720,13 @@ public class Snapshot {
       this((Operation) get);
     }
 
+    public Key(Get get, Result result) {
+      this.namespace = get.forNamespace().get();
+      this.table = get.forTable().get();
+      this.partitionKey = result.getPartitionKey().get();
+      this.clusteringKey = result.getClusteringKey();
+    }
+
     public Key(Put put) {
       this((Operation) put);
     }
