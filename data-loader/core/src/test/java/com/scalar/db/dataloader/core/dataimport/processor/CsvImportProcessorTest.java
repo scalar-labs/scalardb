@@ -135,7 +135,7 @@ class CsvImportProcessorTest {
 
     Map<Integer, ImportDataChunkStatus> statusList2 =
         csvImportProcessor.process(5, 1, UnitTestUtils.getCsvReader());
-    Assertions.assertEquals(0, statusList.get(0).getDataChunkId());
+    Assertions.assertEquals(0, statusList2.get(0).getDataChunkId());
   }
 
   @Test
