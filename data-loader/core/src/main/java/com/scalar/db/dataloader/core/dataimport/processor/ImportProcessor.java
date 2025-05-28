@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportEventListener;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
@@ -22,11 +23,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -56,11 +60,57 @@ public abstract class ImportProcessor {
    * @param transactionBatchSize the number of records to group together in a single transaction
    *     (only used in transaction mode)
    * @param reader the {@link BufferedReader} used to read the source file
-   * @return a map of {@link ImportDataChunkStatus} objects indicating the processing status and
-   *     results of each data chunk
    */
-  public abstract ConcurrentHashMap<Integer, ImportDataChunkStatus> process(
-      int dataChunkSize, int transactionBatchSize, BufferedReader reader);
+  public void process(int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
+    ExecutorService dataChunkExecutor = Executors.newSingleThreadExecutor();
+    BlockingQueue<ImportDataChunk> dataChunkQueue =
+        new LinkedBlockingQueue<>(params.getImportOptions().getDataChunkQueueSize());
+
+    try {
+      CompletableFuture<Void> readerFuture =
+          CompletableFuture.runAsync(
+              () -> readDataChunks(reader, dataChunkSize, dataChunkQueue), dataChunkExecutor);
+
+      while (!(dataChunkQueue.isEmpty() && readerFuture.isDone())) {
+        ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
+        if (dataChunk != null) {
+          processDataChunk(dataChunk, transactionBatchSize);
+        }
+      }
+
+      readerFuture.join();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(
+          CoreError.DATA_LOADER_DATA_CHUNK_PROCESS_FAILED.buildMessage(e.getMessage()), e);
+    } finally {
+      dataChunkExecutor.shutdown();
+      try {
+        if (!dataChunkExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+          dataChunkExecutor.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        dataChunkExecutor.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+      notifyAllDataChunksCompleted();
+    }
+  }
+
+  /**
+   * Reads and processes data in chunks from the provided reader.
+   *
+   * <p>This method should be implemented by each processor to handle the specific format of the
+   * input data. It reads data from the reader, converts it to the appropriate format, and enqueues
+   * it for processing.
+   *
+   * @param reader the BufferedReader containing the data
+   * @param dataChunkSize the number of rows to include in each chunk
+   * @param dataChunkQueue the queue where data chunks are placed for processing
+   * @throws RuntimeException if there are errors reading the file or if interrupted
+   */
+  protected abstract void readDataChunks(
+      BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue);
 
   /**
    * Add import event listener to listener list
@@ -100,7 +150,6 @@ public abstract class ImportProcessor {
   protected void notifyDataChunkStarted(ImportDataChunkStatus status) {
     for (ImportEventListener listener : listeners) {
       listener.onDataChunkStarted(status);
-      listener.addOrUpdateDataChunkStatus(status);
     }
   }
 
@@ -112,7 +161,6 @@ public abstract class ImportProcessor {
   protected void notifyDataChunkCompleted(ImportDataChunkStatus status) {
     for (ImportEventListener listener : listeners) {
       listener.onDataChunkCompleted(status);
-      listener.addOrUpdateDataChunkStatus(status);
     }
   }
 
@@ -294,10 +342,8 @@ public abstract class ImportProcessor {
    *
    * @param dataChunk the data chunk to process
    * @param transactionBatchSize the size of transaction batches (used only in transaction mode)
-   * @return an {@link ImportDataChunkStatus} containing the complete processing results and metrics
    */
-  protected ImportDataChunkStatus processDataChunk(
-      ImportDataChunk dataChunk, int transactionBatchSize) {
+  private void processDataChunk(ImportDataChunk dataChunk, int transactionBatchSize) {
     ImportDataChunkStatus status =
         ImportDataChunkStatus.builder()
             .dataChunkId(dataChunk.getDataChunkId())
@@ -312,7 +358,6 @@ public abstract class ImportProcessor {
       importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk);
     }
     notifyDataChunkCompleted(importDataChunkStatus);
-    return importDataChunkStatus;
   }
 
   /**

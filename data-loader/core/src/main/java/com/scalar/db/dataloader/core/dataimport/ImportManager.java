@@ -17,7 +17,6 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -46,8 +45,6 @@ public class ImportManager implements ImportEventListener {
   private final ScalarDbMode scalarDbMode;
   private final DistributedStorage distributedStorage;
   private final DistributedTransactionManager distributedTransactionManager;
-  private final ConcurrentHashMap<Integer, ImportDataChunkStatus> importDataChunkStatusMap =
-      new ConcurrentHashMap<>();
 
   /**
    * Starts the import process using the configured parameters.
@@ -55,11 +52,8 @@ public class ImportManager implements ImportEventListener {
    * <p>If the data chunk size in {@link ImportOptions} is set to 0, the entire file will be
    * processed as a single chunk. Otherwise, the file will be processed in chunks of the specified
    * size.
-   *
-   * @return a map of {@link ImportDataChunkStatus} objects containing the status of each processed
-   *     chunk
    */
-  public ConcurrentHashMap<Integer, ImportDataChunkStatus> startImport() {
+  public void startImport() {
     ImportProcessorParams params =
         ImportProcessorParams.builder()
             .scalarDbMode(scalarDbMode)
@@ -77,8 +71,7 @@ public class ImportManager implements ImportEventListener {
         importOptions.getDataChunkSize() == 0
             ? Integer.MAX_VALUE
             : importOptions.getDataChunkSize();
-    return processor.process(
-        dataChunkSize, importOptions.getTransactionBatchSize(), importFileReader);
+    processor.process(dataChunkSize, importOptions.getTransactionBatchSize(), importFileReader);
   }
 
   /**
@@ -106,15 +99,6 @@ public class ImportManager implements ImportEventListener {
     for (ImportEventListener listener : listeners) {
       listener.onDataChunkStarted(status);
     }
-  }
-
-  /**
-   * {@inheritDoc} Updates or adds the status of a data chunk in the status map. This method is
-   * thread-safe.
-   */
-  @Override
-  public void addOrUpdateDataChunkStatus(ImportDataChunkStatus status) {
-    importDataChunkStatusMap.put(status.getDataChunkId(), status);
   }
 
   /** {@inheritDoc} Forwards the event to all registered listeners. */
@@ -155,15 +139,6 @@ public class ImportManager implements ImportEventListener {
     for (ImportEventListener listener : listeners) {
       listener.onAllDataChunksCompleted();
     }
-  }
-
-  /**
-   * Returns the current map of import data chunk status objects.
-   *
-   * @return a map of {@link ImportDataChunkStatus} objects
-   */
-  public ConcurrentHashMap<Integer, ImportDataChunkStatus> getImportDataChunkStatus() {
-    return importDataChunkStatusMap;
   }
 
   /**
