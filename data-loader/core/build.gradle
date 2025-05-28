@@ -2,6 +2,9 @@ plugins {
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
+    id 'maven-publish'
+    id 'signing'
+    id 'base'
 }
 
 archivesBaseName = "scalardb-data-loader-core"
