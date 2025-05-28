@@ -159,17 +159,18 @@ public interface CrudOperable<E extends TransactionException> {
   /** A scanner abstraction for iterating results. */
   interface Scanner<E extends TransactionException> extends AutoCloseable, Iterable<Result> {
     /**
-     * Returns the first result in the results.
+     * Returns the next result.
      *
-     * @return the first result in the results
+     * @return an {@code Optional} containing the next result if available, or empty if no more
+     *     results
      * @throws E if the operation fails
      */
     Optional<Result> one() throws E;
 
     /**
-     * Returns all the results.
+     * Returns all remaining results.
      *
-     * @return the list of {@code Result}s
+     * @return a {@code List} containing all remaining results
      * @throws E if the operation fails
      */
     List<Result> all() throws E;

@@ -13,17 +13,18 @@ import java.util.Optional;
 public interface Scanner extends Closeable, Iterable<Result> {
 
   /**
-   * Returns the first result in the results.
+   * Returns the next result.
    *
-   * @return the first result in the results
+   * @return an {@code Optional} containing the next result if available, or empty if no more
+   *     results
    * @throws ExecutionException if the operation fails
    */
   Optional<Result> one() throws ExecutionException;
 
   /**
-   * Returns all the results.
+   * Returns all remaining results.
    *
-   * @return the list of {@code Result}s
+   * @return a {@code List} containing all remaining results
    * @throws ExecutionException if the operation fails
    */
   List<Result> all() throws ExecutionException;
