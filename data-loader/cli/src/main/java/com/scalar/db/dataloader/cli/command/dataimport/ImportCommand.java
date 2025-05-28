@@ -96,7 +96,9 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       throws IOException, TableMetadataException {
     File configFile = new File(configFilePath);
     StorageFactory storageFactory = StorageFactory.create(configFile);
-    try (DistributedStorageAdmin storageAdmin = storageFactory.getStorageAdmin()) {
+    DistributedStorageAdmin storageAdmin = null;
+    try {
+      storageAdmin = storageFactory.getStorageAdmin();
       TableMetadataService tableMetadataService = new TableMetadataService(storageAdmin);
       Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
       if (controlFile != null) {
@@ -111,6 +113,10 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             tableMetadataService.getTableMetadata(namespace, tableName));
       }
       return tableMetadataMap;
+    } finally {
+      if (storageAdmin != null) {
+        storageAdmin.close();
+      }
     }
   }
 
