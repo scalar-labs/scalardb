@@ -124,7 +124,7 @@ public class ImportCommandOptions {
   protected char delimiter;
 
   @CommandLine.Option(
-      names = {"--header", "-h"},
+      names = {"--header", "-hdr"},
       paramLabel = "<HEADER>",
       description =
           "Header row for the CSV/TSV import file (default: use the first line as the header)")
