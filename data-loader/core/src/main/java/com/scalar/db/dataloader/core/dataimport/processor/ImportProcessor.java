@@ -226,16 +226,16 @@ public abstract class ImportProcessor {
    * all records in the batch, and commits or aborts the transaction based on the success of all
    * operations.
    *
-   * @param dataChunk the parent data chunk containing this batch
+   * @param dataChunkId the parent data chunk id of the chunk containing this batch
    * @param transactionBatch the batch of records to process in a single transaction
    * @return an {@link ImportTransactionBatchResult} containing the processing results and any
    *     errors
    */
   private ImportTransactionBatchResult processTransactionBatch(
-      ImportDataChunk dataChunk, ImportTransactionBatch transactionBatch) {
+      int dataChunkId, ImportTransactionBatch transactionBatch) {
     ImportTransactionBatchStatus status =
         ImportTransactionBatchStatus.builder()
-            .dataChunkId(dataChunk.getDataChunkId())
+            .dataChunkId(dataChunkId)
             .transactionBatchId(transactionBatch.getTransactionBatchId())
             .build();
     notifyTransactionBatchStarted(status);
@@ -252,7 +252,7 @@ public abstract class ImportProcessor {
         ImportTaskParams taskParams =
             ImportTaskParams.builder()
                 .sourceRecord(importRow.getSourceData())
-                .dataChunkId(dataChunk.getDataChunkId())
+                .dataChunkId(dataChunkId)
                 .rowNumber(importRow.getRowNumber())
                 .importOptions(params.getImportOptions())
                 .tableColumnDataTypes(params.getTableColumnDataTypes())
@@ -295,7 +295,7 @@ public abstract class ImportProcessor {
         ImportTransactionBatchResult.builder()
             .transactionBatchId(transactionBatch.getTransactionBatchId())
             .success(isSuccess)
-            .dataChunkId(dataChunk.getDataChunkId())
+            .dataChunkId(dataChunkId)
             .records(importRecordResult)
             .errors(Collections.singletonList(error))
             .build();
@@ -307,15 +307,15 @@ public abstract class ImportProcessor {
    * Processes a single record in storage mode (non-transactional). Each record is processed
    * independently without transaction guarantees.
    *
-   * @param dataChunk the parent data chunk containing this record
+   * @param dataChunkId the parent data chunk id of the chunk containing this record
    * @param importRow the record to process
    * @return an {@link ImportTaskResult} containing the processing result for the record
    */
-  private ImportTaskResult processStorageRecord(ImportDataChunk dataChunk, ImportRow importRow) {
+  private ImportTaskResult processStorageRecord(int dataChunkId, ImportRow importRow) {
     ImportTaskParams taskParams =
         ImportTaskParams.builder()
             .sourceRecord(importRow.getSourceData())
-            .dataChunkId(dataChunk.getDataChunkId())
+            .dataChunkId(dataChunkId)
             .rowNumber(importRow.getRowNumber())
             .importOptions(params.getImportOptions())
             .tableColumnDataTypes(params.getTableColumnDataTypes())
@@ -330,7 +330,7 @@ public abstract class ImportProcessor {
             .rowNumber(importRecordResult.getRowNumber())
             .rawRecord(importRecordResult.getRawRecord())
             .targets(importRecordResult.getTargets())
-            .dataChunkId(dataChunk.getDataChunkId())
+            .dataChunkId(dataChunkId)
             .build();
     notifyStorageRecordCompleted(modifiedTaskResult);
     return modifiedTaskResult;
@@ -382,7 +382,7 @@ public abstract class ImportProcessor {
       for (ImportTransactionBatch transactionBatch : transactionBatches) {
         Future<?> transactionBatchFuture =
             transactionBatchExecutor.submit(
-                () -> processTransactionBatch(dataChunk, transactionBatch));
+                () -> processTransactionBatch(dataChunk.getDataChunkId(), transactionBatch));
         transactionBatchFutures.add(transactionBatchFuture);
       }
 
@@ -446,7 +446,8 @@ public abstract class ImportProcessor {
     try {
       for (ImportRow importRow : dataChunk.getSourceData()) {
         Future<?> recordFuture =
-            recordExecutor.submit(() -> processStorageRecord(dataChunk, importRow));
+            recordExecutor.submit(
+                () -> processStorageRecord(dataChunk.getDataChunkId(), importRow));
         recordFutures.add(recordFuture);
       }
       waitForFuturesToComplete(recordFutures);
