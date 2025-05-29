@@ -18,6 +18,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.config.DatabaseConfig;
@@ -28,7 +29,9 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -149,6 +152,178 @@ public class SingleCrudOperationTransactionManagerTest {
         .isInstanceOf(CrudException.class)
         .hasMessageContaining("error")
         .hasCause(exception);
+  }
+
+  @Test
+  public void getScannerAndScannerOne_ShouldReturnScannerAndShouldReturnProperResult()
+      throws ExecutionException, TransactionException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = transactionManager.getScanner(scan);
+    assertThat(actual.one()).hasValue(result1);
+    assertThat(actual.one()).hasValue(result2);
+    assertThat(actual.one()).hasValue(result3);
+    assertThat(actual.one()).isEmpty();
+    actual.close();
+
+    verify(storage).scan(scan);
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldReturnScannerAndShouldReturnProperResults()
+      throws ExecutionException, TransactionException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.all()).thenReturn(Arrays.asList(result1, result2, result3));
+
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = transactionManager.getScanner(scan);
+    assertThat(actual.all()).containsExactly(result1, result2, result3);
+    actual.close();
+
+    verify(storage).scan(scan);
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerIterator_ShouldReturnScannerAndShouldReturnProperResults()
+      throws ExecutionException, TransactionException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = transactionManager.getScanner(scan);
+
+    Iterator<Result> iterator = actual.iterator();
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result1);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result2);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result3);
+    assertThat(iterator.hasNext()).isFalse();
+    actual.close();
+
+    verify(storage).scan(scan);
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScanner_WhenExecutionExceptionThrownByJdbcService_ShouldThrowCrudException()
+      throws ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(storage.scan(scan)).thenThrow(executionException);
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.getScanner(scan)).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerOne_WhenExecutionExceptionThrownByScannerOne_ShouldThrowCrudException()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+
+    Scanner scanner = mock(Scanner.class);
+
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(scanner.one()).thenThrow(executionException);
+
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = transactionManager.getScanner(scan);
+    assertThatThrownBy(actual::one).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerAll_WhenExecutionExceptionThrownByScannerAll_ShouldThrowCrudException()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+
+    Scanner scanner = mock(Scanner.class);
+
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(scanner.all()).thenThrow(executionException);
+
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = transactionManager.getScanner(scan);
+    assertThatThrownBy(actual::all).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_WhenIOExceptionThrownByScannerClose_ShouldThrowCrudException()
+          throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+
+    Scanner scanner = mock(Scanner.class);
+
+    IOException ioException = mock(IOException.class);
+    when(ioException.getMessage()).thenReturn("error");
+    doThrow(ioException).when(scanner).close();
+
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = transactionManager.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
   }
 
   @Test
