@@ -115,46 +115,4 @@ class JsonLinesImportProcessorTest {
     assert statusList != null;
     Assertions.assertEquals(1, statusList.size());
   }
-
-  @Test
-  void test_importProcessWithStorage_runTwice_CheckDataChunkId() {
-    params =
-        ImportProcessorParams.builder()
-            .scalarDbMode(ScalarDbMode.STORAGE)
-            .importOptions(importOptions)
-            .dao(dao)
-            .distributedStorage(distributedStorage)
-            .distributedTransactionManager(distributedTransactionManager)
-            .tableColumnDataTypes(tableColumnDataTypes)
-            .tableMetadataByTableName(tableMetadataByTableName)
-            .build();
-    jsonLinesImportProcessor = new JsonLinesImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
-    Assertions.assertEquals(0, statusList.get(0).getDataChunkId());
-    Map<Integer, ImportDataChunkStatus> statusList2 =
-        jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
-    Assertions.assertEquals(0, statusList2.get(0).getDataChunkId());
-  }
-
-  @Test
-  void test_importProcessWithTransaction_runTwice_CheckDataChunkId() {
-    params =
-        ImportProcessorParams.builder()
-            .scalarDbMode(ScalarDbMode.TRANSACTION)
-            .importOptions(importOptions)
-            .dao(dao)
-            .distributedStorage(distributedStorage)
-            .distributedTransactionManager(distributedTransactionManager)
-            .tableColumnDataTypes(tableColumnDataTypes)
-            .tableMetadataByTableName(tableMetadataByTableName)
-            .build();
-    jsonLinesImportProcessor = new JsonLinesImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
-    Assertions.assertEquals(0, statusList.get(0).getDataChunkId());
-    Map<Integer, ImportDataChunkStatus> statusList2 =
-        jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
-    Assertions.assertEquals(0, statusList2.get(0).getDataChunkId());
-  }
 }

@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JsonLinesImportProcessor extends ImportProcessor {
 
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
-  private static final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
+  private final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
 
   /**
    * Creates a new JsonLinesImportProcessor with the specified parameters.
@@ -64,11 +64,6 @@ public class JsonLinesImportProcessor extends ImportProcessor {
   @Override
   public ConcurrentHashMap<Integer, ImportDataChunkStatus> process(
       int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
-    // Reset the counter to 0 before starting a new import process.
-    // Since the JVM is not restarted between API calls (as in a web application’s API server),
-    // failing to reset the counter would cause the next import to continue from the previous data
-    // chunk ID.
-    dataChunkIdCounter.set(0);
     ExecutorService dataChunkExecutor = Executors.newSingleThreadExecutor();
     BlockingQueue<ImportDataChunk> dataChunkQueue =
         new LinkedBlockingQueue<>(params.getImportOptions().getDataChunkQueueSize());
