@@ -488,7 +488,7 @@ public class CrudHandler {
         // into the scan set
         snapshot.putIntoScanSet(scan, results);
       } else {
-        // If the scan is not fully scanned, put the results into the scanner set
+        // If the scanner is not fully scanned, put the results into the scanner set
         snapshot.putIntoScannerSet(scan, results);
       }
 
