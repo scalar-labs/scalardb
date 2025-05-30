@@ -1,29 +1,20 @@
 package com.scalar.db.dataloader.core.dataimport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDbMode;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
-import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessor;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory;
 import java.io.BufferedReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorParams;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
