@@ -14,6 +14,7 @@ import lombok.Value;
  * Parameters required for executing an import task in the data loader. This class encapsulates all
  * necessary information needed to process and import a single record into ScalarDB.
  */
+@SuppressWarnings("SameNameButDifferent")
 @Builder
 @Value
 public class ImportTaskParams {

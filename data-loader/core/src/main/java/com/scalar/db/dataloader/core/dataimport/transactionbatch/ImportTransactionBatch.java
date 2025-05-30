@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Value;
 
 /** Transaction batch details */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value
 public class ImportTransactionBatch {

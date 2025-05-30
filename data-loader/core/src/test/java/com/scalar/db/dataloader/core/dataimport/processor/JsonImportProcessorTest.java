@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -93,7 +94,7 @@ class JsonImportProcessorTest {
     jsonImportProcessor = new JsonImportProcessor(params);
     Map<Integer, ImportDataChunkStatus> statusList =
         jsonImportProcessor.process(5, 1, UnitTestUtils.getJsonReader());
-    assert statusList != null;
+    assertThat(statusList).isNotNull();
     Assertions.assertEquals(1, statusList.size());
   }
 
@@ -112,7 +113,7 @@ class JsonImportProcessorTest {
     jsonImportProcessor = new JsonImportProcessor(params);
     Map<Integer, ImportDataChunkStatus> statusList =
         jsonImportProcessor.process(5, 1, UnitTestUtils.getJsonReader());
-    assert statusList != null;
+    assertThat(statusList).isNotNull();
     Assertions.assertEquals(1, statusList.size());
   }
 }
