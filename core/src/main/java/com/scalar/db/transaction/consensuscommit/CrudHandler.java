@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -410,9 +411,8 @@ public class CrudHandler {
     private final Scanner scanner;
 
     private final LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
-    private boolean fullyScanned;
-    private boolean failed;
-    private boolean closed;
+    private AtomicBoolean fullyScanned = new AtomicBoolean();
+    private AtomicBoolean closed = new AtomicBoolean();
 
     public ConsensusCommitStorageScanner(Scan scan, List<String> originalProjections)
         throws CrudException {
@@ -427,7 +427,7 @@ public class CrudHandler {
         Optional<Result> r = scanner.one();
 
         if (!r.isPresent()) {
-          fullyScanned = true;
+          fullyScanned.set(true);
           return Optional.empty();
         }
 
@@ -440,13 +440,13 @@ public class CrudHandler {
         return Optional.of(
             new FilteredResult(result, originalProjections, metadata, isIncludeMetadataEnabled));
       } catch (ExecutionException e) {
-        failed = true;
+        closeScanner();
         throw new CrudException(
             CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
             e,
             snapshot.getId());
       } catch (CrudException e) {
-        failed = true;
+        closeScanner();
         throw e;
       }
     }
@@ -468,22 +468,13 @@ public class CrudHandler {
 
     @Override
     public void close() {
-      if (closed) {
-        return;
-      }
-      closed = true;
-
-      try {
-        scanner.close();
-      } catch (IOException e) {
-        logger.warn("Failed to close the scanner", e);
-      }
-
-      if (failed) {
+      if (closed.get()) {
         return;
       }
 
-      if (fullyScanned) {
+      closeScanner();
+
+      if (fullyScanned.get()) {
         // If the scanner is fully scanned, we can treat it as a normal scan, and put the results
         // into the scan set
         snapshot.putIntoScanSet(scan, results);
@@ -497,7 +488,16 @@ public class CrudHandler {
 
     @Override
     public boolean isClosed() {
-      return closed;
+      return closed.get();
+    }
+
+    private void closeScanner() {
+      closed.set(true);
+      try {
+        scanner.close();
+      } catch (IOException e) {
+        logger.warn("Failed to close the scanner", e);
+      }
     }
   }
 

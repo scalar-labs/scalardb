@@ -34,6 +34,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.ScalarDbUtils;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -351,7 +352,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void scanOrGetScanner_ResultGivenFromStorage_ShouldUpdateSnapshotAndReturn(ScanType scanType)
-      throws ExecutionException, CrudException {
+      throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -370,6 +371,7 @@ public class CrudHandlerTest {
     List<Result> results = scanOrGetScanner(scan, scanType);
 
     // Assert
+    verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
     verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
@@ -382,7 +384,7 @@ public class CrudHandlerTest {
   @EnumSource(ScanType.class)
   void
       scanOrGetScanner_PreparedResultGivenFromStorage_ShouldNeverUpdateSnapshotThrowUncommittedRecordException(
-          ScanType scanType) throws ExecutionException {
+          ScanType scanType) throws ExecutionException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -405,6 +407,7 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
+    verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScanSet(any(), any());
   }
@@ -412,7 +415,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void scanOrGetScanner_CalledTwice_SecondTimeShouldReturnTheSameFromSnapshot(ScanType scanType)
-      throws ExecutionException, CrudException {
+      throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan originalScan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(originalScan);
@@ -437,6 +440,7 @@ public class CrudHandlerTest {
     List<Result> results2 = scanOrGetScanner(scan2, scanType);
 
     // Assert
+    verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
     verify(snapshot)
         .putIntoScanSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
@@ -451,7 +455,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void scan_CalledTwiceUnderRealSnapshot_SecondTimeShouldReturnTheSameFromSnapshot(
-      ScanType scanType) throws ExecutionException, CrudException {
+      ScanType scanType) throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan originalScan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(originalScan);
@@ -477,6 +481,8 @@ public class CrudHandlerTest {
     assertThat(results1.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
     assertThat(results1).isEqualTo(results2);
+
+    verify(scanner).close();
     verify(storage, never()).scan(originalScan);
     verify(storage).scan(scanForStorage);
   }
@@ -484,7 +490,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void scanOrGetScanner_GetCalledAfterScan_ShouldReturnFromStorage(ScanType scanType)
-      throws ExecutionException, CrudException {
+      throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -509,8 +515,9 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).scan(scanForStorage);
-
     verify(storage).get(getForStorage);
+    verify(scanner).close();
+
     assertThat(results.size()).isEqualTo(1);
     assertThat(result).isPresent();
     assertThat(results.get(0)).isEqualTo(result.get());
@@ -519,7 +526,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void scanOrGetScanner_GetCalledAfterScanUnderRealSnapshot_ShouldReturnFromStorage(
-      ScanType scanType) throws ExecutionException, CrudException {
+      ScanType scanType) throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan scan = toScanForStorageFrom(prepareScan());
     result = prepareResult(TransactionState.COMMITTED);
@@ -541,6 +548,8 @@ public class CrudHandlerTest {
     // Assert
     verify(storage).scan(scan);
     verify(storage).get(get);
+    verify(scanner).close();
+
     assertThat(results.size()).isEqualTo(1);
     assertThat(result).isPresent();
     assertThat(results.get(0)).isEqualTo(result.get());
@@ -548,9 +557,8 @@ public class CrudHandlerTest {
 
   @ParameterizedTest
   @EnumSource(ScanType.class)
-  public void
-      scanOrGetScanner_CalledAfterDeleteUnderRealSnapshot_ShouldThrowIllegalArgumentException(
-          ScanType scanType) throws ExecutionException, CrudException {
+  void scanOrGetScanner_CalledAfterDeleteUnderRealSnapshot_ShouldThrowIllegalArgumentException(
+      ScanType scanType) throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -613,13 +621,15 @@ public class CrudHandlerTest {
 
     assertThatThrownBy(() -> scanOrGetScanner(scan, scanType))
         .isInstanceOf(IllegalArgumentException.class);
+
+    verify(scanner).close();
   }
 
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void
       scanOrGetScanner_CrossPartitionScanAndResultFromStorageGiven_ShouldUpdateSnapshotAndVerifyNoOverlapThenReturn(
-          ScanType scanType) throws ExecutionException, CrudException {
+          ScanType scanType) throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.COMMITTED);
@@ -637,6 +647,7 @@ public class CrudHandlerTest {
     List<Result> results = scanOrGetScanner(scan, scanType);
 
     // Assert
+    verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
@@ -651,7 +662,7 @@ public class CrudHandlerTest {
   @EnumSource(ScanType.class)
   void
       scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorVerifyNoOverlapButThrowUncommittedRecordException(
-          ScanType scanType) throws ExecutionException {
+          ScanType scanType) throws ExecutionException, IOException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
     result = prepareResult(TransactionState.PREPARED);
@@ -673,6 +684,7 @@ public class CrudHandlerTest {
               assertThat(exception.getResults().get(0)).isEqualTo(result);
             });
 
+    verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), any());
     verify(snapshot, never()).putIntoScannerSet(any(Scan.class), any());
     verify(snapshot, never()).verifyNoOverlap(any(), any());
@@ -681,7 +693,7 @@ public class CrudHandlerTest {
   @Test
   public void
       scan_RuntimeExceptionCausedByExecutionExceptionThrownByIteratorHasNext_ShouldThrowCrudException()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -698,11 +710,13 @@ public class CrudHandlerTest {
     assertThatThrownBy(() -> handler.scan(scan))
         .isInstanceOf(CrudException.class)
         .hasCause(executionException);
+
+    verify(scanner).close();
   }
 
   @Test
   public void scan_RuntimeExceptionThrownByIteratorHasNext_ShouldThrowCrudException()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -717,12 +731,33 @@ public class CrudHandlerTest {
     assertThatThrownBy(() -> handler.scan(scan))
         .isInstanceOf(CrudException.class)
         .hasCause(runtimeException);
+
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScanner_ExecutionExceptionThrownByScannerOne_ShouldThrowCrudException()
+      throws ExecutionException, IOException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(scanner.one()).thenThrow(executionException);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan);
+    assertThatThrownBy(actualScanner::one)
+        .isInstanceOf(CrudException.class)
+        .hasCause(executionException);
+
+    verify(scanner).close();
   }
 
   @Test
   public void
       getScanner_ScannerNotFullyScanned_ShouldPutReadSetAndScannerSetInSnapshotAndVerifyScan()
-          throws ExecutionException, CrudException {
+          throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -742,6 +777,7 @@ public class CrudHandlerTest {
     actualScanner.close();
 
     // Assert
+    verify(scanner).close();
     verify(snapshot).putIntoReadSet(key1, Optional.of(txResult1));
     verify(snapshot)
         .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
