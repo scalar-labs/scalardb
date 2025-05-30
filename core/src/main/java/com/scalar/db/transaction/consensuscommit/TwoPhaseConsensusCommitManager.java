@@ -13,10 +13,12 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -35,6 +37,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -188,9 +191,90 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    throw new UnsupportedOperationException("Implement later");
+    TwoPhaseCommitTransaction transaction = begin();
+
+    TransactionCrudOperable.Scanner scanner;
+    try {
+      scanner = transaction.getScanner(copyAndSetTargetToIfNot(scan));
+    } catch (CrudException e) {
+      rollbackTransaction(transaction);
+      throw e;
+    }
+
+    return new AbstractTransactionManagerCrudOperableScanner() {
+
+      private final AtomicBoolean closed = new AtomicBoolean();
+
+      @Override
+      public Optional<Result> one() throws CrudException {
+        try {
+          return scanner.one();
+        } catch (CrudException e) {
+          closed.set(true);
+
+          try {
+            scanner.close();
+          } catch (CrudException ex) {
+            e.addSuppressed(ex);
+          }
+
+          rollbackTransaction(transaction);
+          throw e;
+        }
+      }
+
+      @Override
+      public List<Result> all() throws CrudException {
+        try {
+          return scanner.all();
+        } catch (CrudException e) {
+          closed.set(true);
+
+          try {
+            scanner.close();
+          } catch (CrudException ex) {
+            e.addSuppressed(ex);
+          }
+
+          rollbackTransaction(transaction);
+          throw e;
+        }
+      }
+
+      @Override
+      public void close() throws CrudException, UnknownTransactionStatusException {
+        if (closed.get()) {
+          return;
+        }
+        closed.set(true);
+
+        try {
+          scanner.close();
+        } catch (CrudException e) {
+          rollbackTransaction(transaction);
+          throw e;
+        }
+
+        try {
+          transaction.prepare();
+          transaction.validate();
+          transaction.commit();
+        } catch (PreparationConflictException
+            | ValidationConflictException
+            | CommitConflictException e) {
+          rollbackTransaction(transaction);
+          throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+        } catch (UnknownTransactionStatusException e) {
+          throw e;
+        } catch (TransactionException e) {
+          rollbackTransaction(transaction);
+          throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+        }
+      }
+    };
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
@@ -201,6 +285,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         });
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -247,6 +332,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         });
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
