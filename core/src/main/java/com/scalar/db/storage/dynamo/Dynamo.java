@@ -77,7 +77,11 @@ public class Dynamo extends AbstractDistributedStorage {
     operationChecker = new DynamoOperationChecker(databaseConfig, metadataManager);
 
     selectStatementHandler =
-        new SelectStatementHandler(client, metadataManager, config.getNamespacePrefix());
+        new SelectStatementHandler(
+            client,
+            metadataManager,
+            config.getNamespacePrefix(),
+            databaseConfig.getScannerFetchSize());
     putStatementHandler =
         new PutStatementHandler(client, metadataManager, config.getNamespacePrefix());
     deleteStatementHandler =

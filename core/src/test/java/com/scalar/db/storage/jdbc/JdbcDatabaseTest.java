@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +18,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -89,7 +91,8 @@ public class JdbcDatabaseTest {
               Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.get(get);
             })
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
     verify(connection).setReadOnly(true);
     verify(connection).close();
   }
@@ -107,8 +110,10 @@ public class JdbcDatabaseTest {
     scanner.close();
 
     // Assert
+    verify(connection).setAutoCommit(false);
     verify(connection).setReadOnly(true);
     verify(jdbcService).getScanner(any(), any());
+    verify(connection).commit();
     verify(connection).close();
   }
 
@@ -125,8 +130,35 @@ public class JdbcDatabaseTest {
               Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.scan(scan);
             })
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+    verify(connection).setAutoCommit(false);
     verify(connection).setReadOnly(true);
+    verify(connection).rollback();
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      whenScanOperationExecutedAndScannerClosed_SQLExceptionThrownByConnectionCommit_shouldThrowIOException()
+          throws Exception {
+    // Arrange
+    when(jdbcService.getScanner(any(), any()))
+        .thenReturn(
+            new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet, true));
+    doThrow(sqlException).when(connection).commit();
+
+    // Act
+    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Scanner scanner = jdbcDatabase.scan(scan);
+    assertThatThrownBy(scanner::close).isInstanceOf(IOException.class).hasCause(sqlException);
+
+    // Assert
+    verify(connection).setAutoCommit(false);
+    verify(connection).setReadOnly(true);
+    verify(jdbcService).getScanner(any(), any());
+    verify(connection).commit();
+    verify(connection).rollback();
     verify(connection).close();
   }
 
@@ -187,7 +219,8 @@ public class JdbcDatabaseTest {
                       .forTable(TABLE);
               jdbcDatabase.put(put);
             })
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
     verify(connection).close();
   }
 
@@ -240,7 +273,8 @@ public class JdbcDatabaseTest {
                   new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.delete(delete);
             })
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
     verify(connection).close();
   }
 
@@ -259,7 +293,9 @@ public class JdbcDatabaseTest {
     jdbcDatabase.mutate(Arrays.asList(put, delete));
 
     // Assert
+    verify(connection).setAutoCommit(false);
     verify(jdbcService).mutate(any(), any());
+    verify(connection).commit();
     verify(connection).close();
   }
 
@@ -287,6 +323,9 @@ public class JdbcDatabaseTest {
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(NoMutationException.class);
+    verify(connection).setAutoCommit(false);
+    verify(jdbcService).mutate(any(), any());
+    verify(connection).rollback();
     verify(connection).close();
   }
 
@@ -309,7 +348,11 @@ public class JdbcDatabaseTest {
                   new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+    verify(connection).setAutoCommit(false);
+    verify(jdbcService).mutate(any(), any());
+    verify(connection).rollback();
     verify(connection).close();
   }
 
@@ -332,7 +375,11 @@ public class JdbcDatabaseTest {
                   new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
-        .isInstanceOf(RetriableExecutionException.class);
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(sqlException);
+    verify(connection).setAutoCommit(false);
+    verify(jdbcService).mutate(any(), any());
+    verify(connection).rollback();
     verify(connection).close();
   }
 }

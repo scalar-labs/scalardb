@@ -9,6 +9,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class StatementHandlerTest {
+
+  private static final int FETCH_SIZE = 10;
+
   @Mock private TableMetadataManager metadataManager;
 
   @BeforeEach
@@ -19,7 +22,7 @@ public class StatementHandlerTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new SelectStatementHandler(null, metadataManager))
+    assertThatThrownBy(() -> new SelectStatementHandler(null, metadataManager, FETCH_SIZE))
         .isInstanceOf(NullPointerException.class);
   }
 }

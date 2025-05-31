@@ -24,6 +24,8 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class QueryScannerTest {
 
+  private static final int FETCH_SIZE = 2;
+
   @Mock PaginatedRequest request;
   @Mock private ResultInterpreter resultInterpreter;
   @Mock private PaginatedRequestResponse response;
@@ -38,12 +40,100 @@ public class QueryScannerTest {
   public void one_ShouldReturnResult() {
     // Arrange
     Map<String, AttributeValue> item = Collections.emptyMap();
-    List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
-    when(request.execute()).thenReturn(response);
-    when(response.items()).thenReturn(items);
+    Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
+    when(request.execute(FETCH_SIZE)).thenReturn(response);
+    when(response.items()).thenReturn(Arrays.asList(item, item));
+    when(response.hasLastEvaluatedKey()).thenReturn(false);
+    when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, FETCH_SIZE, 0, resultInterpreter);
+
+    // Act
+    Optional<Result> actual1 = queryScanner.one();
+    Optional<Result> actual2 = queryScanner.one();
+    Optional<Result> actual3 = queryScanner.one();
+
+    // Assert
+    assertThat(actual1).isPresent();
+    assertThat(actual1.get()).isEqualTo(result);
+    assertThat(actual2).isPresent();
+    assertThat(actual2.get()).isEqualTo(result);
+    assertThat(actual3).isNotPresent();
+
+    verify(resultInterpreter, times(2)).interpret(item);
+    verify(request).execute(FETCH_SIZE);
+  }
+
+  @Test
+  public void all_ShouldReturnResults() {
+    // Arrange
+    Map<String, AttributeValue> item = Collections.emptyMap();
+    Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
+    when(request.execute(FETCH_SIZE)).thenReturn(response);
+    when(response.items()).thenReturn(Arrays.asList(item, item));
+    when(response.hasLastEvaluatedKey()).thenReturn(false);
+    when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
+    when(resultInterpreter.interpret(item)).thenReturn(result);
+    QueryScanner queryScanner = new QueryScanner(request, FETCH_SIZE, 0, resultInterpreter);
+
+    // Act
+    List<Result> results1 = queryScanner.all();
+    List<Result> results2 = queryScanner.all();
+
+    // Assert
+    assertThat(results1.size()).isEqualTo(2);
+    assertThat(results1.get(0)).isEqualTo(result);
+    assertThat(results1.get(1)).isEqualTo(result);
+    assertThat(results2).isEmpty();
+
+    verify(resultInterpreter, times(2)).interpret(item);
+    verify(request).execute(FETCH_SIZE);
+  }
+
+  @Test
+  public void iterator_ShouldReturnResults() {
+    // Arrange
+    Map<String, AttributeValue> item = Collections.emptyMap();
+    Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
+    when(request.execute(FETCH_SIZE)).thenReturn(response);
+    when(response.items()).thenReturn(Arrays.asList(item, item));
+    when(response.hasLastEvaluatedKey()).thenReturn(false);
+    when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
+    when(resultInterpreter.interpret(item)).thenReturn(result);
+
+    QueryScanner queryScanner = new QueryScanner(request, FETCH_SIZE, 0, resultInterpreter);
+
+    // Act
+    Iterator<Result> iterator = queryScanner.iterator();
+
+    // Assert
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result);
+    assertThat(iterator.hasNext()).isFalse();
+    assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
+
+    verify(resultInterpreter, times(2)).interpret(item);
+    verify(request).execute(FETCH_SIZE);
+  }
+
+  @Test
+  public void one_ResponseWithLastEvaluatedKey_ShouldReturnResults() {
+    // Arrange
+    Map<String, AttributeValue> item = Collections.emptyMap();
+    Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
+    when(request.execute(FETCH_SIZE)).thenReturn(response);
+    when(request.execute(lastEvaluatedKey, FETCH_SIZE)).thenReturn(response);
+    when(response.items())
+        .thenReturn(Arrays.asList(item, item))
+        .thenReturn(Collections.singletonList(item));
+    when(response.hasLastEvaluatedKey()).thenReturn(true).thenReturn(false);
+    when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
+    when(resultInterpreter.interpret(item)).thenReturn(result);
+
+    QueryScanner queryScanner = new QueryScanner(request, FETCH_SIZE, 0, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
@@ -61,100 +151,8 @@ public class QueryScannerTest {
     assertThat(actual4).isNotPresent();
 
     verify(resultInterpreter, times(3)).interpret(item);
-    verify(request).execute();
-  }
-
-  @Test
-  public void all_ShouldReturnResults() {
-    // Arrange
-    Map<String, AttributeValue> item = Collections.emptyMap();
-    List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
-    when(request.execute()).thenReturn(response);
-    when(response.items()).thenReturn(items);
-    when(resultInterpreter.interpret(item)).thenReturn(result);
-
-    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
-
-    // Act
-    List<Result> results1 = queryScanner.all();
-    List<Result> results2 = queryScanner.all();
-
-    // Assert
-    assertThat(results1.size()).isEqualTo(3);
-    assertThat(results1.get(0)).isEqualTo(result);
-    assertThat(results1.get(1)).isEqualTo(result);
-    assertThat(results1.get(2)).isEqualTo(result);
-    assertThat(results2).isEmpty();
-
-    verify(resultInterpreter, times(3)).interpret(item);
-    verify(request).execute();
-  }
-
-  @Test
-  public void iterator_ShouldReturnResults() {
-    // Arrange
-    Map<String, AttributeValue> item = Collections.emptyMap();
-    List<Map<String, AttributeValue>> items = Arrays.asList(item, item, item);
-    when(response.items()).thenReturn(items);
-    when(resultInterpreter.interpret(item)).thenReturn(result);
-    when(request.execute()).thenReturn(response);
-
-    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
-
-    // Act
-    Iterator<Result> iterator = queryScanner.iterator();
-
-    // Assert
-    assertThat(iterator.hasNext()).isTrue();
-    assertThat(iterator.next()).isEqualTo(result);
-    assertThat(iterator.hasNext()).isTrue();
-    assertThat(iterator.next()).isEqualTo(result);
-    assertThat(iterator.hasNext()).isTrue();
-    assertThat(iterator.next()).isEqualTo(result);
-    assertThat(iterator.hasNext()).isFalse();
-    assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
-
-    verify(resultInterpreter, times(3)).interpret(item);
-    verify(request).execute();
-  }
-
-  @Test
-  public void one_ResponseWithLastEvaluatedKey_ShouldReturnResults() {
-    // Arrange
-    Map<String, AttributeValue> item = Collections.emptyMap();
-    List<Map<String, AttributeValue>> items = Arrays.asList(item, item);
-    Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
-
-    when(response.items()).thenReturn(items).thenReturn(items);
-    when(response.hasLastEvaluatedKey()).thenReturn(true).thenReturn(false);
-    when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
-    when(resultInterpreter.interpret(item)).thenReturn(result);
-    when(request.execute()).thenReturn(response);
-    when(request.execute(lastEvaluatedKey)).thenReturn(response);
-
-    QueryScanner queryScanner = new QueryScanner(request, 0, resultInterpreter);
-
-    // Act
-    Optional<Result> actual1 = queryScanner.one();
-    Optional<Result> actual2 = queryScanner.one();
-    Optional<Result> actual3 = queryScanner.one();
-    Optional<Result> actual4 = queryScanner.one();
-    Optional<Result> actual5 = queryScanner.one();
-
-    // Assert
-    assertThat(actual1).isPresent();
-    assertThat(actual1.get()).isEqualTo(result);
-    assertThat(actual2).isPresent();
-    assertThat(actual2.get()).isEqualTo(result);
-    assertThat(actual3).isPresent();
-    assertThat(actual3.get()).isEqualTo(result);
-    assertThat(actual4).isPresent();
-    assertThat(actual4.get()).isEqualTo(result);
-    assertThat(actual5).isNotPresent();
-
-    verify(resultInterpreter, times(4)).interpret(item);
-    verify(request).execute(lastEvaluatedKey);
-    verify(request).execute();
+    verify(request).execute(FETCH_SIZE);
+    verify(request).execute(lastEvaluatedKey, FETCH_SIZE);
   }
 
   @Test
@@ -168,13 +166,13 @@ public class QueryScannerTest {
     Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
 
     when(response.items()).thenReturn(items1).thenReturn(items2);
-    when(response.hasLastEvaluatedKey()).thenReturn(true);
+    when(response.hasLastEvaluatedKey()).thenReturn(true).thenReturn(false);
     when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
-    when(request.execute(limit)).thenReturn(response);
+    when(request.execute(FETCH_SIZE)).thenReturn(response);
     when(request.execute(lastEvaluatedKey, limit - items1.size())).thenReturn(response);
     when(resultInterpreter.interpret(item)).thenReturn(result);
 
-    QueryScanner queryScanner = new QueryScanner(request, limit, resultInterpreter);
+    QueryScanner queryScanner = new QueryScanner(request, FETCH_SIZE, limit, resultInterpreter);
 
     // Act
     Optional<Result> actual1 = queryScanner.one();
@@ -192,7 +190,7 @@ public class QueryScannerTest {
     assertThat(actual4).isNotPresent();
 
     verify(resultInterpreter, times(limit)).interpret(item);
-    verify(request).execute(limit);
+    verify(request).execute(FETCH_SIZE);
     verify(request).execute(lastEvaluatedKey, limit - items1.size());
   }
 }

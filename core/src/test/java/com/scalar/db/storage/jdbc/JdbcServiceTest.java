@@ -22,6 +22,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
@@ -47,6 +48,7 @@ import org.mockito.MockitoAnnotations;
 
 public class JdbcServiceTest {
 
+  private static final int SCANNER_FETCH_SIZE = 10;
   private static final String NAMESPACE = "ns";
   private static final String TABLE = "tbl";
 
@@ -78,7 +80,9 @@ public class JdbcServiceTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    jdbcService = new JdbcService(tableMetadataManager, operationChecker, rdbEngine, queryBuilder);
+    jdbcService =
+        new JdbcService(
+            tableMetadataManager, operationChecker, rdbEngine, queryBuilder, SCANNER_FETCH_SIZE);
 
     // Arrange
     when(tableMetadataManager.getTableMetadata(any(Operation.class)))
@@ -129,11 +133,15 @@ public class JdbcServiceTest {
 
     // Act
     Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
-    jdbcService.getScanner(scan, connection);
+    Scanner scanner = jdbcService.getScanner(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(Scan.class));
     verify(queryBuilder).select(any());
+    verify(preparedStatement).setFetchSize(SCANNER_FETCH_SIZE);
+
+    assertThat(scanner).isNotNull();
+    assertThat(scanner).isInstanceOf(ScannerImpl.class);
   }
 
   @Test
@@ -153,11 +161,15 @@ public class JdbcServiceTest {
 
     // Act
     Scan scan = new ScanAll().forNamespace(NAMESPACE).forTable(TABLE);
-    jdbcService.getScanner(scan, connection);
+    Scanner scanner = jdbcService.getScanner(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
     verify(queryBuilder).select(any());
+    verify(preparedStatement).setFetchSize(SCANNER_FETCH_SIZE);
+
+    assertThat(scanner).isNotNull();
+    assertThat(scanner).isInstanceOf(ScannerImpl.class);
   }
 
   @Test
@@ -184,7 +196,7 @@ public class JdbcServiceTest {
             .all()
             .where(ConditionBuilder.column("column").isEqualToInt(10))
             .build();
-    jdbcService.getScanner(scan, connection);
+    Scanner scanner = jdbcService.getScanner(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
@@ -193,6 +205,10 @@ public class JdbcServiceTest {
     verify(queryBuilder.select(any())).where(anySet());
     verify(queryBuilder.select(any())).orderBy(anyList());
     verify(queryBuilder.select(any())).limit(anyInt());
+    verify(preparedStatement).setFetchSize(SCANNER_FETCH_SIZE);
+
+    assertThat(scanner).isNotNull();
+    assertThat(scanner).isInstanceOf(ScannerImpl.class);
   }
 
   @Test
