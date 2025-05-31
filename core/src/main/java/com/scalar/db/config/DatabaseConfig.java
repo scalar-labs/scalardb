@@ -61,7 +61,7 @@ public class DatabaseConfig {
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
-  public static final int DEFAULT_SCANNER_FETCH_SIZE = 10;
+  public static final int DEFAULT_SCANNER_FETCH_SIZE = 1000;
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {

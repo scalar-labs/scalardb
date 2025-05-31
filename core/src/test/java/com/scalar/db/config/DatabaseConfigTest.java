@@ -41,7 +41,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScannerFetchSize()).isEqualTo(1000);
   }
 
   @Test
@@ -70,7 +70,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScannerFetchSize()).isEqualTo(1000);
   }
 
   @Test
@@ -99,7 +99,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScannerFetchSize()).isEqualTo(1000);
   }
 
   @Test
@@ -130,7 +130,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScannerFetchSize()).isEqualTo(1000);
   }
 
   @Test
@@ -411,12 +411,12 @@ public class DatabaseConfigTest {
   public void constructor_PropertiesWithScannerFetchSizeGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.SCANNER_FETCH_SIZE, "1000");
+    props.setProperty(DatabaseConfig.SCANNER_FETCH_SIZE, "10000");
 
     // Act
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getScannerFetchSize()).isEqualTo(1000);
+    assertThat(config.getScannerFetchSize()).isEqualTo(10000);
   }
 }
