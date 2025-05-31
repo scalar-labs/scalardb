@@ -15,7 +15,6 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.HashMap;
@@ -91,10 +90,10 @@ class JsonLinesImportProcessorTest {
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();
     jsonLinesImportProcessor = new JsonLinesImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
-    assert statusList != null;
-    Assertions.assertEquals(1, statusList.size());
+    Assertions.assertDoesNotThrow(
+        () -> {
+          jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
+        });
   }
 
   @Test
@@ -110,9 +109,9 @@ class JsonLinesImportProcessorTest {
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();
     jsonLinesImportProcessor = new JsonLinesImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
-    assert statusList != null;
-    Assertions.assertEquals(1, statusList.size());
+    Assertions.assertDoesNotThrow(
+        () -> {
+          jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
+        });
   }
 }

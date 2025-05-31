@@ -15,7 +15,6 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.HashMap;
@@ -91,10 +90,10 @@ class CsvImportProcessorTest {
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();
     csvImportProcessor = new CsvImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        csvImportProcessor.process(5, 1, UnitTestUtils.getCsvReader());
-    assert statusList != null;
-    Assertions.assertEquals(1, statusList.size());
+    Assertions.assertDoesNotThrow(
+        () -> {
+          csvImportProcessor.process(5, 1, UnitTestUtils.getCsvReader());
+        });
   }
 
   @Test
@@ -110,9 +109,9 @@ class CsvImportProcessorTest {
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();
     csvImportProcessor = new CsvImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        csvImportProcessor.process(5, 1, UnitTestUtils.getCsvReader());
-    assert statusList != null;
-    Assertions.assertEquals(1, statusList.size());
+    Assertions.assertDoesNotThrow(
+        () -> {
+          csvImportProcessor.process(5, 1, UnitTestUtils.getCsvReader());
+        });
   }
 }

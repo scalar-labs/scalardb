@@ -19,13 +19,6 @@ public interface ImportEventListener {
   void onDataChunkStarted(ImportDataChunkStatus status);
 
   /**
-   * Updates or adds new status information for a data chunk.
-   *
-   * @param status the updated status information for the data chunk
-   */
-  void addOrUpdateDataChunkStatus(ImportDataChunkStatus status);
-
-  /**
    * Called when processing of a data chunk is completed.
    *
    * @param status the final status of the completed data chunk
