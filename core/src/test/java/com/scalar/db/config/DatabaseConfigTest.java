@@ -41,6 +41,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
+    assertThat(config.getScannerFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -69,6 +70,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
+    assertThat(config.getScannerFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -97,6 +99,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
+    assertThat(config.getScannerFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -127,6 +130,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
+    assertThat(config.getScannerFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -401,5 +405,18 @@ public class DatabaseConfigTest {
     // Act Assert
     assertThatThrownBy(() -> new DatabaseConfig(props))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithScannerFetchSizeGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.SCANNER_FETCH_SIZE, "1000");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getScannerFetchSize()).isEqualTo(1000);
   }
 }

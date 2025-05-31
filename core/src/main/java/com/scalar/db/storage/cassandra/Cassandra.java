@@ -56,7 +56,7 @@ public class Cassandra extends AbstractDistributedStorage {
 
     handlers =
         StatementHandlerManager.builder()
-            .select(new SelectStatementHandler(session))
+            .select(new SelectStatementHandler(session, config.getScannerFetchSize()))
             .insert(new InsertStatementHandler(session))
             .update(new UpdateStatementHandler(session))
             .delete(new DeleteStatementHandler(session))

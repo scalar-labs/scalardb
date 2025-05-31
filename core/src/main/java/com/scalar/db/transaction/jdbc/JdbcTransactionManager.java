@@ -70,7 +70,12 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
-    jdbcService = new JdbcService(tableMetadataManager, operationChecker, rdbEngine);
+    jdbcService =
+        new JdbcService(
+            tableMetadataManager,
+            operationChecker,
+            rdbEngine,
+            databaseConfig.getScannerFetchSize());
   }
 
   @VisibleForTesting
