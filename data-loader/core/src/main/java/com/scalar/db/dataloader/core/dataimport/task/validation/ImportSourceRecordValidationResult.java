@@ -31,17 +31,29 @@ public final class ImportSourceRecordValidationResult {
     this.errorMessages.add(errorMessage);
   }
 
-  /** @return Immutable list of validation error messages */
+  /**
+   * Return error messages list.
+   *
+   * @return Immutable list of validation error messages.
+   */
   public List<String> getErrorMessages() {
     return Collections.unmodifiableList(this.errorMessages);
   }
 
-  /** @return Immutable set of columns that had errors */
+  /**
+   * A set of columns with errors is stored and returned.
+   *
+   * @return Immutable set of columns that had errors.
+   */
   public Set<String> getColumnsWithErrors() {
     return Collections.unmodifiableSet(this.columnsWithErrors);
   }
 
-  /** @return Validation is valid or not */
+  /**
+   * Stores validation result.
+   *
+   * @return Validation is valid or not.
+   */
   public boolean isValid() {
     return this.errorMessages.isEmpty();
   }

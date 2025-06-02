@@ -6,6 +6,8 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 
+/** To store import target result. */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value
 public class ImportTargetResult {
