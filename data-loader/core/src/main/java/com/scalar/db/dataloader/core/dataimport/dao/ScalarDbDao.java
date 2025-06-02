@@ -22,18 +22,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import javax.annotation.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** The generic DAO that is used to scan ScalarDB data */
 public class ScalarDbDao {
-
-  /* Class logger */
-  private static final Logger logger = LoggerFactory.getLogger(ScalarDbDao.class);
-  private static final String GET_COMPLETED_MSG = "GET completed for %s";
-  private static final String PUT_COMPLETED_MSG = "PUT completed for %s";
-  private static final String SCAN_START_MSG = "SCAN started...";
-  private static final String SCAN_END_MSG = "SCAN completed";
 
   /**
    * Retrieve record from ScalarDB instance in storage mode
@@ -59,9 +50,7 @@ public class ScalarDbDao {
 
     try {
       Get get = createGetWith(namespace, table, partitionKey, clusteringKey);
-      Optional<Result> result = storage.get(get);
-      logger.info(String.format(GET_COMPLETED_MSG, loggingKey));
-      return result;
+      return storage.get(get);
     } catch (ExecutionException e) {
       throw new ScalarDbDaoException("error GET " + loggingKey, e);
     }
@@ -90,9 +79,7 @@ public class ScalarDbDao {
     // Retrieving the key data for logging
     String loggingKey = keysToString(partitionKey, clusteringKey);
     try {
-      Optional<Result> result = transaction.get(get);
-      logger.info(String.format(GET_COMPLETED_MSG, loggingKey));
-      return result;
+      return transaction.get(get);
     } catch (CrudException e) {
       throw new ScalarDbDaoException("error GET " + loggingKey, e.getCause());
     }
@@ -125,7 +112,6 @@ public class ScalarDbDao {
       throw new ScalarDbDaoException(
           CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
     }
-    logger.info(String.format(PUT_COMPLETED_MSG, keysToString(partitionKey, clusteringKey)));
   }
 
   /**
@@ -154,7 +140,6 @@ public class ScalarDbDao {
       throw new ScalarDbDaoException(
           CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
     }
-    logger.info(String.format(PUT_COMPLETED_MSG, keysToString(partitionKey, clusteringKey)));
   }
 
   /**
@@ -186,11 +171,8 @@ public class ScalarDbDao {
 
     // scan data
     try {
-      logger.info(SCAN_START_MSG);
       try (Scanner scanner = storage.scan(scan)) {
-        List<Result> allResults = scanner.all();
-        logger.info(SCAN_END_MSG);
-        return allResults;
+        return scanner.all();
       }
     } catch (ExecutionException | IOException e) {
       throw new ScalarDbDaoException(
@@ -229,10 +211,7 @@ public class ScalarDbDao {
 
     // scan data
     try {
-      logger.info(SCAN_START_MSG);
-      List<Result> results = transaction.scan(scan);
-      logger.info(SCAN_END_MSG);
-      return results;
+      return transaction.scan(scan);
     } catch (CrudException | NoSuchElementException e) {
       // No such element Exception is thrown when the scan is done in transaction mode but
       // ScalarDB is running in storage mode
