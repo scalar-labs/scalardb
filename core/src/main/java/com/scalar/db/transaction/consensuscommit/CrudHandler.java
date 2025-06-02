@@ -411,8 +411,8 @@ public class CrudHandler {
     private final Scanner scanner;
 
     private final LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
-    private AtomicBoolean fullyScanned = new AtomicBoolean();
-    private AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicBoolean fullyScanned = new AtomicBoolean();
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     public ConsensusCommitStorageScanner(Scan scan, List<String> originalProjections)
         throws CrudException {
