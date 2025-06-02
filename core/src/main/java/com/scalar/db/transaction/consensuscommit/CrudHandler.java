@@ -4,11 +4,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.api.AndConditionSet;
+import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.ConditionSetBuilder;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -25,13 +30,16 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -137,34 +145,44 @@ public class CrudHandler {
   @VisibleForTesting
   Optional<TransactionResult> read(@Nullable Snapshot.Key key, Get get) throws CrudException {
     Optional<TransactionResult> result = getFromStorage(get);
-    if (!result.isPresent() || result.get().isCommitted()) {
-      if (result.isPresent() || get.getConjunctions().isEmpty()) {
-        // Keep the read set latest to create before image by using the latest record (result)
-        // because another conflicting transaction might have updated the record after this
-        // transaction read it first. However, we update it only if a get operation has no
-        // conjunction or the result exists. This is because we don’t know whether the record
-        // actually exists or not due to the conjunction.
-        if (key != null) {
-          putIntoReadSetInSnapshot(key, result);
-        } else {
-          // Only for a Get with index, the argument `key` is null
+    if (result.isPresent() && !result.get().isCommitted()) {
+      throw new UncommittedRecordException(
+          get,
+          result.get(),
+          CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
+          snapshot.getId());
+    }
 
-          if (result.isPresent()) {
-            // Only when we can get the record with the Get with index, we can put it into the read
-            // set
-            key = new Snapshot.Key(get, result.get());
-            putIntoReadSetInSnapshot(key, result);
-          }
+    if (!get.getConjunctions().isEmpty()) {
+      // Check if the result matches the conjunctions
+      result =
+          result.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), get.getConjunctions()));
+    }
+
+    if (result.isPresent() || get.getConjunctions().isEmpty()) {
+      // Keep the read set latest to create before image by using the latest record (result)
+      // because another conflicting transaction might have updated the record after this
+      // transaction read it first. However, we update it only if a get operation has no
+      // conjunction or the result exists. This is because we don’t know whether the record
+      // actually exists or not due to the conjunction.
+      if (key != null) {
+        putIntoReadSetInSnapshot(key, result);
+      } else {
+        // Only for a Get with index, the argument `key` is null
+
+        if (result.isPresent()) {
+          // Only when we can get the record with the Get with index, we can put it into the read
+          // set
+          key = new Snapshot.Key(get, result.get());
+          putIntoReadSetInSnapshot(key, result);
         }
       }
-      putIntoGetSetInSnapshot(get, result);
-      return result;
     }
-    throw new UncommittedRecordException(
-        get,
-        result.get(),
-        CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
-        snapshot.getId());
+    putIntoGetSetInSnapshot(get, result);
+    return result;
   }
 
   public List<Result> scan(Scan originalScan) throws CrudException {
@@ -191,12 +209,24 @@ public class CrudHandler {
 
     Scanner scanner = null;
     try {
-      scanner = scanFromStorage(scan);
+      if (scan.getLimit() > 0) {
+        // Since the conjunctions may delete some records from the scan result, it is necessary to
+        // perform the scan without a limit.
+        scanner = scanFromStorage(Scan.newBuilder(scan).limit(0).build());
+      } else {
+        scanner = scanFromStorage(scan);
+      }
+
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
         Snapshot.Key key = new Snapshot.Key(scan, r);
-        processScanResult(key, scan, result);
-        results.put(key, result);
+        Optional<TransactionResult> processedScanResult = processScanResult(key, scan, result);
+        processedScanResult.ifPresent(res -> results.put(key, res));
+
+        if (scan.getLimit() > 0 && results.size() >= scan.getLimit()) {
+          // If the scan has a limit, we stop scanning when we reach the limit.
+          break;
+        }
       }
     } catch (RuntimeException e) {
       Exception exception;
@@ -224,8 +254,8 @@ public class CrudHandler {
     return results;
   }
 
-  private void processScanResult(Snapshot.Key key, Scan scan, TransactionResult result)
-      throws CrudException {
+  private Optional<TransactionResult> processScanResult(
+      Snapshot.Key key, Scan scan, TransactionResult result) throws CrudException {
     if (!result.isCommitted()) {
       throw new UncommittedRecordException(
           scan,
@@ -234,10 +264,24 @@ public class CrudHandler {
           snapshot.getId());
     }
 
-    // We always update the read set to create before image by using the latest record (result)
-    // because another conflicting transaction might have updated the record after this
-    // transaction read it first.
-    putIntoReadSetInSnapshot(key, Optional.of(result));
+    Optional<TransactionResult> ret = Optional.of(result);
+    if (!scan.getConjunctions().isEmpty()) {
+      // Check if the result matches the conjunctions
+      ret =
+          ret.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), scan.getConjunctions()));
+    }
+
+    if (ret.isPresent()) {
+      // We always update the read set to create before image by using the latest record (result)
+      // because another conflicting transaction might have updated the record after this
+      // transaction read it first.
+      putIntoReadSetInSnapshot(key, ret);
+    }
+
+    return ret;
   }
 
   public TransactionCrudOperable.Scanner getScanner(Scan originalScan) throws CrudException {
@@ -397,7 +441,16 @@ public class CrudHandler {
   @VisibleForTesting
   Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
-      return storage.get(get).map(TransactionResult::new);
+      if (get.getConjunctions().isEmpty()) {
+        // If there are no conjunctions, we can read the record directly
+        return storage.get(get).map(TransactionResult::new);
+      } else {
+        // If there are conjunctions, we need to convert them to include conditions on the before
+        // image
+        Set<AndConditionSet> converted = convertConjunctions(get, get.getConjunctions());
+        Get convertedGet = Get.newBuilder(get).clearConditions().whereOr(converted).build();
+        return storage.get(convertedGet).map(TransactionResult::new);
+      }
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(),
@@ -408,13 +461,135 @@ public class CrudHandler {
 
   private Scanner scanFromStorage(Scan scan) throws CrudException {
     try {
-      return storage.scan(scan);
+      if (scan.getConjunctions().isEmpty()) {
+        // If there are no conjunctions, we can read the record directly
+        return storage.scan(scan);
+      } else {
+        // If there are conjunctions, we need to convert them to include conditions on the before
+        // image
+        Set<AndConditionSet> converted = convertConjunctions(scan, scan.getConjunctions());
+        Scan convertedScan = Scan.newBuilder(scan).clearConditions().whereOr(converted).build();
+        return storage.scan(convertedScan);
+      }
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
           e,
           snapshot.getId());
     }
+  }
+
+  /**
+   * Converts the given conjunctions to include conditions on before images.
+   *
+   * <p>This is necessary because we might miss prepared records whose before images match the
+   * original conditions when reading from storage. For example, suppose we have the following
+   * records in storage:
+   *
+   * <pre>
+   *   | partition_key | clustering_key | column | status    | before_column | before_status  |
+   *   |---------------|----------------|--------|-----------|---------------|----------------|
+   *   | 0             | 0              | 1000   | COMMITTED |               |                |
+   *   | 0             | 1              | 200    | PREPARED  | 1000          | COMMITTED      |
+   * </pre>
+   *
+   * If we scan records with the condition `column = 1000`, we will only retrieve the first record,
+   * since the `column` value of the second record is `200`, which does not match `1000`. However,
+   * the second record is a prepared record whose before image matches the condition, so it should
+   * also be returned in the scan result.
+   *
+   * <p>To handle such cases, we convert the conjunctions to include conditions on the before image.
+   * For example, if the original condition is:
+   *
+   * <pre>
+   *   column = 1000
+   * </pre>
+   *
+   * We convert it to:
+   *
+   * <pre>
+   *   column = 1000 OR before_column = 1000
+   * </pre>
+   *
+   * <p>Here are more examples:
+   *
+   * <p>Example 1:
+   *
+   * <pre>
+   *   {@code column >= 500 AND column < 1000}
+   * </pre>
+   *
+   * becomes:
+   *
+   * <pre>
+   *   {@code (column >= 500 AND column < 1000) OR (before_column >= 500 AND before_column < 1000)}
+   * </pre>
+   *
+   * <p>Example 2:
+   *
+   * <pre>
+   *   {@code column1 = 500 OR column2 != 1000}
+   * </pre>
+   *
+   * becomes:
+   *
+   * <pre>
+   *   {@code column1 = 500 OR column2 != 1000 OR before_column1 = 500 OR before_column2 != 1000}
+   * </pre>
+   *
+   * This way, we can ensure that prepared records whose before images satisfy the original scan
+   * conditions are not missed during the scan.
+   *
+   * @param selection the selection to convert
+   * @param conjunctions the conjunctions to convert
+   * @return the converted conjunctions
+   */
+  private Set<AndConditionSet> convertConjunctions(
+      Selection selection, Set<Selection.Conjunction> conjunctions) throws CrudException {
+    TableMetadata metadata = getTableMetadata(selection);
+
+    Set<AndConditionSet> converted = new HashSet<>(conjunctions.size() * 2);
+
+    // Keep the original conjunctions
+    conjunctions.forEach(
+        c -> converted.add(ConditionSetBuilder.andConditionSet(c.getConditions()).build()));
+
+    // Add conditions on the before image
+    for (Selection.Conjunction conjunction : conjunctions) {
+      Set<ConditionalExpression> conditions = new HashSet<>(conjunction.getConditions().size());
+      for (ConditionalExpression condition : conjunction.getConditions()) {
+        String columnName = condition.getColumn().getName();
+
+        if (metadata.getPartitionKeyNames().contains(columnName)
+            || metadata.getClusteringKeyNames().contains(columnName)) {
+          // If the condition is on the primary key, we don't need to convert it
+          conditions.add(condition);
+          continue;
+        }
+
+        // Convert the condition to use the before image column
+        ConditionalExpression convertedCondition;
+        if (condition instanceof LikeExpression) {
+          LikeExpression likeExpression = (LikeExpression) condition;
+          convertedCondition =
+              ConditionBuilder.buildLikeExpression(
+                  likeExpression.getColumn().copyWith(Attribute.BEFORE_PREFIX + columnName),
+                  likeExpression.getOperator(),
+                  likeExpression.getEscape());
+        } else {
+          convertedCondition =
+              ConditionBuilder.buildConditionalExpression(
+                  condition.getColumn().copyWith(Attribute.BEFORE_PREFIX + columnName),
+                  condition.getOperator());
+        }
+
+        conditions.add(convertedCondition);
+      }
+
+      converted.add(ConditionSetBuilder.andConditionSet(conditions).build());
+    }
+
+    return converted;
   }
 
   private Selection prepareStorageSelection(Selection selection) throws CrudException {
@@ -486,6 +661,7 @@ public class CrudHandler {
     private final Scanner scanner;
 
     @Nullable private final LinkedHashMap<Snapshot.Key, TransactionResult> results;
+    private final AtomicInteger scanCount = new AtomicInteger();
     private final AtomicBoolean fullyScanned = new AtomicBoolean();
     private final AtomicBoolean closed = new AtomicBoolean();
 
@@ -493,7 +669,14 @@ public class CrudHandler {
         throws CrudException {
       this.scan = scan;
       this.originalProjections = originalProjections;
-      scanner = scanFromStorage(scan);
+
+      if (scan.getLimit() > 0) {
+        // Since the conjunctions may delete some records from the scan result, it is necessary to
+        // perform the scan without a limit.
+        scanner = scanFromStorage(Scan.newBuilder(scan).limit(0).build());
+      } else {
+        scanner = scanFromStorage(scan);
+      }
 
       if (isValidationOrSnapshotReadRequired()) {
         results = new LinkedHashMap<>();
@@ -506,25 +689,45 @@ public class CrudHandler {
 
     @Override
     public Optional<Result> one() throws CrudException {
+      if (fullyScanned.get()) {
+        return Optional.empty();
+      }
+
       try {
-        Optional<Result> r = scanner.one();
+        while (true) {
+          Optional<Result> r = scanner.one();
 
-        if (!r.isPresent()) {
-          fullyScanned.set(true);
-          return Optional.empty();
+          if (!r.isPresent()) {
+            fullyScanned.set(true);
+            return Optional.empty();
+          }
+
+          Snapshot.Key key = new Snapshot.Key(scan, r.get());
+          TransactionResult result = new TransactionResult(r.get());
+
+          Optional<TransactionResult> processedScanResult = processScanResult(key, scan, result);
+          if (!processedScanResult.isPresent()) {
+            continue;
+          }
+
+          if (results != null) {
+            results.put(key, processedScanResult.get());
+          }
+          scanCount.incrementAndGet();
+
+          if (scan.getLimit() > 0 && scanCount.get() >= scan.getLimit()) {
+            // If the scan has a limit, we stop scanning when we reach the limit.
+            fullyScanned.set(true);
+          }
+
+          TableMetadata metadata = getTableMetadata(scan);
+          return Optional.of(
+              new FilteredResult(
+                  processedScanResult.get(),
+                  originalProjections,
+                  metadata,
+                  isIncludeMetadataEnabled));
         }
-
-        Snapshot.Key key = new Snapshot.Key(scan, r.get());
-        TransactionResult result = new TransactionResult(r.get());
-        processScanResult(key, scan, result);
-
-        if (results != null) {
-          results.put(key, result);
-        }
-
-        TableMetadata metadata = getTableMetadata(scan);
-        return Optional.of(
-            new FilteredResult(result, originalProjections, metadata, isIncludeMetadataEnabled));
       } catch (ExecutionException e) {
         closeScanner();
         throw new CrudException(
