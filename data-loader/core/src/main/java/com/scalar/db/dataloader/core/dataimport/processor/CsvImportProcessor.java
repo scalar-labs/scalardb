@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class CsvImportProcessor extends ImportProcessor {
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
-  private static final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
+  private final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
 
   /**
    * Creates a new CsvImportProcessor with the specified parameters.
