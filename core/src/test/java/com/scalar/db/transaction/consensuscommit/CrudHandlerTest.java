@@ -1,8 +1,13 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.api.ConditionBuilder.column;
+import static com.scalar.db.api.ConditionBuilder.deleteIfExists;
+import static com.scalar.db.api.ConditionBuilder.putIfExists;
+import static com.scalar.db.api.ConditionSetBuilder.condition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -12,8 +17,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -41,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,6 +66,7 @@ public class CrudHandlerTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_NAME_4 = "name4";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
@@ -75,6 +80,7 @@ public class CrudHandlerTest {
               .addColumn(ANY_NAME_1, DataType.TEXT)
               .addColumn(ANY_NAME_2, DataType.TEXT)
               .addColumn(ANY_NAME_3, DataType.TEXT)
+              .addColumn(ANY_NAME_4, DataType.INT)
               .addPartitionKey(ANY_NAME_1)
               .addClusteringKey(ANY_NAME_2)
               .addSecondaryIndex(ANY_NAME_3)
@@ -138,7 +144,7 @@ public class CrudHandlerTest {
         .namespace(ANY_NAMESPACE_NAME)
         .table(ANY_TABLE_NAME)
         .all()
-        .where(ConditionBuilder.column("column").isEqualToInt(10))
+        .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
         .build();
   }
 
@@ -151,10 +157,16 @@ public class CrudHandlerTest {
   }
 
   private TransactionResult prepareResult(TransactionState state) {
+    return prepareResult(ANY_TEXT_1, ANY_TEXT_2, state);
+  }
+
+  private TransactionResult prepareResult(
+      String partitionKeyColumnValue, String clusteringKeyColumnValue, TransactionState state) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
-            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
-            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, partitionKeyColumnValue))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, clusteringKeyColumnValue))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3))
             .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
             .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(state)))
             .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(2)))
@@ -491,7 +503,6 @@ public class CrudHandlerTest {
       when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
 
     // Act
     List<Result> results = scanOrGetScanner(scan, scanType);
@@ -533,7 +544,6 @@ public class CrudHandlerTest {
       when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
 
     // Act
     List<Result> results = scanOrGetScanner(scan, scanType);
@@ -575,7 +585,6 @@ public class CrudHandlerTest {
       when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
 
     // Act
     List<Result> results = scanOrGetScanner(scan, scanType);
@@ -618,7 +627,6 @@ public class CrudHandlerTest {
       when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
 
     // Act
     List<Result> results = scanOrGetScanner(scan, scanType);
@@ -685,7 +693,6 @@ public class CrudHandlerTest {
     when(snapshot.getResults(scanForStorage))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, expected))));
-    when(snapshot.getResult(key)).thenReturn(Optional.of(expected));
 
     // Act
     List<Result> results1 = scanOrGetScanner(scan1, scanType);
@@ -899,7 +906,6 @@ public class CrudHandlerTest {
     }
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
     TransactionResult transactionResult = new TransactionResult(result);
-    when(snapshot.getResult(key)).thenReturn(Optional.of(transactionResult));
 
     // Act
     List<Result> results = scanOrGetScanner(scan, scanType);
@@ -946,6 +952,120 @@ public class CrudHandlerTest {
     verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), any());
     verify(snapshot, never()).putIntoScannerSet(any(Scan.class), any());
     verify(snapshot, never()).verifyNoOverlap(any(), any());
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_WithLimit_ShouldReturnLimitedResults(ScanType scanType)
+      throws CrudException, ExecutionException, IOException {
+    // Arrange
+    Scan scanWithoutLimit = prepareScan();
+    Scan scanWithLimit = Scan.newBuilder(scanWithoutLimit).limit(2).build();
+    Scan scanForStorage = toScanForStorageFrom(scanWithoutLimit);
+
+    Result result1 = prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
+    Result result2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED);
+
+    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, result2);
+
+    TransactionResult transactionResult1 = new TransactionResult(result1);
+    TransactionResult transactionResult2 = new TransactionResult(result2);
+
+    // Set up mock scanner to return two results
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Arrays.asList(result1, result2).iterator());
+    } else {
+      when(scanner.one())
+          .thenReturn(Optional.of(result1))
+          .thenReturn(Optional.of(result2))
+          .thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act
+    List<Result> results = scanOrGetScanner(scanWithLimit, scanType);
+
+    // Assert
+    assertThat(results).hasSize(2);
+    assertThat(results.get(0))
+        .isEqualTo(
+            new FilteredResult(transactionResult1, Collections.emptyList(), TABLE_METADATA, false));
+    assertThat(results.get(1))
+        .isEqualTo(
+            new FilteredResult(transactionResult2, Collections.emptyList(), TABLE_METADATA, false));
+
+    verify(scanner).close();
+    verify(snapshot).putIntoReadSet(key1, Optional.of(transactionResult1));
+    verify(snapshot).putIntoReadSet(key2, Optional.of(transactionResult2));
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<LinkedHashMap<Snapshot.Key, TransactionResult>> resultsCaptor =
+        ArgumentCaptor.forClass(LinkedHashMap.class);
+    verify(snapshot).putIntoScanSet(eq(scanWithLimit), resultsCaptor.capture());
+
+    LinkedHashMap<Snapshot.Key, TransactionResult> capturedResults = resultsCaptor.getValue();
+    assertThat(capturedResults).hasSize(2);
+    assertThat(capturedResults).containsKeys(key1, key2);
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_WithLimitExceedingAvailableResults_ShouldReturnAllAvailableResults(
+      ScanType scanType) throws CrudException, ExecutionException, IOException {
+    // Arrange
+    Scan scanWithoutLimit = prepareScan();
+    Scan scanWithLimit =
+        Scan.newBuilder(scanWithoutLimit).limit(5).build(); // Limit higher than available results
+    Scan scanForStorage = toScanForStorageFrom(scanWithoutLimit);
+
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result);
+    TransactionResult transactionResult1 = new TransactionResult(result);
+
+    // Set up mock scanner to return one result (less than limit)
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act
+    List<Result> results = scanOrGetScanner(scanWithLimit, scanType);
+
+    // Assert
+    assertThat(results).hasSize(1);
+    verify(scanner).close();
+    verify(snapshot).putIntoReadSet(key1, Optional.of(transactionResult1));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scanOrGetScanner_WithLimit_UncommittedResult_ShouldThrowUncommittedRecordException(
+      ScanType scanType) throws ExecutionException, IOException {
+    // Arrange
+    Scan scanWithoutLimit = prepareScan();
+    Scan scanWithLimit = Scan.newBuilder(scanWithoutLimit).limit(3).build();
+    Scan scanForStorage = toScanForStorageFrom(scanWithoutLimit);
+
+    Result uncommittedResult = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.PREPARED);
+
+    // Set up mock scanner to return one committed and one uncommitted result
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(uncommittedResult).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(uncommittedResult)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act & Assert
+    assertThatThrownBy(() -> scanOrGetScanner(scanWithLimit, scanType))
+        .isInstanceOf(UncommittedRecordException.class);
+
+    verify(scanner).close();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoScanSet(any(), any());
   }
 
   @Test
@@ -1161,7 +1281,7 @@ public class CrudHandlerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
-            .condition(ConditionBuilder.putIfExists())
+            .condition(putIfExists())
             .enableImplicitPreRead()
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
@@ -1199,7 +1319,7 @@ public class CrudHandlerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
-            .condition(ConditionBuilder.putIfExists())
+            .condition(putIfExists())
             .enableImplicitPreRead()
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
@@ -1239,7 +1359,7 @@ public class CrudHandlerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
-            .condition(ConditionBuilder.putIfExists())
+            .condition(putIfExists())
             .build();
     Snapshot.Key key = new Snapshot.Key(put);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
@@ -1275,7 +1395,7 @@ public class CrudHandlerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
-            .condition(ConditionBuilder.putIfExists())
+            .condition(putIfExists())
             .build();
 
     // Act Assert
@@ -1315,7 +1435,7 @@ public class CrudHandlerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
-            .condition(ConditionBuilder.deleteIfExists())
+            .condition(deleteIfExists())
             .build();
     Snapshot.Key key = new Snapshot.Key(delete);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
@@ -1351,7 +1471,7 @@ public class CrudHandlerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofText("c1", "foo"))
-            .condition(ConditionBuilder.deleteIfExists())
+            .condition(deleteIfExists())
             .build();
     Snapshot.Key key = new Snapshot.Key(delete);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
@@ -1445,7 +1565,7 @@ public class CrudHandlerTest {
             .namespace(key.getNamespace())
             .table(key.getTable())
             .partitionKey(key.getPartitionKey())
-            .where(mock(ConditionalExpression.class))
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
             .build();
     when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(false);
     when(storage.get(any())).thenReturn(Optional.empty());
@@ -1454,7 +1574,15 @@ public class CrudHandlerTest {
     handler.readUnread(key, getForKey);
 
     // Assert
-    verify(storage).get(any());
+    verify(storage)
+        .get(
+            Get.newBuilder()
+                .namespace(key.getNamespace())
+                .table(key.getTable())
+                .partitionKey(key.getPartitionKey())
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_1))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_1))
+                .build());
     verify(snapshot, never()).putIntoReadSet(key, Optional.empty());
     verify(snapshot).putIntoGetSet(getForKey, Optional.empty());
   }
@@ -1469,7 +1597,6 @@ public class CrudHandlerTest {
     when(key.getTable()).thenReturn(ANY_TABLE_NAME);
     when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
 
-    Result result = mock(Result.class);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(storage.get(any())).thenReturn(Optional.of(result));
 
@@ -1500,7 +1627,6 @@ public class CrudHandlerTest {
     when(key.getTable()).thenReturn(ANY_TABLE_NAME);
     when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
 
-    Result result = mock(Result.class);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
     when(storage.get(any())).thenReturn(Optional.of(result));
 
@@ -1552,7 +1678,6 @@ public class CrudHandlerTest {
       readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_CommittedRecordReturnedByStorage_ShouldCallAppropriateMethods()
           throws CrudException, ExecutionException {
     // Arrange
-    Result result = mock(Result.class);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getPartitionKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
     when(result.getClusteringKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
@@ -1582,7 +1707,6 @@ public class CrudHandlerTest {
       readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
           throws ExecutionException {
     // Arrange
-    Result result = mock(Result.class);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
     when(storage.get(any())).thenReturn(Optional.of(result));
 
@@ -1746,6 +1870,471 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoGetSet(get4, Optional.of(new TransactionResult(result4)));
 
     assertThat(transactionIdCaptor.getValue()).isEqualTo(ANY_TX_ID);
+  }
+
+  @Test
+  public void get_WithConjunctions_ShouldConvertConjunctions()
+      throws CrudException, ExecutionException {
+    // Arrange
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    // Act
+    handler.get(
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build());
+    handler.get(
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .and(column(ANY_NAME_4).isEqualToInt(10))
+            .build());
+    handler.get(
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .or(column(ANY_NAME_4).isEqualToInt(20))
+            .build());
+    handler.get(
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .where(
+                condition(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_3))
+                    .and(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_4))
+                    .build())
+            .or(
+                condition(column(ANY_NAME_4).isGreaterThanInt(30))
+                    .and(column(ANY_NAME_4).isLessThanOrEqualToInt(40))
+                    .build())
+            .build());
+    handler.get(
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .where(
+                condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                    .or(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                    .build())
+            .and(
+                condition(column(ANY_NAME_4).isLessThanOrEqualToInt(50))
+                    .or(column(ANY_NAME_4).isGreaterThanInt(60))
+                    .build())
+            .build());
+    handler.get(
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .where(column(ANY_NAME_3).isLikeText(ANY_TEXT_3))
+            .or(column(ANY_NAME_3).isLikeText(ANY_TEXT_4))
+            .build());
+
+    // Assert
+    verify(storage)
+        .get(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .get(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+                .where(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_4).isEqualToInt(10))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(10))
+                        .build())
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .get(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(ANY_NAME_4).isEqualToInt(20))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(20))
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .get(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+                .where(
+                    condition(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_4))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_4).isGreaterThanInt(30))
+                        .and(column(ANY_NAME_4).isLessThanOrEqualToInt(40))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3)
+                                .isNotEqualToText(ANY_TEXT_3))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3)
+                                .isNotEqualToText(ANY_TEXT_4))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(30))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(40))
+                        .build())
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .get(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+                .where(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(column(ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(column(ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .get(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+                .where(column(ANY_NAME_3).isLikeText(ANY_TEXT_3))
+                .or(column(ANY_NAME_3).isLikeText(ANY_TEXT_4))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_4))
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void scan_WithConjunctions_ShouldConvertConjunctions()
+      throws CrudException, ExecutionException {
+    // Arrange
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getPartitionKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
+    when(result.getClusteringKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    when(storage.scan(any())).thenReturn(scanner);
+
+    // Act
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build());
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .and(column(ANY_NAME_4).isEqualToInt(10))
+            .build());
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .or(column(ANY_NAME_4).isEqualToInt(20))
+            .build());
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(
+                condition(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_3))
+                    .and(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_4))
+                    .build())
+            .or(
+                condition(column(ANY_NAME_4).isGreaterThanInt(30))
+                    .and(column(ANY_NAME_4).isLessThanOrEqualToInt(40))
+                    .build())
+            .build());
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(
+                condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                    .or(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                    .build())
+            .and(
+                condition(column(ANY_NAME_4).isLessThanOrEqualToInt(50))
+                    .or(column(ANY_NAME_4).isGreaterThanInt(60))
+                    .build())
+            .build());
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(column(ANY_NAME_3).isLikeText(ANY_TEXT_3))
+            .or(column(ANY_NAME_3).isLikeText(ANY_TEXT_4))
+            .build());
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(column(ANY_NAME_1).isGreaterThanText(ANY_TEXT_3))
+            .and(column(ANY_NAME_2).isLessThanOrEqualToText(ANY_TEXT_4))
+            .build());
+    handler.scan(
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(column(ANY_NAME_1).isGreaterThanText(ANY_TEXT_3))
+            .and(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+            .build());
+
+    // Assert
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .where(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_4).isEqualToInt(10))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(10))
+                        .build())
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(ANY_NAME_4).isEqualToInt(20))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(20))
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .where(
+                    condition(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_3).isNotEqualToText(ANY_TEXT_4))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_4).isGreaterThanInt(30))
+                        .and(column(ANY_NAME_4).isLessThanOrEqualToInt(40))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3)
+                                .isNotEqualToText(ANY_TEXT_3))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3)
+                                .isNotEqualToText(ANY_TEXT_4))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(30))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(40))
+                        .build())
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .where(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(column(ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(column(ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                        .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(50))
+                        .build())
+                .or(
+                    condition(
+                            column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(60))
+                        .build())
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+                .where(column(ANY_NAME_3).isLikeText(ANY_TEXT_3))
+                .or(column(ANY_NAME_3).isLikeText(ANY_TEXT_4))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_4))
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .all()
+                .where(column(ANY_NAME_1).isGreaterThanText(ANY_TEXT_3))
+                .and(column(ANY_NAME_2).isLessThanOrEqualToText(ANY_TEXT_4))
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    verify(storage)
+        .scan(
+            Scan.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .all()
+                .where(
+                    condition(column(ANY_NAME_1).isGreaterThanText(ANY_TEXT_3))
+                        .and(column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .build())
+                .or(
+                    condition(column(ANY_NAME_1).isGreaterThanText(ANY_TEXT_3))
+                        .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
+                        .build())
+                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
   }
 
   private List<Result> scanOrGetScanner(Scan scan, ScanType scanType) throws CrudException {
