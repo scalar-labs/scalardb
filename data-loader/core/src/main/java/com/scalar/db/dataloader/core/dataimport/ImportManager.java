@@ -153,8 +153,45 @@ public class ImportManager implements ImportEventListener {
   /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
   public void onAllDataChunksCompleted() {
+    Throwable firstException = null;
+
     for (ImportEventListener listener : listeners) {
-      listener.onAllDataChunksCompleted();
+      try {
+        listener.onAllDataChunksCompleted();
+      } catch (Throwable e) {
+        if (firstException == null) {
+          firstException = e;
+        } else {
+          firstException.addSuppressed(e);
+        }
+      }
+    }
+
+    try {
+      closeResources();
+    } catch (Throwable e) {
+      if (firstException != null) {
+        firstException.addSuppressed(e);
+      } else {
+        firstException = e;
+      }
+    }
+
+    if (firstException != null) {
+      throw new RuntimeException("Error during completion", firstException);
+    }
+  }
+
+  /** Close resources properly once the process is completed */
+  public void closeResources() {
+    try {
+      if (distributedStorage != null) {
+        distributedStorage.close();
+      } else if (distributedTransactionManager != null) {
+        distributedTransactionManager.close();
+      }
+    } catch (Throwable e) {
+      throw new RuntimeException("Failed to close the resource", e);
     }
   }
 
