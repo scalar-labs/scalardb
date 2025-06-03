@@ -911,6 +911,14 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0203", "Delimiter must not be null", "", ""),
   DATA_LOADER_CONFIG_FILE_PATH_BLANK(
       Category.USER_ERROR, "0204", "Config file path must not be blank", "", ""),
+  DATA_LOADER_INVALID_DATA_CHUNK_SIZE(
+      Category.USER_ERROR, "0206", "Data chunk size must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_TRANSACTION_SIZE(
+      Category.USER_ERROR, "0207", "Transaction size must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_MAX_THREADS(
+      Category.USER_ERROR, "0208", "Number of max threads must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE(
+      Category.USER_ERROR, "0209", "Data chunk queue size must be greater than 0", "", ""),
 
   //
   // Errors for the concurrency error category

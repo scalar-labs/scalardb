@@ -47,6 +47,10 @@ public class ImportCommandTest {
     importCommand.sourceFileFormat = FileFormat.JSON;
     importCommand.sourceFilePath = importFile.toString();
     importCommand.importMode = ImportMode.UPSERT;
+    importCommand.dataChunkSize = 100;
+    importCommand.transactionSize = 10;
+    importCommand.maxThreads = 4;
+    importCommand.dataChunkQueueSize = 64;
     assertThrows(IllegalArgumentException.class, () -> importCommand.call());
   }
 

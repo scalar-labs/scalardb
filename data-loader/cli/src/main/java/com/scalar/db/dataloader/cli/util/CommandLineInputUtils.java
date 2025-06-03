@@ -5,6 +5,7 @@ import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
+import picocli.CommandLine;
 
 public class CommandLineInputUtils {
 
@@ -45,5 +46,18 @@ public class CommandLineInputUtils {
     Objects.requireNonNull(
         delimiter, CoreError.DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL.buildMessage());
     return value.split(delimiter, limit);
+  }
+
+  /**
+   * Validates that a given integer value is positive. If the value is less than 1, it throws a
+   * {@link CommandLine.ParameterException} with the specified error message.
+   *
+   * @param commandLine the {@link CommandLine} instance used to provide context for the exception
+   * @param value the integer value to validate @
+   */
+  public static void validatePositiveValue(CommandLine commandLine, int value, CoreError error) {
+    if (value < 1) {
+      throw new CommandLine.ParameterException(commandLine, error.buildMessage());
+    }
   }
 }
