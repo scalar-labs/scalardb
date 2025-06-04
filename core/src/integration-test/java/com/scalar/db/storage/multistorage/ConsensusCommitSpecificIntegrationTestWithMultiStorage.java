@@ -1,9 +1,9 @@
 package com.scalar.db.storage.multistorage;
 
-import com.scalar.db.common.ConsensusCommitTestUtils;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Collections;
 import java.util.Map;
