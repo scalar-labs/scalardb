@@ -45,7 +45,6 @@ spotbugsTest.reports {
 }
 spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
-
 if (project.gradle.startParameter.taskNames.any { it.endsWith('publish') } ||
         project.gradle.startParameter.taskNames.any { it.endsWith('publishToMavenLocal') }) {
     // not to publish the fat jar to maven central
