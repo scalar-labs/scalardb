@@ -74,11 +74,11 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     initialize();
     Properties properties1 = getProperties1(TEST_NAME);
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties1, TEST_NAME);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties1, TEST_NAME);
 
     Properties properties2 = getProperties2(TEST_NAME);
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties2, TEST_NAME);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties2, TEST_NAME);
 
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
