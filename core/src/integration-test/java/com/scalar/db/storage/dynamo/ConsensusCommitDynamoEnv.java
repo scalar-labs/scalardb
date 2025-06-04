@@ -1,6 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.common.ConsensusCommitTestUtils;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import java.util.Map;
 import java.util.Properties;
 
