@@ -71,15 +71,6 @@ public class SingleFileImportLogger extends AbstractImportLogger {
   }
 
   /**
-   * Called to add or update the status of a data chunk. This implementation does nothing as the
-   * status is only logged when the data chunk is completed.
-   *
-   * @param status the status of the data chunk
-   */
-  @Override
-  public void addOrUpdateDataChunkStatus(ImportDataChunkStatus status) {}
-
-  /**
    * Called when a data chunk is completed. Logs the summary of the data chunk to the summary log
    * file.
    *
