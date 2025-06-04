@@ -911,6 +911,18 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0203", "Delimiter must not be null", "", ""),
   DATA_LOADER_CONFIG_FILE_PATH_BLANK(
       Category.USER_ERROR, "0204", "Config file path must not be blank", "", ""),
+  CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0205",
+      "Some scanners were not closed. All scanners must be closed before committing the transaction.",
+      "",
+      ""),
+  TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0206",
+      "Some scanners were not closed. All scanners must be closed before preparing the transaction.",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1182,6 +1194,8 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0052", "Failed to read JSON file. Details: %s.", "", ""),
   DATA_LOADER_JSONLINES_FILE_READ_FAILED(
       Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
+  JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
+      Category.INTERNAL_ERROR, "0054", "Getting the scanner failed. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category

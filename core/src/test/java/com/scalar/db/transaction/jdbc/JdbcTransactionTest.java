@@ -1,8 +1,10 @@
 package com.scalar.db.transaction.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,6 +14,10 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -21,8 +27,12 @@ import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,6 +78,223 @@ public class JdbcTransactionTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     transaction = new JdbcTransaction(ANY_TX_ID, jdbcService, connection, rdbEngineStrategy);
+  }
+
+  @Test
+  public void getScannerAndScannerOne_ShouldReturnScannerAndShouldReturnProperResult()
+      throws SQLException, ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThat(actual.one()).hasValue(result1);
+    assertThat(actual.one()).hasValue(result2);
+    assertThat(actual.one()).hasValue(result3);
+    assertThat(actual.one()).isEmpty();
+    actual.close();
+
+    verify(jdbcService).getScanner(scan, connection, false);
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldReturnScannerAndShouldReturnProperResults()
+      throws SQLException, ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.all()).thenReturn(Arrays.asList(result1, result2, result3));
+
+    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThat(actual.all()).containsExactly(result1, result2, result3);
+    actual.close();
+
+    verify(jdbcService).getScanner(scan, connection, false);
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerIterator_ShouldReturnScannerAndShouldReturnProperResults()
+      throws SQLException, ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+
+    Iterator<Result> iterator = actual.iterator();
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result1);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result2);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result3);
+    assertThat(iterator.hasNext()).isFalse();
+    actual.close();
+
+    verify(jdbcService).getScanner(scan, connection, false);
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScanner_WhenSQLExceptionThrownByJdbcService_ShouldThrowCrudException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    when(jdbcService.getScanner(scan, connection, false)).thenThrow(SQLException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.getScanner(scan)).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void getScanner_WhenExecutionExceptionThrownByJdbcService_ShouldThrowCrudException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(jdbcService.getScanner(scan, connection, false)).thenThrow(executionException);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.getScanner(scan)).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerOne_WhenExecutionExceptionThrownByScannerOne_ShouldThrowCrudException()
+          throws SQLException, ExecutionException, CrudException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    Scanner scanner = mock(Scanner.class);
+
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(scanner.one()).thenThrow(executionException);
+
+    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThatThrownBy(actual::one).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerAll_WhenExecutionExceptionThrownByScannerAll_ShouldThrowCrudException()
+          throws SQLException, ExecutionException, CrudException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    Scanner scanner = mock(Scanner.class);
+
+    ExecutionException executionException = mock(ExecutionException.class);
+    when(executionException.getMessage()).thenReturn("error");
+    when(scanner.all()).thenThrow(executionException);
+
+    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThatThrownBy(actual::all).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_WhenIOExceptionThrownByScannerClose_ShouldThrowCrudException()
+          throws SQLException, ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    Scanner scanner = mock(Scanner.class);
+
+    IOException ioException = mock(IOException.class);
+    when(ioException.getMessage()).thenReturn("error");
+    doThrow(ioException).when(scanner).close();
+
+    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
   }
 
   @Test

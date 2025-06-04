@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
-import com.scalar.db.common.ConsensusCommitTestUtils;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import java.util.Properties;
 
 public final class ConsensusCommitCassandraEnv {
