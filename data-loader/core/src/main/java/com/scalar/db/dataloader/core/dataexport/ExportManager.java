@@ -1,10 +1,12 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidationException;
@@ -32,11 +34,31 @@ import org.slf4j.LoggerFactory;
 public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
-  private final DistributedStorage storage;
+  private final DistributedStorage distributedStorage;
+  private final DistributedTransactionManager distributedTransactionManager;
   private final ScalarDbDao dao;
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
 
+  public ExportManager(
+      DistributedStorage distributedStorage,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    this.distributedStorage = distributedStorage;
+    this.distributedTransactionManager = null;
+    this.dao = dao;
+    this.producerTaskFactory = producerTaskFactory;
+  }
+
+  public ExportManager(
+      DistributedTransactionManager distributedTransactionManager,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    this.distributedStorage = null;
+    this.distributedTransactionManager = distributedTransactionManager;
+    this.dao = dao;
+    this.producerTaskFactory = producerTaskFactory;
+  }
   /**
    * Create and add header part for the export file
    *
@@ -83,8 +105,8 @@ public abstract class ExportManager {
       BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
-      try (Scanner scanner = createScanner(exportOptions, dao, storage)) {
-
+      try (Scanner scanner =
+          createScanner(exportOptions, dao, distributedStorage, distributedTransactionManager)) {
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
 
@@ -118,6 +140,7 @@ public abstract class ExportManager {
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
     }
+    closeResources();
     return exportReport;
   }
 
@@ -208,6 +231,18 @@ public abstract class ExportManager {
     }
   }
 
+  private Scanner createScanner(
+      ExportOptions exportOptions,
+      ScalarDbDao dao,
+      DistributedStorage storage,
+      DistributedTransactionManager transactionManager)
+      throws ScalarDbDaoException {
+    if (exportOptions.getScalarDbMode().equals(ScalarDbMode.TRANSACTION)) {
+      return createScannerWithTransaction(exportOptions, dao, transactionManager);
+    }
+    return createScannerWithStorage(exportOptions, dao, storage);
+  }
+
   /**
    * To create a scanner object
    *
@@ -217,7 +252,7 @@ public abstract class ExportManager {
    * @return created scanner
    * @throws ScalarDbDaoException throws if any issue occurs in creating scanner object
    */
-  private Scanner createScanner(
+  private Scanner createScannerWithStorage(
       ExportOptions exportOptions, ScalarDbDao dao, DistributedStorage storage)
       throws ScalarDbDaoException {
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
@@ -238,6 +273,45 @@ public abstract class ExportManager {
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
           storage);
+    }
+  }
+
+  private Scanner createScannerWithTransaction(
+      ExportOptions exportOptions,
+      ScalarDbDao dao,
+      DistributedTransactionManager distributedTransactionManager)
+      throws ScalarDbDaoException {
+    boolean isScanAll = exportOptions.getScanPartitionKey() == null;
+    if (isScanAll) {
+      return dao.createScanner(
+          exportOptions.getNamespace(),
+          exportOptions.getTableName(),
+          exportOptions.getProjectionColumns(),
+          exportOptions.getLimit(),
+          distributedTransactionManager);
+    } else {
+      return dao.createScanner(
+          exportOptions.getNamespace(),
+          exportOptions.getTableName(),
+          exportOptions.getScanPartitionKey(),
+          exportOptions.getScanRange(),
+          exportOptions.getSortOrders(),
+          exportOptions.getProjectionColumns(),
+          exportOptions.getLimit(),
+          distributedTransactionManager);
+    }
+  }
+
+  /** Close resources properly once the process is completed */
+  public void closeResources() {
+    try {
+      if (distributedStorage != null) {
+        distributedStorage.close();
+      } else if (distributedTransactionManager != null) {
+        distributedTransactionManager.close();
+      }
+    } catch (Throwable e) {
+      throw new RuntimeException("Failed to close the resource", e);
     }
   }
 }

@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
@@ -253,6 +254,34 @@ public class ScalarDbDao {
    *
    * @param namespace ScalarDB namespace
    * @param table ScalarDB table name
+   * @param projectionColumns List of column projection to use during scan
+   * @param limit Scan limit value
+   * @param distributedTransactionManager Distributed transaction manager object
+   * @return ScalarDB Scanner object
+   * @throws ScalarDbDaoException if scan fails
+   */
+  public Scanner createScanner(
+      String namespace,
+      String table,
+      List<String> projectionColumns,
+      int limit,
+      DistributedTransactionManager distributedTransactionManager)
+      throws ScalarDbDaoException {
+    Scan scan =
+        createScan(namespace, table, null, null, new ArrayList<>(), projectionColumns, limit);
+    try {
+      return (Scanner) distributedTransactionManager.getScanner(scan);
+    } catch (CrudException e) {
+      throw new ScalarDbDaoException(
+          CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
+    }
+  }
+
+  /**
+   * Create a ScalarDB scanner instance
+   *
+   * @param namespace ScalarDB namespace
+   * @param table ScalarDB table name
    * @param partitionKey Partition key used in ScalarDB scan
    * @param scanRange Optional range to set ScalarDB scan start and end values
    * @param sortOrders Optional scan clustering key sorting values
@@ -279,6 +308,37 @@ public class ScalarDbDao {
     } catch (ExecutionException e) {
       throw new ScalarDbDaoException(
           CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
+    }
+  }
+
+  /**
+   * Create a ScalarDB scanner instance
+   *
+   * @param namespace ScalarDB namespace
+   * @param table ScalarDB table name
+   * @param partitionKey Partition key used in ScalarDB scan
+   * @param scanRange Optional range to set ScalarDB scan start and end values
+   * @param sortOrders Optional scan clustering key sorting values
+   * @param projectionColumns List of column projection to use during scan
+   * @param limit Scan limit value
+   * @param distributedTransactionManager Distributed transaction manager object
+   * @return ScalarDB Scanner object
+   */
+  public Scanner createScanner(
+      String namespace,
+      String table,
+      @Nullable Key partitionKey,
+      @Nullable ScanRange scanRange,
+      @Nullable List<Scan.Ordering> sortOrders,
+      @Nullable List<String> projectionColumns,
+      int limit,
+      DistributedTransactionManager distributedTransactionManager) {
+    Scan scan =
+        createScan(namespace, table, partitionKey, scanRange, sortOrders, projectionColumns, limit);
+    try {
+      return (Scanner) distributedTransactionManager.getScanner(scan);
+    } catch (CrudException e) {
+      throw new RuntimeException(e);
     }
   }
 
