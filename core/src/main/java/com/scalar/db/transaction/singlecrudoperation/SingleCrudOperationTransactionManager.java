@@ -20,7 +20,6 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
@@ -28,6 +27,7 @@ import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
+import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -156,11 +156,53 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
   public List<Result> scan(Scan scan) throws CrudException {
     scan = copyAndSetTargetToIfNot(scan);
 
-    try (Scanner scanner = storage.scan(scan.withConsistency(Consistency.LINEARIZABLE))) {
+    try (com.scalar.db.api.Scanner scanner =
+        storage.scan(scan.withConsistency(Consistency.LINEARIZABLE))) {
       return scanner.all();
     } catch (ExecutionException | IOException e) {
       throw new CrudException(e.getMessage(), e, null);
     }
+  }
+
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    scan = copyAndSetTargetToIfNot(scan);
+
+    com.scalar.db.api.Scanner scanner;
+    try {
+      scanner = storage.scan(scan);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, null);
+    }
+
+    return new AbstractTransactionManagerCrudOperableScanner() {
+      @Override
+      public Optional<Result> one() throws CrudException {
+        try {
+          return scanner.one();
+        } catch (ExecutionException e) {
+          throw new CrudException(e.getMessage(), e, null);
+        }
+      }
+
+      @Override
+      public List<Result> all() throws CrudException {
+        try {
+          return scanner.all();
+        } catch (ExecutionException e) {
+          throw new CrudException(e.getMessage(), e, null);
+        }
+      }
+
+      @Override
+      public void close() throws CrudException {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          throw new CrudException(e.getMessage(), e, null);
+        }
+      }
+    };
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
