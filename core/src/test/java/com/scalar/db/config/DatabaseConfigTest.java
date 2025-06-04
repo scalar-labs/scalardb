@@ -41,7 +41,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScanFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -70,7 +70,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScanFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -99,7 +99,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScanFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -130,7 +130,7 @@ public class DatabaseConfigTest {
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
-    assertThat(config.getScannerFetchSize()).isEqualTo(10);
+    assertThat(config.getScanFetchSize()).isEqualTo(10);
   }
 
   @Test
@@ -408,15 +408,15 @@ public class DatabaseConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithScannerFetchSizeGiven_ShouldLoadProperly() {
+  public void constructor_PropertiesWithScanFetchSizeGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.SCANNER_FETCH_SIZE, "1000");
+    props.setProperty(DatabaseConfig.SCAN_FETCH_SIZE, "1000");
 
     // Act
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getScannerFetchSize()).isEqualTo(1000);
+    assertThat(config.getScanFetchSize()).isEqualTo(1000);
   }
 }

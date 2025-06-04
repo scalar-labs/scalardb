@@ -44,20 +44,20 @@ public class JdbcService {
   private final OperationChecker operationChecker;
   private final RdbEngineStrategy rdbEngine;
   private final QueryBuilder queryBuilder;
-  private final int scannerFetchSize;
+  private final int scanFetchSize;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
       RdbEngineStrategy rdbEngine,
-      int scannerFetchSize) {
+      int scanFetchSize) {
     this(
         tableMetadataManager,
         operationChecker,
         rdbEngine,
         new QueryBuilder(rdbEngine),
-        scannerFetchSize);
+        scanFetchSize);
   }
 
   @VisibleForTesting
@@ -66,12 +66,12 @@ public class JdbcService {
       OperationChecker operationChecker,
       RdbEngineStrategy rdbEngine,
       QueryBuilder queryBuilder,
-      int scannerFetchSize) {
+      int scanFetchSize) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.operationChecker = Objects.requireNonNull(operationChecker);
     this.rdbEngine = Objects.requireNonNull(rdbEngine);
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
-    this.scannerFetchSize = scannerFetchSize;
+    this.scanFetchSize = scanFetchSize;
   }
 
   public Optional<Result> get(Get get, Connection connection)
@@ -121,7 +121,7 @@ public class JdbcService {
     SelectQuery selectQuery = buildSelectQuery(scan, tableMetadata);
     PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql());
     selectQuery.bind(preparedStatement);
-    preparedStatement.setFetchSize(scannerFetchSize);
+    preparedStatement.setFetchSize(scanFetchSize);
     ResultSet resultSet = preparedStatement.executeQuery();
     return new ScannerImpl(
         new ResultInterpreter(scan.getProjections(), tableMetadata, rdbEngine),

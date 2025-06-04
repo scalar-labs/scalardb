@@ -48,7 +48,7 @@ import org.mockito.MockitoAnnotations;
 
 public class JdbcServiceTest {
 
-  private static final int SCANNER_FETCH_SIZE = 10;
+  private static final int SCAN_FETCH_SIZE = 10;
   private static final String NAMESPACE = "ns";
   private static final String TABLE = "tbl";
 
@@ -82,7 +82,7 @@ public class JdbcServiceTest {
     MockitoAnnotations.openMocks(this).close();
     jdbcService =
         new JdbcService(
-            tableMetadataManager, operationChecker, rdbEngine, queryBuilder, SCANNER_FETCH_SIZE);
+            tableMetadataManager, operationChecker, rdbEngine, queryBuilder, SCAN_FETCH_SIZE);
 
     // Arrange
     when(tableMetadataManager.getTableMetadata(any(Operation.class)))
@@ -138,7 +138,7 @@ public class JdbcServiceTest {
     // Assert
     verify(operationChecker).check(any(Scan.class));
     verify(queryBuilder).select(any());
-    verify(preparedStatement).setFetchSize(SCANNER_FETCH_SIZE);
+    verify(preparedStatement).setFetchSize(SCAN_FETCH_SIZE);
 
     assertThat(scanner).isNotNull();
     assertThat(scanner).isInstanceOf(ScannerImpl.class);
@@ -166,7 +166,7 @@ public class JdbcServiceTest {
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
     verify(queryBuilder).select(any());
-    verify(preparedStatement).setFetchSize(SCANNER_FETCH_SIZE);
+    verify(preparedStatement).setFetchSize(SCAN_FETCH_SIZE);
 
     assertThat(scanner).isNotNull();
     assertThat(scanner).isInstanceOf(ScannerImpl.class);
@@ -205,7 +205,7 @@ public class JdbcServiceTest {
     verify(queryBuilder.select(any())).where(anySet());
     verify(queryBuilder.select(any())).orderBy(anyList());
     verify(queryBuilder.select(any())).limit(anyInt());
-    verify(preparedStatement).setFetchSize(SCANNER_FETCH_SIZE);
+    verify(preparedStatement).setFetchSize(SCAN_FETCH_SIZE);
 
     assertThat(scanner).isNotNull();
     assertThat(scanner).isInstanceOf(ScannerImpl.class);

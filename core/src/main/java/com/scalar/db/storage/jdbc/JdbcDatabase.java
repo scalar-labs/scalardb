@@ -61,10 +61,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
     jdbcService =
         new JdbcService(
-            tableMetadataManager,
-            operationChecker,
-            rdbEngine,
-            databaseConfig.getScannerFetchSize());
+            tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
   }
 
   @VisibleForTesting

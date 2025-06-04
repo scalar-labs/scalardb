@@ -38,7 +38,7 @@ public class DatabaseConfig {
   private boolean crossPartitionScanFilteringEnabled;
   private boolean crossPartitionScanOrderingEnabled;
   private String systemNamespaceName;
-  private int scannerFetchSize;
+  private int scanFetchSize;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -57,11 +57,11 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
   public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
-  public static final String SCANNER_FETCH_SIZE = PREFIX + "scanner_fetch_size";
+  public static final String SCAN_FETCH_SIZE = PREFIX + "scan_fetch_size";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
-  public static final int DEFAULT_SCANNER_FETCH_SIZE = 10;
+  public static final int DEFAULT_SCAN_FETCH_SIZE = 10;
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -122,7 +122,7 @@ public class DatabaseConfig {
 
     systemNamespaceName = getSystemNamespaceName(getProperties());
 
-    scannerFetchSize = getInt(getProperties(), SCANNER_FETCH_SIZE, DEFAULT_SCANNER_FETCH_SIZE);
+    scanFetchSize = getInt(getProperties(), SCAN_FETCH_SIZE, DEFAULT_SCAN_FETCH_SIZE);
   }
 
   public List<String> getContactPoints() {
@@ -177,8 +177,8 @@ public class DatabaseConfig {
     return systemNamespaceName;
   }
 
-  public int getScannerFetchSize() {
-    return scannerFetchSize;
+  public int getScanFetchSize() {
+    return scanFetchSize;
   }
 
   public static String getTransactionManager(Properties properties) {

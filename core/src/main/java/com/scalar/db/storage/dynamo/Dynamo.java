@@ -81,7 +81,7 @@ public class Dynamo extends AbstractDistributedStorage {
             client,
             metadataManager,
             config.getNamespacePrefix(),
-            databaseConfig.getScannerFetchSize());
+            databaseConfig.getScanFetchSize());
     putStatementHandler =
         new PutStatementHandler(client, metadataManager, config.getNamespacePrefix());
     deleteStatementHandler =
