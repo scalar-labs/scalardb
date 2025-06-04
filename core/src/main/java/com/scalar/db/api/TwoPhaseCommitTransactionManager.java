@@ -132,7 +132,7 @@ public interface TwoPhaseCommitTransactionManager
    *     You can retry the transaction from the beginning
    * @throws TransactionException if joining the transaction fails due to transient or nontransient
    *     faults. You can try retrying the transaction from the beginning, but the transaction may
-   *     still fail if the cause is nontranient
+   *     still fail if the cause is nontransient
    */
   TwoPhaseCommitTransaction join(String txId)
       throws TransactionNotFoundException, TransactionException;

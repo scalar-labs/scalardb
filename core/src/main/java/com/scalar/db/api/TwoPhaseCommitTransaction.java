@@ -77,7 +77,7 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    *     faults (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws PreparationException if the transaction fails to prepare due to transient or
    *     nontransient faults. You can try retrying the transaction from the beginning, but the
-   *     transaction may still fail if the cause is nontranient
+   *     transaction may still fail if the cause is nontransient
    */
   void prepare() throws PreparationConflictException, PreparationException;
 
@@ -89,7 +89,7 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    *     faults (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws ValidationException if the transaction fails to validate due to transient or
    *     nontransient faults. You can try retrying the transaction from the beginning, but the
-   *     transaction may still fail if the cause is nontranient
+   *     transaction may still fail if the cause is nontransient
    */
   void validate() throws ValidationConflictException, ValidationException;
 
@@ -100,7 +100,7 @@ public interface TwoPhaseCommitTransaction extends TransactionCrudOperable {
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CommitException if the transaction fails to commit due to transient or nontransient
    *     faults. You can try retrying the transaction from the beginning, but the transaction may
-   *     still fail if the cause is nontranient
+   *     still fail if the cause is nontransient
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
