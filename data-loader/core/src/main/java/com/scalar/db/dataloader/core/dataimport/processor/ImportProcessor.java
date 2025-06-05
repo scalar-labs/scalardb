@@ -462,8 +462,11 @@ public abstract class ImportProcessor {
       boolean allSaved =
           result.getTargets().stream()
               .allMatch(t -> t.getStatus().equals(ImportTargetResultStatus.SAVED));
-      if (allSaved) successCount.incrementAndGet();
-      else failureCount.incrementAndGet();
+      if (allSaved) {
+        successCount.incrementAndGet();
+      } else {
+        failureCount.incrementAndGet();
+      }
     }
     Instant endTime = Instant.now();
     int totalDuration = (int) Duration.between(startTime, endTime).toMillis();
