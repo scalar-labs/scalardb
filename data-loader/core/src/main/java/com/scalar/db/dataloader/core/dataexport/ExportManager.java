@@ -233,6 +233,23 @@ public abstract class ExportManager {
     }
   }
 
+  /**
+   * Creates a ScalarDB {@link Scanner} instance based on the configured ScalarDB mode.
+   *
+   * <p>If the {@link ScalarDbMode} specified in {@code exportOptions} is {@code TRANSACTION}, a
+   * scanner is created using the {@link DistributedTransactionManager}. Otherwise, a scanner is
+   * created using the {@link DistributedStorage}.
+   *
+   * @param exportOptions Options containing configuration for the export operation, including the
+   *     ScalarDB mode
+   * @param dao The {@link ScalarDbDao} used to access ScalarDB
+   * @param storage The {@link DistributedStorage} instance used for storage-level operations
+   * @param transactionManager The {@link DistributedTransactionManager} instance used for
+   *     transaction-level operations
+   * @return A {@link Scanner} instance for reading data from ScalarDB
+   * @throws ScalarDbDaoException If an error occurs while creating the scanner with the DAO
+   * @throws TransactionException If an error occurs during transactional scanner creation
+   */
   private Scanner createScanner(
       ExportOptions exportOptions,
       ScalarDbDao dao,
@@ -246,13 +263,20 @@ public abstract class ExportManager {
   }
 
   /**
-   * To create a scanner object
+   * Creates a ScalarDB {@link Scanner} using the {@link DistributedStorage} interface based on the
+   * scan configuration provided in {@link ExportOptions}.
    *
-   * @param exportOptions export options
-   * @param dao ScalarDB dao object
-   * @param storage distributed storage object
-   * @return created scanner
-   * @throws ScalarDbDaoException throws if any issue occurs in creating scanner object
+   * <p>If no partition key is specified in the {@code exportOptions}, a full table scan is
+   * performed. Otherwise, a partition-specific scan is performed using the provided partition key,
+   * optional scan range, and sort orders.
+   *
+   * @param exportOptions Options containing configuration for the export operation, including
+   *     namespace, table name, projection columns, limit, and scan parameters
+   * @param dao The {@link ScalarDbDao} used to construct the scan operation
+   * @param storage The {@link DistributedStorage} instance used to execute the scan
+   * @return A {@link Scanner} instance for reading data from ScalarDB using storage-level
+   *     operations
+   * @throws ScalarDbDaoException If an error occurs while creating the scanner
    */
   private Scanner createScannerWithStorage(
       ExportOptions exportOptions, ScalarDbDao dao, DistributedStorage storage)
@@ -280,8 +304,11 @@ public abstract class ExportManager {
 
   /**
    * Creates a {@link Scanner} using a {@link DistributedTransaction} based on the provided export
-   * options. This method initiates a read-only transaction to ensure a consistent snapshot of the
-   * data during scan.
+   * options.
+   *
+   * <p>If no partition key is specified in the {@code exportOptions}, a full table scan is
+   * performed. Otherwise, a partition-specific scan is performed using the provided partition key,
+   * optional scan range, and sort orders.
    *
    * @param exportOptions Options specifying how to scan the table (e.g., partition key, range,
    *     projection).
