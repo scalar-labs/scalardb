@@ -53,7 +53,8 @@ public class CommandLineInputUtils {
    * {@link CommandLine.ParameterException} with the specified error message.
    *
    * @param commandLine the {@link CommandLine} instance used to provide context for the exception
-   * @param value the integer value to validate @
+   * @param value the integer value to validate
+   * @param error the error that is thrown when the value is invalid
    */
   public static void validatePositiveValue(CommandLine commandLine, int value, CoreError error) {
     if (value < 1) {
