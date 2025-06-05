@@ -58,7 +58,7 @@ publishing {
             from components.java
             pom {
                 name = 'ScalarDB Data Loader'
-                description = 'A tool for importing data to and from ScalarDB'
+                description = 'A tool for exporting data from and importing data into ScalarDB'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {
