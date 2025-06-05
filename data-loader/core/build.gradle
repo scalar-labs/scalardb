@@ -54,7 +54,7 @@ if (project.gradle.startParameter.taskNames.any { it.endsWith('publish') } ||
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'scalardb-data-loader'
+            artifactId = 'scalardb-data-loader-core'
             from components.java
             pom {
                 name = 'ScalarDB Data Loader'
