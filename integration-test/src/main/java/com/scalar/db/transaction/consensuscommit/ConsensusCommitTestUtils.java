@@ -71,4 +71,11 @@ public final class ConsensusCommitTestUtils {
         COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED);
     return properties;
   }
+
+  public static void addSuffixToCoordinatorNamespace(Properties properties, String suffix) {
+    String coordinatorNamespace =
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + suffix);
+  }
 }
