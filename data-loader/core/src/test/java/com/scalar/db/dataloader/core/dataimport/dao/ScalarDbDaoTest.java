@@ -2,10 +2,22 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import static com.scalar.db.dataloader.core.UnitTestUtils.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
+import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.ScanRange;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,10 +27,14 @@ class ScalarDbDaoTest {
 
   private static final int TEST_VALUE_INT_MIN = 1;
   private ScalarDbDao dao;
+  private DistributedTransactionManager distributedTransactionManager;
+  private DistributedStorage distributedStorage;
 
   @BeforeEach
   void setUp() {
     this.dao = new ScalarDbDao();
+    this.distributedStorage = mock(DistributedStorage.class);
+    this.distributedTransactionManager = mock(DistributedTransactionManager.class);
   }
 
   @Test
@@ -149,6 +165,62 @@ class ScalarDbDaoTest {
 
     // Compare ScanAll object
     assertThat(scan.toString()).isEqualTo(expectedResult.toString());
+  }
+
+  @Test
+  void createScanner_withTransactionManager_ShouldCreateScannerObject()
+      throws CrudException, ScalarDbDaoException {
+    // Create Scan Object
+    TransactionManagerCrudOperable.Scanner mockScanner =
+        mock(
+            TransactionManagerCrudOperable.Scanner.class,
+            withSettings().extraInterfaces(Scanner.class));
+    when(distributedTransactionManager.getScanner(any())).thenReturn(mockScanner);
+    Scanner result =
+        this.dao.createScanner(
+            TEST_NAMESPACE,
+            TEST_TABLE_NAME,
+            null,
+            new ScanRange(null, null, false, false),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            0,
+            distributedTransactionManager);
+    // Assert
+    assertNotNull(result);
+    assertEquals(mockScanner, result);
+    result =
+        this.dao.createScanner(
+            TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, distributedTransactionManager);
+    // Assert
+    assertNotNull(result);
+    assertEquals(mockScanner, result);
+  }
+
+  @Test
+  void createScanner_withStorage_ShouldCreateScannerObject()
+      throws CrudException, ExecutionException, ScalarDbDaoException {
+    // Create Scan Object
+    Scanner mockScanner = mock(Scanner.class);
+    when(distributedStorage.scan(any())).thenReturn(mockScanner);
+    Scanner result =
+        this.dao.createScanner(
+            TEST_NAMESPACE,
+            TEST_TABLE_NAME,
+            null,
+            new ScanRange(null, null, false, false),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            0,
+            distributedStorage);
+    // Assert
+    assertNotNull(result);
+    assertEquals(mockScanner, result);
+
+    result = this.dao.createScanner(TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, distributedStorage);
+    // Assert
+    assertNotNull(result);
+    assertEquals(mockScanner, result);
   }
 
   /**
