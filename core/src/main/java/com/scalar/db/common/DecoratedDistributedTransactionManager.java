@@ -77,6 +77,16 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
+  public DistributedTransaction beginReadOnly() throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly());
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly(txId));
+  }
+
+  @Override
   public DistributedTransaction start() throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.start());
   }
@@ -84,6 +94,16 @@ public abstract class DecoratedDistributedTransactionManager
   @Override
   public DistributedTransaction start(String txId) throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.start(txId));
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(txId));
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly() throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly());
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */

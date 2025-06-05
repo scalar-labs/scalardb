@@ -20,7 +20,9 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class StateManagedDistributedTransactionManager
     extends DecoratedDistributedTransactionManager {
 

@@ -76,6 +76,20 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
             .buildMessage());
   }
 
+  @Override
+  public DistributedTransaction beginReadOnly() throws TransactionException {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
+            .buildMessage());
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
+            .buildMessage());
+  }
+
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override

@@ -22,7 +22,9 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class StateManagedTwoPhaseCommitTransactionManager
     extends DecoratedTwoPhaseCommitTransactionManager {
 

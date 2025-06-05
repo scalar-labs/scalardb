@@ -109,6 +109,16 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
     }
   }
 
+  @Override
+  public DistributedTransaction beginReadOnly() {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) {
+    throw new UnsupportedOperationException("implement later");
+  }
+
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
