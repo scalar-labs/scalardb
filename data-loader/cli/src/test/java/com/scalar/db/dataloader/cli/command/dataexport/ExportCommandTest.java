@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import java.io.File;
 import java.nio.file.Paths;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -56,7 +56,8 @@ class ExportCommandTest {
   }
 
   @Test
-  void call_withScalarDBModeTransaction_WithInvalidConfigurationFile_shouldReturnOne() throws Exception {
+  void call_withScalarDBModeTransaction_WithInvalidConfigurationFile_shouldReturnOne()
+      throws Exception {
     ExportCommand exportCommand = new ExportCommand();
     exportCommand.configFilePath = "scalardb.properties";
     exportCommand.dataChunkSize = 100;
