@@ -57,8 +57,8 @@ publishing {
             artifactId = 'scalardb-data-loader-core'
             from components.java
             pom {
-                name = 'ScalarDB Data Loader'
-                description = 'A tool for exporting data from and importing data into ScalarDB'
+                name = 'ScalarDB Data Loader Core'
+                description = 'Core library for exporting data from and importing data into ScalarDB'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {
