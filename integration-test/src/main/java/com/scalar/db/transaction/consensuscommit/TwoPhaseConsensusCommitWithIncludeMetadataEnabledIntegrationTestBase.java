@@ -60,7 +60,7 @@ public abstract class TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrati
     Properties properties = getProperties(TEST_NAME);
 
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
 
     // Enable to include metadata
     properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
