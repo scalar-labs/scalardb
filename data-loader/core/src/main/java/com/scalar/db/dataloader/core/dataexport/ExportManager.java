@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
@@ -14,6 +15,7 @@ import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidato
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -132,7 +134,7 @@ public abstract class ExportManager {
           // TODO: handle this
         }
         processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (InterruptedException | IOException e) {
+      } catch (InterruptedException | IOException | TransactionException e) {
         logger.error("Error during export: {}", e.getMessage());
       } finally {
         bufferedWriter.flush();
@@ -236,7 +238,7 @@ public abstract class ExportManager {
       ScalarDbDao dao,
       DistributedStorage storage,
       DistributedTransactionManager transactionManager)
-      throws ScalarDbDaoException {
+      throws ScalarDbDaoException, TransactionException {
     if (exportOptions.getScalarDbMode().equals(ScalarDbMode.TRANSACTION)) {
       return createScannerWithTransaction(exportOptions, dao, transactionManager);
     }
@@ -276,29 +278,63 @@ public abstract class ExportManager {
     }
   }
 
+  /**
+   * Creates a {@link Scanner} using a {@link DistributedTransaction} based on the provided export
+   * options. This method initiates a read-only transaction to ensure a consistent snapshot of the
+   * data during scan.
+   *
+   * @param exportOptions Options specifying how to scan the table (e.g., partition key, range,
+   *     projection).
+   * @param dao The ScalarDb data access object to create the scanner.
+   * @param distributedTransactionManager The transaction manager used to start a new transaction.
+   * @return A {@link Scanner} for reading data from the specified table.
+   * @throws ScalarDbDaoException If an error occurs while creating the scanner.
+   * @throws TransactionException If an error occurs during transaction management (start or
+   *     commit).
+   */
   private Scanner createScannerWithTransaction(
       ExportOptions exportOptions,
       ScalarDbDao dao,
       DistributedTransactionManager distributedTransactionManager)
-      throws ScalarDbDaoException {
+      throws ScalarDbDaoException, TransactionException {
+
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
-    if (isScanAll) {
-      return dao.createScanner(
-          exportOptions.getNamespace(),
-          exportOptions.getTableName(),
-          exportOptions.getProjectionColumns(),
-          exportOptions.getLimit(),
-          distributedTransactionManager);
-    } else {
-      return dao.createScanner(
-          exportOptions.getNamespace(),
-          exportOptions.getTableName(),
-          exportOptions.getScanPartitionKey(),
-          exportOptions.getScanRange(),
-          exportOptions.getSortOrders(),
-          exportOptions.getProjectionColumns(),
-          exportOptions.getLimit(),
-          distributedTransactionManager);
+    DistributedTransaction transaction = distributedTransactionManager.start();
+
+    try {
+      Scanner scanner;
+      if (isScanAll) {
+        scanner =
+            dao.createScanner(
+                exportOptions.getNamespace(),
+                exportOptions.getTableName(),
+                exportOptions.getProjectionColumns(),
+                exportOptions.getLimit(),
+                transaction);
+      } else {
+        scanner =
+            dao.createScanner(
+                exportOptions.getNamespace(),
+                exportOptions.getTableName(),
+                exportOptions.getScanPartitionKey(),
+                exportOptions.getScanRange(),
+                exportOptions.getSortOrders(),
+                exportOptions.getProjectionColumns(),
+                exportOptions.getLimit(),
+                transaction);
+      }
+
+      transaction.commit();
+      return scanner;
+
+    } catch (Exception e) {
+      try {
+        transaction.abort();
+      } catch (TransactionException abortException) {
+        logger.error(
+            "Failed to abort transaction: {}", abortException.getMessage(), abortException);
+      }
+      throw e;
     }
   }
 

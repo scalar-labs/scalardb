@@ -135,6 +135,16 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     return new TableMetadataService(storageFactory.getStorageAdmin());
   }
 
+  /**
+   * Creates an {@link ExportManager} instance based on ScalarDB mode and file format.
+   *
+   * @param scalarDbMode The ScalarDB mode (TRANSACTION or STORAGE).
+   * @param scalarDbDao The DAO for accessing ScalarDB.
+   * @param fileFormat The output file format (CSV, JSON, JSONL).
+   * @param scalarDbPropertiesFilePath Path to the ScalarDB properties file.
+   * @return A configured {@link ExportManager}.
+   * @throws IOException If there is an error reading the properties file.
+   */
   private ExportManager createExportManager(
       ScalarDbMode scalarDbMode,
       ScalarDbDao scalarDbDao,
@@ -154,6 +164,15 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     }
   }
 
+  /**
+   * Returns an {@link ExportManager} that uses {@link DistributedTransactionManager}.
+   *
+   * @param distributedTransactionManager distributed transaction manager object
+   * @param scalarDbDao The DAO for accessing ScalarDB.
+   * @param fileFormat The output file format (CSV, JSON, JSONL).
+   * @param taskFactory Producer task factory object
+   * @return A configured {@link ExportManager}.
+   */
   private ExportManager createExportManagerWithTransaction(
       DistributedTransactionManager distributedTransactionManager,
       ScalarDbDao scalarDbDao,
@@ -171,6 +190,15 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     }
   }
 
+  /**
+   * Returns an {@link ExportManager} that uses {@link DistributedStorage}.
+   *
+   * @param storage distributed storage object
+   * @param scalarDbDao The DAO for accessing ScalarDB.
+   * @param fileFormat The output file format (CSV, JSON, JSONL).
+   * @param taskFactory Producer task factory object
+   * @return A configured {@link ExportManager}.
+   */
   private ExportManager createExportManagerWithStorage(
       DistributedStorage storage,
       ScalarDbDao scalarDbDao,

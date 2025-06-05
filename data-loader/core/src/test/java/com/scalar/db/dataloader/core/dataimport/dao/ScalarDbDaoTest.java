@@ -10,11 +10,11 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TransactionManagerCrudOperable;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -27,14 +27,14 @@ class ScalarDbDaoTest {
 
   private static final int TEST_VALUE_INT_MIN = 1;
   private ScalarDbDao dao;
-  private DistributedTransactionManager distributedTransactionManager;
+  private DistributedTransaction transaction;
   private DistributedStorage distributedStorage;
 
   @BeforeEach
   void setUp() {
     this.dao = new ScalarDbDao();
     this.distributedStorage = mock(DistributedStorage.class);
-    this.distributedTransactionManager = mock(DistributedTransactionManager.class);
+    this.transaction = mock(DistributedTransaction.class);
   }
 
   @Test
@@ -171,11 +171,9 @@ class ScalarDbDaoTest {
   void createScanner_withTransactionManager_ShouldCreateScannerObject()
       throws CrudException, ScalarDbDaoException {
     // Create Scan Object
-    TransactionManagerCrudOperable.Scanner mockScanner =
-        mock(
-            TransactionManagerCrudOperable.Scanner.class,
-            withSettings().extraInterfaces(Scanner.class));
-    when(distributedTransactionManager.getScanner(any())).thenReturn(mockScanner);
+    TransactionCrudOperable.Scanner mockScanner =
+        mock(TransactionCrudOperable.Scanner.class, withSettings().extraInterfaces(Scanner.class));
+    when(transaction.getScanner(any())).thenReturn(mockScanner);
     Scanner result =
         this.dao.createScanner(
             TEST_NAMESPACE,
@@ -185,13 +183,11 @@ class ScalarDbDaoTest {
             new ArrayList<>(),
             new ArrayList<>(),
             0,
-            distributedTransactionManager);
+            transaction);
     // Assert
     assertNotNull(result);
     assertEquals(mockScanner, result);
-    result =
-        this.dao.createScanner(
-            TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, distributedTransactionManager);
+    result = this.dao.createScanner(TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, transaction);
     // Assert
     assertNotNull(result);
     assertEquals(mockScanner, result);

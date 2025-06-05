@@ -1,6 +1,9 @@
 package com.scalar.db.dataloader.core.dataexport;
 
+import static org.mockito.Mockito.when;
+
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
@@ -13,6 +16,7 @@ import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
@@ -35,18 +39,21 @@ import org.mockito.Spy;
 public class JsonLineExportManagerTest {
   TableMetadata mockData;
   DistributedStorage storage;
+  DistributedTransaction transaction;
   DistributedTransactionManager manager;
   @Spy ScalarDbDao dao;
   ProducerTaskFactory producerTaskFactory;
   ExportManager exportManager;
 
   @BeforeEach
-  void setup() {
+  void setup() throws TransactionException {
     storage = Mockito.mock(DistributedStorage.class);
+    transaction = Mockito.mock(DistributedTransaction.class);
     manager = Mockito.mock(DistributedTransactionManager.class);
     mockData = UnitTestUtils.createTestTableMetadata();
     dao = Mockito.mock(ScalarDbDao.class);
     producerTaskFactory = new ProducerTaskFactory(null, false, true);
+    when(manager.start()).thenReturn(transaction);
   }
 
   @Test
@@ -158,7 +165,7 @@ public class JsonLineExportManagerTest {
                 exportOptions.getTableName(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                manager))
+                transaction))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
@@ -204,7 +211,7 @@ public class JsonLineExportManagerTest {
                 exportOptions.getSortOrders(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                manager))
+                transaction))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =

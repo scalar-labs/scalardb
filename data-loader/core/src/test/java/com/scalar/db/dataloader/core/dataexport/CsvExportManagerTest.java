@@ -1,6 +1,9 @@
 package com.scalar.db.dataloader.core.dataexport;
 
+import static org.mockito.Mockito.when;
+
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
@@ -13,6 +16,7 @@ import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
@@ -36,16 +40,19 @@ public class CsvExportManagerTest {
   TableMetadata mockData;
   DistributedStorage storage;
   DistributedTransactionManager manager;
+  DistributedTransaction transaction;
   @Spy ScalarDbDao dao;
   ProducerTaskFactory producerTaskFactory;
   ExportManager exportManager;
 
   @BeforeEach
-  void setup() {
+  void setup() throws TransactionException {
     storage = Mockito.mock(DistributedStorage.class);
     manager = Mockito.mock(DistributedTransactionManager.class);
+    transaction = Mockito.mock(DistributedTransaction.class);
     mockData = UnitTestUtils.createTestTableMetadata();
     dao = Mockito.mock(ScalarDbDao.class);
+    when(manager.start()).thenReturn(transaction);
     producerTaskFactory = new ProducerTaskFactory(null, false, true);
   }
 
@@ -64,15 +71,14 @@ public class CsvExportManagerTest {
             .scanRange(new ScanRange(null, null, false, false))
             .build();
 
-    Mockito.when(
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                storage))
+    when(dao.createScanner(
+            exportOptions.getNamespace(),
+            exportOptions.getTableName(),
+            exportOptions.getProjectionColumns(),
+            exportOptions.getLimit(),
+            storage))
         .thenReturn(scanner);
-    Mockito.when(scanner.iterator()).thenReturn(results.iterator());
+    when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
         new BufferedWriter(
             Files.newBufferedWriter(
@@ -108,18 +114,17 @@ public class CsvExportManagerTest {
             .scanRange(new ScanRange(null, null, false, false))
             .build();
 
-    Mockito.when(
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getScanPartitionKey(),
-                exportOptions.getScanRange(),
-                exportOptions.getSortOrders(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                storage))
+    when(dao.createScanner(
+            exportOptions.getNamespace(),
+            exportOptions.getTableName(),
+            exportOptions.getScanPartitionKey(),
+            exportOptions.getScanRange(),
+            exportOptions.getSortOrders(),
+            exportOptions.getProjectionColumns(),
+            exportOptions.getLimit(),
+            storage))
         .thenReturn(scanner);
-    Mockito.when(scanner.iterator()).thenReturn(results.iterator());
+    when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
         new BufferedWriter(
             Files.newBufferedWriter(
@@ -150,15 +155,14 @@ public class CsvExportManagerTest {
             .scalarDbMode(ScalarDbMode.TRANSACTION)
             .build();
 
-    Mockito.when(
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                manager))
+    when(dao.createScanner(
+            exportOptions.getNamespace(),
+            exportOptions.getTableName(),
+            exportOptions.getProjectionColumns(),
+            exportOptions.getLimit(),
+            transaction))
         .thenReturn(scanner);
-    Mockito.when(scanner.iterator()).thenReturn(results.iterator());
+    when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
         new BufferedWriter(
             Files.newBufferedWriter(
@@ -174,8 +178,7 @@ public class CsvExportManagerTest {
   }
 
   @Test
-  void startExport_givenPartitionKey_withTransaction_shouldGenerateOutputFile()
-      throws IOException, ScalarDbDaoException {
+  void startExport_givenPartitionKey_withTransaction_shouldGenerateOutputFile() throws IOException {
     producerTaskFactory = new ProducerTaskFactory(",", false, false);
     exportManager = new CsvExportManager(manager, dao, producerTaskFactory);
     Scanner scanner = Mockito.mock(Scanner.class);
@@ -195,18 +198,17 @@ public class CsvExportManagerTest {
             .scalarDbMode(ScalarDbMode.TRANSACTION)
             .build();
 
-    Mockito.when(
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getScanPartitionKey(),
-                exportOptions.getScanRange(),
-                exportOptions.getSortOrders(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                manager))
+    when(dao.createScanner(
+            exportOptions.getNamespace(),
+            exportOptions.getTableName(),
+            exportOptions.getScanPartitionKey(),
+            exportOptions.getScanRange(),
+            exportOptions.getSortOrders(),
+            exportOptions.getProjectionColumns(),
+            exportOptions.getLimit(),
+            transaction))
         .thenReturn(scanner);
-    Mockito.when(scanner.iterator()).thenReturn(results.iterator());
+    when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
         new BufferedWriter(
             Files.newBufferedWriter(
