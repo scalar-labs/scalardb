@@ -32,6 +32,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class SelectStatementHandlerTest {
+  private static final int FETCH_SIZE = 10;
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table_name";
   private static final String ANY_NAME_1 = "name1";
@@ -55,7 +56,7 @@ public class SelectStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(session);
+    handler = new SelectStatementHandler(session, FETCH_SIZE);
   }
 
   private Get prepareGet() {
@@ -497,7 +498,7 @@ public class SelectStatementHandlerTest {
   public void handle_DriverExceptionThrown_ShouldThrowProperExecutionException() {
     // Arrange
     get = prepareGetWithClusteringKey();
-    SelectStatementHandler spy = Mockito.spy(new SelectStatementHandler(session));
+    SelectStatementHandler spy = Mockito.spy(new SelectStatementHandler(session, FETCH_SIZE));
     doReturn(prepared).when(spy).prepare(get);
     doReturn(bound).when(spy).bind(prepared, get);
 
@@ -525,7 +526,7 @@ public class SelectStatementHandlerTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new SelectStatementHandler(null))
+    assertThatThrownBy(() -> new SelectStatementHandler(null, FETCH_SIZE))
         .isInstanceOf(NullPointerException.class);
   }
 
@@ -594,5 +595,18 @@ public class SelectStatementHandlerTest {
 
     // Assert
     verify(session).prepare(expected);
+  }
+
+  @Test
+  public void execute_ShouldSetFetchSizeAndExecute() {
+    // Arrange
+    Get get = prepareGet();
+
+    // Act
+    handler.execute(bound, get);
+
+    // Assert
+    verify(bound).setFetchSize(FETCH_SIZE);
+    verify(session).execute(bound);
   }
 }

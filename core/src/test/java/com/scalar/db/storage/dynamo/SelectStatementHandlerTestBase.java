@@ -49,6 +49,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 public abstract class SelectStatementHandlerTestBase {
+  private static final int FETCH_SIZE = 10;
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -74,7 +75,7 @@ public abstract class SelectStatementHandlerTestBase {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(client, metadataManager, getNamespacePrefix());
+    handler = new SelectStatementHandler(client, metadataManager, getNamespacePrefix(), FETCH_SIZE);
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
@@ -1877,7 +1878,7 @@ public abstract class SelectStatementHandlerTestBase {
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
     assertThat(actualRequest.scanIndexForward()).isNull();
-    assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+    assertThat(actualRequest.limit()).isEqualTo(FETCH_SIZE);
     assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
@@ -1927,7 +1928,7 @@ public abstract class SelectStatementHandlerTestBase {
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
     assertThat(actualRequest.scanIndexForward()).isNull();
-    assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+    assertThat(actualRequest.limit()).isEqualTo(FETCH_SIZE);
     assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
@@ -1946,7 +1947,7 @@ public abstract class SelectStatementHandlerTestBase {
     ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
     verify(client).scan(captor.capture());
     ScanRequest actualRequest = captor.getValue();
-    assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
+    assertThat(actualRequest.limit()).isEqualTo(FETCH_SIZE);
     assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 
@@ -1965,7 +1966,7 @@ public abstract class SelectStatementHandlerTestBase {
     ArgumentCaptor<ScanRequest> captor = ArgumentCaptor.forClass(ScanRequest.class);
     verify(client).scan(captor.capture());
     ScanRequest actualRequest = captor.getValue();
-    assertThat(actualRequest.limit()).isEqualTo(null);
+    assertThat(actualRequest.limit()).isEqualTo(FETCH_SIZE);
     assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
   }
 

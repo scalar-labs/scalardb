@@ -41,13 +41,18 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
+
+  private final int fetchSize;
+
   /**
    * Constructs {@code SelectStatementHandler} with the specified {@code Session}
    *
    * @param session session to be used with this statement
+   * @param fetchSize the number of rows to be fetched at once
    */
-  public SelectStatementHandler(Session session) {
+  public SelectStatementHandler(Session session, int fetchSize) {
     super(session);
+    this.fetchSize = fetchSize;
   }
 
   @Override
@@ -94,6 +99,7 @@ public class SelectStatementHandler extends StatementHandler {
   @Override
   @Nonnull
   protected ResultSet execute(BoundStatement bound, Operation operation) {
+    bound.setFetchSize(fetchSize);
     return session.execute(bound);
   }
 

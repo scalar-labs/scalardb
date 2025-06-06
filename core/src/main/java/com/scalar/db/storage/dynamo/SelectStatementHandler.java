@@ -49,6 +49,7 @@ public class SelectStatementHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
   private final String namespacePrefix;
+  private final int fetchSize;
 
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
@@ -62,10 +63,12 @@ public class SelectStatementHandler {
   public SelectStatementHandler(
       DynamoDbClient client,
       TableMetadataManager metadataManager,
-      Optional<String> namespacePrefix) {
+      Optional<String> namespacePrefix,
+      int fetchSize) {
     this.client = checkNotNull(client);
     this.metadataManager = checkNotNull(metadataManager);
     this.namespacePrefix = namespacePrefix.orElse("");
+    this.fetchSize = fetchSize;
   }
 
   @Nonnull
@@ -151,7 +154,10 @@ public class SelectStatementHandler {
     com.scalar.db.storage.dynamo.request.QueryRequest request =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        request, limit, new ResultInterpreter(selection.getProjections(), tableMetadata));
+        request,
+        fetchSize,
+        limit,
+        new ResultInterpreter(selection.getProjections(), tableMetadata));
   }
 
   private Scanner executeScan(Scan scan, TableMetadata tableMetadata) {
@@ -184,7 +190,10 @@ public class SelectStatementHandler {
     com.scalar.db.storage.dynamo.request.QueryRequest queryRequest =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        queryRequest, scan.getLimit(), new ResultInterpreter(scan.getProjections(), tableMetadata));
+        queryRequest,
+        fetchSize,
+        scan.getLimit(),
+        new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private Scanner executeFullScan(ScanAll scan, TableMetadata tableMetadata) {
@@ -205,6 +214,7 @@ public class SelectStatementHandler {
         new com.scalar.db.storage.dynamo.request.ScanRequest(client, builder.build());
     return new QueryScanner(
         requestWrapper,
+        fetchSize,
         scan.getLimit(),
         new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
