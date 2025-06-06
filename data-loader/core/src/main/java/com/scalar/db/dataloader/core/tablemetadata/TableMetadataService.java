@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.tablemetadata;
 
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
@@ -18,7 +19,17 @@ import lombok.RequiredArgsConstructor;
 public class TableMetadataService {
 
   private final DistributedStorageAdmin storageAdmin;
+  private final DistributedTransactionAdmin transactionAdmin;
 
+  public TableMetadataService(DistributedStorageAdmin storageAdmin) {
+    this.transactionAdmin = null;
+    this.storageAdmin = storageAdmin;
+  }
+
+  public TableMetadataService(DistributedTransactionAdmin transactionAdmin) {
+    this.transactionAdmin = transactionAdmin;
+    this.storageAdmin = null;
+  }
   /**
    * Retrieves the {@link TableMetadata} for a specific namespace and table name.
    *
@@ -31,7 +42,12 @@ public class TableMetadataService {
   public TableMetadata getTableMetadata(String namespace, String tableName)
       throws TableMetadataException {
     try {
-      TableMetadata tableMetadata = storageAdmin.getTableMetadata(namespace, tableName);
+      TableMetadata tableMetadata = null;
+      if (storageAdmin != null) {
+        tableMetadata = storageAdmin.getTableMetadata(namespace, tableName);
+      } else if (transactionAdmin != null) {
+        tableMetadata = transactionAdmin.getTableMetadata(namespace, tableName);
+      }
       if (tableMetadata == null) {
         throw new TableMetadataException(
             CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));

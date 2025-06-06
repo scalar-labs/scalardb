@@ -1,10 +1,13 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidationException;
@@ -12,6 +15,7 @@ import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidato
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -32,11 +36,31 @@ import org.slf4j.LoggerFactory;
 public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
-  private final DistributedStorage storage;
+  private final DistributedStorage distributedStorage;
+  private final DistributedTransactionManager distributedTransactionManager;
   private final ScalarDbDao dao;
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
 
+  public ExportManager(
+      DistributedStorage distributedStorage,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    this.distributedStorage = distributedStorage;
+    this.distributedTransactionManager = null;
+    this.dao = dao;
+    this.producerTaskFactory = producerTaskFactory;
+  }
+
+  public ExportManager(
+      DistributedTransactionManager distributedTransactionManager,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    this.distributedStorage = null;
+    this.distributedTransactionManager = distributedTransactionManager;
+    this.dao = dao;
+    this.producerTaskFactory = producerTaskFactory;
+  }
   /**
    * Create and add header part for the export file
    *
@@ -83,8 +107,8 @@ public abstract class ExportManager {
       BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
-      try (Scanner scanner = createScanner(exportOptions, dao, storage)) {
-
+      try (Scanner scanner =
+          createScanner(exportOptions, dao, distributedStorage, distributedTransactionManager)) {
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
 
@@ -110,7 +134,7 @@ public abstract class ExportManager {
           // TODO: handle this
         }
         processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (InterruptedException | IOException e) {
+      } catch (InterruptedException | IOException | TransactionException e) {
         logger.error("Error during export: {}", e.getMessage());
       } finally {
         bufferedWriter.flush();
@@ -118,6 +142,7 @@ public abstract class ExportManager {
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
     }
+    closeResources();
     return exportReport;
   }
 
@@ -209,15 +234,51 @@ public abstract class ExportManager {
   }
 
   /**
-   * To create a scanner object
+   * Creates a ScalarDB {@link Scanner} instance based on the configured ScalarDB mode.
    *
-   * @param exportOptions export options
-   * @param dao ScalarDB dao object
-   * @param storage distributed storage object
-   * @return created scanner
-   * @throws ScalarDbDaoException throws if any issue occurs in creating scanner object
+   * <p>If the {@link ScalarDbMode} specified in {@code exportOptions} is {@code TRANSACTION}, a
+   * scanner is created using the {@link DistributedTransactionManager}. Otherwise, a scanner is
+   * created using the {@link DistributedStorage}.
+   *
+   * @param exportOptions Options containing configuration for the export operation, including the
+   *     ScalarDB mode
+   * @param dao The {@link ScalarDbDao} used to access ScalarDB
+   * @param storage The {@link DistributedStorage} instance used for storage-level operations
+   * @param transactionManager The {@link DistributedTransactionManager} instance used for
+   *     transaction-level operations
+   * @return A {@link Scanner} instance for reading data from ScalarDB
+   * @throws ScalarDbDaoException If an error occurs while creating the scanner with the DAO
+   * @throws TransactionException If an error occurs during transactional scanner creation
    */
   private Scanner createScanner(
+      ExportOptions exportOptions,
+      ScalarDbDao dao,
+      DistributedStorage storage,
+      DistributedTransactionManager transactionManager)
+      throws ScalarDbDaoException, TransactionException {
+    if (exportOptions.getScalarDbMode().equals(ScalarDbMode.TRANSACTION)) {
+      return createScannerWithTransaction(exportOptions, dao, transactionManager);
+    }
+    return createScannerWithStorage(exportOptions, dao, storage);
+  }
+
+  /**
+   * Creates a ScalarDB {@link Scanner} using the {@link DistributedStorage} interface based on the
+   * scan configuration provided in {@link ExportOptions}.
+   *
+   * <p>If no partition key is specified in the {@code exportOptions}, a full table scan is
+   * performed. Otherwise, a partition-specific scan is performed using the provided partition key,
+   * optional scan range, and sort orders.
+   *
+   * @param exportOptions Options containing configuration for the export operation, including
+   *     namespace, table name, projection columns, limit, and scan parameters
+   * @param dao The {@link ScalarDbDao} used to construct the scan operation
+   * @param storage The {@link DistributedStorage} instance used to execute the scan
+   * @return A {@link Scanner} instance for reading data from ScalarDB using storage-level
+   *     operations
+   * @throws ScalarDbDaoException If an error occurs while creating the scanner
+   */
+  private Scanner createScannerWithStorage(
       ExportOptions exportOptions, ScalarDbDao dao, DistributedStorage storage)
       throws ScalarDbDaoException {
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
@@ -238,6 +299,82 @@ public abstract class ExportManager {
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
           storage);
+    }
+  }
+
+  /**
+   * Creates a {@link Scanner} using a {@link DistributedTransaction} based on the provided export
+   * options.
+   *
+   * <p>If no partition key is specified in the {@code exportOptions}, a full table scan is
+   * performed. Otherwise, a partition-specific scan is performed using the provided partition key,
+   * optional scan range, and sort orders.
+   *
+   * @param exportOptions Options specifying how to scan the table (e.g., partition key, range,
+   *     projection).
+   * @param dao The ScalarDb data access object to create the scanner.
+   * @param distributedTransactionManager The transaction manager used to start a new transaction.
+   * @return A {@link Scanner} for reading data from the specified table.
+   * @throws ScalarDbDaoException If an error occurs while creating the scanner.
+   * @throws TransactionException If an error occurs during transaction management (start or
+   *     commit).
+   */
+  private Scanner createScannerWithTransaction(
+      ExportOptions exportOptions,
+      ScalarDbDao dao,
+      DistributedTransactionManager distributedTransactionManager)
+      throws ScalarDbDaoException, TransactionException {
+
+    boolean isScanAll = exportOptions.getScanPartitionKey() == null;
+    DistributedTransaction transaction = distributedTransactionManager.start();
+
+    try {
+      Scanner scanner;
+      if (isScanAll) {
+        scanner =
+            dao.createScanner(
+                exportOptions.getNamespace(),
+                exportOptions.getTableName(),
+                exportOptions.getProjectionColumns(),
+                exportOptions.getLimit(),
+                transaction);
+      } else {
+        scanner =
+            dao.createScanner(
+                exportOptions.getNamespace(),
+                exportOptions.getTableName(),
+                exportOptions.getScanPartitionKey(),
+                exportOptions.getScanRange(),
+                exportOptions.getSortOrders(),
+                exportOptions.getProjectionColumns(),
+                exportOptions.getLimit(),
+                transaction);
+      }
+
+      transaction.commit();
+      return scanner;
+
+    } catch (Exception e) {
+      try {
+        transaction.abort();
+      } catch (TransactionException abortException) {
+        logger.error(
+            "Failed to abort transaction: {}", abortException.getMessage(), abortException);
+      }
+      throw e;
+    }
+  }
+
+  /** Close resources properly once the process is completed */
+  public void closeResources() {
+    try {
+      if (distributedStorage != null) {
+        distributedStorage.close();
+      } else if (distributedTransactionManager != null) {
+        distributedTransactionManager.close();
+      }
+    } catch (Throwable e) {
+      throw new RuntimeException("Failed to close the resource", e);
     }
   }
 }
