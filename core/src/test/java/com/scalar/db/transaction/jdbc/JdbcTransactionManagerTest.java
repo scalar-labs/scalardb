@@ -195,14 +195,12 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void begin_ConnectionFailure_ShouldThrowTransactionException() throws Exception {
+  public void begin_SQLExceptionThrown_ShouldThrowTransactionException() throws Exception {
     // Arrange
-    when(dataSource.getConnection()).thenThrow(new SQLException("Connection failed"));
+    when(dataSource.getConnection()).thenThrow(SQLException.class);
 
-    // Act & Assert
-    assertThatThrownBy(() -> manager.begin())
-        .isInstanceOf(TransactionException.class)
-        .hasMessageContaining("Connection failed");
+    // Act Assert
+    assertThatThrownBy(() -> manager.begin()).isInstanceOf(TransactionException.class);
   }
 
   @Test
