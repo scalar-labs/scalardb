@@ -340,7 +340,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public void setReadOnly(Connection connection, boolean readOnly) {
+  public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
     // Do nothing. SQLite does not support read-only mode.
   }
 }

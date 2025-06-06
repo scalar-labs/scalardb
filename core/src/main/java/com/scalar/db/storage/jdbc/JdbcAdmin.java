@@ -438,7 +438,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     boolean tableExists = false;
 
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (PreparedStatement preparedStatement =
           connection.prepareStatement(getSelectColumnsStatement())) {
@@ -510,7 +510,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
@@ -608,7 +608,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " LIKE ?";
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (PreparedStatement preparedStatement =
           connection.prepareStatement(selectTablesOfNamespaceStatement)) {
@@ -644,7 +644,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(NAMESPACE_COL_NAMESPACE_NAME)
             + " = ?";
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (PreparedStatement statement = connection.prepareStatement(selectQuery)) {
         statement.setString(1, namespace);
@@ -992,7 +992,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       String selectQuery =
           "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);

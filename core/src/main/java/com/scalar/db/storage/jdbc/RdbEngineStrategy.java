@@ -230,7 +230,8 @@ public interface RdbEngineStrategy {
     // Do nothing
   }
 
-  default void setReadOnly(Connection connection, boolean readOnly) throws SQLException {
+  default void setConnectionToReadOnly(Connection connection, boolean readOnly)
+      throws SQLException {
     connection.setReadOnly(readOnly);
   }
 }

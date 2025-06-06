@@ -117,7 +117,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
 
       DistributedTransaction transaction;
       if (readOnly) {
-        rdbEngine.setReadOnly(connection, true);
+        rdbEngine.setConnectionToReadOnly(connection, true);
         transaction =
             new ReadOnlyDistributedTransaction(
                 new JdbcTransaction(txId, jdbcService, connection, rdbEngine));
