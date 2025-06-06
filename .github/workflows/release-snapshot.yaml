@@ -30,7 +30,7 @@ jobs:
           VERSION=$(./gradlew :core:properties -q | grep "version:" | awk '{print $2}')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Upload SNAPSHOT versions for scalardb, scalardb-schema-loader, and scalardb-integration-test to Maven Snapshot Repository
+      - name: Upload SNAPSHOT versions for scalardb, scalardb-schema-loader, scalardb-data-loader-core, and scalardb-integration-test to Maven Snapshot Repository
         if: contains(steps.version.outputs.version, '-SNAPSHOT')
         run: |
           echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
