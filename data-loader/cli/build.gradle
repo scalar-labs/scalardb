@@ -9,11 +9,13 @@ application {
     mainClass = 'com.scalar.db.dataloader.cli.DataLoaderCli'
 }
 
-archivesBaseName = "scalardb-data-loader-cli"
+base {
+    archivesName = "scalardb-data-loader-cli"
+}
 
 dependencies {
     implementation project(':core')
-    implementation project(':data-loader:core')
+    implementation project(':data-loader:data-loader-core')
     implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
     implementation "info.picocli:picocli:${picocliVersion}"
 
