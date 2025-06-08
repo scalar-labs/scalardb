@@ -195,6 +195,8 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
     try {
       crud.waitForRecoveryCompletionIfNecessary();
+    } catch (CrudConflictException e) {
+      throw new PreparationConflictException(e.getMessage(), e, getId());
     } catch (CrudException e) {
       throw new PreparationException(e.getMessage(), e, getId());
     }

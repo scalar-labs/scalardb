@@ -150,12 +150,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
             recoveryExecutor,
             commit,
+            consensusCommitConfig.getIsolation(),
+            false,
             groupCommitter);
   }
 

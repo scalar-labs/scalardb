@@ -198,6 +198,8 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
     try {
       crud.waitForRecoveryCompletionIfNecessary();
+    } catch (CrudConflictException e) {
+      throw new CommitConflictException(e.getMessage(), e, getId());
     } catch (CrudException e) {
       throw new CommitException(e.getMessage(), e, getId());
     }

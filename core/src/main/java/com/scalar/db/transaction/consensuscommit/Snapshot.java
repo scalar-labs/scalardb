@@ -47,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -128,9 +129,8 @@ public class Snapshot {
     return id;
   }
 
-  @VisibleForTesting
   @Nonnull
-  Isolation getIsolation() {
+  public Isolation getIsolation() {
     return isolation;
   }
 
@@ -212,6 +212,11 @@ public class Snapshot {
 
   public boolean containsKeyInReadSet(Key key) {
     return readSet.containsKey(key);
+  }
+
+  @Nullable
+  public Optional<TransactionResult> getFromReadSet(Key key) {
+    return readSet.get(key);
   }
 
   public boolean containsKeyInGetSet(Get get) {
@@ -754,6 +759,14 @@ public class Snapshot {
 
   private boolean isSerializable() {
     return isolation == Isolation.SERIALIZABLE;
+  }
+
+  public boolean isSnapshotReadRequired() {
+    return isolation != Isolation.READ_COMMITTED;
+  }
+
+  public boolean shouldOverwriteReadSet() {
+    return isolation == Isolation.READ_COMMITTED;
   }
 
   public boolean isValidationRequired() {

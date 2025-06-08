@@ -60,7 +60,6 @@ public class ConsensusCommitManagerTest {
   @Mock private DistributedStorage storage;
   @Mock private DistributedStorageAdmin admin;
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryExecutor recoveryExecutor;
@@ -76,15 +75,14 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
             recoveryExecutor,
             commit,
+            Isolation.SNAPSHOT,
+            false,
             null);
-
-    when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
   }
 
   @Test
@@ -127,12 +125,13 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
             recoveryExecutor,
             commit,
+            Isolation.SNAPSHOT,
+            false,
             groupCommitter);
 
     // Act
@@ -158,12 +157,13 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
             recoveryExecutor,
             commit,
+            Isolation.SNAPSHOT,
+            false,
             groupCommitter);
 
     // Act

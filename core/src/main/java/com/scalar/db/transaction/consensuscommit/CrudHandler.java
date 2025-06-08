@@ -25,6 +25,7 @@ import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -205,8 +206,26 @@ public class CrudHandler {
 
   private Optional<TransactionResult> executeRecovery(
       Snapshot.Key key, Selection selection, TransactionResult result) throws CrudException {
+    RecoveryExecutor.RecoveryType recoveryType;
+    if (snapshot.getIsolation() == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      if (readOnly) {
+        // In read-only mode, we don't recover the record, but return the committed result
+        recoveryType = RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER;
+      } else {
+        // In read-write mode, we recover the record and return the committed result
+        recoveryType = RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER;
+      }
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, we always recover the record and return the latest
+      // result
+      recoveryType = RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER;
+    }
+
     RecoveryExecutor.Result recoveryResult =
-        recoveryExecutor.execute(key, selection, result, snapshot.getId());
+        recoveryExecutor.execute(key, selection, result, snapshot.getId(), recoveryType);
+
     recoveryResults.add(recoveryResult);
     return recoveryResult.recoveredResult;
   }
@@ -339,14 +358,16 @@ public class CrudHandler {
 
   private void putIntoReadSetInSnapshot(Snapshot.Key key, Optional<TransactionResult> result) {
     // In read-only mode, we don't need to put the result into the read set
-    if (!readOnly && !snapshot.containsKeyInReadSet(key)) {
-      snapshot.putIntoReadSet(key, result);
+    if (!readOnly) {
+      if (snapshot.shouldOverwriteReadSet() || !snapshot.containsKeyInReadSet(key)) {
+        snapshot.putIntoReadSet(key, result);
+      }
     }
   }
 
   private boolean isSnapshotReadRequired() {
     // In single-operation mode, we don't need snapshot read
-    return !singleOperation;
+    return !singleOperation && snapshot.isSnapshotReadRequired();
   }
 
   private boolean isValidationOrSnapshotReadRequired() {
@@ -379,10 +400,14 @@ public class CrudHandler {
   }
 
   private void verifyNoOverlap(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
-    // In either read-only mode or single-operation mode, we don't need to verify the overlap
-    if (!readOnly && !singleOperation) {
+    if (isOverlapVerificationRequired()) {
       snapshot.verifyNoOverlap(scan, results);
     }
+  }
+
+  private boolean isOverlapVerificationRequired() {
+    // In either read-only mode or single-operation mode, we don't need to verify overlap
+    return !readOnly && !singleOperation;
   }
 
   public void put(Put put) throws CrudException {
@@ -462,11 +487,28 @@ public class CrudHandler {
     for (RecoveryExecutor.Result recoveryResult : recoveryResults) {
       try {
         if (snapshot.containsKeyInWriteSet(recoveryResult.key)
-            || snapshot.containsKeyInDeleteSet(recoveryResult.key)
-            || snapshot.isValidationRequired()) {
+            || snapshot.containsKeyInDeleteSet(recoveryResult.key)) {
+          Optional<TransactionResult> result = recoveryResult.recoveryFuture.get();
+
+          if (snapshot.shouldOverwriteReadSet() && !readOnly) {
+            // Overwrite the read set with the result of the recovery only if the result in the read
+            // set has not been updated since the updated result should be the latter one.
+            Optional<TransactionResult> resultFromReadSet =
+                snapshot.getFromReadSet(recoveryResult.key);
+            assert resultFromReadSet != null;
+            if (resultFromReadSet.equals(recoveryResult.recoveredResult)) {
+              snapshot.putIntoReadSet(recoveryResult.key, result);
+            }
+          }
+        } else if (snapshot.isValidationRequired()) {
           recoveryResult.recoveryFuture.get();
         }
       } catch (java.util.concurrent.ExecutionException e) {
+        if (e.getCause() instanceof CrudConflictException) {
+          throw new CrudConflictException(
+              e.getCause().getMessage(), e.getCause(), snapshot.getId());
+        }
+
         throw new CrudException(
             CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(
                 e.getCause().getMessage()),
@@ -487,6 +529,11 @@ public class CrudHandler {
       try {
         recoveryResult.recoveryFuture.get();
       } catch (java.util.concurrent.ExecutionException e) {
+        if (e.getCause() instanceof CrudConflictException) {
+          throw new CrudConflictException(
+              e.getCause().getMessage(), e.getCause(), snapshot.getId());
+        }
+
         throw new CrudException(
             CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(
                 e.getCause().getMessage()),
@@ -717,7 +764,7 @@ public class CrudHandler {
         scanner = scanFromStorage(scan);
       }
 
-      if (isValidationOrSnapshotReadRequired()) {
+      if (isValidationOrSnapshotReadRequired() || isOverlapVerificationRequired()) {
         results = new LinkedHashMap<>();
       } else {
         // If neither validation nor snapshot read is required, we don't need to put the results

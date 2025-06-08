@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Operation;
@@ -64,22 +65,61 @@ public class RecoveryExecutor implements AutoCloseable {
   }
 
   public Result execute(
-      Snapshot.Key key, Selection selection, TransactionResult result, String transactionId)
+      Snapshot.Key key,
+      Selection selection,
+      TransactionResult result,
+      String transactionId,
+      RecoveryType recoveryType)
       throws CrudException {
     assert !result.isCommitted();
 
-    Optional<Coordinator.State> state = getCoordinatorState(result.getId());
+    Optional<TransactionResult> recoveredResult;
+    Future<Optional<TransactionResult>> future;
 
-    Optional<TransactionResult> recoveredResult =
-        createRecoveredResult(state, selection, result, transactionId);
+    switch (recoveryType) {
+      case RETURN_LATEST_RESULT_AND_RECOVER:
+        Optional<Coordinator.State> state = getCoordinatorState(result.getId());
 
-    // Recover the record
-    Future<Void> future =
-        executorService.submit(
-            () -> {
-              recovery.recover(selection, result, state);
-              return null;
-            });
+        // Return the latest result
+        recoveredResult = createRecoveredResult(state, selection, result, transactionId);
+
+        // Recover the record
+        future =
+            executorService.submit(
+                () -> {
+                  recovery.recover(selection, result, state);
+                  return recoveredResult;
+                });
+
+        break;
+      case RETURN_COMMITTED_RESULT_AND_RECOVER:
+        // Return the committed result
+        recoveredResult = createRolledBackRecord(selection, result, transactionId);
+
+        // Recover the record
+        future =
+            executorService.submit(
+                () -> {
+                  Optional<Coordinator.State> s = getCoordinatorState(result.getId());
+                  Optional<TransactionResult> r =
+                      createRecoveredResult(s, selection, result, transactionId);
+
+                  recovery.recover(selection, result, s);
+                  return r;
+                });
+
+        break;
+      case RETURN_COMMITTED_RESULT_AND_NOT_RECOVER:
+        // Return the committed result
+        recoveredResult = createRolledBackRecord(selection, result, transactionId);
+
+        // No need to recover the record
+        future = Futures.immediateFuture(recoveredResult);
+
+        break;
+      default:
+        throw new AssertionError("Unknown recovery type: " + recoveryType);
+    }
 
     return new Result(key, recoveredResult, future);
   }
@@ -263,15 +303,21 @@ public class RecoveryExecutor implements AutoCloseable {
     public final Optional<TransactionResult> recoveredResult;
 
     // The future that completes when the recovery is done
-    public final Future<Void> recoveryFuture;
+    public final Future<Optional<TransactionResult>> recoveryFuture;
 
     public Result(
         Snapshot.Key key,
         Optional<TransactionResult> recoveredResult,
-        Future<Void> recoveryFuture) {
+        Future<Optional<TransactionResult>> recoveryFuture) {
       this.key = key;
       this.recoveredResult = recoveredResult;
       this.recoveryFuture = recoveryFuture;
     }
+  }
+
+  public enum RecoveryType {
+    RETURN_LATEST_RESULT_AND_RECOVER,
+    RETURN_COMMITTED_RESULT_AND_RECOVER,
+    RETURN_COMMITTED_RESULT_AND_NOT_RECOVER
   }
 }
