@@ -552,6 +552,19 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void
+      prepare_CrudConflictExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowPreparationConflictException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    doThrow(CrudConflictException.class).when(crud).waitForRecoveryCompletionIfNecessary();
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.prepare())
+        .isInstanceOf(PreparationConflictException.class);
+  }
+
+  @Test
+  public void
       prepare_CrudExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowPreparationException()
           throws CrudException {
     // Arrange
