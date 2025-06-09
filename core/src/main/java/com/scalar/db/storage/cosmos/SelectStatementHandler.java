@@ -44,8 +44,12 @@ import org.jooq.impl.DSL;
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
 
-  public SelectStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+  private final int fetchSize;
+
+  public SelectStatementHandler(
+      CosmosClient client, TableMetadataManager metadataManager, int fetchSize) {
     super(client, metadataManager);
+    this.fetchSize = fetchSize;
   }
 
   /**
@@ -85,9 +89,10 @@ public class SelectStatementHandler extends StatementHandler {
       return executeReadWithIndex(get, tableMetadata);
     }
 
+    PartitionKey partitionKey = cosmosOperation.getCosmosPartitionKey();
+
     if (get.getProjections().isEmpty()) {
       String id = cosmosOperation.getId();
-      PartitionKey partitionKey = cosmosOperation.getCosmosPartitionKey();
       Record record = getContainer(get).readItem(id, partitionKey, Record.class).getItem();
       return new SingleRecordScanner(
           record, new ResultInterpreter(get.getProjections(), tableMetadata));
@@ -100,8 +105,10 @@ public class SelectStatementHandler extends StatementHandler {
                     .eq(cosmosOperation.getConcatenatedPartitionKey()),
                 DSL.field("r.id").eq(cosmosOperation.getId()))
             .getSQL(ParamType.INLINED);
+    CosmosQueryRequestOptions options =
+        new CosmosQueryRequestOptions().setPartitionKey(partitionKey);
 
-    return executeQuery(get, tableMetadata, query);
+    return executeQuery(get, tableMetadata, query, options);
   }
 
   private Scanner executeReadWithIndex(Selection selection, TableMetadata tableMetadata)
@@ -327,8 +334,8 @@ public class SelectStatementHandler extends StatementHandler {
       CosmosQueryRequestOptions queryOptions) {
     Iterator<FeedResponse<Record>> pagesIterator =
         getContainer(selection)
-            .queryItems(query, queryOptions, Record.class)
-            .iterableByPage()
+            .queryItems(query, queryOptions.setMaxBufferedItemCount(fetchSize), Record.class)
+            .iterableByPage(fetchSize)
             .iterator();
 
     return new ScannerImpl(
