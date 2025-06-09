@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
 import java.nio.file.Path;
@@ -59,7 +59,7 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     // Add testName as a coordinator schema suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     return properties;
   }
@@ -67,12 +67,10 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     Properties propertiesForCassandra = MultiStorageEnv.getPropertiesForCassandra(testName);
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(
-        propertiesForCassandra, testName);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(propertiesForCassandra, testName);
 
     Properties propertiesForJdbc = MultiStorageEnv.getPropertiesForJdbc(testName);
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(
-        propertiesForJdbc, testName);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(propertiesForJdbc, testName);
 
     return new MultiStorageAdminTestUtils(propertiesForCassandra, propertiesForJdbc);
   }

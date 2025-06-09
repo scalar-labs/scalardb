@@ -12,7 +12,7 @@ public abstract class ConsensusCommitAdminRepairIntegrationTestBase
     properties.putAll(getProps(testName));
 
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     return properties;
   }
