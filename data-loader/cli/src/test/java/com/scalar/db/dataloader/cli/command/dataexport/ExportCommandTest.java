@@ -28,6 +28,7 @@ class ExportCommandTest {
     ExportCommand exportCommand = new ExportCommand();
     exportCommand.configFilePath = "";
     exportCommand.dataChunkSize = 100;
+    exportCommand.maxThreads = 4;
     exportCommand.namespace = "scalar";
     exportCommand.table = "asset";
     exportCommand.outputDirectory = "";
@@ -47,6 +48,7 @@ class ExportCommandTest {
     ExportCommand exportCommand = new ExportCommand();
     exportCommand.configFilePath = "scalardb.properties";
     exportCommand.dataChunkSize = 100;
+    exportCommand.maxThreads = 4;
     exportCommand.namespace = "scalar";
     exportCommand.table = "asset";
     exportCommand.outputDirectory = "";

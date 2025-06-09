@@ -20,6 +20,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -443,5 +445,10 @@ class RdbEngineMysql extends AbstractRdbEngine {
   public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, LocalDateTime>
       getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties() {
+    return Collections.singletonMap("useCursorFetch", "true");
   }
 }
