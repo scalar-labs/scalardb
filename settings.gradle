@@ -4,3 +4,7 @@ include 'schema-loader'
 include 'integration-test'
 include 'data-loader:core'
 include 'data-loader:cli'
+
+// This is a workaround for an issue where projects with the same name lead to unintended conflict.
+// See https://github.com/gradle/gradle/issues/847 for the details
+findProject(':data-loader:core')?.name = 'data-loader-core'
