@@ -82,7 +82,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
       return jdbcService.get(get, connection);
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -98,7 +98,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
       return jdbcService.getScanner(scan, connection);
     } catch (SQLException e) {
       close(connection);

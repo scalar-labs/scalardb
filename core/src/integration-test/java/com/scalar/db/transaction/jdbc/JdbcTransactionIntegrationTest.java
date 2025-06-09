@@ -7,8 +7,6 @@ import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegrationTestBase {
 
@@ -44,16 +42,4 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
   @Override
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
-
-  @Disabled("Implement later")
-  @Override
-  @Test
-  public void get_GetGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecord() {}
-
-  @Disabled("Implement later")
-  @Override
-  @ParameterizedTest
-  @EnumSource(ScanType.class)
-  public void scanOrGetScanner_ScanGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecords(
-      ScanType scanType) {}
 }
