@@ -7,7 +7,9 @@ plugins {
     id 'base'
 }
 
-archivesBaseName = "scalardb-data-loader-core"
+base {
+    archivesName = "scalardb-data-loader-core"
+}
 
 dependencies {
     // ScalarDB core
@@ -44,12 +46,6 @@ spotbugsTest.reports {
     html.enabled = true
 }
 spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
-
-if (project.gradle.startParameter.taskNames.any { it.endsWith('publish') } ||
-        project.gradle.startParameter.taskNames.any { it.endsWith('publishToMavenLocal') }) {
-    // not to publish the fat jar to maven central
-    shadowJar.enabled = false
-}
 
 publishing {
     publications {
