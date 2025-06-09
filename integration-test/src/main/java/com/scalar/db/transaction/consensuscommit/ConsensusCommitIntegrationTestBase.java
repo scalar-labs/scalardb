@@ -15,10 +15,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
 import java.util.Optional;
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 public abstract class ConsensusCommitIntegrationTestBase
     extends DistributedTransactionIntegrationTestBase {
@@ -932,16 +929,4 @@ public abstract class ConsensusCommitIntegrationTestBase
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult).isNotPresent();
   }
-
-  @Disabled("Implement later")
-  @Override
-  @Test
-  public void get_GetGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecord() {}
-
-  @Disabled("Implement later")
-  @Override
-  @ParameterizedTest
-  @EnumSource(ScanType.class)
-  public void scanOrGetScanner_ScanGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecords(
-      ScanType scanType) {}
 }
