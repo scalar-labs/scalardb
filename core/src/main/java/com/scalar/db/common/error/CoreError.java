@@ -923,6 +923,14 @@ public enum CoreError implements ScalarDbError {
       "Some scanners were not closed. All scanners must be closed before preparing the transaction.",
       "",
       ""),
+  DATA_LOADER_INVALID_DATA_CHUNK_SIZE(
+      Category.USER_ERROR, "0207", "Data chunk size must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_TRANSACTION_SIZE(
+      Category.USER_ERROR, "0208", "Transaction size must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_MAX_THREADS(
+      Category.USER_ERROR, "0209", "Number of max threads must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE(
+      Category.USER_ERROR, "0210", "Data chunk queue size must be greater than 0", "", ""),
 
   //
   // Errors for the concurrency error category
