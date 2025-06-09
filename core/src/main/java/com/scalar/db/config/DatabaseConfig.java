@@ -37,6 +37,7 @@ public class DatabaseConfig {
   private boolean crossPartitionScanEnabled;
   private boolean crossPartitionScanFilteringEnabled;
   private boolean crossPartitionScanOrderingEnabled;
+  private int scanFetchSize;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -54,9 +55,11 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN = SCAN_PREFIX + "enabled";
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
+  public static final String SCAN_FETCH_SIZE = PREFIX + "scan_fetch_size";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
+  public static final int DEFAULT_SCAN_FETCH_SIZE = 10;
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -114,6 +117,8 @@ public class DatabaseConfig {
               .CROSS_PARTITION_SCAN_MUST_BE_ENABLED_TO_USE_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING
               .buildMessage());
     }
+
+    scanFetchSize = getInt(getProperties(), SCAN_FETCH_SIZE, DEFAULT_SCAN_FETCH_SIZE);
   }
 
   public List<String> getContactPoints() {
@@ -162,6 +167,10 @@ public class DatabaseConfig {
 
   public boolean isCrossPartitionScanOrderingEnabled() {
     return crossPartitionScanOrderingEnabled;
+  }
+
+  public int getScanFetchSize() {
+    return scanFetchSize;
   }
 
   public static String getTransactionManager(Properties properties) {
