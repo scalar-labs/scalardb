@@ -19,6 +19,8 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
@@ -40,6 +42,8 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -700,6 +704,404 @@ public class TwoPhaseConsensusCommitManagerTest {
     verify(transaction).validate();
     verify(transaction).commit();
     assertThat(actual).isEqualTo(results);
+  }
+
+  @Test
+  public void getScannerAndScannerOne_ShouldReturnScannerAndReturnProperResult() throws Exception {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThat(actual.one()).hasValue(result1);
+    assertThat(actual.one()).hasValue(result2);
+    assertThat(actual.one()).hasValue(result3);
+    assertThat(actual.one()).isEmpty();
+    actual.close();
+
+    verify(spied).begin();
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldReturnScannerAndReturnProperResults() throws Exception {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.all())
+        .thenReturn(Arrays.asList(result1, result2, result3))
+        .thenReturn(Collections.emptyList());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    List<Result> results = actual.all();
+    assertThat(results).containsExactly(result1, result2, result3);
+    assertThat(actual.all()).isEmpty();
+    actual.close();
+
+    verify(spied).begin();
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerIterator_ShouldReturnScannerAndReturnProperResults()
+      throws Exception {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+
+    Iterator<Result> iterator = actual.iterator();
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result1);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result2);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result3);
+    assertThat(iterator.hasNext()).isFalse();
+    actual.close();
+
+    verify(spied).begin();
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void
+      getScanner_CrudExceptionThrownByTransactionGetScanner_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    when(transaction.getScanner(scan)).thenThrow(CrudException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.getScanner(scan)).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerOne_CrudExceptionThrownByScannerOne_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    when(scanner.one()).thenThrow(CrudException.class);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::one).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerAll_CrudExceptionThrownByScannerAll_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    when(scanner.all()).thenThrow(CrudException.class);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::all).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CrudExceptionThrownByScannerClose_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    doThrow(CrudException.class).when(scanner).close();
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_PreparationConflictExceptionThrownByTransactionPrepare_ShouldRollbackTransactionAndThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+    doThrow(PreparationConflictException.class).when(transaction).prepare();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_ValidationConflictExceptionThrownByTransactionValidate_ShouldRollbackTransactionAndThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+    doThrow(ValidationConflictException.class).when(transaction).validate();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CommitConflictExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+    doThrow(CommitConflictException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_UnknownTransactionStatusExceptionByTransactionCommit_ShouldThrowUnknownTransactionStatusException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+    doThrow(UnknownTransactionStatusException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(UnknownTransactionStatusException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CommitExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction).when(spied).begin();
+    doThrow(CommitException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
+
+    verify(spied).begin();
+    verify(scanner).close();
+    verify(transaction).rollback();
   }
 
   @Test

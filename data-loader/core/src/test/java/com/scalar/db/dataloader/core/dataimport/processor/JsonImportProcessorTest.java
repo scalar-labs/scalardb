@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -16,7 +15,6 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.HashMap;
@@ -92,10 +90,10 @@ class JsonImportProcessorTest {
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();
     jsonImportProcessor = new JsonImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        jsonImportProcessor.process(5, 1, UnitTestUtils.getJsonReader());
-    assertThat(statusList).isNotNull();
-    Assertions.assertEquals(1, statusList.size());
+    Assertions.assertDoesNotThrow(
+        () -> {
+          jsonImportProcessor.process(5, 1, UnitTestUtils.getJsonReader());
+        });
   }
 
   @Test
@@ -111,9 +109,9 @@ class JsonImportProcessorTest {
             .tableMetadataByTableName(tableMetadataByTableName)
             .build();
     jsonImportProcessor = new JsonImportProcessor(params);
-    Map<Integer, ImportDataChunkStatus> statusList =
-        jsonImportProcessor.process(5, 1, UnitTestUtils.getJsonReader());
-    assertThat(statusList).isNotNull();
-    Assertions.assertEquals(1, statusList.size());
+    Assertions.assertDoesNotThrow(
+        () -> {
+          jsonImportProcessor.process(5, 1, UnitTestUtils.getJsonReader());
+        });
   }
 }

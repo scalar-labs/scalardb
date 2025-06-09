@@ -28,7 +28,7 @@ public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBa
     properties.putAll(getProps1(testName));
 
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     return properties;
   }
@@ -39,7 +39,7 @@ public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBa
     properties.putAll(getProps2(testName));
 
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     return properties;
   }

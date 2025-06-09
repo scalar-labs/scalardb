@@ -1977,7 +1977,8 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanLargeDataWithLimit_ShouldRetrieveExpectedValues() throws ExecutionException {
+  public void scan_ScanLargeDataWithLimit_ShouldRetrieveExpectedValues()
+      throws ExecutionException, IOException {
     // Arrange
     int recordCount = 345;
     int limit = 234;
@@ -2003,7 +2004,7 @@ public abstract class DistributedStorageIntegrationTestBase {
             .build();
 
     // Act
-    List<Result> results = storage.scan(scan).all();
+    List<Result> results = scanAll(scan);
 
     // Assert
     assertThat(results.size()).isEqualTo(limit);
@@ -2328,7 +2329,7 @@ public abstract class DistributedStorageIntegrationTestBase {
 
   @Test
   public void scan_ScanAllLargeDataWithLimit_ShouldRetrieveExpectedValues()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     // Arrange
     int recordCount = 345;
     int limit = 234;
@@ -2349,7 +2350,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan = Scan.newBuilder().namespace(namespace).table(TABLE).all().limit(limit).build();
 
     // Act
-    List<Result> results = storage.scan(scan).all();
+    List<Result> results = scanAll(scan);
 
     // Assert
     assertThat(results.size()).isEqualTo(limit);

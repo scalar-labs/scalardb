@@ -157,6 +157,11 @@ public abstract class DecoratedDistributedTransactionManager
     return transactionManager.scan(scan);
   }
 
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    return transactionManager.getScanner(scan);
+  }
+
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
   @Deprecated
   @Override

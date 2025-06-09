@@ -24,8 +24,10 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -94,6 +96,45 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       lazyRecovery(e);
       throw e;
     }
+  }
+
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    scan = copyAndSetTargetToIfNot(scan);
+    Scanner scanner = crud.getScanner(scan);
+
+    return new Scanner() {
+      @Override
+      public Optional<Result> one() throws CrudException {
+        try {
+          return scanner.one();
+        } catch (UncommittedRecordException e) {
+          lazyRecovery(e);
+          throw e;
+        }
+      }
+
+      @Override
+      public List<Result> all() throws CrudException {
+        try {
+          return scanner.all();
+        } catch (UncommittedRecordException e) {
+          lazyRecovery(e);
+          throw e;
+        }
+      }
+
+      @Override
+      public void close() throws CrudException {
+        scanner.close();
+      }
+
+      @Nonnull
+      @Override
+      public Iterator<Result> iterator() {
+        return scanner.iterator();
+      }
+    };
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -208,6 +249,10 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
+    if (!crud.areAllScannersClosed()) {
+      throw new IllegalStateException(CoreError.CONSENSUS_COMMIT_SCANNER_NOT_CLOSED.buildMessage());
+    }
+
     // Execute implicit pre-read
     try {
       crud.readIfImplicitPreReadEnabled();
@@ -229,6 +274,12 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void rollback() {
+    try {
+      crud.closeScanners();
+    } catch (CrudException e) {
+      logger.warn("Failed to close the scanner", e);
+    }
+
     if (groupCommitter != null) {
       groupCommitter.remove(crud.getSnapshot().getId());
     }

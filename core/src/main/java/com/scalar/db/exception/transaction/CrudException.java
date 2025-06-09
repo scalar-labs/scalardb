@@ -6,7 +6,7 @@ import javax.annotation.Nullable;
 /**
  * An exception thrown when a transaction CRUD operation fails due to transient or nontransient
  * faults. You can try retrying the transaction from the beginning, but the transaction may still
- * fail if the cause is nontranient.
+ * fail if the cause is nontransient.
  */
 public class CrudException extends TransactionException {
 

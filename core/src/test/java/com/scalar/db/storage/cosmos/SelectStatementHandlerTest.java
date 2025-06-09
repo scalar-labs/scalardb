@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -17,6 +18,7 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
+import com.azure.cosmos.models.FeedResponse;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.scalar.db.api.Get;
@@ -31,13 +33,17 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class SelectStatementHandlerTest {
+  private static final int FETCH_SIZE = 10;
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -60,12 +66,16 @@ public class SelectStatementHandlerTest {
   @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse<Record> response;
   @Mock private CosmosPagedIterable<Record> responseIterable;
+  @Mock private Iterable<FeedResponse<Record>> pagesIterable;
+  @Mock private Iterator<FeedResponse<Record>> pagesIterator;
+
+  @Captor ArgumentCaptor<CosmosQueryRequestOptions> cosmosQueryRequestOptionsCaptor;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(client, metadataManager);
+    handler = new SelectStatementHandler(client, metadataManager, FETCH_SIZE);
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
 
@@ -91,6 +101,7 @@ public class SelectStatementHandlerTest {
 
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
@@ -119,8 +130,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
@@ -130,7 +141,12 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -172,8 +188,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan = prepareScan();
     String query =
@@ -187,7 +203,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -195,8 +218,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
@@ -207,7 +230,12 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -231,8 +259,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -258,7 +286,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -270,8 +305,8 @@ public class SelectStatementHandlerTest {
 
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -307,7 +342,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -315,8 +357,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -342,7 +384,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -350,8 +399,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -375,7 +424,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -384,8 +440,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -409,7 +465,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -422,8 +485,8 @@ public class SelectStatementHandlerTest {
 
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -450,7 +513,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -463,8 +533,8 @@ public class SelectStatementHandlerTest {
 
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -491,7 +561,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -499,8 +576,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     ScanAll scanAll = prepareScanAll().withLimit(ANY_LIMIT);
 
     // Act Assert
@@ -509,7 +586,11 @@ public class SelectStatementHandlerTest {
     // Assert
     String expectedQuery = "select * from Record r offset 0 limit " + ANY_LIMIT;
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -517,8 +598,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     ScanAll scanAll = prepareScanAll();
 
     // Act Assert
@@ -527,7 +608,11 @@ public class SelectStatementHandlerTest {
     // Assert
     String expectedQuery = "select * from Record r";
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -535,8 +620,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     Get get = prepareGet().withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
 
     // Act Assert
@@ -556,7 +641,13 @@ public class SelectStatementHandlerTest {
             + ANY_TEXT_2
             + "')";
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -565,8 +656,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     Get get = prepareGet().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
 
     // Act Assert
@@ -587,7 +678,13 @@ public class SelectStatementHandlerTest {
             + ANY_TEXT_2
             + "')";
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -595,8 +692,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get =
         new Get(indexKey)
@@ -618,7 +715,12 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -627,8 +729,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
 
     // Act Assert
@@ -641,7 +743,11 @@ public class SelectStatementHandlerTest {
             + "{\"name3\":r.values[\"name3\"],\"name4\":r.values[\"name4\"]} as values "
             + "from Record r";
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -650,8 +756,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
 
     // Act Assert
@@ -665,7 +771,11 @@ public class SelectStatementHandlerTest {
             + "{\"name2\":r.clusteringKey[\"name2\"]} as clusteringKey "
             + "from Record r";
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -674,8 +784,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_4));
 
     // Act Assert
@@ -689,7 +799,11 @@ public class SelectStatementHandlerTest {
             + "{\"name4\":r.values[\"name4\"]} as values "
             + "from Record r";
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -698,8 +812,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_2, ANY_NAME_4));
 
     // Act Assert
@@ -713,7 +827,11 @@ public class SelectStatementHandlerTest {
             + "{\"name4\":r.values[\"name4\"]} as values "
             + "from Record r";
     verify(container)
-        .queryItems(eq(expectedQuery), any(CosmosQueryRequestOptions.class), eq(Record.class));
+        .queryItems(eq(expectedQuery), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -721,8 +839,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan =
@@ -745,7 +863,12 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -754,8 +877,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
         prepareScan()
@@ -783,7 +906,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -799,14 +929,15 @@ public class SelectStatementHandlerTest {
 
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
     Scan scan =
         new Scan(partitionKey)
             .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
+    cosmosPartitionKey = new PartitionKey(ANY_TEXT_1 + ":" + ANY_TEXT_2);
 
     String query =
         "select r.id, "
@@ -821,7 +952,14 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -837,8 +975,8 @@ public class SelectStatementHandlerTest {
 
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     ScanAll scanAll =
         new ScanAll()
             .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
@@ -856,7 +994,12 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 
   @Test
@@ -872,8 +1015,8 @@ public class SelectStatementHandlerTest {
 
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
-    Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+    when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
+    when(pagesIterable.iterator()).thenReturn(pagesIterator);
     Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
     Key clusteringKey = Key.of(ANY_NAME_3, ANY_TEXT_3, ANY_NAME_4, ANY_TEXT_4);
     Get get =
@@ -881,6 +1024,7 @@ public class SelectStatementHandlerTest {
             .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
+    cosmosPartitionKey = new PartitionKey(ANY_TEXT_1 + ":" + ANY_TEXT_2);
 
     String query =
         "select r.id, "
@@ -894,6 +1038,13 @@ public class SelectStatementHandlerTest {
     assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
-    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+    verify(container)
+        .queryItems(eq(query), cosmosQueryRequestOptionsCaptor.capture(), eq(Record.class));
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getPartitionKey())
+        .isEqualTo(cosmosPartitionKey);
+    assertThat(cosmosQueryRequestOptionsCaptor.getValue().getMaxBufferedItemCount())
+        .isEqualTo(FETCH_SIZE);
+    verify(responseIterable).iterableByPage(FETCH_SIZE);
+    verify(pagesIterable).iterator();
   }
 }

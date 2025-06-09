@@ -1,4 +1,4 @@
-package com.scalar.db.common;
+package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_ENABLED;
@@ -70,5 +70,12 @@ public final class ConsensusCommitTestUtils {
         PROP_CONSENSUS_COMMIT_COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED,
         COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED);
     return properties;
+  }
+
+  public static void addSuffixToCoordinatorNamespace(Properties properties, String suffix) {
+    String coordinatorNamespace =
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + suffix);
   }
 }

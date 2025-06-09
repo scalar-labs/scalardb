@@ -20,6 +20,7 @@ import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransaction;
+import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -32,6 +33,7 @@ import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.ScalarDbUtils;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -92,6 +94,50 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, txId);
     }
+  }
+
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    scan = copyAndSetTargetToIfNot(scan);
+
+    com.scalar.db.api.Scanner scanner;
+    try {
+      scanner = jdbcService.getScanner(scan, connection, false);
+    } catch (SQLException e) {
+      throw createCrudException(
+          e, CoreError.JDBC_TRANSACTION_GETTING_SCANNER_FAILED.buildMessage(e.getMessage()));
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, txId);
+    }
+
+    return new AbstractTransactionCrudOperableScanner() {
+      @Override
+      public Optional<Result> one() throws CrudException {
+        try {
+          return scanner.one();
+        } catch (ExecutionException e) {
+          throw new CrudException(e.getMessage(), e, txId);
+        }
+      }
+
+      @Override
+      public List<Result> all() throws CrudException {
+        try {
+          return scanner.all();
+        } catch (ExecutionException e) {
+          throw new CrudException(e.getMessage(), e, txId);
+        }
+      }
+
+      @Override
+      public void close() throws CrudException {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          throw new CrudException(e.getMessage(), e, txId);
+        }
+      }
+    };
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
