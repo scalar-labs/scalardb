@@ -5,6 +5,7 @@ import com.scalar.db.common.AbstractScanner;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,7 +26,7 @@ public class ScannerImpl extends AbstractScanner {
   private final Connection connection;
   private final PreparedStatement preparedStatement;
   private final ResultSet resultSet;
-  private final boolean closeConnectionOnClose;
+  private final boolean commitAndCloseConnectionOnClose;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ScannerImpl(
@@ -33,12 +34,12 @@ public class ScannerImpl extends AbstractScanner {
       Connection connection,
       PreparedStatement preparedStatement,
       ResultSet resultSet,
-      boolean closeConnectionOnClose) {
+      boolean commitAndCloseConnectionOnClose) {
     this.resultInterpreter = Objects.requireNonNull(resultInterpreter);
     this.connection = Objects.requireNonNull(connection);
     this.preparedStatement = Objects.requireNonNull(preparedStatement);
     this.resultSet = Objects.requireNonNull(resultSet);
-    this.closeConnectionOnClose = closeConnectionOnClose;
+    this.commitAndCloseConnectionOnClose = commitAndCloseConnectionOnClose;
   }
 
   @Override
@@ -49,7 +50,8 @@ public class ScannerImpl extends AbstractScanner {
       }
       return Optional.empty();
     } catch (SQLException e) {
-      throw new ExecutionException(CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(), e);
+      throw new ExecutionException(
+          CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -62,12 +64,13 @@ public class ScannerImpl extends AbstractScanner {
       }
       return ret;
     } catch (SQLException e) {
-      throw new ExecutionException(CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(), e);
+      throw new ExecutionException(
+          CoreError.JDBC_FETCHING_NEXT_RESULT_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 
   @Override
-  public void close() {
+  public void close() throws IOException {
     try {
       resultSet.close();
     } catch (SQLException e) {
@@ -79,11 +82,24 @@ public class ScannerImpl extends AbstractScanner {
       logger.warn("Failed to close the preparedStatement", e);
     }
 
-    if (closeConnectionOnClose) {
+    if (commitAndCloseConnectionOnClose) {
       try {
-        connection.close();
+        connection.commit();
       } catch (SQLException e) {
-        logger.warn("Failed to close the connection", e);
+        try {
+          connection.rollback();
+        } catch (SQLException ex) {
+          e.addSuppressed(ex);
+        }
+
+        throw new IOException(
+            CoreError.JDBC_CLOSING_SCANNER_FAILED.buildMessage(e.getMessage()), e);
+      } finally {
+        try {
+          connection.close();
+        } catch (SQLException e) {
+          logger.warn("Failed to close the connection", e);
+        }
       }
     }
   }
