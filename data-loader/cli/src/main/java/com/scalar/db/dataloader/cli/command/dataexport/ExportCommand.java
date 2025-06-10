@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
@@ -56,6 +57,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     try {
       validateOutputDirectory();
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
+      validatePositiveValue(
+          spec.commandLine(), dataChunkSize, CoreError.DATA_LOADER_INVALID_DATA_CHUNK_SIZE);
+      validatePositiveValue(
+          spec.commandLine(), maxThreads, CoreError.DATA_LOADER_INVALID_MAX_THREADS);
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =

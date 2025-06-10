@@ -923,9 +923,17 @@ public enum CoreError implements ScalarDbError {
       "Some scanners were not closed. All scanners must be closed before preparing the transaction.",
       "",
       ""),
+  DATA_LOADER_INVALID_DATA_CHUNK_SIZE(
+      Category.USER_ERROR, "0207", "Data chunk size must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_TRANSACTION_SIZE(
+      Category.USER_ERROR, "0208", "Transaction size must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_MAX_THREADS(
+      Category.USER_ERROR, "0209", "Number of max threads must be greater than 0", "", ""),
+  DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE(
+      Category.USER_ERROR, "0210", "Data chunk queue size must be greater than 0", "", ""),
   MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
       Category.USER_ERROR,
-      "0207",
+      "0211",
       "Mutations are not allowed in read-only transactions. Transaction ID: %s",
       "",
       ""),
@@ -1123,7 +1131,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_ERROR_OCCURRED_IN_SELECTION(
       Category.INTERNAL_ERROR, "0027", "An error occurred in the selection. Details: %s", "", ""),
   JDBC_FETCHING_NEXT_RESULT_FAILED(
-      Category.INTERNAL_ERROR, "0028", "Fetching the next result failed", "", ""),
+      Category.INTERNAL_ERROR, "0028", "Fetching the next result failed. Details: %s", "", ""),
   JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR, "0029", "Rolling back the transaction failed. Details: %s", "", ""),
   JDBC_TRANSACTION_COMMITTING_TRANSACTION_FAILED(
@@ -1202,6 +1210,8 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
       Category.INTERNAL_ERROR, "0054", "Getting the scanner failed. Details: %s", "", ""),
+  JDBC_CLOSING_SCANNER_FAILED(
+      Category.INTERNAL_ERROR, "0055", "Closing the scanner failed. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category

@@ -1,5 +1,7 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -52,6 +54,16 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   public Integer call() throws Exception {
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
+    validatePositiveValue(
+        spec.commandLine(), dataChunkSize, CoreError.DATA_LOADER_INVALID_DATA_CHUNK_SIZE);
+    validatePositiveValue(
+        spec.commandLine(), transactionSize, CoreError.DATA_LOADER_INVALID_TRANSACTION_SIZE);
+    validatePositiveValue(
+        spec.commandLine(), maxThreads, CoreError.DATA_LOADER_INVALID_MAX_THREADS);
+    validatePositiveValue(
+        spec.commandLine(),
+        dataChunkQueueSize,
+        CoreError.DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
     ImportOptions importOptions = createImportOptions(controlFile);
     ImportLoggerConfig config =

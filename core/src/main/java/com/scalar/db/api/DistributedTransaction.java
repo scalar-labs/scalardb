@@ -73,7 +73,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CommitException if the transaction fails to commit due to transient or nontransient
    *     faults. You can try retrying the transaction from the beginning, but the transaction may
-   *     still fail if the cause is nontranient
+   *     still fail if the cause is nontransient
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;

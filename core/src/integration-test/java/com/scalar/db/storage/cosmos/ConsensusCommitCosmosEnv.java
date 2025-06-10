@@ -1,6 +1,5 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import java.util.Map;
 import java.util.Properties;
@@ -12,7 +11,7 @@ public final class ConsensusCommitCosmosEnv {
     Properties properties = CosmosEnv.getProperties(testName);
 
     // Add testName as a coordinator schema suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     return ConsensusCommitTestUtils.loadConsensusCommitProperties(properties);
   }

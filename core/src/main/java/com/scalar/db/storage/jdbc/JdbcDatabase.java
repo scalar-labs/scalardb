@@ -59,7 +59,9 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             databaseConfig.getMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
-    jdbcService = new JdbcService(tableMetadataManager, operationChecker, rdbEngine);
+    jdbcService =
+        new JdbcService(
+            tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
   }
 
   @VisibleForTesting
@@ -98,9 +100,18 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
+      connection.setAutoCommit(false);
       rdbEngine.setConnectionToReadOnly(connection, true);
       return jdbcService.getScanner(scan, connection);
     } catch (SQLException e) {
+      try {
+        if (connection != null) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
+
       close(connection);
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
