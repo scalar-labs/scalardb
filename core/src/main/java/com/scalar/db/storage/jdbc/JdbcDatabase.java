@@ -11,6 +11,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
@@ -53,12 +54,13 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     dataSource = JdbcUtils.initDataSource(config, rdbEngine);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
+    JdbcAdmin jdbcAdmin = new JdbcAdmin(tableMetadataDataSource, config);
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(
-            new JdbcAdmin(tableMetadataDataSource, config),
-            databaseConfig.getMetadataCacheExpirationTimeSecs());
+        new TableMetadataManager(jdbcAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    OperationChecker operationChecker =
+        new OperationChecker(
+            databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin));
 
-    OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
     jdbcService =
         new JdbcService(
             tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());

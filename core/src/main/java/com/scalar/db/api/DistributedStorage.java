@@ -181,6 +181,14 @@ public interface DistributedStorage extends AutoCloseable {
   /**
    * Mutates entries of the underlying storage with the specified list of {@link Mutation} commands.
    *
+   * <p>Note that this method only supports mutations within the atomicity unit specified by {@link
+   * StorageInfo#getMutationAtomicityUnit()}. For example, if the atomicity unit of the storage is
+   * {@link StorageInfo.MutationAtomicityUnit#PARTITION}, the mutations must occur within the same
+   * partition. Also note that the maximum number of mutations that can be performed atomically is
+   * defined by {@link StorageInfo#getMaxAtomicMutationCount()}.
+   *
+   * <p>To retrieve storage information, use {@link DistributedStorageAdmin#getStorageInfo(String)}.
+   *
    * @param mutations a list of {@code Mutation} commands
    * @throws ExecutionException if the operation fails
    */
