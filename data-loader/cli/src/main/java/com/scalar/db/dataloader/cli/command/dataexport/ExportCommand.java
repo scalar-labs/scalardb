@@ -159,7 +159,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       throws IOException {
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
-    if (scalarDbMode.equals(ScalarDbMode.TRANSACTION)) {
+    if (scalarDbMode.equals(ScalarDbMode.STORAGE)) {
       DistributedStorage storage = StorageFactory.create(scalarDbPropertiesFilePath).getStorage();
       return createExportManagerWithStorage(storage, scalarDbDao, fileFormat, taskFactory);
     } else {
