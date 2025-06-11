@@ -123,6 +123,36 @@ public class SchemaOperatorTest {
   }
 
   @Test
+  public void
+      createReplicationTables_IfReplicationTablesNotExist_ShouldCallCreateReplicationTables()
+          throws Exception {
+    // Arrange
+    when(transactionAdmin.replicationTablesExist()).thenReturn(false);
+
+    // Act
+    operator.createReplicationTables(options);
+
+    // Assert
+    verify(transactionAdmin).replicationTablesExist();
+    verify(transactionAdmin).createReplicationTables(options);
+  }
+
+  @Test
+  public void
+      createReplicationTables_IfReplicationTablesExist_ShouldNotCallCreateReplicationTables()
+          throws Exception {
+    // Arrange
+    when(transactionAdmin.replicationTablesExist()).thenReturn(true);
+
+    // Act
+    operator.createReplicationTables(options);
+
+    // Assert
+    verify(transactionAdmin).replicationTablesExist();
+    verify(transactionAdmin, never()).createReplicationTables(options);
+  }
+
+  @Test
   public void deleteTables_WithTableList_ShouldCallProperMethods() throws Exception {
     // Arrange
     List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
@@ -197,6 +227,34 @@ public class SchemaOperatorTest {
   }
 
   @Test
+  public void dropReplicationTables_IfReplicationTablesExist_ShouldCallDropReplicationTables()
+      throws Exception {
+    // Arrange
+    when(transactionAdmin.replicationTablesExist()).thenReturn(true);
+
+    // Act
+    operator.dropReplicationTables();
+
+    // Assert
+    verify(transactionAdmin).replicationTablesExist();
+    verify(transactionAdmin).dropReplicationTables();
+  }
+
+  @Test
+  public void dropReplicationTables_IfReplicationTablesNotExist_ShouldCallNotDropReplicationTables()
+      throws Exception {
+    // Arrange
+    when(transactionAdmin.replicationTablesExist()).thenReturn(false);
+
+    // Act
+    operator.dropReplicationTables();
+
+    // Assert
+    verify(transactionAdmin).replicationTablesExist();
+    verify(transactionAdmin, never()).dropReplicationTables();
+  }
+
+  @Test
   public void repairTables_WithTransactionTables_ShouldCallProperMethods() throws Exception {
     // Arrange
     List<TableSchema> tableSchemaList = Arrays.asList(tableSchema, tableSchema, tableSchema);
@@ -243,6 +301,18 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(transactionAdmin).repairCoordinatorTables(options);
+    verifyNoInteractions(storageAdmin);
+  }
+
+  @Test
+  public void repairReplicationTables_ShouldCallProperMethods() throws Exception {
+    // Arrange
+
+    // Act
+    operator.repairReplicationTables(options);
+
+    // Assert
+    verify(transactionAdmin).repairReplicationTables(options);
     verifyNoInteractions(storageAdmin);
   }
 
