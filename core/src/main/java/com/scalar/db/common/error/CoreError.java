@@ -861,8 +861,7 @@ public enum CoreError implements ScalarDbError {
   REPLICATION_NOT_ENABLED(
       Category.USER_ERROR,
       "0188",
-      // TODO: Update the message once the licence type is determined.
-      "The replication feature is not enabled. To use this feature, you must enable it",
+      "The replication feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   DATA_LOADER_IMPORT_TARGET_MISSING(
@@ -931,6 +930,12 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0209", "Number of max threads must be greater than 0", "", ""),
   DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE(
       Category.USER_ERROR, "0210", "Data chunk queue size must be greater than 0", "", ""),
+  MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
+      Category.USER_ERROR,
+      "0211",
+      "Mutations are not allowed in read-only transactions. Transaction ID: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
