@@ -689,7 +689,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0149",
-      "Invalid base64 encoding for blob value '%s' for column %s in table %s in namespace %s",
+      "Invalid base64 encoding for blob value '%s' for column %s in table %s in namespace %s.",
       "",
       ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
