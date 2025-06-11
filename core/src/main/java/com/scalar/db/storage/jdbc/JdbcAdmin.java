@@ -394,7 +394,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     boolean tableExists = false;
 
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       if (!namespaceExistsInternal(connection, metadataSchema)) {
         return null;
@@ -461,7 +461,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
@@ -550,7 +550,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " LIKE ?";
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (PreparedStatement preparedStatement =
           connection.prepareStatement(selectTablesOfNamespaceStatement)) {
@@ -583,7 +583,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       return namespaceExistsInternal(connection, namespace);
     } catch (SQLException e) {
@@ -814,7 +814,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + " FROM "
             + encloseFullTableName(metadataSchema, METADATA_TABLE);
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (Statement stmt = connection.createStatement();
           ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
