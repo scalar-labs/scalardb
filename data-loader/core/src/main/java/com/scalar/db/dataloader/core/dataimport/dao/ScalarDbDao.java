@@ -18,6 +18,7 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -107,7 +108,7 @@ public class ScalarDbDao {
 
     Put put = createPutWith(namespace, table, partitionKey, clusteringKey, columns);
     try {
-      transaction.put(put);
+      transaction.mutate(Collections.singletonList(put));
     } catch (CrudException e) {
       throw new ScalarDbDaoException(
           CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
