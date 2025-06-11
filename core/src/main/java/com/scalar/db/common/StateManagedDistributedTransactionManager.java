@@ -146,9 +146,12 @@ public class StateManagedDistributedTransactionManager
 
     @Override
     public void rollback() throws RollbackException {
-      if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
+      if (status == Status.ROLLED_BACK) {
+        return;
+      }
+      if (status == Status.COMMITTED) {
         throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
+            CoreError.TRANSACTION_ALREADY_COMMITTED.buildMessage(status));
       }
       try {
         super.rollback();
@@ -159,9 +162,12 @@ public class StateManagedDistributedTransactionManager
 
     @Override
     public void abort() throws AbortException {
-      if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
+      if (status == Status.ROLLED_BACK) {
+        return;
+      }
+      if (status == Status.COMMITTED) {
         throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
+            CoreError.TRANSACTION_ALREADY_COMMITTED.buildMessage(status));
       }
       try {
         super.abort();
