@@ -58,6 +58,7 @@ public class SelectStatementHandler {
    * @param client {@code DynamoDbClient}
    * @param metadataManager {@code TableMetadataManager}
    * @param namespacePrefix a namespace prefix
+   * @param fetchSize the number of items to fetch in each request
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public SelectStatementHandler(
