@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
@@ -171,10 +170,9 @@ class ScalarDbDaoTest {
   void createScanner_withTransactionManager_ShouldCreateScannerObject()
       throws CrudException, ScalarDbDaoException {
     // Create Scan Object
-    TransactionCrudOperable.Scanner mockScanner =
-        mock(TransactionCrudOperable.Scanner.class, withSettings().extraInterfaces(Scanner.class));
+    TransactionCrudOperable.Scanner mockScanner = mock(TransactionCrudOperable.Scanner.class);
     when(transaction.getScanner(any())).thenReturn(mockScanner);
-    Scanner result =
+    TransactionCrudOperable.Scanner result =
         this.dao.createScanner(
             TEST_NAMESPACE,
             TEST_TABLE_NAME,

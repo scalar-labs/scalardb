@@ -10,6 +10,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -259,7 +260,7 @@ public class ScalarDbDao {
    * @return ScalarDB Scanner object
    * @throws ScalarDbDaoException if scan fails
    */
-  public Scanner createScanner(
+  public TransactionCrudOperable.Scanner createScanner(
       String namespace,
       String table,
       List<String> projectionColumns,
@@ -269,7 +270,7 @@ public class ScalarDbDao {
     Scan scan =
         createScan(namespace, table, null, null, new ArrayList<>(), projectionColumns, limit);
     try {
-      return (Scanner) transaction.getScanner(scan);
+      return transaction.getScanner(scan);
     } catch (CrudException e) {
       throw new ScalarDbDaoException(
           CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
@@ -323,7 +324,7 @@ public class ScalarDbDao {
    * @param transaction Distributed transaction object
    * @return ScalarDB Scanner object
    */
-  public Scanner createScanner(
+  public TransactionCrudOperable.Scanner createScanner(
       String namespace,
       String table,
       @Nullable Key partitionKey,
@@ -335,7 +336,7 @@ public class ScalarDbDao {
     Scan scan =
         createScan(namespace, table, partitionKey, scanRange, sortOrders, projectionColumns, limit);
     try {
-      return (Scanner) transaction.getScanner(scan);
+      return transaction.getScanner(scan);
     } catch (CrudException e) {
       throw new RuntimeException(e);
     }

@@ -72,7 +72,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
       ExportManager exportManager =
           createExportManager(scalarDbMode, scalarDbDao, outputFormat, scalarDbPropertiesFilePath);
-
+      System.out.println(scalarDbMode);
       TableMetadata tableMetadata = tableMetadataService.getTableMetadata(namespace, table);
 
       Key partitionKey =
@@ -233,7 +233,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
             .maxThreadCount(maxThreads)
             .dataChunkSize(dataChunkSize)
             .prettyPrintJson(prettyPrintJson)
-            .scanRange(scanRange);
+            .scanRange(scanRange)
+            .scalarDbMode(scalarDbMode);
 
     if (projectionColumns != null) {
       builder.projectionColumns(projectionColumns);

@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
@@ -92,58 +93,139 @@ public abstract class ExportManager {
   public ExportReport startExport(
       ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer) {
     ExportReport exportReport = new ExportReport();
+    ExecutorService executorService = null;
+
     try {
       validateExportOptions(exportOptions, tableMetadata);
-      Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
       handleTransactionMetadata(exportOptions, tableMetadata);
-      processHeader(exportOptions, tableMetadata, writer);
 
-      int maxThreadCount =
-          exportOptions.getMaxThreadCount() == 0
-              ? Runtime.getRuntime().availableProcessors()
-              : exportOptions.getMaxThreadCount();
-      ExecutorService executorService = Executors.newFixedThreadPool(maxThreadCount);
+      try (BufferedWriter bufferedWriter = new BufferedWriter(writer)) {
+        processHeader(exportOptions, tableMetadata, bufferedWriter);
 
-      BufferedWriter bufferedWriter = new BufferedWriter(writer);
-      boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
+        int threadCount =
+            exportOptions.getMaxThreadCount() > 0
+                ? exportOptions.getMaxThreadCount()
+                : Runtime.getRuntime().availableProcessors();
+        executorService = Executors.newFixedThreadPool(threadCount);
 
-      try (Scanner scanner =
-          createScanner(exportOptions, dao, distributedStorage, distributedTransactionManager)) {
-        Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
+        Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
 
-        while (iterator.hasNext()) {
-          List<Result> dataChunk = fetchDataChunk(iterator, exportOptions.getDataChunkSize());
-          executorService.submit(
-              () ->
-                  processDataChunk(
-                      exportOptions,
-                      tableMetadata,
-                      dataTypeByColumnName,
-                      dataChunk,
-                      bufferedWriter,
-                      isJson,
-                      isFirstBatch,
-                      exportReport));
+        if (exportOptions.getScalarDbMode() == ScalarDbMode.STORAGE) {
+          try (Scanner scanner = createScannerWithStorage(exportOptions, dao, distributedStorage)) {
+            submitTasks(
+                scanner.iterator(),
+                executorService,
+                exportOptions,
+                tableMetadata,
+                dataTypeByColumnName,
+                bufferedWriter,
+                isFirstBatch,
+                exportReport);
+          }
+        } else if (exportOptions.getScalarDbMode() == ScalarDbMode.TRANSACTION
+            && distributedTransactionManager != null) {
+          ScannerWithTransaction scannerWithTx =
+              createScannerWithTransaction(exportOptions, dao, distributedTransactionManager);
+
+          try (TransactionCrudOperable.Scanner scanner = scannerWithTx.getScanner()) {
+            submitTasks(
+                scanner.iterator(),
+                executorService,
+                exportOptions,
+                tableMetadata,
+                dataTypeByColumnName,
+                bufferedWriter,
+                isFirstBatch,
+                exportReport);
+          } finally {
+            scannerWithTx.getTransaction().commit();
+          }
         }
-        executorService.shutdown();
-        if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
-          logger.info("All tasks completed");
-        } else {
-          logger.error("Timeout occurred while waiting for tasks to complete");
-          // TODO: handle this
-        }
+
+        shutdownExecutor(executorService);
         processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (InterruptedException | IOException | TransactionException e) {
-        logger.error("Error during export: {}", e.getMessage());
-      } finally {
-        bufferedWriter.flush();
       }
-    } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
-      logger.error("Error during export: {}", e.getMessage());
+
+    } catch (Exception e) {
+      logger.error("Export failed", e);
+    } finally {
+      if (executorService != null && !executorService.isShutdown()) {
+        executorService.shutdownNow();
+      }
+      closeResources();
     }
-    closeResources();
+
     return exportReport;
+  }
+
+  /**
+   * Submits asynchronous tasks for processing chunks of data to the given executor service.
+   *
+   * <p>This method reads data from the provided {@code iterator} in chunks (based on the configured
+   * chunk size) and submits each chunk as a separate task for processing. Each task invokes {@code
+   * processDataChunk()} to write the data to the output format.
+   *
+   * <p>Any exceptions thrown during chunk processing are logged but do not halt the submission of
+   * other tasks.
+   *
+   * @param iterator the iterator over database results
+   * @param executorService the executor service to run the processing tasks
+   * @param exportOptions configuration for export operation
+   * @param tableMetadata metadata for the table being exported
+   * @param dataTypeByColumnName mapping of column names to their data types
+   * @param writer the writer to which export output is written
+   * @param isFirstBatch an atomic flag used to track if the current chunk is the first one (used
+   *     for formatting)
+   * @param exportReport the report object that accumulates export statistics
+   */
+  private void submitTasks(
+      Iterator<Result> iterator,
+      ExecutorService executorService,
+      ExportOptions exportOptions,
+      TableMetadata tableMetadata,
+      Map<String, DataType> dataTypeByColumnName,
+      BufferedWriter writer,
+      AtomicBoolean isFirstBatch,
+      ExportReport exportReport) {
+    while (iterator.hasNext()) {
+      List<Result> chunk = fetchDataChunk(iterator, exportOptions.getDataChunkSize());
+      executorService.submit(
+          () -> {
+            try {
+              processDataChunk(
+                  exportOptions,
+                  tableMetadata,
+                  dataTypeByColumnName,
+                  chunk,
+                  writer,
+                  exportOptions.getOutputFileFormat() == FileFormat.JSON,
+                  isFirstBatch,
+                  exportReport);
+            } catch (Exception e) {
+              logger.error("Error processing data chunk", e);
+            }
+          });
+    }
+  }
+
+  /**
+   * Shuts down the given executor service gracefully, waiting for tasks to complete.
+   *
+   * <p>This method initiates an orderly shutdown where previously submitted tasks are executed, but
+   * no new tasks will be accepted. It then waits for all tasks to finish within a specified
+   * timeout. If the tasks do not complete in time, a warning is logged.
+   *
+   * @param executorService the ExecutorService to shut down
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  private void shutdownExecutor(ExecutorService executorService) throws InterruptedException {
+    executorService.shutdown();
+    if (!executorService.awaitTermination(60, TimeUnit.MINUTES)) {
+      logger.warn("Timeout while waiting for export tasks to finish.");
+    } else {
+      logger.info("All export tasks completed.");
+    }
   }
 
   /**
@@ -234,35 +316,6 @@ public abstract class ExportManager {
   }
 
   /**
-   * Creates a ScalarDB {@link Scanner} instance based on the configured ScalarDB mode.
-   *
-   * <p>If the {@link ScalarDbMode} specified in {@code exportOptions} is {@code TRANSACTION}, a
-   * scanner is created using the {@link DistributedTransactionManager}. Otherwise, a scanner is
-   * created using the {@link DistributedStorage}.
-   *
-   * @param exportOptions Options containing configuration for the export operation, including the
-   *     ScalarDB mode
-   * @param dao The {@link ScalarDbDao} used to access ScalarDB
-   * @param storage The {@link DistributedStorage} instance used for storage-level operations
-   * @param transactionManager The {@link DistributedTransactionManager} instance used for
-   *     transaction-level operations
-   * @return A {@link Scanner} instance for reading data from ScalarDB
-   * @throws ScalarDbDaoException If an error occurs while creating the scanner with the DAO
-   * @throws TransactionException If an error occurs during transactional scanner creation
-   */
-  private Scanner createScanner(
-      ExportOptions exportOptions,
-      ScalarDbDao dao,
-      DistributedStorage storage,
-      DistributedTransactionManager transactionManager)
-      throws ScalarDbDaoException, TransactionException {
-    if (exportOptions.getScalarDbMode().equals(ScalarDbMode.TRANSACTION)) {
-      return createScannerWithTransaction(exportOptions, dao, transactionManager);
-    }
-    return createScannerWithStorage(exportOptions, dao, storage);
-  }
-
-  /**
    * Creates a ScalarDB {@link Scanner} using the {@link DistributedStorage} interface based on the
    * scan configuration provided in {@link ExportOptions}.
    *
@@ -303,23 +356,27 @@ public abstract class ExportManager {
   }
 
   /**
-   * Creates a {@link Scanner} using a {@link DistributedTransaction} based on the provided export
-   * options.
+   * Creates a {@link ScannerWithTransaction} object that encapsulates a transactional scanner and
+   * its associated transaction for reading data from a ScalarDB table.
    *
-   * <p>If no partition key is specified in the {@code exportOptions}, a full table scan is
-   * performed. Otherwise, a partition-specific scan is performed using the provided partition key,
+   * <p>If no partition key is provided in the {@link ExportOptions}, a full table scan is
+   * performed. Otherwise, a partition-specific scan is created using the provided partition key,
    * optional scan range, and sort orders.
    *
-   * @param exportOptions Options specifying how to scan the table (e.g., partition key, range,
-   *     projection).
-   * @param dao The ScalarDb data access object to create the scanner.
-   * @param distributedTransactionManager The transaction manager used to start a new transaction.
-   * @return A {@link Scanner} for reading data from the specified table.
-   * @throws ScalarDbDaoException If an error occurs while creating the scanner.
-   * @throws TransactionException If an error occurs during transaction management (start or
-   *     commit).
+   * <p>The method starts a new transaction using the given {@link DistributedTransactionManager},
+   * which will be associated with the returned scanner. This allows data export operations to be
+   * executed in a consistent transactional context.
+   *
+   * @param exportOptions the options specifying how to scan the table, such as namespace, table
+   *     name, projection columns, scan partition key, range, sort orders, and limit.
+   * @param dao the {@link ScalarDbDao} used to construct the transactional scanner.
+   * @param distributedTransactionManager the transaction manager used to start a new transaction.
+   * @return a {@link ScannerWithTransaction} instance that wraps both the transaction and the
+   *     scanner.
+   * @throws ScalarDbDaoException if an error occurs while creating the scanner with the DAO.
+   * @throws TransactionException if an error occurs when starting the transaction.
    */
-  private Scanner createScannerWithTransaction(
+  private ScannerWithTransaction createScannerWithTransaction(
       ExportOptions exportOptions,
       ScalarDbDao dao,
       DistributedTransactionManager distributedTransactionManager)
@@ -328,41 +385,29 @@ public abstract class ExportManager {
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
     DistributedTransaction transaction = distributedTransactionManager.start();
 
-    try {
-      Scanner scanner;
-      if (isScanAll) {
-        scanner =
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                transaction);
-      } else {
-        scanner =
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getScanPartitionKey(),
-                exportOptions.getScanRange(),
-                exportOptions.getSortOrders(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                transaction);
-      }
-
-      transaction.commit();
-      return scanner;
-
-    } catch (Exception e) {
-      try {
-        transaction.abort();
-      } catch (TransactionException abortException) {
-        logger.error(
-            "Failed to abort transaction: {}", abortException.getMessage(), abortException);
-      }
-      throw e;
+    TransactionCrudOperable.Scanner scanner;
+    if (isScanAll) {
+      scanner =
+          dao.createScanner(
+              exportOptions.getNamespace(),
+              exportOptions.getTableName(),
+              exportOptions.getProjectionColumns(),
+              exportOptions.getLimit(),
+              transaction);
+    } else {
+      scanner =
+          dao.createScanner(
+              exportOptions.getNamespace(),
+              exportOptions.getTableName(),
+              exportOptions.getScanPartitionKey(),
+              exportOptions.getScanRange(),
+              exportOptions.getSortOrders(),
+              exportOptions.getProjectionColumns(),
+              exportOptions.getLimit(),
+              transaction);
     }
+
+    return new ScannerWithTransaction(transaction, scanner);
   }
 
   /** Close resources properly once the process is completed */
