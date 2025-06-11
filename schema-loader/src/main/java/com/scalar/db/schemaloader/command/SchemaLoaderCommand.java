@@ -63,6 +63,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private boolean coordinator;
 
   @Option(
+      names = "--replication-tables",
+      description = "Create/delete/repair replication tables",
+      defaultValue = "false")
+  private boolean replicationTables;
+
+  @Option(
       names = {"-f", "--schema-file"},
       description = "Path to the schema json file")
   private Path schemaFile;
@@ -107,7 +113,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     if (mode == null) {
       createTables();
     } else if (mode.deleteTables) {
-      SchemaLoader.unload(configPath, schemaFile, coordinator);
+      SchemaLoader.unload(configPath, schemaFile, coordinator, replicationTables);
     } else if (mode.repairTables) {
       repairTables();
     } else if (mode.alterTables) {
@@ -120,7 +126,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
   private void createTables() throws SchemaLoaderException {
     Map<String, String> options = prepareAllOptions();
-    SchemaLoader.load(configPath, schemaFile, options, coordinator);
+    SchemaLoader.load(configPath, schemaFile, options, coordinator, replicationTables);
   }
 
   private void repairTables() throws SchemaLoaderException {
@@ -130,7 +136,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
               .buildMessage());
     }
     Map<String, String> options = prepareAllOptions();
-    SchemaLoader.repairTables(configPath, schemaFile, options, coordinator);
+    SchemaLoader.repairTables(configPath, schemaFile, options, coordinator, replicationTables);
   }
 
   private void alterTables() throws SchemaLoaderException {

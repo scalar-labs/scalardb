@@ -17,6 +17,8 @@ import java.util.Properties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
@@ -59,604 +61,854 @@ public class SchemaLoaderTest {
     closeable.close();
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, schemaFilePath, options, true);
+    SchemaLoader.load(configFilePath, schemaFilePath, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, schemaFilePath, options, false);
+    SchemaLoader.load(configFilePath, schemaFilePath, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndNullSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndNullSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, (Path) null, options, true);
+    SchemaLoader.load(configFilePath, (Path) null, options, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndNullSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndNullSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, (Path) null, options, false);
+    SchemaLoader.load(configFilePath, (Path) null, options, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, SERIALIZED_SCHEMA_JSON, options, true);
+    SchemaLoader.load(configFilePath, SERIALIZED_SCHEMA_JSON, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, SERIALIZED_SCHEMA_JSON, options, false);
+    SchemaLoader.load(
+        configFilePath, SERIALIZED_SCHEMA_JSON, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndNullSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndNullSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, (String) null, options, true);
+    SchemaLoader.load(configFilePath, (String) null, options, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigFileAndNullSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigFileAndNullSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configFilePath, (String) null, options, false);
+    SchemaLoader.load(configFilePath, (String) null, options, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, schemaFilePath, options, true);
+    SchemaLoader.load(configProperties, schemaFilePath, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, schemaFilePath, options, false);
+    SchemaLoader.load(configProperties, schemaFilePath, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndNullSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndNullSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, (Path) null, options, true);
+    SchemaLoader.load(configProperties, (Path) null, options, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndNullSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndNullSchemaFileWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, (Path) null, options, false);
+    SchemaLoader.load(configProperties, (Path) null, options, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, SERIALIZED_SCHEMA_JSON, options, true);
+    SchemaLoader.load(
+        configProperties, SERIALIZED_SCHEMA_JSON, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, SERIALIZED_SCHEMA_JSON, options, false);
+    SchemaLoader.load(
+        configProperties, SERIALIZED_SCHEMA_JSON, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, (String) null, options, true);
+    SchemaLoader.load(configProperties, (String) null, options, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutCreateCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.load(configProperties, (String) null, options, false);
+    SchemaLoader.load(configProperties, (String) null, options, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).createTables(anyList());
     verify(operator, never()).createCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).createReplicationTables(options);
+    } else {
+      verify(operator, never()).createReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, schemaFilePath, true);
+    SchemaLoader.unload(configFilePath, schemaFilePath, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, schemaFilePath, false);
+    SchemaLoader.unload(configFilePath, schemaFilePath, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndNullSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndNullSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, (Path) null, true);
+    SchemaLoader.unload(configFilePath, (Path) null, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndNullSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndNullSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, (Path) null, false);
+    SchemaLoader.unload(configFilePath, (Path) null, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, SERIALIZED_SCHEMA_JSON, true);
+    SchemaLoader.unload(configFilePath, SERIALIZED_SCHEMA_JSON, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, SERIALIZED_SCHEMA_JSON, false);
+    SchemaLoader.unload(configFilePath, SERIALIZED_SCHEMA_JSON, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndNullSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndNullSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, (String) null, true);
+    SchemaLoader.unload(configFilePath, (String) null, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigFileAndNullSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigFileAndNullSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configFilePath, (String) null, false);
+    SchemaLoader.unload(configFilePath, (String) null, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, schemaFilePath, true);
+    SchemaLoader.unload(configProperties, schemaFilePath, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, schemaFilePath, false);
+    SchemaLoader.unload(configProperties, schemaFilePath, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndNullSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndNullSchemaFileWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, (Path) null, true);
+    SchemaLoader.unload(configProperties, (Path) null, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndNullSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndNullSchemaFileWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, (Path) null, false);
+    SchemaLoader.unload(configProperties, (Path) null, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, SERIALIZED_SCHEMA_JSON, true);
+    SchemaLoader.unload(configProperties, SERIALIZED_SCHEMA_JSON, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, SERIALIZED_SCHEMA_JSON, false);
+    SchemaLoader.unload(configProperties, SERIALIZED_SCHEMA_JSON, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, (String) null, true);
+    SchemaLoader.unload(configProperties, (String) null, true, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutDeleteCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.unload(configProperties, (String) null, false);
+    SchemaLoader.unload(configProperties, (String) null, false, withReplicationTables);
 
     // Assert
     verify(parser, never()).parse();
     verify(operator).deleteTables(anyList());
     verify(operator, never()).dropCoordinatorTables();
+    if (withReplicationTables) {
+      verify(operator).dropReplicationTables();
+    } else {
+      verify(operator, never()).dropReplicationTables();
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigFilePathAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigFilePathAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, SERIALIZED_SCHEMA_JSON, options, true);
+    SchemaLoader.repairTables(
+        configFilePath, SERIALIZED_SCHEMA_JSON, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigFilePathAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigFilePathAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, SERIALIZED_SCHEMA_JSON, options, false);
+    SchemaLoader.repairTables(
+        configFilePath, SERIALIZED_SCHEMA_JSON, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, SERIALIZED_SCHEMA_JSON, options, true);
+    SchemaLoader.repairTables(
+        configProperties, SERIALIZED_SCHEMA_JSON, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigPropertiesAndSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, SERIALIZED_SCHEMA_JSON, options, false);
+    SchemaLoader.repairTables(
+        configProperties, SERIALIZED_SCHEMA_JSON, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, schemaFilePath, options, true);
+    SchemaLoader.repairTables(
+        configProperties, schemaFilePath, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigPropertiesAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configProperties, schemaFilePath, options, false);
+    SchemaLoader.repairTables(
+        configProperties, schemaFilePath, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigFilePathAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigFilePathAndSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, true);
+    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, true, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void
-      repairTable_WithConfigFilePathAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly()
-          throws Exception {
+      repairTable_WithConfigFilePathAndSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
     // Arrange
 
     // Act
-    SchemaLoader.repairTables(configFilePath, schemaFilePath, options, false);
+    SchemaLoader.repairTables(
+        configFilePath, schemaFilePath, options, false, withReplicationTables);
 
     // Assert
     verify(parser).parse();
     verify(operator).repairTables(anyList());
     verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
   }
 
   @Test

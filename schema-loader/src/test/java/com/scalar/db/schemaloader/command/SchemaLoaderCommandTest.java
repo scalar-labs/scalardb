@@ -85,11 +85,12 @@ public class SchemaLoaderCommandTest {
         "--no-backup",
         "-f",
         schemaFile,
-        "--coordinator");
+        "--coordinator",
+        "--replication-tables");
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () -> SchemaLoader.load(Paths.get(configFile), Paths.get(schemaFile), options, true));
+        () -> SchemaLoader.load(Paths.get(configFile), Paths.get(schemaFile), options, true, true));
   }
 
   @Test
@@ -121,11 +122,51 @@ public class SchemaLoaderCommandTest {
         "--no-scaling",
         "--no-backup",
         "-f",
-        schemaFile);
+        schemaFile,
+        "--replication-tables");
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () -> SchemaLoader.load(Paths.get(configFile), Paths.get(schemaFile), options, false));
+        () ->
+            SchemaLoader.load(Paths.get(configFile), Paths.get(schemaFile), options, false, true));
+  }
+
+  @Test
+  public void
+      call_WithProperArgumentsForCreatingTablesWithoutReplicationTablesArgument_ShouldCallLoadProperly() {
+    // Arrange
+    Map<String, String> options =
+        ImmutableMap.<String, String>builder()
+            .put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy)
+            .put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy)
+            .put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor)
+            .put(DynamoAdmin.REQUEST_UNIT, ru)
+            .put(DynamoAdmin.NO_SCALING, noScaling.toString())
+            .put(DynamoAdmin.NO_BACKUP, noBackup.toString())
+            .build();
+
+    // Act
+    commandLine.execute(
+        "--config",
+        configFile,
+        "--replication-strategy",
+        replicationStrategy,
+        "--compaction-strategy",
+        compactionStrategy,
+        "--replication-factor",
+        replicationFactor,
+        "--ru",
+        ru,
+        "--no-scaling",
+        "--no-backup",
+        "-f",
+        schemaFile,
+        "--coordinator");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () ->
+            SchemaLoader.load(Paths.get(configFile), Paths.get(schemaFile), options, true, false));
   }
 
   @Test
@@ -160,7 +201,7 @@ public class SchemaLoaderCommandTest {
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () -> SchemaLoader.load(Paths.get(configFile), (Path) null, options, true));
+        () -> SchemaLoader.load(Paths.get(configFile), (Path) null, options, true, false));
   }
 
   @Test
@@ -170,11 +211,12 @@ public class SchemaLoaderCommandTest {
     String configFile = "path_to_config_file";
 
     // Act
-    commandLine.execute("-f", schemaFile, "-D", "--config", configFile, "--coordinator");
+    commandLine.execute(
+        "-f", schemaFile, "-D", "--config", configFile, "--coordinator", "--replication-tables");
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () -> SchemaLoader.unload(Paths.get(configFile), Paths.get(schemaFile), true));
+        () -> SchemaLoader.unload(Paths.get(configFile), Paths.get(schemaFile), true, true));
   }
 
   @Test
@@ -185,11 +227,26 @@ public class SchemaLoaderCommandTest {
     String configFile = "path_to_config_file";
 
     // Act
-    commandLine.execute("-f", schemaFile, "-D", "--config", configFile);
+    commandLine.execute("-f", schemaFile, "-D", "--config", configFile, "--replication-tables");
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () -> SchemaLoader.unload(Paths.get(configFile), Paths.get(schemaFile), false));
+        () -> SchemaLoader.unload(Paths.get(configFile), Paths.get(schemaFile), false, true));
+  }
+
+  @Test
+  public void
+      call_WithProperArgumentsForDeletingTablesWithoutReplicationTablesArgument_ShouldCallUnloadProperly() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+
+    // Act
+    commandLine.execute("-f", schemaFile, "-D", "--config", configFile, "--coordinator");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () -> SchemaLoader.unload(Paths.get(configFile), Paths.get(schemaFile), true, false));
   }
 
   @Test
@@ -207,7 +264,7 @@ public class SchemaLoaderCommandTest {
     schemaLoaderMockedStatic.verify(
         () ->
             SchemaLoader.repairTables(
-                Paths.get(configFile), Paths.get(schemaFile), options, false));
+                Paths.get(configFile), Paths.get(schemaFile), options, false, false));
   }
 
   @Test
@@ -225,7 +282,33 @@ public class SchemaLoaderCommandTest {
     // Assert
     schemaLoaderMockedStatic.verify(
         () ->
-            SchemaLoader.repairTables(Paths.get(configFile), Paths.get(schemaFile), options, true));
+            SchemaLoader.repairTables(
+                Paths.get(configFile), Paths.get(schemaFile), options, true, false));
+  }
+
+  @Test
+  public void
+      call_WithProperArgumentsForRepairingAllWithReplicationTablesArgument_ShouldCallRepairAllProperly() {
+    // Arrange
+    String schemaFile = "path_to_file";
+    String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_BACKUP, noBackup.toString());
+
+    // Act
+    commandLine.execute(
+        "-f",
+        schemaFile,
+        "--repair-all",
+        "--config",
+        configFile,
+        "--replication-tables",
+        "--no-backup");
+
+    // Assert
+    schemaLoaderMockedStatic.verify(
+        () ->
+            SchemaLoader.repairTables(
+                Paths.get(configFile), Paths.get(schemaFile), options, false, true));
   }
 
   @Test
@@ -253,7 +336,7 @@ public class SchemaLoaderCommandTest {
 
     // Assert
     schemaLoaderMockedStatic.verify(
-        () -> SchemaLoader.unload(Paths.get(configFile), (Path) null, true));
+        () -> SchemaLoader.unload(Paths.get(configFile), (Path) null, true, false));
   }
 
   @Test

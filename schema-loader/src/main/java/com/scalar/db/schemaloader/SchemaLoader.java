@@ -97,17 +97,19 @@ public class SchemaLoader {
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
+   * @param createReplicationTables create replication tables or not.
    * @throws SchemaLoaderException thrown when creating tables fails.
    */
   public static void load(
       Properties configProperties,
       @Nullable Path schemaFilePath,
       Map<String, String> options,
-      boolean createCoordinatorTables)
+      boolean createCoordinatorTables,
+      boolean createReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    load(config, schema, options, createCoordinatorTables);
+    load(config, schema, options, createCoordinatorTables, createReplicationTables);
   }
 
   /**
@@ -117,17 +119,19 @@ public class SchemaLoader {
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
+   * @param createReplicationTables create replication tables or not.
    * @throws SchemaLoaderException thrown when creating tables fails.
    */
   public static void load(
       Path configFilePath,
       @Nullable Path schemaFilePath,
       Map<String, String> options,
-      boolean createCoordinatorTables)
+      boolean createCoordinatorTables,
+      boolean createReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    load(config, schema, options, createCoordinatorTables);
+    load(config, schema, options, createCoordinatorTables, createReplicationTables);
   }
 
   /**
@@ -137,17 +141,19 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
+   * @param createReplicationTables create replication tables or not.
    * @throws SchemaLoaderException thrown when creating tables fails.
    */
   public static void load(
       Properties configProperties,
       @Nullable String serializedSchemaJson,
       Map<String, String> options,
-      boolean createCoordinatorTables)
+      boolean createCoordinatorTables,
+      boolean createReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    load(config, schema, options, createCoordinatorTables);
+    load(config, schema, options, createCoordinatorTables, createReplicationTables);
   }
 
   /**
@@ -157,17 +163,19 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
+   * @param createReplicationTables create replication tables or not.
    * @throws SchemaLoaderException thrown when creating tables fails.
    */
   public static void load(
       Path configFilePath,
       @Nullable String serializedSchemaJson,
       Map<String, String> options,
-      boolean createCoordinatorTables)
+      boolean createCoordinatorTables,
+      boolean createReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    load(config, schema, options, createCoordinatorTables);
+    load(config, schema, options, createCoordinatorTables, createReplicationTables);
   }
 
   /**
@@ -177,13 +185,15 @@ public class SchemaLoader {
    * @param schema schema definition.
    * @param options specific options for creating tables.
    * @param createCoordinatorTables create coordinator tables or not.
+   * @param createReplicationTables create replication tables or not.
    * @throws SchemaLoaderException thrown when creating tables fails.
    */
   private static void load(
       Either<Path, Properties> config,
       Either<Path, String> schema,
       Map<String, String> options,
-      boolean createCoordinatorTables)
+      boolean createCoordinatorTables,
+      boolean createReplicationTables)
       throws SchemaLoaderException {
     // Parse the schema
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, options);
@@ -194,6 +204,9 @@ public class SchemaLoader {
       if (createCoordinatorTables) {
         operator.createCoordinatorTables(options);
       }
+      if (createReplicationTables) {
+        operator.createReplicationTables(options);
+      }
     }
   }
 
@@ -203,14 +216,18 @@ public class SchemaLoader {
    * @param configProperties ScalarDB config properties.
    * @param schemaFilePath path to schema file.
    * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @param deleteReplicationTables delete replication tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
    */
   public static void unload(
-      Properties configProperties, @Nullable Path schemaFilePath, boolean deleteCoordinatorTables)
+      Properties configProperties,
+      @Nullable Path schemaFilePath,
+      boolean deleteCoordinatorTables,
+      boolean deleteReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    unload(config, schema, deleteCoordinatorTables);
+    unload(config, schema, deleteCoordinatorTables, deleteReplicationTables);
   }
 
   /**
@@ -219,14 +236,18 @@ public class SchemaLoader {
    * @param configFilePath path to ScalarDB config file.
    * @param schemaFilePath path to schema file.
    * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @param deleteReplicationTables delete replication tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
    */
   public static void unload(
-      Path configFilePath, @Nullable Path schemaFilePath, boolean deleteCoordinatorTables)
+      Path configFilePath,
+      @Nullable Path schemaFilePath,
+      boolean deleteCoordinatorTables,
+      boolean deleteReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    unload(config, schema, deleteCoordinatorTables);
+    unload(config, schema, deleteCoordinatorTables, deleteReplicationTables);
   }
 
   /**
@@ -235,16 +256,18 @@ public class SchemaLoader {
    * @param configProperties ScalarDB config properties.
    * @param serializedSchemaJson serialized json string schema.
    * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @param deleteReplicationTables delete replication tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
    */
   public static void unload(
       Properties configProperties,
       @Nullable String serializedSchemaJson,
-      boolean deleteCoordinatorTables)
+      boolean deleteCoordinatorTables,
+      boolean deleteReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    unload(config, schema, deleteCoordinatorTables);
+    unload(config, schema, deleteCoordinatorTables, deleteReplicationTables);
   }
 
   /**
@@ -253,14 +276,18 @@ public class SchemaLoader {
    * @param configFilePath path to ScalarDB config file.
    * @param serializedSchemaJson serialized json string schema.
    * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @param deleteReplicationTables delete replication tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
    */
   public static void unload(
-      Path configFilePath, @Nullable String serializedSchemaJson, boolean deleteCoordinatorTables)
+      Path configFilePath,
+      @Nullable String serializedSchemaJson,
+      boolean deleteCoordinatorTables,
+      boolean deleteReplicationTables)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    unload(config, schema, deleteCoordinatorTables);
+    unload(config, schema, deleteCoordinatorTables, deleteReplicationTables);
   }
 
   /**
@@ -269,10 +296,14 @@ public class SchemaLoader {
    * @param config ScalarDB config.
    * @param schema schema definition.
    * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @param deleteReplicationTables delete replication tables or not.
    * @throws SchemaLoaderException thrown when deleting tables fails.
    */
   private static void unload(
-      Either<Path, Properties> config, Either<Path, String> schema, boolean deleteCoordinatorTables)
+      Either<Path, Properties> config,
+      Either<Path, String> schema,
+      boolean deleteCoordinatorTables,
+      boolean deleteReplicationTables)
       throws SchemaLoaderException {
     // Parse the schema
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, Collections.emptyMap());
@@ -282,6 +313,9 @@ public class SchemaLoader {
       operator.deleteTables(tableSchemaList);
       if (deleteCoordinatorTables) {
         operator.dropCoordinatorTables();
+      }
+      if (deleteReplicationTables) {
+        operator.dropReplicationTables();
       }
     }
   }
@@ -293,17 +327,19 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
+   * @param repairReplicationTable repair replication tables or not.
    * @throws SchemaLoaderException thrown when repairing tables fails.
    */
   public static void repairTables(
       Properties configProperties,
       String serializedSchemaJson,
       Map<String, String> options,
-      boolean repairCoordinatorTable)
+      boolean repairCoordinatorTable,
+      boolean repairReplicationTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairTables(config, schema, options, repairCoordinatorTable, repairReplicationTable);
   }
 
   /**
@@ -313,17 +349,19 @@ public class SchemaLoader {
    * @param schemaPath path to the schema file.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
+   * @param repairReplicationTable repair replication tables or not.
    * @throws SchemaLoaderException thrown when repairing tables fails.
    */
   public static void repairTables(
       Properties configProperties,
       Path schemaPath,
       Map<String, String> options,
-      boolean repairCoordinatorTable)
+      boolean repairCoordinatorTable,
+      boolean repairReplicationTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaPath);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairTables(config, schema, options, repairCoordinatorTable, repairReplicationTable);
   }
 
   /**
@@ -333,17 +371,19 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
+   * @param repairReplicationTable repair replication tables or not.
    * @throws SchemaLoaderException thrown when repairing tables fails.
    */
   public static void repairTables(
       Path configPath,
       String serializedSchemaJson,
       Map<String, String> options,
-      boolean repairCoordinatorTable)
+      boolean repairCoordinatorTable,
+      boolean repairReplicationTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configPath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairTables(config, schema, options, repairCoordinatorTable, repairReplicationTable);
   }
 
   /**
@@ -353,14 +393,19 @@ public class SchemaLoader {
    * @param schemaPath path to the schema file.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
+   * @param repairReplicationTable repair replication tables or not.
    * @throws SchemaLoaderException thrown when repairing tables fails.
    */
   public static void repairTables(
-      Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
+      Path configPath,
+      Path schemaPath,
+      Map<String, String> options,
+      boolean repairCoordinatorTable,
+      boolean repairReplicationTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configPath);
     Either<Path, String> schema = new Left<>(schemaPath);
-    repairTables(config, schema, options, repairCoordinatorTable);
+    repairTables(config, schema, options, repairCoordinatorTable, repairReplicationTable);
   }
 
   /**
@@ -370,13 +415,15 @@ public class SchemaLoader {
    * @param schema schema.
    * @param options specific options for repairing tables.
    * @param repairCoordinatorTable repair coordinator tables or not.
+   * @param repairReplicationTable repair replication tables or not.
    * @throws SchemaLoaderException thrown when repairing tables fails.
    */
   private static void repairTables(
       Either<Path, Properties> config,
       Either<Path, String> schema,
       Map<String, String> options,
-      boolean repairCoordinatorTable)
+      boolean repairCoordinatorTable,
+      boolean repairReplicationTable)
       throws SchemaLoaderException {
     // Parse the schema
     List<TableSchema> tableSchemaList = getTableSchemaList(schema, options);
@@ -386,6 +433,9 @@ public class SchemaLoader {
       operator.repairTables(tableSchemaList);
       if (repairCoordinatorTable) {
         operator.repairCoordinatorTables(options);
+      }
+      if (repairReplicationTable) {
+        operator.repairReplicationTables(options);
       }
     }
   }
