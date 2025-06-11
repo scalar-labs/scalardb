@@ -145,10 +145,15 @@ public abstract class ExportManager {
 
         shutdownExecutor(executorService);
         processFooter(exportOptions, tableMetadata, bufferedWriter);
+      } catch (TransactionException e) {
+        throw new RuntimeException(e);
       }
 
-    } catch (Exception e) {
-      logger.error("Export failed", e);
+    } catch (ExportOptionsValidationException
+        | IOException
+        | ScalarDbDaoException
+        | InterruptedException e) {
+      logger.error("Error during export: {}", e.getMessage());
     } finally {
       if (executorService != null && !executorService.isShutdown()) {
         executorService.shutdownNow();

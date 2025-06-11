@@ -72,7 +72,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
       ExportManager exportManager =
           createExportManager(scalarDbMode, scalarDbDao, outputFormat, scalarDbPropertiesFilePath);
-      System.out.println(scalarDbMode);
       TableMetadata tableMetadata = tableMetadataService.getTableMetadata(namespace, table);
 
       Key partitionKey =
