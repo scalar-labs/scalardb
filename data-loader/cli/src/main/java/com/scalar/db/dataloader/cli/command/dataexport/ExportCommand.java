@@ -27,6 +27,8 @@ import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataStorageService;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataTransactionService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
@@ -134,10 +136,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       ScalarDbMode scalarDbMode, String scalarDbPropertiesFilePath) throws IOException {
     if (scalarDbMode.equals(ScalarDbMode.TRANSACTION)) {
       TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
-      return new TableMetadataService(transactionFactory.getTransactionAdmin());
+      return new TableMetadataTransactionService(transactionFactory.getTransactionAdmin());
     }
     StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
-    return new TableMetadataService(storageFactory.getStorageAdmin());
+    return new TableMetadataStorageService(storageFactory.getStorageAdmin());
   }
 
   /**

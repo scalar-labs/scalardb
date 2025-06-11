@@ -24,6 +24,7 @@ import com.scalar.db.dataloader.core.dataimport.processor.DefaultImportProcessor
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataStorageService;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
@@ -109,7 +110,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     File configFile = new File(configFilePath);
     StorageFactory storageFactory = StorageFactory.create(configFile);
     try (DistributedStorageAdmin storageAdmin = storageFactory.getStorageAdmin()) {
-      TableMetadataService tableMetadataService = new TableMetadataService(storageAdmin);
+      TableMetadataService tableMetadataService = new TableMetadataStorageService(storageAdmin);
       Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
       if (controlFile != null) {
         for (ControlFileTable table : controlFile.getTables()) {
