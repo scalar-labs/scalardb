@@ -77,9 +77,9 @@ import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
-import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
+import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 
 /**
  * Manages table creating, dropping and truncating in Dynamo DB
@@ -532,17 +532,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private void waitForTableCreation(Namespace namespace, String table) throws ExecutionException {
     try {
-      while (true) {
-        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
-        DescribeTableResponse describeTableResponse =
-            client.describeTable(
-                DescribeTableRequest.builder()
-                    .tableName(getFullTableName(namespace, table))
-                    .build());
-        if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
-          break;
-        }
-      }
+      DynamoDbWaiter waiter = client.waiter();
+      waiter.waitUntilTableExists(b -> b.tableName(getFullTableName(namespace, table)));
     } catch (Exception e) {
       throw new ExecutionException(
           "Waiting for the " + getFullTableName(namespace, table) + " table creation failed", e);
