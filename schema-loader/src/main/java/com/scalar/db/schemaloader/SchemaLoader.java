@@ -453,6 +453,272 @@ public class SchemaLoader {
     }
   }
 
+  // For backward compatibility.
+
+  /**
+   * Creates tables defined in the schema file. See {@link #load(Properties, Path, Map, boolean,
+   * boolean)} for details.
+   *
+   * @param configProperties ScalarDB config properties.
+   * @param schemaFilePath path to schema file.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTables create coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables fails.
+   */
+  public static void load(
+      Properties configProperties,
+      @Nullable Path schemaFilePath,
+      Map<String, String> options,
+      boolean createCoordinatorTables)
+      throws SchemaLoaderException {
+    load(configProperties, schemaFilePath, options, createCoordinatorTables, false);
+  }
+
+  /**
+   * Creates tables defined in the schema file. See {@link #load(Path, Path, Map, boolean, boolean)}
+   * for details.
+   *
+   * @param configFilePath path to ScalarDB config file.
+   * @param schemaFilePath path to schema file.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTables create coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables fails.
+   */
+  public static void load(
+      Path configFilePath,
+      @Nullable Path schemaFilePath,
+      Map<String, String> options,
+      boolean createCoordinatorTables)
+      throws SchemaLoaderException {
+    load(configFilePath, schemaFilePath, options, createCoordinatorTables, false);
+  }
+
+  /**
+   * Creates tables defined in the schema. See {@link #load(Properties, String, Map, boolean,
+   * boolean)} for details.
+   *
+   * @param configProperties ScalarDB config properties.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTables create coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables fails.
+   */
+  public static void load(
+      Properties configProperties,
+      @Nullable String serializedSchemaJson,
+      Map<String, String> options,
+      boolean createCoordinatorTables)
+      throws SchemaLoaderException {
+    load(configProperties, serializedSchemaJson, options, createCoordinatorTables, false);
+  }
+
+  /**
+   * Creates tables defined in the schema. See {@link #load(Path, String, Map, boolean, boolean)}
+   * for details.
+   *
+   * @param configFilePath path to ScalarDB config file.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTables create coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables fails.
+   */
+  public static void load(
+      Path configFilePath,
+      @Nullable String serializedSchemaJson,
+      Map<String, String> options,
+      boolean createCoordinatorTables)
+      throws SchemaLoaderException {
+    load(configFilePath, serializedSchemaJson, options, createCoordinatorTables, false);
+  }
+
+  /**
+   * Creates tables defined in the schema file. See {@link #load(Either, Either, Map, boolean,
+   * boolean)} for details.
+   *
+   * @param config ScalarDB config.
+   * @param schema schema definition.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTables create coordinator tables or not.
+   * @throws SchemaLoaderException thrown when creating tables fails.
+   */
+  private static void load(
+      Either<Path, Properties> config,
+      Either<Path, String> schema,
+      Map<String, String> options,
+      boolean createCoordinatorTables)
+      throws SchemaLoaderException {
+    load(config, schema, options, createCoordinatorTables, false);
+  }
+
+  /**
+   * Delete tables defined in the schema file. See {@link #unload(Properties, Path, boolean,
+   * boolean)} for details.
+   *
+   * @param configProperties ScalarDB config properties.
+   * @param schemaFilePath path to schema file.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @throws SchemaLoaderException thrown when deleting tables fails.
+   */
+  public static void unload(
+      Properties configProperties, @Nullable Path schemaFilePath, boolean deleteCoordinatorTables)
+      throws SchemaLoaderException {
+    unload(configProperties, schemaFilePath, deleteCoordinatorTables, false);
+  }
+
+  /**
+   * Delete tables defined in the schema file. See {@link #unload(Path, Path, boolean, boolean)} for
+   * details.
+   *
+   * @param configFilePath path to ScalarDB config file.
+   * @param schemaFilePath path to schema file.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @throws SchemaLoaderException thrown when deleting tables fails.
+   */
+  public static void unload(
+      Path configFilePath, @Nullable Path schemaFilePath, boolean deleteCoordinatorTables)
+      throws SchemaLoaderException {
+    unload(configFilePath, schemaFilePath, deleteCoordinatorTables, false);
+  }
+
+  /**
+   * Delete tables defined in the schema. See {@link #unload(Properties, String, boolean, boolean)}
+   * for details.
+   *
+   * @param configProperties ScalarDB config properties.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @throws SchemaLoaderException thrown when deleting tables fails.
+   */
+  public static void unload(
+      Properties configProperties,
+      @Nullable String serializedSchemaJson,
+      boolean deleteCoordinatorTables)
+      throws SchemaLoaderException {
+    unload(configProperties, serializedSchemaJson, deleteCoordinatorTables, false);
+  }
+
+  /**
+   * Delete tables defined in the schema. See {@link #unload(Path, String, boolean, boolean)} for
+   * details.
+   *
+   * @param configFilePath path to ScalarDB config file.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @throws SchemaLoaderException thrown when deleting tables fails.
+   */
+  public static void unload(
+      Path configFilePath, @Nullable String serializedSchemaJson, boolean deleteCoordinatorTables)
+      throws SchemaLoaderException {
+    unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables, false);
+  }
+
+  /**
+   * Delete tables defined in the schema. See {@link #unload(Either, Either, boolean, boolean)} for
+   * details.
+   *
+   * @param config ScalarDB config.
+   * @param schema schema definition.
+   * @param deleteCoordinatorTables delete coordinator tables or not.
+   * @throws SchemaLoaderException thrown when deleting tables fails.
+   */
+  private static void unload(
+      Either<Path, Properties> config, Either<Path, String> schema, boolean deleteCoordinatorTables)
+      throws SchemaLoaderException {
+    unload(config, schema, deleteCoordinatorTables, false);
+  }
+
+  /**
+   * Repair namespaces and tables. See {@link #repairAll(Properties, String, Map, boolean, boolean)}
+   * for details.
+   *
+   * @param configProperties ScalarDB config properties
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for repairing.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when repairing fails.
+   */
+  public static void repairAll(
+      Properties configProperties,
+      String serializedSchemaJson,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    repairAll(configProperties, serializedSchemaJson, options, repairCoordinatorTable, false);
+  }
+
+  /**
+   * Repair namespaces and tables. See {@link #repairAll(Path, String, Map, boolean, boolean)} for
+   * details.
+   *
+   * @param configProperties ScalarDB properties.
+   * @param schemaPath path to the schema file.
+   * @param options specific options for repairing.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when repairing fails.
+   */
+  public static void repairAll(
+      Properties configProperties,
+      Path schemaPath,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    repairAll(configProperties, schemaPath, options, repairCoordinatorTable, false);
+  }
+
+  /**
+   * Repair namespaces and tables. See {@link #repairAll(Path, String, Map, boolean, boolean)} for
+   * details.
+   *
+   * @param configPath path to the ScalarDB config.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for repairing.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when repairing fails.
+   */
+  public static void repairAll(
+      Path configPath,
+      String serializedSchemaJson,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    repairAll(configPath, serializedSchemaJson, options, repairCoordinatorTable, false);
+  }
+
+  /**
+   * Repair namespaces and tables. See {@link #repairAll(Path, Path, Map, boolean, boolean)} for
+   * details.
+   *
+   * @param configPath path to the ScalarDB config.
+   * @param schemaPath path to the schema file.
+   * @param options specific options for repairing.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when repairing fails.
+   */
+  public static void repairAll(
+      Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    repairAll(configPath, schemaPath, options, repairCoordinatorTable, false);
+  }
+
+  /**
+   * Repair namespaces and tables. See {@link #repairAll(Either, Either, Map, boolean, boolean)} for
+   * details.
+   *
+   * @param config ScalarDB config
+   * @param schema schema.
+   * @param options specific options for repairing.
+   * @param repairCoordinatorTable repair coordinator tables or not.
+   * @throws SchemaLoaderException thrown when repairing fails.
+   */
+  private static void repairAll(
+      Either<Path, Properties> config,
+      Either<Path, String> schema,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
+      throws SchemaLoaderException {
+    repairAll(config, schema, options, repairCoordinatorTable, false);
+  }
+
   /**
    * Alter the tables defined in the schema. Supported alter operations are:
    *
