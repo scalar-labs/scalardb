@@ -59,3 +59,23 @@ spotbugsTest.reports {
     html.enabled = true
 }
 spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
+
+task dockerfileLint(type: Exec) {
+    description 'Lint the Dockerfile'
+    commandLine "${project.rootDir}/ci/dockerfile_lint.sh"
+}
+
+task copyFilesToDockerBuildContextDir(type: Copy) {
+    description 'Copy files to a temporary folder to build the Docker image'
+    dependsOn shadowJar
+    from("Dockerfile")
+    from(tasks.shadowJar.archiveFile)
+    into('build/docker')
+}
+
+task docker(type: Exec) {
+    description 'Build ScalarDB Data Loader Docker image'
+    dependsOn copyFilesToDockerBuildContextDir
+    workingDir 'build/docker'
+    commandLine 'docker', 'build', "--tag=ghcr.io/scalar-labs/scalardb-data-loader:${project.version}", "."
+}
