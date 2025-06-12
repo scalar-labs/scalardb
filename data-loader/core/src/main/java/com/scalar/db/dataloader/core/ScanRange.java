@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core;
 import com.scalar.db.io.Key;
 import lombok.Value;
 
-/** * The scan range which is used in data export scan filtering */
+/** The scan range which is used in data export scan filtering */
 @SuppressWarnings("SameNameButDifferent")
 @Value
 public class ScanRange {

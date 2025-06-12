@@ -9,12 +9,13 @@ import picocli.CommandLine;
 
 public class ScanOrderingConverter implements CommandLine.ITypeConverter<List<Scan.Ordering>> {
   /**
-   * Converts a comma-separated string of key-value pairs into a list of {@link Scan.Ordering}
-   * objects. Each pair must be in the format "column=order", where "order" is a valid enum value of
-   * {@link Scan.Ordering.Order} (e.g., ASC or DESC, case-insensitive).
+   * Converts a comma-separated string of key-value pairs into a list of {@link
+   * com.scalar.db.api.Scan.Ordering} objects. Each pair must be in the format "column=order", where
+   * "order" is a valid enum value of {@link com.scalar.db.api.Scan.Ordering} (e.g., ASC or DESC,
+   * case-insensitive).
    *
    * @param value the comma-separated key-value string to convert
-   * @return a list of {@link Scan.Ordering} objects constructed from the input
+   * @return a list of {@link com.scalar.db.api.Scan.Ordering} objects constructed from the input
    * @throws IllegalArgumentException if parsing fails due to invalid format or enum value
    */
   @Override

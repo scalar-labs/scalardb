@@ -7,7 +7,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 
-/** Transaction batch result */
+/** Transaction batch result. */
 @SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value
