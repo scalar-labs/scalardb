@@ -74,7 +74,7 @@ task copyFilesToDockerBuildContextDir(type: Copy) {
 }
 
 task docker(type: Exec) {
-    description 'Build ScalarDB Data Loader Docker image'
+    description 'Build ScalarDB Data Loader Docker CLI image'
     dependsOn copyFilesToDockerBuildContextDir
     workingDir 'build/docker'
     commandLine 'docker', 'build', "--tag=ghcr.io/scalar-labs/scalardb-data-loader-cli:${project.version}", "."
