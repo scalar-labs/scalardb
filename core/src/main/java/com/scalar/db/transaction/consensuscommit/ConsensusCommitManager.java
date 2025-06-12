@@ -23,6 +23,7 @@ import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -137,11 +138,18 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   // `groupCommitter` must be set before calling this method.
   private CommitHandler createCommitHandler() {
+    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          groupCommitter);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+      return new CommitHandler(
+          storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper);
     }
   }
 

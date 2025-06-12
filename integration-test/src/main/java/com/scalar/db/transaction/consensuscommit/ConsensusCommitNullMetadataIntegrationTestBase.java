@@ -20,6 +20,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -163,11 +164,18 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   private CommitHandler createCommitHandler(
       TransactionTableMetadataManager tableMetadataManager,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
+    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          groupCommitter);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+      return new CommitHandler(
+          storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper);
     }
   }
 

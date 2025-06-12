@@ -63,7 +63,12 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   protected CommitHandler createCommitHandler() {
     createGroupCommitterIfNotExists();
     return new CommitHandlerWithGroupCommit(
-        storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        new MutationsGrouper(storageInfoProvider),
+        groupCommitter);
   }
 
   private String anyGroupCommitParentId() {

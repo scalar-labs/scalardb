@@ -20,6 +20,7 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransactionManager;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -77,7 +78,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     recoveryExecutor =
         new RecoveryExecutor(
             coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    commit =
+        new CommitHandler(
+            storage,
+            coordinator,
+            tableMetadataManager,
+            parallelExecutor,
+            new MutationsGrouper(new StorageInfoProvider(admin)));
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -97,7 +104,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     recoveryExecutor =
         new RecoveryExecutor(
             coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    commit =
+        new CommitHandler(
+            storage,
+            coordinator,
+            tableMetadataManager,
+            parallelExecutor,
+            new MutationsGrouper(new StorageInfoProvider(admin)));
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
