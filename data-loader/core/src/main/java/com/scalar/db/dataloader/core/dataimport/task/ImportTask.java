@@ -74,7 +74,7 @@ public abstract class ImportTask {
       return ImportTaskResult.builder()
           .rawRecord(params.getSourceRecord())
           .rowNumber(params.getRowNumber())
-          .targets(Collections.singletonList(singleTargetResult))
+          .targets(new ArrayList<>(Collections.singletonList(singleTargetResult)))
           .build();
     }
 
@@ -310,11 +310,14 @@ public abstract class ImportTask {
               optionalScalarDBResult.orElse(null),
               mutableSourceRecord,
               importOptions.isIgnoreNullValues(),
-              tableMetadata);
+              tableMetadata,
+              namespace,
+              table);
     } catch (Base64Exception | ColumnParsingException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
+          .importedRecord(mutableSourceRecord)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
           .build();
