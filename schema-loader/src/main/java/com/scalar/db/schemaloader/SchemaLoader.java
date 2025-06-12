@@ -532,25 +532,6 @@ public class SchemaLoader {
   }
 
   /**
-   * Creates tables defined in the schema file. See {@link #load(Either, Either, Map, boolean,
-   * boolean)} for details.
-   *
-   * @param config ScalarDB config.
-   * @param schema schema definition.
-   * @param options specific options for creating tables.
-   * @param createCoordinatorTables create coordinator tables or not.
-   * @throws SchemaLoaderException thrown when creating tables fails.
-   */
-  private static void load(
-      Either<Path, Properties> config,
-      Either<Path, String> schema,
-      Map<String, String> options,
-      boolean createCoordinatorTables)
-      throws SchemaLoaderException {
-    load(config, schema, options, createCoordinatorTables, false);
-  }
-
-  /**
    * Delete tables defined in the schema file. See {@link #unload(Properties, Path, boolean,
    * boolean)} for details.
    *
@@ -610,21 +591,6 @@ public class SchemaLoader {
       Path configFilePath, @Nullable String serializedSchemaJson, boolean deleteCoordinatorTables)
       throws SchemaLoaderException {
     unload(configFilePath, serializedSchemaJson, deleteCoordinatorTables, false);
-  }
-
-  /**
-   * Delete tables defined in the schema. See {@link #unload(Either, Either, boolean, boolean)} for
-   * details.
-   *
-   * @param config ScalarDB config.
-   * @param schema schema definition.
-   * @param deleteCoordinatorTables delete coordinator tables or not.
-   * @throws SchemaLoaderException thrown when deleting tables fails.
-   */
-  private static void unload(
-      Either<Path, Properties> config, Either<Path, String> schema, boolean deleteCoordinatorTables)
-      throws SchemaLoaderException {
-    unload(config, schema, deleteCoordinatorTables, false);
   }
 
   /**
@@ -698,25 +664,6 @@ public class SchemaLoader {
       Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
       throws SchemaLoaderException {
     repairAll(configPath, schemaPath, options, repairCoordinatorTable, false);
-  }
-
-  /**
-   * Repair namespaces and tables. See {@link #repairAll(Either, Either, Map, boolean, boolean)} for
-   * details.
-   *
-   * @param config ScalarDB config
-   * @param schema schema.
-   * @param options specific options for repairing.
-   * @param repairCoordinatorTable repair coordinator tables or not.
-   * @throws SchemaLoaderException thrown when repairing fails.
-   */
-  private static void repairAll(
-      Either<Path, Properties> config,
-      Either<Path, String> schema,
-      Map<String, String> options,
-      boolean repairCoordinatorTable)
-      throws SchemaLoaderException {
-    repairAll(config, schema, options, repairCoordinatorTable, false);
   }
 
   /**
