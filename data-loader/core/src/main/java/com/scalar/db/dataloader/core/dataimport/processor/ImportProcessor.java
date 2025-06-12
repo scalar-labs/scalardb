@@ -416,19 +416,11 @@ public abstract class ImportProcessor {
       ImportTransactionBatchResult importTransactionBatchResult =
           processTransactionBatch(dataChunk.getDataChunkId(), transactionBatch);
 
-      importTransactionBatchResult
-          .getRecords()
-          .forEach(
-              batchRecords -> {
-                if (batchRecords.getTargets().stream()
-                    .allMatch(
-                        targetResult ->
-                            targetResult.getStatus().equals(ImportTargetResultStatus.SAVED))) {
-                  successCount.incrementAndGet();
-                } else {
-                  failureCount.incrementAndGet();
-                }
-              });
+      if (importTransactionBatchResult.isSuccess()) {
+        successCount.addAndGet(importTransactionBatchResult.getRecords().size());
+      } else {
+        failureCount.addAndGet(importTransactionBatchResult.getRecords().size());
+      }
     }
     Instant endTime = Instant.now();
     int totalDuration = (int) Duration.between(startTime, endTime).toMillis();
