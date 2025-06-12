@@ -2,9 +2,9 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -36,6 +36,7 @@ public class CommitHandler {
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+  private final MutationsGrouper mutationsGrouper;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   @LazyInit @Nullable private BeforePreparationSnapshotHook beforePreparationSnapshotHook;
@@ -46,11 +47,13 @@ public class CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.mutationsGrouper = checkNotNull(mutationsGrouper);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
@@ -199,12 +202,11 @@ public class CommitHandler {
       PrepareMutationComposer composer =
           new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
       snapshot.to(composer);
-      PartitionedMutations mutations = new PartitionedMutations(composer.get());
+      List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
-      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-      for (PartitionedMutations.Key key : orderedKeys) {
-        tasks.add(() -> storage.mutate(mutations.get(key)));
+      List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
+      for (List<Mutation> mutations : groupedMutations) {
+        tasks.add(() -> storage.mutate(mutations));
       }
       parallelExecutor.prepareRecords(tasks, snapshot.getId());
     } catch (NoMutationException e) {
@@ -252,12 +254,11 @@ public class CommitHandler {
       CommitMutationComposer composer =
           new CommitMutationComposer(snapshot.getId(), tableMetadataManager);
       snapshot.to(composer);
-      PartitionedMutations mutations = new PartitionedMutations(composer.get());
+      List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
-      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-      for (PartitionedMutations.Key key : orderedKeys) {
-        tasks.add(() -> storage.mutate(mutations.get(key)));
+      List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
+      for (List<Mutation> mutations : groupedMutations) {
+        tasks.add(() -> storage.mutate(mutations));
       }
       parallelExecutor.commitRecords(tasks, snapshot.getId());
     } catch (Exception e) {
@@ -300,12 +301,11 @@ public class CommitHandler {
       RollbackMutationComposer composer =
           new RollbackMutationComposer(snapshot.getId(), storage, tableMetadataManager);
       snapshot.to(composer);
-      PartitionedMutations mutations = new PartitionedMutations(composer.get());
+      List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
-      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-      for (PartitionedMutations.Key key : orderedKeys) {
-        tasks.add(() -> storage.mutate(mutations.get(key)));
+      List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
+      for (List<Mutation> mutations : groupedMutations) {
+        tasks.add(() -> storage.mutate(mutations));
       }
       parallelExecutor.rollbackRecords(tasks, snapshot.getId());
     } catch (Exception e) {
