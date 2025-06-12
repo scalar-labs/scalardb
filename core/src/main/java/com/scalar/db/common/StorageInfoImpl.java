@@ -10,13 +10,15 @@ public class StorageInfoImpl implements StorageInfo {
 
   private final String storageName;
   private final MutationAtomicityUnit mutationAtomicityUnit;
-  private final int maxAtomicMutationCount;
+  private final int maxAtomicMutationsCount;
 
   public StorageInfoImpl(
-      String storageName, MutationAtomicityUnit mutationAtomicityUnit, int maxAtomicMutationCount) {
+      String storageName,
+      MutationAtomicityUnit mutationAtomicityUnit,
+      int maxAtomicMutationsCount) {
     this.storageName = storageName;
     this.mutationAtomicityUnit = mutationAtomicityUnit;
-    this.maxAtomicMutationCount = maxAtomicMutationCount;
+    this.maxAtomicMutationsCount = maxAtomicMutationsCount;
   }
 
   @Override
@@ -30,8 +32,8 @@ public class StorageInfoImpl implements StorageInfo {
   }
 
   @Override
-  public int getMaxAtomicMutationCount() {
-    return maxAtomicMutationCount;
+  public int getMaxAtomicMutationsCount() {
+    return maxAtomicMutationsCount;
   }
 
   @Override
@@ -43,14 +45,14 @@ public class StorageInfoImpl implements StorageInfo {
       return false;
     }
     StorageInfoImpl that = (StorageInfoImpl) o;
-    return getMaxAtomicMutationCount() == that.getMaxAtomicMutationCount()
+    return getMaxAtomicMutationsCount() == that.getMaxAtomicMutationsCount()
         && Objects.equals(getStorageName(), that.getStorageName())
         && getMutationAtomicityUnit() == that.getMutationAtomicityUnit();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getStorageName(), getMutationAtomicityUnit(), getMaxAtomicMutationCount());
+    return Objects.hash(getStorageName(), getMutationAtomicityUnit(), getMaxAtomicMutationsCount());
   }
 
   @Override
@@ -58,7 +60,7 @@ public class StorageInfoImpl implements StorageInfo {
     return MoreObjects.toStringHelper(this)
         .add("storageName", storageName)
         .add("mutationAtomicityUnit", mutationAtomicityUnit)
-        .add("maxAtomicMutationCount", maxAtomicMutationCount)
+        .add("maxAtomicMutationsCount", maxAtomicMutationsCount)
         .toString();
   }
 }

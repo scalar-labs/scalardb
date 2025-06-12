@@ -185,7 +185,7 @@ public interface DistributedStorage extends AutoCloseable {
    * StorageInfo#getMutationAtomicityUnit()}. For example, if the atomicity unit of the storage is
    * {@link StorageInfo.MutationAtomicityUnit#PARTITION}, the mutations must occur within the same
    * partition. Also note that the maximum number of mutations that can be performed atomically is
-   * defined by {@link StorageInfo#getMaxAtomicMutationCount()}.
+   * defined by {@link StorageInfo#getMaxAtomicMutationsCount()}.
    *
    * <p>To retrieve storage information, use {@link DistributedStorageAdmin#getStorageInfo(String)}.
    *

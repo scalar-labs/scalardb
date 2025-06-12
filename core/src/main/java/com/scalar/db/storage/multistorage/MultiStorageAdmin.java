@@ -288,7 +288,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
       return new StorageInfoImpl(
           holder.storageName,
           storageInfo.getMutationAtomicityUnit(),
-          storageInfo.getMaxAtomicMutationCount());
+          storageInfo.getMaxAtomicMutationsCount());
     } catch (RuntimeException e) {
       if (e.getCause() instanceof ExecutionException) {
         throw (ExecutionException) e.getCause();

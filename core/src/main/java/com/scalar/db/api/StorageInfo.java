@@ -20,7 +20,7 @@ public interface StorageInfo {
    *
    * @return the maximum number of mutations that can be performed atomically in the storage
    */
-  int getMaxAtomicMutationCount();
+  int getMaxAtomicMutationsCount();
 
   /**
    * The mutation atomicity unit of the storage.
