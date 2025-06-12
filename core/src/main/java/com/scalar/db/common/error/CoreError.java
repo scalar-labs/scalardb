@@ -214,10 +214,10 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0042", "Invalid ID specified. ID: %d", "", ""),
   TRANSACTION_NOT_ACTIVE(
       Category.USER_ERROR, "0043", "The transaction is not active. Status: %s", "", ""),
-  TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK(
+  TRANSACTION_ALREADY_COMMITTED(
       Category.USER_ERROR,
       "0044",
-      "The transaction has already been committed or rolled back. Status: %s",
+      "The transaction has already been committed. Status: %s",
       "",
       ""),
   TRANSACTION_NOT_PREPARED(
@@ -689,13 +689,13 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0149",
-      "Invalid base64 encoding for blob value for column %s in table %s in namespace %s",
+      "Invalid base64 encoding for blob value '%s' for column %s in table %s in namespace %s",
       "",
       ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0150",
-      "Invalid number specified for column %s in table %s in namespace %s",
+      "Invalid number '%s' specified for column %s in table %s in namespace %s",
       "",
       ""),
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
@@ -898,7 +898,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0199",
-      "Invalid date time value specified for column %s in table %s in namespace %s.",
+      "Invalid date time value '%s' specified for column %s in table %s in namespace %s.",
       "",
       ""),
   DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT(
