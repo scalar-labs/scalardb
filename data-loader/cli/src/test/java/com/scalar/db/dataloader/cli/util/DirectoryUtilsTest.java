@@ -53,13 +53,13 @@ class DirectoryUtilsTest {
     try {
       Set<PosixFilePermission> perms = new HashSet<>();
       perms.add(PosixFilePermission.OWNER_READ);
-      perms.add(PosixFilePermission.OWNER_EXECUTE); // Allow entering directory
+      perms.add(PosixFilePermission.OWNER_EXECUTE);
       Files.setPosixFilePermissions(readOnlyDirectory, perms);
     } catch (UnsupportedOperationException | IOException e) {
       // Fall back for systems without POSIX support
       readOnlyDirectory.toFile().setWritable(false);
     }
-    // ✅ Verify it is actually non-writable
+    // Verify it is actually non-writable
     boolean isWritable = Files.isWritable(readOnlyDirectory);
     Assumptions.assumeFalse(isWritable, "Directory is still writable; skipping test.");
 
