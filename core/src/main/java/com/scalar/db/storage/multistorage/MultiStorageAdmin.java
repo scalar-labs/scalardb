@@ -327,10 +327,10 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   static class AdminHolder {
-    public final String storageName;
-    public final DistributedStorageAdmin admin;
+    private final String storageName;
+    private final DistributedStorageAdmin admin;
 
-    public AdminHolder(String storageName, DistributedStorageAdmin admin) {
+    AdminHolder(String storageName, DistributedStorageAdmin admin) {
       this.storageName = storageName;
       this.admin = admin;
     }
