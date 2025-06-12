@@ -1,12 +1,11 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
@@ -125,10 +124,9 @@ public abstract class ExportManager {
           }
         } else if (exportOptions.getScalarDbMode() == ScalarDbMode.TRANSACTION
             && distributedTransactionManager != null) {
-          ScannerWithTransaction scannerWithTx =
-              createScannerWithTransaction(exportOptions, dao, distributedTransactionManager);
 
-          try (TransactionCrudOperable.Scanner scanner = scannerWithTx.getScanner()) {
+          try (TransactionManagerCrudOperable.Scanner scanner =
+              createScannerWithTransaction(exportOptions, dao, distributedTransactionManager)) {
             submitTasks(
                 scanner.iterator(),
                 executorService,
@@ -138,8 +136,6 @@ public abstract class ExportManager {
                 bufferedWriter,
                 isFirstBatch,
                 exportReport);
-          } finally {
-            scannerWithTx.getTransaction().commit();
           }
         }
 
@@ -361,36 +357,31 @@ public abstract class ExportManager {
   }
 
   /**
-   * Creates a {@link ScannerWithTransaction} object that encapsulates a transactional scanner and
-   * its associated transaction for reading data from a ScalarDB table.
+   * Creates a {@link TransactionManagerCrudOperable.Scanner} instance using the given {@link
+   * ExportOptions}, {@link ScalarDbDao}, and {@link DistributedTransactionManager}.
    *
-   * <p>If no partition key is provided in the {@link ExportOptions}, a full table scan is
-   * performed. Otherwise, a partition-specific scan is created using the provided partition key,
-   * optional scan range, and sort orders.
+   * <p>If {@code scanPartitionKey} is not specified in {@code exportOptions}, a full table scan is
+   * performed using the specified projection columns and limit. Otherwise, the scan is executed
+   * with the specified partition key, range, sort orders, projection columns, and limit.
    *
-   * <p>The method starts a new transaction using the given {@link DistributedTransactionManager},
-   * which will be associated with the returned scanner. This allows data export operations to be
-   * executed in a consistent transactional context.
-   *
-   * @param exportOptions the options specifying how to scan the table, such as namespace, table
-   *     name, projection columns, scan partition key, range, sort orders, and limit.
-   * @param dao the {@link ScalarDbDao} used to construct the transactional scanner.
-   * @param distributedTransactionManager the transaction manager used to start a new transaction.
-   * @return a {@link ScannerWithTransaction} instance that wraps both the transaction and the
-   *     scanner.
-   * @throws ScalarDbDaoException if an error occurs while creating the scanner with the DAO.
-   * @throws TransactionException if an error occurs when starting the transaction.
+   * @param exportOptions the export options containing scan configuration such as namespace, table
+   *     name, partition key, projection columns, limit, range, and sort order
+   * @param dao the ScalarDB DAO used to create the scanner
+   * @param distributedTransactionManager the transaction manager to use for the scan operation
+   * @return a {@link TransactionManagerCrudOperable.Scanner} for retrieving rows in transaction
+   *     mode
+   * @throws ScalarDbDaoException if an error occurs while creating the scanner
+   * @throws TransactionException if a transaction-related error occurs during scanner creation
    */
-  private ScannerWithTransaction createScannerWithTransaction(
+  private TransactionManagerCrudOperable.Scanner createScannerWithTransaction(
       ExportOptions exportOptions,
       ScalarDbDao dao,
       DistributedTransactionManager distributedTransactionManager)
       throws ScalarDbDaoException, TransactionException {
 
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
-    DistributedTransaction transaction = distributedTransactionManager.start();
 
-    TransactionCrudOperable.Scanner scanner;
+    TransactionManagerCrudOperable.Scanner scanner;
     if (isScanAll) {
       scanner =
           dao.createScanner(
@@ -398,7 +389,7 @@ public abstract class ExportManager {
               exportOptions.getTableName(),
               exportOptions.getProjectionColumns(),
               exportOptions.getLimit(),
-              transaction);
+              distributedTransactionManager);
     } else {
       scanner =
           dao.createScanner(
@@ -409,10 +400,10 @@ public abstract class ExportManager {
               exportOptions.getSortOrders(),
               exportOptions.getProjectionColumns(),
               exportOptions.getLimit(),
-              transaction);
+              distributedTransactionManager);
     }
 
-    return new ScannerWithTransaction(transaction, scanner);
+    return scanner;
   }
 
   /** Close resources properly once the process is completed */

@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
@@ -10,7 +11,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -260,12 +261,12 @@ public class ScalarDbDao {
    * @return ScalarDB Scanner object
    * @throws ScalarDbDaoException if scan fails
    */
-  public TransactionCrudOperable.Scanner createScanner(
+  public TransactionManagerCrudOperable.Scanner createScanner(
       String namespace,
       String table,
       List<String> projectionColumns,
       int limit,
-      DistributedTransaction transaction)
+      DistributedTransactionManager transaction)
       throws ScalarDbDaoException {
     Scan scan =
         createScan(namespace, table, null, null, new ArrayList<>(), projectionColumns, limit);
@@ -324,7 +325,7 @@ public class ScalarDbDao {
    * @param transaction Distributed transaction object
    * @return ScalarDB Scanner object
    */
-  public TransactionCrudOperable.Scanner createScanner(
+  public TransactionManagerCrudOperable.Scanner createScanner(
       String namespace,
       String table,
       @Nullable Key partitionKey,
@@ -332,7 +333,7 @@ public class ScalarDbDao {
       @Nullable List<Scan.Ordering> sortOrders,
       @Nullable List<String> projectionColumns,
       int limit,
-      DistributedTransaction transaction) {
+      DistributedTransactionManager transaction) {
     Scan scan =
         createScan(namespace, table, partitionKey, scanRange, sortOrders, projectionColumns, limit);
     try {

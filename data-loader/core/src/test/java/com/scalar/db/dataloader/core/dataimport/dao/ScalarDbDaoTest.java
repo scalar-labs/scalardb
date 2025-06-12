@@ -9,11 +9,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -21,19 +21,20 @@ import com.scalar.db.io.Key;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class ScalarDbDaoTest {
 
   private static final int TEST_VALUE_INT_MIN = 1;
   private ScalarDbDao dao;
-  private DistributedTransaction transaction;
+  private DistributedTransactionManager manager;
   private DistributedStorage distributedStorage;
 
   @BeforeEach
   void setUp() {
     this.dao = new ScalarDbDao();
     this.distributedStorage = mock(DistributedStorage.class);
-    this.transaction = mock(DistributedTransaction.class);
+    this.manager = mock(DistributedTransactionManager.class);
   }
 
   @Test
@@ -170,9 +171,10 @@ class ScalarDbDaoTest {
   void createScanner_withTransactionManager_ShouldCreateScannerObject()
       throws CrudException, ScalarDbDaoException {
     // Create Scan Object
-    TransactionCrudOperable.Scanner mockScanner = mock(TransactionCrudOperable.Scanner.class);
-    when(transaction.getScanner(any())).thenReturn(mockScanner);
-    TransactionCrudOperable.Scanner result =
+    TransactionManagerCrudOperable.Scanner mockScanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
+    when(manager.getScanner(any())).thenReturn(mockScanner);
+    TransactionManagerCrudOperable.Scanner result =
         this.dao.createScanner(
             TEST_NAMESPACE,
             TEST_TABLE_NAME,
@@ -181,11 +183,11 @@ class ScalarDbDaoTest {
             new ArrayList<>(),
             new ArrayList<>(),
             0,
-            transaction);
+            manager);
     // Assert
     assertNotNull(result);
     assertEquals(mockScanner, result);
-    result = this.dao.createScanner(TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, transaction);
+    result = this.dao.createScanner(TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, manager);
     // Assert
     assertNotNull(result);
     assertEquals(mockScanner, result);

@@ -8,7 +8,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -144,7 +144,8 @@ public class CsvExportManagerTest {
   void startExport_givenValidDataWithoutPartitionKey_withTransaction_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
     exportManager = new JsonLineExportManager(manager, dao, producerTaskFactory);
-    TransactionCrudOperable.Scanner scanner = Mockito.mock(TransactionCrudOperable.Scanner.class);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.csv";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -161,7 +162,7 @@ public class CsvExportManagerTest {
             exportOptions.getTableName(),
             exportOptions.getProjectionColumns(),
             exportOptions.getLimit(),
-            transaction))
+            manager))
         .thenReturn(scanner);
     when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
@@ -182,7 +183,8 @@ public class CsvExportManagerTest {
   void startExport_givenPartitionKey_withTransaction_shouldGenerateOutputFile() throws IOException {
     producerTaskFactory = new ProducerTaskFactory(",", false, false);
     exportManager = new CsvExportManager(manager, dao, producerTaskFactory);
-    TransactionCrudOperable.Scanner scanner = Mockito.mock(TransactionCrudOperable.Scanner.class);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.csv";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -207,7 +209,7 @@ public class CsvExportManagerTest {
             exportOptions.getSortOrders(),
             exportOptions.getProjectionColumns(),
             exportOptions.getLimit(),
-            transaction))
+            manager))
         .thenReturn(scanner);
     when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
