@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
@@ -9,8 +10,17 @@ import java.io.Writer;
 
 public class JsonLineExportManager extends ExportManager {
   public JsonLineExportManager(
-      DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
-    super(storage, dao, producerTaskFactory);
+      DistributedStorage distributedStorage,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    super(distributedStorage, dao, producerTaskFactory);
+  }
+
+  public JsonLineExportManager(
+      DistributedTransactionManager distributedTransactionManager,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    super(distributedTransactionManager, dao, producerTaskFactory);
   }
 
   /**

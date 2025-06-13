@@ -5,6 +5,7 @@ import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
@@ -13,6 +14,7 @@ import com.scalar.db.dataloader.cli.util.FileUtils;
 import com.scalar.db.dataloader.cli.util.InvalidFilePathException;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.dataexport.CsvExportManager;
 import com.scalar.db.dataloader.core.dataexport.ExportManager;
@@ -25,10 +27,14 @@ import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataStorageService;
+import com.scalar.db.dataloader.core.tablemetadata.TableMetadataTransactionService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -62,14 +68,13 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       validatePositiveValue(
           spec.commandLine(), maxThreads, CoreError.DATA_LOADER_INVALID_MAX_THREADS);
 
-      StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
-      TableMetadataService metaDataService =
-          new TableMetadataService(storageFactory.getStorageAdmin());
+      TableMetadataService tableMetadataService =
+          createTableMetadataService(scalarDbMode, scalarDbPropertiesFilePath);
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
-      ExportManager exportManager = createExportManager(storageFactory, scalarDbDao, outputFormat);
-
-      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
+      ExportManager exportManager =
+          createExportManager(scalarDbMode, scalarDbDao, outputFormat, scalarDbPropertiesFilePath);
+      TableMetadata tableMetadata = tableMetadataService.getTableMetadata(namespace, table);
 
       Key partitionKey =
           partitionKeyValue != null ? getKeysFromList(partitionKeyValue, tableMetadata) : null;
@@ -127,11 +132,85 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     }
   }
 
+  private TableMetadataService createTableMetadataService(
+      ScalarDbMode scalarDbMode, String scalarDbPropertiesFilePath) throws IOException {
+    if (scalarDbMode.equals(ScalarDbMode.TRANSACTION)) {
+      TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
+      return new TableMetadataTransactionService(transactionFactory.getTransactionAdmin());
+    }
+    StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
+    return new TableMetadataStorageService(storageFactory.getStorageAdmin());
+  }
+
+  /**
+   * Creates an {@link ExportManager} instance based on ScalarDB mode and file format.
+   *
+   * @param scalarDbMode The ScalarDB mode (TRANSACTION or STORAGE).
+   * @param scalarDbDao The DAO for accessing ScalarDB.
+   * @param fileFormat The output file format (CSV, JSON, JSONL).
+   * @param scalarDbPropertiesFilePath Path to the ScalarDB properties file.
+   * @return A configured {@link ExportManager}.
+   * @throws IOException If there is an error reading the properties file.
+   */
   private ExportManager createExportManager(
-      StorageFactory storageFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
+      ScalarDbMode scalarDbMode,
+      ScalarDbDao scalarDbDao,
+      FileFormat fileFormat,
+      String scalarDbPropertiesFilePath)
+      throws IOException {
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
-    DistributedStorage storage = storageFactory.getStorage();
+    if (scalarDbMode.equals(ScalarDbMode.STORAGE)) {
+      DistributedStorage storage = StorageFactory.create(scalarDbPropertiesFilePath).getStorage();
+      return createExportManagerWithStorage(storage, scalarDbDao, fileFormat, taskFactory);
+    } else {
+      DistributedTransactionManager distributedTransactionManager =
+          TransactionFactory.create(scalarDbPropertiesFilePath).getTransactionManager();
+      return createExportManagerWithTransaction(
+          distributedTransactionManager, scalarDbDao, fileFormat, taskFactory);
+    }
+  }
+
+  /**
+   * Returns an {@link ExportManager} that uses {@link DistributedTransactionManager}.
+   *
+   * @param distributedTransactionManager distributed transaction manager object
+   * @param scalarDbDao The DAO for accessing ScalarDB.
+   * @param fileFormat The output file format (CSV, JSON, JSONL).
+   * @param taskFactory Producer task factory object
+   * @return A configured {@link ExportManager}.
+   */
+  private ExportManager createExportManagerWithTransaction(
+      DistributedTransactionManager distributedTransactionManager,
+      ScalarDbDao scalarDbDao,
+      FileFormat fileFormat,
+      ProducerTaskFactory taskFactory) {
+    switch (fileFormat) {
+      case JSON:
+        return new JsonExportManager(distributedTransactionManager, scalarDbDao, taskFactory);
+      case JSONL:
+        return new JsonLineExportManager(distributedTransactionManager, scalarDbDao, taskFactory);
+      case CSV:
+        return new CsvExportManager(distributedTransactionManager, scalarDbDao, taskFactory);
+      default:
+        throw new AssertionError("Invalid file format" + fileFormat);
+    }
+  }
+
+  /**
+   * Returns an {@link ExportManager} that uses {@link DistributedStorage}.
+   *
+   * @param storage distributed storage object
+   * @param scalarDbDao The DAO for accessing ScalarDB.
+   * @param fileFormat The output file format (CSV, JSON, JSONL).
+   * @param taskFactory Producer task factory object
+   * @return A configured {@link ExportManager}.
+   */
+  private ExportManager createExportManagerWithStorage(
+      DistributedStorage storage,
+      ScalarDbDao scalarDbDao,
+      FileFormat fileFormat,
+      ProducerTaskFactory taskFactory) {
     switch (fileFormat) {
       case JSON:
         return new JsonExportManager(storage, scalarDbDao, taskFactory);
@@ -155,7 +234,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
             .maxThreadCount(maxThreads)
             .dataChunkSize(dataChunkSize)
             .prettyPrintJson(prettyPrintJson)
-            .scanRange(scanRange);
+            .scanRange(scanRange)
+            .scalarDbMode(scalarDbMode);
 
     if (projectionColumns != null) {
       builder.projectionColumns(projectionColumns);

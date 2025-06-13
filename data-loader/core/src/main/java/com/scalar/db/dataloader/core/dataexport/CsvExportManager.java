@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
@@ -13,8 +14,17 @@ import java.util.List;
 
 public class CsvExportManager extends ExportManager {
   public CsvExportManager(
-      DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
-    super(storage, dao, producerTaskFactory);
+      DistributedStorage distributedStorage,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    super(distributedStorage, dao, producerTaskFactory);
+  }
+
+  public CsvExportManager(
+      DistributedTransactionManager distributedTransactionManager,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    super(distributedTransactionManager, dao, producerTaskFactory);
   }
 
   /**

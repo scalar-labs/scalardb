@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -30,6 +31,7 @@ public class ExportOptions {
   @Builder.Default private final boolean includeTransactionMetadata = false;
   @Builder.Default private List<String> projectionColumns = Collections.emptyList();
   private List<Scan.Ordering> sortOrders;
+  @Builder.Default private final ScalarDbMode scalarDbMode = ScalarDbMode.STORAGE;
 
   public static ExportOptionsBuilder builder(
       String namespace, String tableName, Key scanPartitionKey, FileFormat outputFileFormat) {
