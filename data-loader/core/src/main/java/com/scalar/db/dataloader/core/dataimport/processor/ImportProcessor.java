@@ -41,11 +41,12 @@ import org.slf4j.LoggerFactory;
  * supports both transactional and non-transactional (storage) modes and provides event notification
  * capabilities for monitoring the import process.
  */
+@SuppressWarnings({"SameNameButDifferent", "FutureReturnValueIgnored"})
 @RequiredArgsConstructor
 public abstract class ImportProcessor {
 
   final ImportProcessorParams params;
-  private static final Logger LOGGER = LoggerFactory.getLogger(ImportProcessor.class);
+  private static final Logger logger = LoggerFactory.getLogger(ImportProcessor.class);
   private final List<ImportEventListener> listeners = new ArrayList<>();
 
   /**
@@ -316,13 +317,13 @@ public abstract class ImportProcessor {
 
     } catch (TransactionException e) {
       isSuccess = false;
-      LOGGER.error(e.getMessage());
+      logger.error(e.getMessage());
       try {
         if (transaction != null) {
           transaction.abort(); // Ensure transaction is aborted
         }
       } catch (TransactionException abortException) {
-        LOGGER.error(
+        logger.error(
             "Failed to abort transaction: {}", abortException.getMessage(), abortException);
       }
       error = e.getMessage();

@@ -29,16 +29,15 @@ public class ScanOrderingConverterTest {
   void callConvert_withValidValueAndOrderAscending_shouldReturnScanOrdering() {
     String value = "id=ASC,age=DESC";
     List<Scan.Ordering> expectedOrder = new ArrayList<>();
-    expectedOrder.add(new Scan.Ordering("id", Scan.Ordering.Order.ASC));
-    expectedOrder.add(new Scan.Ordering("age", Scan.Ordering.Order.DESC));
+    expectedOrder.add(Scan.Ordering.asc("id"));
+    expectedOrder.add(Scan.Ordering.desc("age"));
     Assertions.assertEquals(expectedOrder, scanOrderingConverter.convert(value));
   }
 
   @Test
   void callConvert_withValidValueAndOrderDescending_shouldReturnScanOrdering() {
     String value = "id=desc";
-    List<Scan.Ordering> expectedOrder =
-        Collections.singletonList(new Scan.Ordering("id", Scan.Ordering.Order.DESC));
+    List<Scan.Ordering> expectedOrder = Collections.singletonList(Scan.Ordering.desc("id"));
     Assertions.assertEquals(expectedOrder, scanOrderingConverter.convert(value));
   }
 }

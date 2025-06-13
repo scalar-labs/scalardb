@@ -11,6 +11,7 @@ import java.io.Writer;
 import java.util.Iterator;
 import java.util.List;
 
+/** Export manager implementation which manages the export task that exports data in CSV format */
 public class CsvExportManager extends ExportManager {
   public CsvExportManager(
       DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {

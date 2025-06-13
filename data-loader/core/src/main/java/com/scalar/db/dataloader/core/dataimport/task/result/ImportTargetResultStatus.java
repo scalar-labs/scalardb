@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.core.dataimport.task.result;
 
+/** Import target result status */
 public enum ImportTargetResultStatus {
   VALIDATION_FAILED,
   RETRIEVAL_FAILED,

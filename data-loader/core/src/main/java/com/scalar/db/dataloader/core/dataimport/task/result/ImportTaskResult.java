@@ -7,6 +7,8 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 
+/** A DTO to store the import task result */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value
 @JsonDeserialize(builder = ImportTaskResult.ImportTaskResultBuilder.class)
@@ -22,4 +24,13 @@ public class ImportTaskResult {
 
   @JsonProperty("dataChunkId")
   int dataChunkId;
+
+  /**
+   * Explicit builder class declaration required for Javadoc generation.
+   *
+   * <p>This class is normally generated automatically by Lombok's {@code @Builder} annotation.
+   * However, when using a custom builder method name (e.g., {@code hiddenBuilder()}), Javadoc may
+   * fail to resolve references to this builder unless it is explicitly declared.
+   */
+  public static class ImportTaskResultBuilder {}
 }

@@ -13,7 +13,7 @@ public class CommandLineInputUtils {
    * Parses a single key-value pair from a string in the format "key=value".
    *
    * @param keyValue the key-value string to parse
-   * @return a {@link Map.Entry} representing the parsed key-value pair
+   * @return a {@link java.util.Map.Entry} representing the parsed key-value pair
    * @throws IllegalArgumentException if the input is null, empty, or not in the expected format
    */
   public static Map.Entry<String, String> parseKeyValue(String keyValue) {
@@ -50,7 +50,7 @@ public class CommandLineInputUtils {
 
   /**
    * Validates that a given integer value is positive. If the value is less than 1, it throws a
-   * {@link CommandLine.ParameterException} with the specified error message.
+   * {@link picocli.CommandLine.ParameterException} with the specified error message.
    *
    * @param commandLine the {@link CommandLine} instance used to provide context for the exception
    * @param value the integer value to validate

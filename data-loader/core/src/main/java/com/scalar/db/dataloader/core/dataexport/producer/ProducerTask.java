@@ -8,6 +8,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * An abstract base class for producer tasks that process chunks of data retrieved from a ScalarDB
+ * table.
+ *
+ * <p>Subclasses are expected to implement the {@link #process(List)} method, which transforms a
+ * chunk of {@link Result} objects into a specific format (e.g., CSV, JSON).
+ *
+ * <p>This class manages metadata and column projection logic that can be used by all concrete
+ * implementations.
+ */
 public abstract class ProducerTask {
 
   protected final TableMetadata tableMetadata;

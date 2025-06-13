@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.core.dataimport.task.result;
 
+/** Enum to indicate the import result status */
 public enum ImportResultStatus {
   SUCCESS,
   PARTIAL_SUCCESS,

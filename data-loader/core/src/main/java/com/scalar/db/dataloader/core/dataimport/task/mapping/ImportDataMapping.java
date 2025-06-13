@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTableFieldMapping;
 
+/** To map source data to target columns using the control file mappings */
 public class ImportDataMapping {
 
   /**

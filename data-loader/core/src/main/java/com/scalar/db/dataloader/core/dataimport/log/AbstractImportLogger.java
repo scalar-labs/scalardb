@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
  * logging transaction batch results and managing event listeners. Concrete implementations should
  * define how to log transaction batches and handle errors.
  */
+@SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public abstract class AbstractImportLogger implements ImportEventListener {
 
