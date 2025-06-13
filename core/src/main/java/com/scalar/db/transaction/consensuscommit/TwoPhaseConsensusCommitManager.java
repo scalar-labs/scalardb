@@ -83,7 +83,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             parallelExecutor,
             new MutationsGrouper(new StorageInfoProvider(admin)),
-            config.isCoordinatorWriteOmissionOnReadOnlyEnabled());
+            config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+            config.isOnePhaseCommitEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -108,7 +109,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             parallelExecutor,
             new MutationsGrouper(new StorageInfoProvider(admin)),
-            config.isCoordinatorWriteOmissionOnReadOnlyEnabled());
+            config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+            config.isOnePhaseCommitEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }

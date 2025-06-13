@@ -336,6 +336,277 @@ public class MutationsGrouperTest {
     assertThat(result.get(2)).containsExactly(mutation2, mutation4);
   }
 
+  @Test
+  public void canBeGroupedTogether_WithEmptyCollection_ShouldReturnTrue()
+      throws ExecutionException {
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Collections.emptyList());
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void canBeGroupedTogether_WithAllMutationsInSameGroupForRecordAtomicity_ShouldReturnTrue()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.RECORD);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    // Create multiple mutations with same partition key, clustering key, table and namespace
+    Key partitionKey1 = mock(Key.class);
+    Key clusteringKey1 = mock(Key.class);
+    Mutation mutation1 =
+        createMutation(namespace, table, partitionKey1, Optional.of(clusteringKey1));
+    Mutation mutation2 =
+        createMutation(namespace, table, partitionKey1, Optional.of(clusteringKey1));
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void
+      canBeGroupedTogether_WithAllMutationsInSameGroupForPartitionAtomicity_ShouldReturnTrue()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.PARTITION);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    // Create mutations with same partition key but different clustering keys
+    Key partitionKey1 = mock(Key.class);
+    Key clusteringKey1 = mock(Key.class);
+    Key clusteringKey2 = mock(Key.class);
+    Mutation mutation1 =
+        createMutation(namespace, table, partitionKey1, Optional.of(clusteringKey1));
+    Mutation mutation2 =
+        createMutation(namespace, table, partitionKey1, Optional.of(clusteringKey2));
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void canBeGroupedTogether_WithAllMutationsInSameGroupForTableAtomicity_ShouldReturnTrue()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    // Create mutations with same table but different partition keys
+    Key partitionKey1 = mock(Key.class);
+    Key partitionKey2 = mock(Key.class);
+    Mutation mutation1 = createMutation(namespace, table, partitionKey1, Optional.empty());
+    Mutation mutation2 = createMutation(namespace, table, partitionKey2, Optional.empty());
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void
+      canBeGroupedTogether_WithAllMutationsInSameGroupForNamespaceAtomicity_ShouldReturnTrue()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table1 = "table1";
+    String table2 = "table2";
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    // Create mutations with same namespace but different tables
+    Key partitionKey1 = mock(Key.class);
+    Key partitionKey2 = mock(Key.class);
+    Mutation mutation1 = createMutation(namespace, table1, partitionKey1, Optional.empty());
+    Mutation mutation2 = createMutation(namespace, table2, partitionKey2, Optional.empty());
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void canBeGroupedTogether_WithAllMutationsInSameGroupForStorageAtomicity_ShouldReturnTrue()
+      throws ExecutionException {
+    // Arrange
+    String namespace1 = "ns1";
+    String namespace2 = "ns2";
+    String table1 = "table1";
+    String table2 = "table2";
+
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.STORAGE);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace1)).thenReturn(storageInfo);
+    when(storageInfoProvider.getStorageInfo(namespace2)).thenReturn(storageInfo);
+
+    // Create mutations with different namespaces but same storage
+    Key partitionKey1 = mock(Key.class);
+    Key partitionKey2 = mock(Key.class);
+    Mutation mutation1 = createMutation(namespace1, table1, partitionKey1, Optional.empty());
+    Mutation mutation2 = createMutation(namespace2, table2, partitionKey2, Optional.empty());
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void canBeGroupedTogether_WithMutationsInDifferentGroups_ShouldReturnFalse()
+      throws ExecutionException {
+    // Arrange
+    String namespace1 = "ns1";
+    String namespace2 = "ns2";
+    String table1 = "table1";
+    String table2 = "table2";
+
+    StorageInfo storageInfo1 = mock(StorageInfo.class);
+    when(storageInfo1.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo1.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo1.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace1)).thenReturn(storageInfo1);
+
+    StorageInfo storageInfo2 = mock(StorageInfo.class);
+    when(storageInfo2.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo2.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo2.getStorageName()).thenReturn("storage2");
+    when(storageInfoProvider.getStorageInfo(namespace2)).thenReturn(storageInfo2);
+
+    // Create mutations with different storage
+    Key partitionKey1 = mock(Key.class);
+    Key partitionKey2 = mock(Key.class);
+    Mutation mutation1 = createMutation(namespace1, table1, partitionKey1, Optional.empty());
+    Mutation mutation2 = createMutation(namespace2, table2, partitionKey2, Optional.empty());
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      canBeGroupedTogether_WithMutationsInDifferentTables_ShouldReturnFalseForTableAtomicity()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table1 = "table1";
+    String table2 = "table2";
+
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    // Create mutations with same namespace but different tables
+    Key partitionKey1 = mock(Key.class);
+    Key partitionKey2 = mock(Key.class);
+    Mutation mutation1 = createMutation(namespace, table1, partitionKey1, Optional.empty());
+    Mutation mutation2 = createMutation(namespace, table2, partitionKey2, Optional.empty());
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      canBeGroupedTogether_WithMutationsInDifferentPartitions_ShouldReturnFalseForPartitionAtomicity()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.PARTITION);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    // Create mutations with same table but different partition keys
+    Key partitionKey1 = mock(Key.class);
+    Key partitionKey2 = mock(Key.class);
+    Mutation mutation1 = createMutation(namespace, table, partitionKey1, Optional.empty());
+    Mutation mutation2 = createMutation(namespace, table, partitionKey2, Optional.empty());
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void canBeGroupedTogether_WithOverMaxCount_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit())
+        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(3); // Max 3 mutations allowed
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    // Create 4 mutations (one over max count)
+    List<Mutation> mutations = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      Key partitionKey = mock(Key.class);
+      mutations.add(createMutation(namespace, table, partitionKey, Optional.empty()));
+    }
+
+    // Act
+    boolean result = grouper.canBeGroupedTogether(mutations);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
   private Mutation createMutation(
       String namespace, String table, Key partitionKey, Optional<Key> clusteringKey) {
     Mutation mutation = mock(Put.class);

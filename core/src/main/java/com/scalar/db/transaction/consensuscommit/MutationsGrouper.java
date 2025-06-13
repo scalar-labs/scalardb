@@ -7,6 +7,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,41 @@ public class MutationsGrouper {
 
     // Flatten the grouped mutations into a single list of batches
     return groupToBatches.values().stream().flatMap(List::stream).collect(Collectors.toList());
+  }
+
+  public boolean canBeGroupedTogether(Collection<Mutation> mutations) throws ExecutionException {
+    if (mutations.isEmpty()) {
+      return true;
+    }
+
+    Iterator<Mutation> iterator = mutations.iterator();
+    Mutation firstMutation = iterator.next();
+    assert firstMutation.forNamespace().isPresent();
+    StorageInfo storageInfo =
+        storageInfoProvider.getStorageInfo(firstMutation.forNamespace().get());
+    MutationGroup firstGroup = new MutationGroup(firstMutation, storageInfo);
+
+    int maxCount = firstGroup.storageInfo.getMaxAtomicMutationsCount();
+    int mutationCount = 1;
+
+    while (iterator.hasNext()) {
+      Mutation otherMutation = iterator.next();
+      assert otherMutation.forNamespace().isPresent();
+      StorageInfo otherStorageInfo =
+          storageInfoProvider.getStorageInfo(otherMutation.forNamespace().get());
+      MutationGroup otherGroup = new MutationGroup(otherMutation, otherStorageInfo);
+
+      if (!firstGroup.equals(otherGroup)) {
+        return false; // Found a mutation that does not belong to the first group
+      }
+
+      mutationCount++;
+      if (mutationCount > maxCount) {
+        return false; // Exceeds the maximum allowed count for this group
+      }
+    }
+
+    return true; // All mutations belong to the same group and within the count limit
   }
 
   private static class MutationGroup {

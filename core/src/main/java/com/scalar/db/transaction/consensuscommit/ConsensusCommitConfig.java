@@ -35,6 +35,7 @@ public class ConsensusCommitConfig {
 
   public static final String COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED =
       PREFIX + "coordinator.write_omission_on_read_only.enabled";
+  public static final String ONE_PHASE_COMMIT_ENABLED = PREFIX + "one_phase_commit.enabled";
   public static final String PARALLEL_IMPLICIT_PRE_READ =
       PREFIX + "parallel_implicit_pre_read.enabled";
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
@@ -75,8 +76,9 @@ public class ConsensusCommitConfig {
   private final boolean asyncRollbackEnabled;
 
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  private final boolean onePhaseCommitEnabled;
   private final boolean parallelImplicitPreReadEnabled;
-  private final boolean isIncludeMetadataEnabled;
+  private final boolean includeMetadataEnabled;
 
   private final boolean coordinatorGroupCommitEnabled;
   private final int coordinatorGroupCommitSlotCapacity;
@@ -145,9 +147,11 @@ public class ConsensusCommitConfig {
     coordinatorWriteOmissionOnReadOnlyEnabled =
         getBoolean(properties, COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED, true);
 
-    isIncludeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
+    onePhaseCommitEnabled = getBoolean(properties, ONE_PHASE_COMMIT_ENABLED, false);
 
     parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
+
+    includeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
 
     coordinatorGroupCommitEnabled = getBoolean(properties, COORDINATOR_GROUP_COMMIT_ENABLED, false);
     coordinatorGroupCommitSlotCapacity =
@@ -219,12 +223,16 @@ public class ConsensusCommitConfig {
     return coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
+  public boolean isOnePhaseCommitEnabled() {
+    return onePhaseCommitEnabled;
+  }
+
   public boolean isParallelImplicitPreReadEnabled() {
     return parallelImplicitPreReadEnabled;
   }
 
   public boolean isIncludeMetadataEnabled() {
-    return isIncludeMetadataEnabled;
+    return includeMetadataEnabled;
   }
 
   public boolean isCoordinatorGroupCommitEnabled() {
