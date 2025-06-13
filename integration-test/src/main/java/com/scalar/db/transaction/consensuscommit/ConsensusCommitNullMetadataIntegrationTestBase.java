@@ -172,10 +172,11 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
           tableMetadataManager,
           parallelExecutor,
           mutationsGrouper,
+          false,
           groupCommitter);
     } else {
       return new CommitHandler(
-          storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper);
+          storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, false);
     }
   }
 

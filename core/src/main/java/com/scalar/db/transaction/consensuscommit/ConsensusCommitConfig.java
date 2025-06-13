@@ -38,6 +38,8 @@ public class ConsensusCommitConfig {
 
   public static final String RECOVERY_EXECUTOR_COUNT = PREFIX + "recovery_executor_count";
 
+  public static final String ONE_PHASE_COMMIT_ENABLED = PREFIX + "one_phase_commit.enabled";
+
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
   public static final int DEFAULT_RECOVERY_EXECUTOR_COUNT = 128;
 
@@ -78,7 +80,9 @@ public class ConsensusCommitConfig {
 
   private final int recoveryExecutorCount;
 
-  private final boolean isIncludeMetadataEnabled;
+  private final boolean onePhaseCommitEnabled;
+
+  private final boolean includeMetadataEnabled;
 
   private final boolean parallelImplicitPreReadEnabled;
 
@@ -149,7 +153,9 @@ public class ConsensusCommitConfig {
     recoveryExecutorCount =
         getInt(properties, RECOVERY_EXECUTOR_COUNT, DEFAULT_RECOVERY_EXECUTOR_COUNT);
 
-    isIncludeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
+    onePhaseCommitEnabled = getBoolean(properties, ONE_PHASE_COMMIT_ENABLED, false);
+
+    includeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
 
     parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
@@ -223,8 +229,12 @@ public class ConsensusCommitConfig {
     return recoveryExecutorCount;
   }
 
+  public boolean isOnePhaseCommitEnabled() {
+    return onePhaseCommitEnabled;
+  }
+
   public boolean isIncludeMetadataEnabled() {
-    return isIncludeMetadataEnabled;
+    return includeMetadataEnabled;
   }
 
   public boolean isParallelImplicitPreReadEnabled() {

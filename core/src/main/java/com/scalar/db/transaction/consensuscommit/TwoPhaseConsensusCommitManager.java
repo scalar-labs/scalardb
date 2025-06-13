@@ -84,7 +84,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(new StorageInfoProvider(admin)));
+            new MutationsGrouper(new StorageInfoProvider(admin)),
+            config.isOnePhaseCommitEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -110,7 +111,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(new StorageInfoProvider(admin)));
+            new MutationsGrouper(new StorageInfoProvider(admin)),
+            config.isOnePhaseCommitEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }

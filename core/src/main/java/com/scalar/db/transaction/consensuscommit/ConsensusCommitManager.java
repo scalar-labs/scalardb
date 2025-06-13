@@ -77,7 +77,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         new RecoveryExecutor(
             coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit = createCommitHandler();
+    commit = createCommitHandler(config);
     isolation = config.getIsolation();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
@@ -100,7 +100,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         new RecoveryExecutor(
             coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit = createCommitHandler();
+    commit = createCommitHandler(config);
     isolation = config.getIsolation();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
@@ -137,7 +137,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   // `groupCommitter` must be set before calling this method.
-  private CommitHandler createCommitHandler() {
+  private CommitHandler createCommitHandler(ConsensusCommitConfig config) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
@@ -146,10 +146,16 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           tableMetadataManager,
           parallelExecutor,
           mutationsGrouper,
+          config.isOnePhaseCommitEnabled(),
           groupCommitter);
     } else {
       return new CommitHandler(
-          storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper);
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          config.isOnePhaseCommitEnabled());
     }
   }
 

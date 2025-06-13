@@ -68,6 +68,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         tableMetadataManager,
         parallelExecutor,
         new MutationsGrouper(storageInfoProvider),
+        false,
         groupCommitter);
   }
 
