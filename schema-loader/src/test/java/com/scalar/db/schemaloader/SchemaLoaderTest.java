@@ -916,8 +916,6 @@ public class SchemaLoaderTest {
     }
   }
 
-  // For backward compatibility with the old method signatures.
-
   @Test
   public void
       load_WithConfigFileAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()

@@ -453,8 +453,6 @@ public class SchemaLoader {
     }
   }
 
-  // For backward compatibility.
-
   /**
    * Creates tables defined in the schema file. See {@link #load(Properties, Path, Map, boolean,
    * boolean)} for details.
