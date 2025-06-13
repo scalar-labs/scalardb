@@ -579,8 +579,8 @@ public class SchemaLoader {
   }
 
   /**
-   * Repair namespaces and tables. See {@link #repairAll(Properties, String, Map, boolean, boolean)}
-   * for details.
+   * Repair namespaces and tables. See {@link #repairTables(Properties, String, Map, boolean,
+   * boolean)} for details.
    *
    * @param configProperties ScalarDB config properties
    * @param serializedSchemaJson serialized json string schema.
@@ -588,18 +588,18 @@ public class SchemaLoader {
    * @param repairCoordinatorTable repair coordinator tables or not.
    * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairAll(
+  public static void repairTables(
       Properties configProperties,
       String serializedSchemaJson,
       Map<String, String> options,
       boolean repairCoordinatorTable)
       throws SchemaLoaderException {
-    repairAll(configProperties, serializedSchemaJson, options, repairCoordinatorTable, false);
+    repairTables(configProperties, serializedSchemaJson, options, repairCoordinatorTable, false);
   }
 
   /**
-   * Repair namespaces and tables. See {@link #repairAll(Path, String, Map, boolean, boolean)} for
-   * details.
+   * Repair namespaces and tables. See {@link #repairTables(Path, String, Map, boolean, boolean)}
+   * for details.
    *
    * @param configProperties ScalarDB properties.
    * @param schemaPath path to the schema file.
@@ -607,18 +607,18 @@ public class SchemaLoader {
    * @param repairCoordinatorTable repair coordinator tables or not.
    * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairAll(
+  public static void repairTables(
       Properties configProperties,
       Path schemaPath,
       Map<String, String> options,
       boolean repairCoordinatorTable)
       throws SchemaLoaderException {
-    repairAll(configProperties, schemaPath, options, repairCoordinatorTable, false);
+    repairTables(configProperties, schemaPath, options, repairCoordinatorTable, false);
   }
 
   /**
-   * Repair namespaces and tables. See {@link #repairAll(Path, String, Map, boolean, boolean)} for
-   * details.
+   * Repair namespaces and tables. See {@link #repairTables(Path, String, Map, boolean, boolean)}
+   * for details.
    *
    * @param configPath path to the ScalarDB config.
    * @param serializedSchemaJson serialized json string schema.
@@ -626,17 +626,17 @@ public class SchemaLoader {
    * @param repairCoordinatorTable repair coordinator tables or not.
    * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairAll(
+  public static void repairTables(
       Path configPath,
       String serializedSchemaJson,
       Map<String, String> options,
       boolean repairCoordinatorTable)
       throws SchemaLoaderException {
-    repairAll(configPath, serializedSchemaJson, options, repairCoordinatorTable, false);
+    repairTables(configPath, serializedSchemaJson, options, repairCoordinatorTable, false);
   }
 
   /**
-   * Repair namespaces and tables. See {@link #repairAll(Path, Path, Map, boolean, boolean)} for
+   * Repair namespaces and tables. See {@link #repairTables(Path, Path, Map, boolean, boolean)} for
    * details.
    *
    * @param configPath path to the ScalarDB config.
@@ -645,10 +645,10 @@ public class SchemaLoader {
    * @param repairCoordinatorTable repair coordinator tables or not.
    * @throws SchemaLoaderException thrown when repairing fails.
    */
-  public static void repairAll(
+  public static void repairTables(
       Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
       throws SchemaLoaderException {
-    repairAll(configPath, schemaPath, options, repairCoordinatorTable, false);
+    repairTables(configPath, schemaPath, options, repairCoordinatorTable, false);
   }
 
   /**
