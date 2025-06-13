@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 
+/** Responsible to create producer task based on the export file format */
 @SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public class ProducerTaskFactory {

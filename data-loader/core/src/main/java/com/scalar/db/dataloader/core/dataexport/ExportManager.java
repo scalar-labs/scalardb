@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Export manager class which manages the export task */
 @SuppressWarnings({"SameNameButDifferent", "FutureReturnValueIgnored"})
 @RequiredArgsConstructor
 public abstract class ExportManager {

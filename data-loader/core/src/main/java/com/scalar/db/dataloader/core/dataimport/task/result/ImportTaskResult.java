@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 
+/** A DTO to store the import task result */
 @SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Value

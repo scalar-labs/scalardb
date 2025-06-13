@@ -18,6 +18,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Producer that converts ScalarDB scan results to JSON content. The output is sent to a queue to be
+ * processed by a consumer
+ */
 public class JsonProducerTask extends ProducerTask {
 
   private final DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();

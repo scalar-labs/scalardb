@@ -5,15 +5,24 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.service.StorageFactory;
 import javax.annotation.Nullable;
 
+/**
+ * A manager class for handling ScalarDB operations in storage mode.
+ *
+ * <p>Provides access to {@link DistributedStorage} for data operations and {@link
+ * DistributedStorageAdmin} for administrative operations such as schema management.
+ *
+ * <p>This class is typically used when interacting with ScalarDB in a non-transactional,
+ * storage-only configuration.
+ */
 public class ScalarDbStorageManager {
 
   @Nullable private final DistributedStorage storage;
   private final DistributedStorageAdmin storageAdmin;
 
   /**
-   * Class constructor
+   * Constructs a {@code ScalarDbStorageManager} using the provided {@link StorageFactory}.
    *
-   * @param storageFactory Factory to create all the necessary ScalarDB data managers
+   * @param storageFactory the factory used to create the ScalarDB storage and admin instances
    */
   public ScalarDbStorageManager(StorageFactory storageFactory) {
     storage = storageFactory.getStorage();
