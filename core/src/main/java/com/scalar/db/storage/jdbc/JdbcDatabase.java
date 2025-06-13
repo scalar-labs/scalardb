@@ -105,7 +105,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection.setAutoCommit(false);
       rdbEngine.setConnectionToReadOnly(connection, true);
       return jdbcService.getScanner(scan, connection);
-    } catch (SQLException e) {
+    } catch (Exception e) {
       try {
         if (connection != null) {
           connection.rollback();
