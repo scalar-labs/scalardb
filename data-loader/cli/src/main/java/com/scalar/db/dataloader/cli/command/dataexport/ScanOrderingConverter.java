@@ -7,6 +7,22 @@ import java.util.List;
 import java.util.stream.Collectors;
 import picocli.CommandLine;
 
+/**
+ * A {@link picocli.CommandLine.ITypeConverter} implementation that converts a comma-separated
+ * string of column-order pairs into a list of {@link com.scalar.db.api.Scan.Ordering} objects.
+ *
+ * <p>This converter is used to parse CLI arguments for scan ordering in ScalarDB-based
+ * applications. The input string must contain one or more key-value pairs in the format {@code
+ * column=order}, separated by commas. The {@code order} must be a valid {@link
+ * com.scalar.db.api.Scan.Ordering.Order} enum value, such as {@code ASC} or {@code DESC}
+ * (case-insensitive).
+ *
+ * <p>Example input: {@code "name=asc,age=desc"} results in a list containing {@code
+ * Scan.Ordering.asc("name")} and {@code Scan.Ordering.desc("age")}.
+ *
+ * <p>Invalid formats or unrecognized order values will result in an {@link
+ * IllegalArgumentException}.
+ */
 public class ScanOrderingConverter implements CommandLine.ITypeConverter<List<Scan.Ordering>> {
   /**
    * Converts a comma-separated string of key-value pairs into a list of {@link
@@ -27,7 +43,9 @@ public class ScanOrderingConverter implements CommandLine.ITypeConverter<List<Sc
               String columnName = entry.getKey();
               Scan.Ordering.Order sortOrder =
                   Scan.Ordering.Order.valueOf(entry.getValue().trim().toUpperCase());
-              return new Scan.Ordering(columnName, sortOrder);
+              return sortOrder == Scan.Ordering.Order.ASC
+                  ? Scan.Ordering.asc(columnName)
+                  : Scan.Ordering.desc(columnName);
             })
         .collect(Collectors.toList());
   }
