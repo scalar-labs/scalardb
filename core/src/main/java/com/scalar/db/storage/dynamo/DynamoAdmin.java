@@ -7,7 +7,9 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -153,6 +155,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(SCALING_TYPE_INDEX_READ, MetricType.DYNAMO_DB_READ_CAPACITY_UTILIZATION)
           .put(SCALING_TYPE_INDEX_WRITE, MetricType.DYNAMO_DB_WRITE_CAPACITY_UTILIZATION)
           .build();
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "dynamo",
+          StorageInfo.MutationAtomicityUnit.STORAGE,
+          // DynamoDB has a limit of 100 items per transactional batch write operation
+          100);
 
   private final DynamoDbClient client;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
@@ -1501,6 +1509,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private String getFullTableName(Namespace namespace, String table) {
     return ScalarDbUtils.getFullTableName(namespace.prefixed(), table);
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 
   @Override

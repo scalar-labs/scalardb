@@ -21,7 +21,9 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -47,6 +49,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String NAMESPACES_NAME_COL = "name";
   private static final String DEFAULT_REPLICATION_FACTOR = "3";
   @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "cassandra",
+          StorageInfo.MutationAtomicityUnit.PARTITION,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE);
+
   private final ClusterManager clusterManager;
   private final String metadataKeyspace;
 
@@ -568,6 +577,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     for (String name : secondaryIndexNames) {
       createIndexInternal(keyspace, table, name, ifNotExists);
     }
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 
   @Override
