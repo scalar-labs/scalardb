@@ -23,4 +23,6 @@ public class ImportTaskResult {
 
   @JsonProperty("dataChunkId")
   int dataChunkId;
+
+  public static class ImportTaskResultBuilder {}
 }

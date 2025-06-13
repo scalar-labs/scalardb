@@ -39,4 +39,6 @@ public class ImportDataChunkStatus {
 
   @JsonProperty("status")
   private final ImportDataChunkStatusState status;
+
+  public static class ImportDataChunkStatusBuilder {}
 }

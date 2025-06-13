@@ -30,4 +30,6 @@ public class ImportTransactionBatchResult {
 
   @JsonProperty("success")
   boolean success;
+
+  public static class ImportTransactionBatchResultBuilder {}
 }

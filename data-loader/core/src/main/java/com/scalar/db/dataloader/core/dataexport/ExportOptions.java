@@ -48,4 +48,6 @@ public class ExportOptions {
         .scanPartitionKey(scanPartitionKey)
         .outputFileFormat(outputFileFormat);
   }
+
+  public static class ExportOptionsBuilder {}
 }
