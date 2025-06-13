@@ -36,7 +36,9 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MultiStorage extends AbstractDistributedStorage {
 
-  private final Map<String, DistributedStorage> tableStorageMap;
+  /** @deprecated Will be removed in 5.0.0. */
+  @Deprecated private final Map<String, DistributedStorage> tableStorageMap;
+
   private final Map<String, DistributedStorage> namespaceStorageMap;
   private final DistributedStorage defaultStorage;
   private final List<DistributedStorage> storages;
@@ -140,6 +142,8 @@ public class MultiStorage extends AbstractDistributedStorage {
   }
 
   private DistributedStorage getStorage(Operation operation) {
+    assert operation.forFullTableName().isPresent() && operation.forNamespace().isPresent();
+
     String fullTaleName = operation.forFullTableName().get();
     DistributedStorage storage = tableStorageMap.get(fullTaleName);
     if (storage != null) {

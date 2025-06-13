@@ -100,7 +100,7 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION(
       Category.USER_ERROR,
       "0019",
-      "Mutations that span multiple partitions are not supported. Mutations: %s",
+      "The storage does not support mutations across multiple partitions. Storage: %s; Mutations: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_PARTITION_KEY(
@@ -936,6 +936,30 @@ public enum CoreError implements ScalarDbError {
       "Mutations are not allowed in read-only transactions. Transaction ID: %s",
       "",
       ""),
+  OPERATION_CHECK_ERROR_MULTI_RECORD_MUTATION(
+      Category.USER_ERROR,
+      "0212",
+      "The storage does not support mutations across multiple records. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_TABLE_MUTATION(
+      Category.USER_ERROR,
+      "0213",
+      "The storage does not support mutations across multiple tables. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_NAMESPACE_MUTATION(
+      Category.USER_ERROR,
+      "0214",
+      "The storage does not support mutations across multiple namespaces. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_STORAGE_MUTATION(
+      Category.USER_ERROR,
+      "0215",
+      "Mutations across multiple storages are not allowed. Mutations: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1211,6 +1235,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0054", "Getting the scanner failed. Details: %s", "", ""),
   JDBC_CLOSING_SCANNER_FAILED(
       Category.INTERNAL_ERROR, "0055", "Closing the scanner failed. Details: %s", "", ""),
+  GETTING_STORAGE_INFO_FAILED(
+      Category.INTERNAL_ERROR,
+      "0056",
+      "Getting the storage information failed. Namespace: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
