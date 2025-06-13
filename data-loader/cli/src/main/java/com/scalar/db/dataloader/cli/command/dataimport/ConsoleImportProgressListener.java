@@ -60,7 +60,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
 
   @Override
   public void onTransactionBatchStarted(ImportTransactionBatchStatus batchStatus) {
-    // Optional: Implement if you want to show more granular batch progress
+
   }
 
   @Override
@@ -79,7 +79,6 @@ public class ConsoleImportProgressListener implements ImportEventListener {
 
   @Override
   public void onTaskComplete(ImportTaskResult taskResult) {
-    // Optional: Summary or stats after final chunk
   }
 
   private void render() {
