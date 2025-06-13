@@ -19,6 +19,7 @@ import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
@@ -66,12 +67,13 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
     dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
+    JdbcAdmin jdbcAdmin = new JdbcAdmin(tableMetadataDataSource, config);
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(
-            new JdbcAdmin(tableMetadataDataSource, config),
-            databaseConfig.getMetadataCacheExpirationTimeSecs());
+        new TableMetadataManager(jdbcAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    OperationChecker operationChecker =
+        new OperationChecker(
+            databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin));
 
-    OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
     jdbcService =
         new JdbcService(
             tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
