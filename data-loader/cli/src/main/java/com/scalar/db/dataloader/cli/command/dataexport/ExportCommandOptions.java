@@ -62,7 +62,7 @@ public class ExportCommandOptions {
   protected FileFormat outputFormat;
 
   @CommandLine.Option(
-      names = {"--include-metadata", "-m"},
+      names = {"--include-metadata", "-im"},
       description = "Include transaction metadata in the exported data (default: false)",
       defaultValue = "false")
   protected boolean includeTransactionMetadata;
@@ -147,7 +147,7 @@ public class ExportCommandOptions {
   protected int dataChunkSize;
 
   @CommandLine.Option(
-      names = {"--mode", "-sm"},
+      names = {"--mode", "-m"},
       description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
       paramLabel = "<MODE>",
       defaultValue = "STORAGE")
