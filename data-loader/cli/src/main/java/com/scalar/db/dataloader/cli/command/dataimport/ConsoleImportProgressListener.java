@@ -36,7 +36,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
 
   @Override
   public void onDataChunkCompleted(ImportDataChunkStatus status) {
-    long elapsed = System.currentTimeMillis() - status.getStartTime().toEpochMilli();
+    long elapsed = status.getEndTime().toEpochMilli() - status.getStartTime().toEpochMilli();
     totalRecords.addAndGet(status.getTotalRecords());
     if (status.getSuccessCount() > 0) {
       chunkLogs.put(
