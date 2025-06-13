@@ -22,6 +22,7 @@ public class ImportSourceRecordValidator {
    * @param columnNames List of all column names in table
    * @param sourceRecord source data
    * @param allColumnsRequired If true treat missing columns as an error
+   * @param tableMetadata metadata of the table to which data is to be imported
    * @return Source record validation result
    */
   public static ImportSourceRecordValidationResult validateSourceRecord(
@@ -84,6 +85,7 @@ public class ImportSourceRecordValidator {
    * @param columnNames List of column names for a table
    * @param validationResult Source record validation result
    * @param ignoreColumns Columns that can be ignored in the check
+   * @param tableMetadata metadata of the table to which data is to be imported
    */
   public static void checkMissingColumns(
       JsonNode sourceRecord,
@@ -108,6 +110,7 @@ public class ImportSourceRecordValidator {
    * @param sourceRecord Source json object
    * @param columnNames List of column names for a table
    * @param validationResult Source record validation result
+   * @param tableMetadata metadata of the table to which data is to be imported
    */
   public static void checkMissingColumns(
       JsonNode sourceRecord,

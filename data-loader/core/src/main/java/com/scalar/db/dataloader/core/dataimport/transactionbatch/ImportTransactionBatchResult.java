@@ -31,5 +31,12 @@ public class ImportTransactionBatchResult {
   @JsonProperty("success")
   boolean success;
 
+  /**
+   * Explicit builder class declaration required for Javadoc generation.
+   *
+   * <p>This class is normally generated automatically by Lombok's {@code @Builder} annotation.
+   * However, when using a custom builder method name (e.g., {@code hiddenBuilder()}), Javadoc may
+   * fail to resolve references to this builder unless it is explicitly declared.
+   */
   public static class ImportTransactionBatchResultBuilder {}
 }

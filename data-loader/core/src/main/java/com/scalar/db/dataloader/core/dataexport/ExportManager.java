@@ -65,6 +65,7 @@ public abstract class ExportManager {
    * @param exportOptions Export options
    * @param tableMetadata Metadata for a single ScalarDB table
    * @param writer Writer to write the exported data
+   * @return export report object containing data such as total exported row count
    */
   public ExportReport startExport(
       ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer) {

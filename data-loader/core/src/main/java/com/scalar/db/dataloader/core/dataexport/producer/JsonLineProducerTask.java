@@ -25,6 +25,7 @@ public class JsonLineProducerTask extends ProducerTask {
    * Class constructor
    *
    * @param includeMetadata Include metadata in the exported data
+   * @param projectionColumns list of columns that is required in export data
    * @param tableMetadata Metadata for a single ScalarDB table
    * @param columnDataTypes Map of data types for the all columns in a ScalarDB table
    */

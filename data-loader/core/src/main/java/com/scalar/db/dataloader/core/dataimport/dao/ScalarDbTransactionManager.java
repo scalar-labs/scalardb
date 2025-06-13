@@ -15,6 +15,8 @@ public class ScalarDbTransactionManager {
   /**
    * Returns distributed Transaction manager for ScalarDB connection that is running in transaction
    * mode
+   *
+   * @return distributed transaction manager object
    */
   public DistributedTransactionManager getDistributedTransactionManager() {
     return transactionManager;

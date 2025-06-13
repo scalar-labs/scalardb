@@ -49,5 +49,12 @@ public class ExportOptions {
         .outputFileFormat(outputFileFormat);
   }
 
+  /**
+   * Explicit builder class declaration required for Javadoc generation.
+   *
+   * <p>Although Lombok generates this builder class automatically, Javadoc requires an explicit
+   * declaration to resolve references in the generated documentation, especially when using a
+   * custom builder method name (e.g., {@code hiddenBuilder()}).
+   */
   public static class ExportOptionsBuilder {}
 }
