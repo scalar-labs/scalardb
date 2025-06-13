@@ -140,6 +140,25 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
+      whenScanOperationExecutedAndJdbcServiceThrowsIllegalArgumentException_shouldCloseConnectionAndThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Exception cause = new IllegalArgumentException("Table not found");
+    // Simulate the table not found scenario.
+    when(jdbcService.getScanner(any(), any())).thenThrow(cause);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              jdbcDatabase.scan(scan);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+    verify(connection).close();
+  }
+
+  @Test
+  public void
       whenScanOperationExecutedAndScannerClosed_SQLExceptionThrownByConnectionCommit_shouldThrowIOException()
           throws Exception {
     // Arrange
