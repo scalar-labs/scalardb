@@ -105,7 +105,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection.setAutoCommit(false);
       rdbEngine.setConnectionToReadOnly(connection, true);
       return jdbcService.getScanner(scan, connection);
-    } catch (Exception e) {
+    } catch (SQLException e) {
       try {
         if (connection != null) {
           connection.rollback();
@@ -117,6 +117,11 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       close(connection);
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
+    } catch (Exception e) {
+      if (connection != null) {
+        close(connection);
+      }
+      throw e;
     }
   }
 

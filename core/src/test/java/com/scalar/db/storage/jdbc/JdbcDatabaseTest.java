@@ -140,7 +140,7 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      whenScanOperationExecutedAndJdbcServiceThrowsIllegalArgumentException_shouldThrowExecutionException()
+      whenScanOperationExecutedAndJdbcServiceThrowsIllegalArgumentException_shouldCloseConnectionAndThrowIllegalArgumentException()
           throws Exception {
     // Arrange
     Exception cause = new IllegalArgumentException("Table not found");
@@ -153,11 +153,7 @@ public class JdbcDatabaseTest {
               Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.scan(scan);
             })
-        .isInstanceOf(ExecutionException.class)
-        .hasCause(cause);
-    verify(connection).setAutoCommit(false);
-    verify(connection).setReadOnly(true);
-    verify(connection).rollback();
+        .isInstanceOf(IllegalArgumentException.class);
     verify(connection).close();
   }
 
