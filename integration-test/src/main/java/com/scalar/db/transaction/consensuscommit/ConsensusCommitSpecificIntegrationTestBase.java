@@ -24,6 +24,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
@@ -33,12 +34,15 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
@@ -46,6 +50,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.time.Duration;
@@ -5268,6 +5273,374 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
   }
 
+  @Test
+  public void manager_get_GetGivenForCommittedRecord_WithSerializable_ShouldReturnRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+      Get get = prepareGet(0, 0, namespace1, TABLE_1);
+
+      // Act
+      Optional<Result> result = managerWithSerializable.get(get);
+
+      // Assert
+      assertThat(result.isPresent()).isTrue();
+      assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    }
+  }
+
+  @Test
+  public void manager_scan_ScanGivenForCommittedRecord_WithSerializable_ShouldReturnRecords()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+      Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
+
+      // Act
+      List<Result> results = managerWithSerializable.scan(scan);
+
+      // Assert
+      assertThat(results.size()).isEqualTo(3);
+      assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
+
+      assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
+
+      assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
+    }
+  }
+
+  @Test
+  public void manager_getScanner_ScanGivenForCommittedRecord_WithSerializable_ShouldReturnRecords()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+      Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
+
+      // Act Assert
+      TransactionManagerCrudOperable.Scanner scanner = managerWithSerializable.getScanner(scan);
+
+      Optional<Result> result1 = scanner.one();
+      assertThat(result1).isPresent();
+      assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(getBalance(result1.get())).isEqualTo(INITIAL_BALANCE);
+
+      Optional<Result> result2 = scanner.one();
+      assertThat(result2).isPresent();
+      assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(getBalance(result2.get())).isEqualTo(INITIAL_BALANCE);
+
+      Optional<Result> result3 = scanner.one();
+      assertThat(result3).isPresent();
+      assertThat(result3.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(result3.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(getBalance(result3.get())).isEqualTo(INITIAL_BALANCE);
+
+      assertThat(scanner.one()).isNotPresent();
+
+      scanner.close();
+    }
+  }
+
+  @Test
+  public void manager_put_PutGivenForNonExisting_WithSerializable_ShouldCreateRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      int expected = INITIAL_BALANCE;
+      Put put =
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, expected)
+              .build();
+
+      // Act
+      managerWithSerializable.put(put);
+
+      // Assert
+      Get get = prepareGet(0, 0, namespace1, TABLE_1);
+      Optional<Result> result = managerWithSerializable.get(get);
+
+      assertThat(result.isPresent()).isTrue();
+      assertThat(getBalance(result.get())).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  public void manager_put_PutGivenForExisting_WithSerializable_ShouldUpdateRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+
+      // Act
+      int expected = INITIAL_BALANCE + 100;
+      Put put =
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, expected)
+              .enableImplicitPreRead()
+              .build();
+      managerWithSerializable.put(put);
+
+      // Assert
+      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+      assertThat(actual.isPresent()).isTrue();
+      assertThat(getBalance(actual.get())).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  public void manager_insert_InsertGivenForNonExisting_WithSerializable_ShouldCreateRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      int expected = INITIAL_BALANCE;
+      Insert insert =
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, expected)
+              .build();
+
+      // Act
+      managerWithSerializable.insert(insert);
+
+      // Assert
+      Get get = prepareGet(0, 0, namespace1, TABLE_1);
+      Optional<Result> result = managerWithSerializable.get(get);
+
+      assertThat(result.isPresent()).isTrue();
+      assertThat(getBalance(result.get())).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  public void
+      manager_insert_InsertGivenForExisting_WithSerializable_ShouldThrowCrudConflictException()
+          throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+
+      // Act Assert
+      int expected = INITIAL_BALANCE + 100;
+      Insert insert =
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, expected)
+              .build();
+
+      assertThatThrownBy(() -> managerWithSerializable.insert(insert))
+          .isInstanceOf(CrudConflictException.class);
+    }
+  }
+
+  @Test
+  public void manager_upsert_UpsertGivenForNonExisting_WithSerializable_ShouldCreateRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      int expected = INITIAL_BALANCE;
+      Upsert upsert =
+          Upsert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, expected)
+              .build();
+
+      // Act
+      managerWithSerializable.upsert(upsert);
+
+      // Assert
+      Get get = prepareGet(0, 0, namespace1, TABLE_1);
+      Optional<Result> result = managerWithSerializable.get(get);
+
+      assertThat(result.isPresent()).isTrue();
+      assertThat(getBalance(result.get())).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  public void manager_upsert_UpsertGivenForExisting_WithSerializable_ShouldUpdateRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+
+      // Act
+      int expected = INITIAL_BALANCE + 100;
+      Upsert upsert =
+          Upsert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, expected)
+              .build();
+      managerWithSerializable.upsert(upsert);
+
+      // Assert
+      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+      assertThat(actual.isPresent()).isTrue();
+      assertThat(getBalance(actual.get())).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  public void manager_update_UpdateGivenForNonExisting_WithSerializable_ShouldDoNothing()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      Update update =
+          Update.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, INITIAL_BALANCE)
+              .build();
+
+      // Act
+      assertThatCode(() -> managerWithSerializable.update(update)).doesNotThrowAnyException();
+
+      // Assert
+      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+      assertThat(actual).isEmpty();
+    }
+  }
+
+  @Test
+  public void manager_update_UpdateGivenForExisting_WithSerializable_ShouldUpdateRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+
+      // Act
+      int expected = INITIAL_BALANCE + 100;
+      Update update =
+          Update.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, expected)
+              .build();
+      managerWithSerializable.update(update);
+
+      // Assert
+      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+      assertThat(actual.isPresent()).isTrue();
+      assertThat(getBalance(actual.get())).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  public void manager_delete_DeleteGivenForExisting_WithSerializable_ShouldDeleteRecord()
+      throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      populateRecords(namespace1, TABLE_1);
+      Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+
+      // Act
+      managerWithSerializable.delete(delete);
+
+      // Assert
+      Optional<Result> result = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+      assertThat(result.isPresent()).isFalse();
+    }
+  }
+
+  @Test
+  public void manager_mutate_WithSerializable_ShouldMutateRecords() throws TransactionException {
+    try (DistributedTransactionManager managerWithSerializable =
+        getTransactionManagerWithSerializable()) {
+      // Arrange
+      manager.insert(
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, INITIAL_BALANCE)
+              .build());
+      manager.insert(
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, INITIAL_BALANCE)
+              .build());
+
+      Update update =
+          Update.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 1)
+              .build();
+      Delete delete = prepareDelete(1, 0, namespace1, TABLE_1);
+
+      // Act
+      managerWithSerializable.mutate(Arrays.asList(update, delete));
+
+      // Assert
+      Optional<Result> result1 = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+      Optional<Result> result2 = managerWithSerializable.get(prepareGet(1, 0, namespace1, TABLE_1));
+
+      assertThat(result1.isPresent()).isTrue();
+      assertThat(getBalance(result1.get())).isEqualTo(1);
+
+      assertThat(result2.isPresent()).isFalse();
+    }
+  }
+
   private DistributedTransaction prepareTransfer(
       int fromId,
       String fromNamespace,
@@ -5505,5 +5878,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();
+  }
+
+  private DistributedTransactionManager getTransactionManagerWithSerializable() {
+    Properties properties = getProperties(TEST_NAME);
+    // Add testName as a coordinator namespace suffix
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
+    properties.put(ConsensusCommitConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.name());
+    return TransactionFactory.create(properties).getTransactionManager();
   }
 }
