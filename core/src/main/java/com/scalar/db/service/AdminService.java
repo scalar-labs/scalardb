@@ -2,6 +2,7 @@ package com.scalar.db.service;
 
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -120,6 +121,11 @@ public class AdminService implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return admin.getNamespaceNames();
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
+    return admin.getStorageInfo(namespace);
   }
 
   @Override
