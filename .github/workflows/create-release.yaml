@@ -77,3 +77,16 @@ jobs:
           asset_path: schema-loader/build/libs/scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
           asset_name: scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
           asset_content_type: application/java-archive
+
+      - name: Build scalardb-data-loader-cli jar
+        run: ./gradlew :data-loader:cli:shadowJar
+
+      - name: Upload scalardb-data-loader-cli jar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: data-loader/cli/build/libs/scalardb-data-loader-cli-${{ steps.version.outputs.version }}.jar
+          asset_name: scalardb-data-loader-cli-${{ steps.version.outputs.version }}.jar
+          asset_content_type: application/java-archive
