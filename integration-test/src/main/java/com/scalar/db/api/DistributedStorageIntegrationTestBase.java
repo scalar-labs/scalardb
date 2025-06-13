@@ -1042,86 +1042,6 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
-  public void
-      put_MultiplePutWithDifferentPartitionsWithIfNotExistsGiven_ShouldThrowIllegalArgumentException()
-          throws IOException, ExecutionException {
-    // Arrange
-    List<Put> puts = preparePuts();
-    puts.get(0).withCondition(new PutIfNotExists());
-    puts.get(3).withCondition(new PutIfNotExists());
-    puts.get(6).withCondition(new PutIfNotExists());
-
-    // Act
-    assertThatThrownBy(() -> storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    // Assert
-    List<Result> results;
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 0))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 3))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 6))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-  }
-
-  @Test
-  public void put_MultiplePutWithDifferentPartitionsGiven_ShouldThrowIllegalArgumentException()
-      throws IOException, ExecutionException {
-    // Arrange
-    List<Put> puts = preparePuts();
-
-    // Act
-    assertThatThrownBy(() -> storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    // Assert
-    List<Result> results;
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 0))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 3))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 6))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-  }
-
-  @Test
   public void put_MultiplePutWithDifferentConditionsGiven_ShouldStoreProperly()
       throws IOException, ExecutionException {
     // Arrange
@@ -1542,44 +1462,6 @@ public abstract class DistributedStorageIntegrationTestBase {
     assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
     assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
     assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
-  }
-
-  @Test
-  public void mutate_MultiplePutWithDifferentPartitionsGiven_ShouldThrowIllegalArgumentException()
-      throws IOException, ExecutionException {
-    // Arrange
-    List<Put> puts = preparePuts();
-
-    // Act
-    assertThatCode(() -> storage.mutate(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    // Assert
-    List<Result> results;
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 0))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 3))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
-    results =
-        scanAll(
-            Scan.newBuilder()
-                .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 6))
-                .build());
-    assertThat(results.size()).isEqualTo(0);
   }
 
   @Test

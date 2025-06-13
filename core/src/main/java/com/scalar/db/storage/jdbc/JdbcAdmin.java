@@ -12,7 +12,9 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -56,6 +58,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final String INDEX_NAME_PREFIX = "index";
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "jdbc",
+          StorageInfo.MutationAtomicityUnit.STORAGE,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE);
 
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
@@ -906,5 +914,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private String encloseFullTableName(String schema, String table) {
     return rdbEngine.encloseFullTableName(schema, table);
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 }

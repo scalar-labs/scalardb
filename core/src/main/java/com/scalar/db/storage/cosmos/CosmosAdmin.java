@@ -24,7 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -61,6 +63,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @VisibleForTesting public static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String STORED_PROCEDURE_PATH =
       "cosmosdb_stored_procedure/" + STORED_PROCEDURE_FILE_NAME;
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "cosmos",
+          StorageInfo.MutationAtomicityUnit.PARTITION,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE);
 
   private final CosmosClient client;
   private final String metadataDatabase;
@@ -626,5 +634,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throw e;
     }
     return true;
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 }
