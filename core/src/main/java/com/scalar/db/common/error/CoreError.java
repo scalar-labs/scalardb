@@ -100,7 +100,7 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION(
       Category.USER_ERROR,
       "0019",
-      "Mutations that span multiple partitions are not supported. Mutations: %s",
+      "The storage does not support mutations across multiple partitions. Storage: %s; Mutations: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_PARTITION_KEY(
@@ -689,13 +689,13 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0149",
-      "Invalid base64 encoding for blob value for column %s in table %s in namespace %s",
+      "Invalid base64 encoding for blob value '%s' for column %s in table %s in namespace %s",
       "",
       ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0150",
-      "Invalid number specified for column %s in table %s in namespace %s",
+      "Invalid number '%s' specified for column %s in table %s in namespace %s",
       "",
       ""),
   DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
@@ -898,7 +898,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0199",
-      "Invalid date time value specified for column %s in table %s in namespace %s.",
+      "Invalid date time value '%s' specified for column %s in table %s in namespace %s.",
       "",
       ""),
   DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT(
@@ -934,6 +934,30 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0211",
       "Mutations are not allowed in read-only transactions. Transaction ID: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_RECORD_MUTATION(
+      Category.USER_ERROR,
+      "0212",
+      "The storage does not support mutations across multiple records. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_TABLE_MUTATION(
+      Category.USER_ERROR,
+      "0213",
+      "The storage does not support mutations across multiple tables. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_NAMESPACE_MUTATION(
+      Category.USER_ERROR,
+      "0214",
+      "The storage does not support mutations across multiple namespaces. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_STORAGE_MUTATION(
+      Category.USER_ERROR,
+      "0215",
+      "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
 
@@ -1211,6 +1235,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0054", "Getting the scanner failed. Details: %s", "", ""),
   JDBC_CLOSING_SCANNER_FAILED(
       Category.INTERNAL_ERROR, "0055", "Closing the scanner failed. Details: %s", "", ""),
+  GETTING_STORAGE_INFO_FAILED(
+      Category.INTERNAL_ERROR,
+      "0056",
+      "Getting the storage information failed. Namespace: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
