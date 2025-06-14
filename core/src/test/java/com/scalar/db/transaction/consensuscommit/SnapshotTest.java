@@ -244,14 +244,19 @@ public class SnapshotTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_TEXT_3)
-        .withValue(ANY_NAME_4, ANY_TEXT_4);
+    return preparePut(ANY_TEXT_1, ANY_TEXT_2);
+  }
+
+  private Put preparePut(String partitionKeyColumnValue, String clusteringKeyColumnValue) {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, partitionKeyColumnValue))
+        .clusteringKey(Key.ofText(ANY_NAME_2, clusteringKeyColumnValue))
+        .textValue(ANY_NAME_3, ANY_TEXT_3)
+        .textValue(ANY_NAME_4, ANY_TEXT_4)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Put prepareAnotherPut() {
@@ -301,12 +306,17 @@ public class SnapshotTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return prepareDelete(ANY_TEXT_1, ANY_TEXT_2);
+  }
+
+  private Delete prepareDelete(String partitionKeyColumnValue, String clusteringKeyColumnValue) {
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, partitionKeyColumnValue))
+        .clusteringKey(Key.ofText(ANY_NAME_2, clusteringKeyColumnValue))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Delete prepareAnotherDelete() {
@@ -1086,7 +1096,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializable_GetSetWithGetWithIndex_RecordInsertedByMySelf_ShouldProcessWithoutExceptions()
+      toSerializable_GetSetWithGetWithIndex_RecordInsertedByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
@@ -1160,7 +1170,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializable_ScanSetUpdatedByMySelf_ShouldProcessWithoutExceptions()
+  public void toSerializable_ScanSetUpdatedByMyself_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
@@ -1237,7 +1247,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void toSerializable_ScanSetExtendedByMySelf_ShouldProcessWithoutExceptions()
+  public void toSerializable_ScanSetExtendedByMyself_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
@@ -1261,7 +1271,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializable_ScanSetWithMultipleRecordsExtendedByMySelf_ShouldProcessWithoutExceptions()
+      toSerializable_ScanSetWithMultipleRecordsExtendedByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
@@ -1526,7 +1536,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRangeByMySelf_ShouldProcessWithoutExceptions()
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
@@ -1589,7 +1599,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRangeByMySelf_ShouldProcessWithoutExceptions()
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
@@ -1617,6 +1627,107 @@ public class SnapshotTest {
 
     // Assert
     verify(storage).scan(scanWithProjectionsWithoutLimit);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecords_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScanWithIndex();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
+    TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3);
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
+
+    // Simulate that the first and second records were updated by another transaction
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjections =
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecordsByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScanWithIndex();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
+    TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3);
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
+
+    // Simulate that the first and second records were updated by myself
+    snapshot.putIntoWriteSet(key1, preparePut(ANY_TEXT_1, ANY_TEXT_1));
+    snapshot.putIntoWriteSet(key3, preparePut(ANY_TEXT_3, ANY_TEXT_1));
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjections =
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithIndexInScanSet_WhenDeletingRecordsByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    Scan scan = prepareScanWithIndex();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
+    TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
+    TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3);
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
+
+    // Simulate that the first and second records were deleted by myself
+    snapshot.putIntoDeleteSet(key1, prepareDelete(ANY_TEXT_1, ANY_TEXT_1));
+    snapshot.putIntoDeleteSet(key3, prepareDelete(ANY_TEXT_3, ANY_TEXT_1));
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanWithProjections =
+        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test
