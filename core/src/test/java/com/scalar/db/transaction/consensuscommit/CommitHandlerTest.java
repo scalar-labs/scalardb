@@ -292,6 +292,30 @@ public class CommitHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
+  public void
+      commit_NoWritesAndDeletesInSnapshot_ValidationFailed_ShouldNotPrepareRecordsAndAbortStateAndRollbackRecords(
+          boolean withSnapshotHook)
+          throws ExecutionException, CoordinatorException, ValidationConflictException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
+    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
+    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commit(snapshot, false))
+        .isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    verify(storage, never()).mutate(anyList());
+    verify(snapshot).toSerializable(storage);
+    verify(coordinator, never()).putState(any());
+    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verify(handler).onFailureBeforeCommit(any());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
   public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withSnapshotHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {

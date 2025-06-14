@@ -134,8 +134,14 @@ public class CommitHandler {
         validate(snapshot);
       } catch (ValidationException e) {
         safelyCallOnFailureBeforeCommit(snapshot);
-        abortState(snapshot.getId());
-        rollbackRecords(snapshot);
+
+        // If the transaction has no writes and deletes, we don't need to abort-state and
+        // rollback-records since there are no changes to be made.
+        if (!hasNoWritesAndDeletesInSnapshot) {
+          abortState(snapshot.getId());
+          rollbackRecords(snapshot);
+        }
+
         if (e instanceof ValidationConflictException) {
           throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
         }
