@@ -42,6 +42,15 @@ public abstract class ExportManager {
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
 
+  /**
+   * Constructs an {@code ExportManager} that uses a {@link DistributedStorage} instance for
+   * non-transactional data export operations.
+   *
+   * @param distributedStorage the {@link DistributedStorage} used to read data directly from
+   *     storage
+   * @param dao the {@link ScalarDbDao} used to perform data operations
+   * @param producerTaskFactory the factory for creating producer tasks to format the exported data
+   */
   public ExportManager(
       DistributedStorage distributedStorage,
       ScalarDbDao dao,
@@ -52,6 +61,15 @@ public abstract class ExportManager {
     this.producerTaskFactory = producerTaskFactory;
   }
 
+  /**
+   * Constructs an {@code ExportManager} that uses a {@link DistributedTransactionManager} instance
+   * for transactional data export operations.
+   *
+   * @param distributedTransactionManager the {@link DistributedTransactionManager} used to read
+   *     data with transactional guarantees
+   * @param dao the {@link ScalarDbDao} used to perform data operations
+   * @param producerTaskFactory the factory for creating producer tasks to format the exported data
+   */
   public ExportManager(
       DistributedTransactionManager distributedTransactionManager,
       ScalarDbDao dao,

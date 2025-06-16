@@ -132,6 +132,21 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     }
   }
 
+  /**
+   * Creates a {@link TableMetadataService} instance based on the specified {@link ScalarDbMode} and
+   * ScalarDB configuration file.
+   *
+   * <p>If the mode is {@code TRANSACTION}, this method initializes a {@link TransactionFactory} and
+   * uses its transaction admin to create a {@link TableMetadataTransactionService}. Otherwise, it
+   * initializes a {@link StorageFactory} and creates a {@link TableMetadataStorageService} using
+   * its storage admin.
+   *
+   * @param scalarDbMode the mode ScalarDB is running in (either {@code STORAGE} or {@code
+   *     TRANSACTION})
+   * @param scalarDbPropertiesFilePath the path to the ScalarDB properties file
+   * @return an appropriate {@link TableMetadataService} based on the mode
+   * @throws IOException if reading the ScalarDB properties file fails
+   */
   private TableMetadataService createTableMetadataService(
       ScalarDbMode scalarDbMode, String scalarDbPropertiesFilePath) throws IOException {
     if (scalarDbMode.equals(ScalarDbMode.TRANSACTION)) {

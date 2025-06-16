@@ -9,6 +9,18 @@ import java.io.IOException;
 import java.io.Writer;
 
 public class JsonLineExportManager extends ExportManager {
+  /**
+   * Constructs a {@code JsonLineExportManager} for exporting data using a {@link
+   * DistributedStorage} instance.
+   *
+   * <p>This constructor is used when exporting data in non-transactional (storage) mode.
+   *
+   * @param distributedStorage the {@link DistributedStorage} used to read data directly from
+   *     storage
+   * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for exporting data
+   * @param producerTaskFactory the factory used to create producer tasks for generating
+   *     CSV-formatted output
+   */
   public JsonLineExportManager(
       DistributedStorage distributedStorage,
       ScalarDbDao dao,
@@ -16,6 +28,16 @@ public class JsonLineExportManager extends ExportManager {
     super(distributedStorage, dao, producerTaskFactory);
   }
 
+  /**
+   * Constructs a {@code JsonLineExportManager} for exporting data using a {@link
+   * DistributedTransactionManager}.
+   *
+   * @param distributedTransactionManager the transaction manager used to read data with
+   *     transactional guarantees
+   * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for exporting data
+   * @param producerTaskFactory the factory used to create producer tasks for generating
+   *     CSV-formatted output
+   */
   public JsonLineExportManager(
       DistributedTransactionManager distributedTransactionManager,
       ScalarDbDao dao,

@@ -13,6 +13,18 @@ import java.util.Iterator;
 import java.util.List;
 
 public class CsvExportManager extends ExportManager {
+  /**
+   * Constructs a {@code CsvExportManager} for exporting data using a {@link DistributedStorage}
+   * instance.
+   *
+   * <p>This constructor is used when exporting data in non-transactional (storage) mode.
+   *
+   * @param distributedStorage the {@link DistributedStorage} used to read data directly from
+   *     storage
+   * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for exporting data
+   * @param producerTaskFactory the factory used to create producer tasks for generating
+   *     CSV-formatted output
+   */
   public CsvExportManager(
       DistributedStorage distributedStorage,
       ScalarDbDao dao,
@@ -20,6 +32,16 @@ public class CsvExportManager extends ExportManager {
     super(distributedStorage, dao, producerTaskFactory);
   }
 
+  /**
+   * Constructs a {@code CsvExportManager} for exporting data using a {@link
+   * DistributedTransactionManager}.
+   *
+   * @param distributedTransactionManager the transaction manager used to read data with
+   *     transactional guarantees
+   * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for exporting data
+   * @param producerTaskFactory the factory used to create producer tasks for generating
+   *     CSV-formatted output
+   */
   public CsvExportManager(
       DistributedTransactionManager distributedTransactionManager,
       ScalarDbDao dao,
