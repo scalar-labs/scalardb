@@ -118,9 +118,15 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     } catch (Exception e) {
-      if (connection != null) {
-        close(connection);
+      try {
+        if (connection != null) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
       }
+
+      close(connection);
       throw e;
     }
   }
