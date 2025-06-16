@@ -491,7 +491,7 @@ public class CrudHandler {
     private final List<String> originalProjections;
     private final Scanner scanner;
 
-    private final LinkedHashMap<Snapshot.Key, TransactionResult> results;
+    @Nullable private final LinkedHashMap<Snapshot.Key, TransactionResult> results;
     private final AtomicBoolean fullyScanned = new AtomicBoolean();
     private final AtomicBoolean closed = new AtomicBoolean();
 
