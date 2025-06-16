@@ -19,3 +19,9 @@ jobs:
         with:
           github-token: ${{ secrets.CR_PAT }}
           package-name: scalardb-schema-loader
+
+      - name: scalardb-data-loader-cli
+        uses: camargo/delete-untagged-action@v1
+        with:
+          github-token: ${{ secrets.CR_PAT }}
+          package-name: scalardb-data-loader-cli
