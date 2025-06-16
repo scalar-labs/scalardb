@@ -67,8 +67,12 @@ jobs:
         run: |
           mkdir -p /tmp/gradle_test_reports/core
           mkdir -p /tmp/gradle_test_reports/schema-loader
+          mkdir -p /tmp/gradle_test_reports/data-loader/core
+          mkdir -p /tmp/gradle_test_reports/data-loader/cli
           cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
           cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
+          cp -a data-loader/core/build/reports/tests/test /tmp/gradle_test_reports/data-loader/core/
+          cp -a data-loader/cli/build/reports/tests/test /tmp/gradle_test_reports/data-loader/cli/
 
       - name: Upload Gradle test reports
         if: always()
@@ -83,9 +87,13 @@ jobs:
           mkdir -p /tmp/gradle_spotbugs_reports/core
           mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
           mkdir -p /tmp/gradle_spotbugs_reports/integration-test
+          mkdir -p /tmp/gradle_spotbugs_reports/data-loader/core
+          mkdir -p /tmp/gradle_spotbugs_reports/data-loader/cli
           cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
           cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
           cp -a integration-test/build/reports/spotbugs /tmp/gradle_spotbugs_reports/integration-test/
+          cp -a data-loader/core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/data-loader/core/
+          cp -a data-loader/cli/build/reports/spotbugs /tmp/gradle_spotbugs_reports/data-loader/cli/
 
       - name: Upload Spotbugs reports
         if: always()
@@ -112,6 +120,9 @@ jobs:
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
         run: ./gradlew schema-loader:dockerfileLint
+
+      - name: Dockerfile Lint for ScalarDB Data Loader CLI
+        run: ./gradlew data-loader:cli:dockerfileLint
 
   integration-test-for-cassandra-3-0:
     name: Cassandra 3.0 integration test (${{ matrix.mode.label }})
