@@ -118,19 +118,9 @@ public class CrudHandler {
           .map(r -> new FilteredResult(r, originalProjections, metadata, isIncludeMetadataEnabled));
     } else {
       Optional<TransactionResult> result = read(key, get);
-      if (get.getConjunctions().isEmpty()) {
-        return snapshot
-            .mergeResult(key, result)
-            .map(
-                r ->
-                    new FilteredResult(r, originalProjections, metadata, isIncludeMetadataEnabled));
-      } else {
-        return snapshot
-            .mergeResult(key, result, get.getConjunctions())
-            .map(
-                r ->
-                    new FilteredResult(r, originalProjections, metadata, isIncludeMetadataEnabled));
-      }
+      return snapshot
+          .mergeResult(key, result, get.getConjunctions())
+          .map(r -> new FilteredResult(r, originalProjections, metadata, isIncludeMetadataEnabled));
     }
   }
 

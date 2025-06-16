@@ -281,7 +281,8 @@ public class CrudHandlerTest {
     Snapshot.Key key = new Snapshot.Key(getForStorage);
     when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
-    when(snapshot.mergeResult(key, transactionResult)).thenReturn(transactionResult);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
 
     // Act
     Optional<Result> result = handler.get(get);
@@ -321,7 +322,8 @@ public class CrudHandlerTest {
     Snapshot.Key key = new Snapshot.Key(getForStorage);
     when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
-    when(snapshot.mergeResult(key, transactionResult)).thenReturn(transactionResult);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
 
     // Act
     Optional<Result> result = handler.get(get);
