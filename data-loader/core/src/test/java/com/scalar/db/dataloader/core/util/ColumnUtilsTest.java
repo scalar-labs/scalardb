@@ -161,7 +161,7 @@ class ColumnUtilsTest {
             () -> ColumnUtils.createColumnFromValue(DataType.INT, columnInfo, value));
     assertEquals(
         CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
-            columnName, "table", "ns"),
+            value, columnName, "table", "ns"),
         exception.getMessage());
   }
 
@@ -181,7 +181,7 @@ class ColumnUtilsTest {
             () -> ColumnUtils.createColumnFromValue(DataType.BLOB, columnInfo, value));
     assertEquals(
         CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
-            columnName, "table", "ns"),
+            value, columnName, "table", "ns"),
         exception.getMessage());
   }
   /**
@@ -200,7 +200,7 @@ class ColumnUtilsTest {
             () -> ColumnUtils.createColumnFromValue(DataType.TIMESTAMP, columnInfo, value));
     assertEquals(
         CoreError.DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
-            columnName, "table", "ns"),
+            value, columnName, "table", "ns"),
         exception.getMessage());
   }
 
@@ -215,7 +215,17 @@ class ColumnUtilsTest {
   void getColumnsFromResult_withValidData_shouldReturnColumns()
       throws Base64Exception, ColumnParsingException {
     List<Column<?>> columns =
-        ColumnUtils.getColumnsFromResult(scalarDBResult, sourceRecord, false, mockMetadata);
+        ColumnUtils.getColumnsFromResult(
+            scalarDBResult, sourceRecord, false, mockMetadata, "namespace", "table");
+    assertEquals(8, columns.size());
+  }
+
+  @Test
+  void getColumnsFromResult_withResultNull_withValidData_shouldReturnColumns()
+      throws Base64Exception, ColumnParsingException {
+    List<Column<?>> columns =
+        ColumnUtils.getColumnsFromResult(
+            null, sourceRecord, false, mockMetadata, "namespace", "table");
     assertEquals(8, columns.size());
   }
 }
