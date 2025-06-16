@@ -217,12 +217,12 @@ public class Snapshot {
     return getSet.containsKey(get);
   }
 
-  public boolean hasNoWritesAndDeletes() {
-    return writeSet.isEmpty() && deleteSet.isEmpty();
+  public boolean hasSomeWritesOrDeletes() {
+    return !writeSet.isEmpty() || !deleteSet.isEmpty();
   }
 
-  public boolean hasNoReads() {
-    return getSet.isEmpty() && scanSet.isEmpty() && scannerSet.isEmpty();
+  public boolean hasSomeReads() {
+    return !getSet.isEmpty() || !scanSet.isEmpty() || !scannerSet.isEmpty();
   }
 
   public Optional<TransactionResult> getResult(Key key) throws CrudException {
