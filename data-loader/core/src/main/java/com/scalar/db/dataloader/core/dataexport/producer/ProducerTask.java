@@ -20,9 +20,28 @@ import java.util.Set;
  */
 public abstract class ProducerTask {
 
+  /**
+   * The metadata of the table from which the data is being exported. Used to understand schema
+   * details such as column types and primary keys.
+   */
   protected final TableMetadata tableMetadata;
+
+  /**
+   * A map of column names to their corresponding data types. Derived from the table metadata to
+   * assist in formatting output correctly.
+   */
   protected final Map<String, DataType> dataTypeByColumnName;
+
+  /**
+   * Flag indicating whether to include internal metadata columns (e.g., transaction metadata) in
+   * the output.
+   */
   protected final boolean includeMetadata;
+
+  /**
+   * A set of column names to include in the exported output. If empty, all columns are included by
+   * default.
+   */
   protected final Set<String> projectedColumnsSet;
 
   /**
@@ -44,5 +63,12 @@ public abstract class ProducerTask {
     this.dataTypeByColumnName = columnDataTypes;
   }
 
+  /**
+   * Processes a chunk of export data and returns a formatted string representation of the chunk.
+   *
+   * @param dataChunk the list of {@link Result} objects representing a chunk of data to be exported
+   * @return a formatted string representing the processed data chunk, ready to be written to the
+   *     output
+   */
   public abstract String process(List<Result> dataChunk);
 }
