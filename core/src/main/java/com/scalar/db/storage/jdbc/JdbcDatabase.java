@@ -197,6 +197,9 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       close(connection);
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
+    } catch (Exception e) {
+      close(connection);
+      throw e;
     }
 
     try {
