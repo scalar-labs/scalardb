@@ -8,12 +8,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermission;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
@@ -48,25 +44,13 @@ class DirectoryUtilsTest {
   @Test
   void validateOrCreateTargetDirectory_DirectoryNotWritable_ThrowsException() throws IOException {
     Path readOnlyDirectory = Files.createDirectory(Paths.get(tempDir.toString(), "readOnlyDir"));
+    readOnlyDirectory.toFile().setWritable(false);
 
-    // Try to make it read-only using POSIX if supported
-    try {
-      Set<PosixFilePermission> perms = new HashSet<>();
-      perms.add(PosixFilePermission.OWNER_READ);
-      perms.add(PosixFilePermission.OWNER_EXECUTE);
-      Files.setPosixFilePermissions(readOnlyDirectory, perms);
-    } catch (UnsupportedOperationException | IOException e) {
-      // Fall back for systems without POSIX support
-      readOnlyDirectory.toFile().setWritable(false);
-    }
-    // Verify it is actually non-writable
-    boolean isWritable = Files.isWritable(readOnlyDirectory);
-    Assumptions.assumeFalse(isWritable, "Directory is still writable; skipping test.");
-
-    // Test
     assertThrows(
         DirectoryValidationException.class,
-        () -> DirectoryUtils.validateOrCreateTargetDirectory(readOnlyDirectory.toString()));
+        () -> {
+          DirectoryUtils.validateOrCreateTargetDirectory(readOnlyDirectory.toString());
+        });
   }
 
   @Test
