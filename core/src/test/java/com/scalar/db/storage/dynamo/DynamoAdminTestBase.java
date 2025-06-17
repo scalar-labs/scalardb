@@ -732,8 +732,7 @@ public abstract class DynamoAdminTestBase {
     // Act Assert
     assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, metadata))
         .isInstanceOf(ExecutionException.class);
-    verify(client, times(DynamoAdmin.DEFAULT_MAX_RETRY_COUNT + 1))
-        .putItem(any(PutItemRequest.class));
+    verify(client, times(DynamoAdmin.MAX_RETRY_COUNT + 1)).putItem(any(PutItemRequest.class));
   }
 
   @Test
@@ -1477,8 +1476,7 @@ public abstract class DynamoAdminTestBase {
     // Act Assert
     assertThatThrownBy(() -> admin.createNamespace(NAMESPACE, Collections.emptyMap()))
         .isInstanceOf(ExecutionException.class);
-    verify(client, times(DynamoAdmin.DEFAULT_MAX_RETRY_COUNT + 1))
-        .putItem(any(PutItemRequest.class));
+    verify(client, times(DynamoAdmin.MAX_RETRY_COUNT + 1)).putItem(any(PutItemRequest.class));
   }
 
   @Test

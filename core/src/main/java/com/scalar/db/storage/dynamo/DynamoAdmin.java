@@ -97,7 +97,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
   private static final int DEFAULT_WAITING_DURATION_SECS = 3;
-  @VisibleForTesting static final int DEFAULT_MAX_RETRY_COUNT = 10;
+  @VisibleForTesting static final int MAX_RETRY_COUNT = 10;
 
   @VisibleForTesting static final String PARTITION_KEY = "concatenatedPartitionKey";
   @VisibleForTesting static final String CLUSTERING_KEY = "concatenatedClusteringKey";
@@ -249,7 +249,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                 .build());
         return;
       } catch (ResourceNotFoundException e) {
-        if (retryCount >= DEFAULT_MAX_RETRY_COUNT) {
+        if (retryCount >= MAX_RETRY_COUNT) {
           throw new ExecutionException(
               "Inserting the " + namespace + " namespace into the namespaces table failed", e);
         }
@@ -492,7 +492,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                 .build());
         return;
       } catch (ResourceNotFoundException e) {
-        if (retryCount >= DEFAULT_MAX_RETRY_COUNT) {
+        if (retryCount >= MAX_RETRY_COUNT) {
           throw new ExecutionException(
               "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed",
               e);
