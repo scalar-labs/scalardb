@@ -30,9 +30,21 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class SingleFileImportLogger extends AbstractImportLogger {
 
+  /**
+   * Name format for the file where the summary of the import process will be logged. This file
+   * typically includes overall statistics and a high-level status of the import.
+   */
   protected static final String SUMMARY_LOG_FILE_NAME = "summary.log";
+
+  /** Name format for the file where successfully imported records will be logged in JSON format. */
   protected static final String SUCCESS_LOG_FILE_NAME = "success.json";
+
+  /**
+   * Name format for the file where failed import records will be logged in JSON format, typically
+   * along with error details or reasons for failure.
+   */
   protected static final String FAILURE_LOG_FILE_NAME = "failure.json";
+
   private static final Logger logger = LoggerFactory.getLogger(SingleFileImportLogger.class);
   private volatile LogWriter summaryLogWriter;
   private final LogWriter successLogWriter;

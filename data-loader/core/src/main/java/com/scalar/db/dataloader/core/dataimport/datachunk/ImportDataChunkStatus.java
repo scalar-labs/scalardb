@@ -6,7 +6,8 @@ import java.time.Instant;
 import lombok.Builder;
 import lombok.Data;
 
-/** * A DTO to store import data chunk details */
+/** A DTO to store import data chunk details. */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Data
 @Builder
 @JsonDeserialize(builder = ImportDataChunkStatus.ImportDataChunkStatusBuilder.class)
@@ -38,4 +39,13 @@ public class ImportDataChunkStatus {
 
   @JsonProperty("status")
   private final ImportDataChunkStatusState status;
+
+  /**
+   * Explicit builder class declaration required for Javadoc generation.
+   *
+   * <p>This class is normally generated automatically by Lombok's {@code @Builder} annotation.
+   * However, when using a custom builder method name (e.g., {@code hiddenBuilder()}), Javadoc may
+   * fail to resolve references to this builder unless it is explicitly declared.
+   */
+  public static class ImportDataChunkStatusBuilder {}
 }

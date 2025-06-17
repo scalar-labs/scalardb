@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
  * Service for retrieving {@link TableMetadata} from ScalarDB. Provides methods to fetch metadata
  * for individual tables or a collection of tables.
  */
+@SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public class TableMetadataService {
 

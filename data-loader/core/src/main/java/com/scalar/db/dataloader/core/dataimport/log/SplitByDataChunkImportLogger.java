@@ -36,8 +36,17 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class SplitByDataChunkImportLogger extends AbstractImportLogger {
 
+  /**
+   * Name format for the file where the summary of the import process will be logged. This file
+   * typically includes overall statistics and a high-level status of the import.
+   */
   protected static final String SUMMARY_LOG_FILE_NAME_FORMAT = "data_chunk_%s_summary.json";
+  /**
+   * Name format for the file where failed import records will be logged in JSON format, typically
+   * along with error details or reasons for failure.
+   */
   protected static final String FAILURE_LOG_FILE_NAME_FORMAT = "data_chunk_%s_failure.json";
+  /** Name format for the file where successfully imported records will be logged in JSON format. */
   protected static final String SUCCESS_LOG_FILE_NAME_FORMAT = "data_chunk_%s_success.json";
 
   private static final Logger logger = LoggerFactory.getLogger(SplitByDataChunkImportLogger.class);
