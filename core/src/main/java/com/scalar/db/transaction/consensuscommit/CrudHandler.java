@@ -51,10 +51,10 @@ public class CrudHandler {
   // Whether the transaction is in read-only mode or not.
   private final boolean readOnly;
 
-  // Whether the transaction is in single-operation mode or not. Single-operation mode refers to
-  // executing a CRUD operation directly through `DistributedTransactionManager` without explicitly
-  // beginning a transaction.
-  private final boolean singleOperation;
+  // Whether the transaction is in one-operation mode or not. One-operation mode refers to executing
+  // a CRUD operation directly through `DistributedTransactionManager` without explicitly beginning
+  // a transaction.
+  private final boolean oneOperation;
 
   private final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
@@ -66,7 +66,7 @@ public class CrudHandler {
       boolean isIncludeMetadataEnabled,
       ParallelExecutor parallelExecutor,
       boolean readOnly,
-      boolean singleOperation) {
+      boolean oneOperation) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
@@ -74,7 +74,7 @@ public class CrudHandler {
     this.mutationConditionsValidator = new MutationConditionsValidator(snapshot.getId());
     this.parallelExecutor = parallelExecutor;
     this.readOnly = readOnly;
-    this.singleOperation = singleOperation;
+    this.oneOperation = oneOperation;
   }
 
   @VisibleForTesting
@@ -86,7 +86,7 @@ public class CrudHandler {
       MutationConditionsValidator mutationConditionsValidator,
       ParallelExecutor parallelExecutor,
       boolean readOnly,
-      boolean singleOperation) {
+      boolean oneOperation) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
     this.tableMetadataManager = tableMetadataManager;
@@ -94,7 +94,7 @@ public class CrudHandler {
     this.mutationConditionsValidator = mutationConditionsValidator;
     this.parallelExecutor = parallelExecutor;
     this.readOnly = readOnly;
-    this.singleOperation = singleOperation;
+    this.oneOperation = oneOperation;
   }
 
   public Optional<Result> get(Get originalGet) throws CrudException {
@@ -279,8 +279,8 @@ public class CrudHandler {
   }
 
   private boolean isSnapshotReadRequired() {
-    // In single-operation mode, we don't need snapshot read
-    return !singleOperation;
+    // In one-operation mode, we don't need snapshot read
+    return !oneOperation;
   }
 
   private boolean isValidationOrSnapshotReadRequired() {
@@ -313,8 +313,8 @@ public class CrudHandler {
   }
 
   private void verifyNoOverlap(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
-    // In either read-only mode or single-operation mode, we don't need to verify the overlap
-    if (!readOnly && !singleOperation) {
+    // In either read-only mode or one-operation mode, we don't need to verify the overlap
+    if (!readOnly && !oneOperation) {
       snapshot.verifyNoOverlap(scan, results);
     }
   }

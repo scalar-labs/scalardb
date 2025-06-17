@@ -259,7 +259,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_InSingleOperationMode_ValidationNotRequired_ShouldReturnFromStorageAndUpdateSnapshot()
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_InOneOperationMode_ValidationNotRequired_ShouldReturnFromStorageAndUpdateSnapshot()
           throws CrudException, ExecutionException {
     // Arrange
     handler =
@@ -300,7 +300,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_InSingleOperationMode_ValidationRequired_ShouldReturnFromStorageAndUpdateSnapshot()
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_InOneOperationMode_ValidationRequired_ShouldReturnFromStorageAndUpdateSnapshot()
           throws CrudException, ExecutionException {
     // Arrange
     handler =
@@ -341,7 +341,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      get_GetWithConjunction_GetNotExistsInSnapshotAndRecordInStorageCommitted_InSingleOperationMode_ValidationRequired_ShouldReturnFromStorageAndUpdateSnapshot()
+      get_GetWithConjunction_GetNotExistsInSnapshotAndRecordInStorageCommitted_InOneOperationMode_ValidationRequired_ShouldReturnFromStorageAndUpdateSnapshot()
           throws CrudException, ExecutionException {
     // Arrange
     handler =
@@ -596,7 +596,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void
-      scanOrGetScanner_ResultGivenFromStorage_InSingleOperationMode_ValidationNotRequired_ShouldUpdateSnapshotAndReturn(
+      scanOrGetScanner_ResultGivenFromStorage_InOneOperationMode_ValidationNotRequired_ShouldUpdateSnapshotAndReturn(
           ScanType scanType) throws ExecutionException, CrudException {
     // Arrange
     handler =
@@ -638,7 +638,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void
-      scanOrGetScanner_ResultGivenFromStorage_InSingleOperationMode_ValidationRequired_ShouldUpdateSnapshotAndReturn(
+      scanOrGetScanner_ResultGivenFromStorage_InOneOperationMode_ValidationRequired_ShouldUpdateSnapshotAndReturn(
           ScanType scanType) throws ExecutionException, CrudException {
     // Arrange
     handler =
@@ -1095,7 +1095,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      getScanner_ScannerNotFullyScanned_InSingleOperationMode_ValidationNotRequired_ShouldUpdateSnapshotProperly()
+      getScanner_ScannerNotFullyScanned_InOneOperationMode_ValidationNotRequired_ShouldUpdateSnapshotProperly()
           throws ExecutionException, CrudException {
     // Arrange
     handler =
@@ -1137,7 +1137,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      getScanner_ScannerNotFullyScanned_InSingleOperationMode_ValidationRequired_ShouldUpdateSnapshotProperly()
+      getScanner_ScannerNotFullyScanned_InOneOperationMode_ValidationRequired_ShouldUpdateSnapshotProperly()
           throws ExecutionException, CrudException {
     // Arrange
     handler =

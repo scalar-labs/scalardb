@@ -219,7 +219,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @VisibleForTesting
   DistributedTransaction begin(
-      String txId, Isolation isolation, boolean readOnly, boolean singleOperation) {
+      String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
     if (isGroupCommitEnabled()) {
@@ -240,7 +240,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             isIncludeMetadataEnabled,
             parallelExecutor,
             readOnly,
-            singleOperation);
+            oneOperation);
     DistributedTransaction transaction =
         new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
     if (readOnly) {
@@ -251,7 +251,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return transaction;
   }
 
-  private DistributedTransaction beginSingleOperation(boolean readOnly) {
+  private DistributedTransaction beginOneOperation(boolean readOnly) {
     String txId = UUID.randomUUID().toString();
     return begin(txId, config.getIsolation(), readOnly, true);
   }
@@ -268,7 +268,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    DistributedTransaction transaction = beginSingleOperation(true);
+    DistributedTransaction transaction = beginOneOperation(true);
 
     TransactionCrudOperable.Scanner scanner;
     try {
@@ -438,7 +438,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction,
       boolean readOnly)
       throws CrudException, UnknownTransactionStatusException {
-    DistributedTransaction transaction = beginSingleOperation(readOnly);
+    DistributedTransaction transaction = beginOneOperation(readOnly);
 
     try {
       R result = throwableFunction.apply(transaction);

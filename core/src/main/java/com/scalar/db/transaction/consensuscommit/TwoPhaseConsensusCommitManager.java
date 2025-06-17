@@ -167,7 +167,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
 
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(
-      String txId, Isolation isolation, boolean readOnly, boolean singleOperation) {
+      String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
@@ -177,7 +177,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             isIncludeMetadataEnabled,
             parallelExecutor,
             readOnly,
-            singleOperation);
+            oneOperation);
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
@@ -185,7 +185,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     return transaction;
   }
 
-  private TwoPhaseCommitTransaction beginSingleOperation(boolean readOnly) {
+  private TwoPhaseCommitTransaction beginOneOperation(boolean readOnly) {
     String txId = UUID.randomUUID().toString();
     return begin(txId, config.getIsolation(), readOnly, true);
   }
@@ -202,7 +202,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    TwoPhaseCommitTransaction transaction = beginSingleOperation(true);
+    TwoPhaseCommitTransaction transaction = beginOneOperation(true);
 
     TransactionCrudOperable.Scanner scanner;
     try {
@@ -376,7 +376,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction,
       boolean readOnly)
       throws CrudException, UnknownTransactionStatusException {
-    TwoPhaseCommitTransaction transaction = beginSingleOperation(readOnly);
+    TwoPhaseCommitTransaction transaction = beginOneOperation(readOnly);
     try {
       R result = throwableFunction.apply(transaction);
       transaction.prepare();
