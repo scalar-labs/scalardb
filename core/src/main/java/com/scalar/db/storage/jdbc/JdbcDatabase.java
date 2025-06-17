@@ -104,6 +104,17 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       close(connection);
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
+    } catch (Exception e) {
+      try {
+        if (connection != null) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
+
+      close(connection);
+      throw e;
     }
   }
 
@@ -173,6 +184,9 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       close(connection);
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
+    } catch (Exception e) {
+      close(connection);
+      throw e;
     }
 
     try {
