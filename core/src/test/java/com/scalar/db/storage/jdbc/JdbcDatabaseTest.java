@@ -2,6 +2,9 @@ package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -122,6 +125,25 @@ public class JdbcDatabaseTest {
               jdbcDatabase.scan(scan);
             })
         .isInstanceOf(ExecutionException.class);
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      whenScanOperationExecutedAndJdbcServiceThrowsIllegalArgumentException_shouldCloseConnectionAndThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Exception cause = new IllegalArgumentException("Table not found");
+    // Simulate the table not found scenario.
+    when(jdbcService.getScanner(any(), any())).thenThrow(cause);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              jdbcDatabase.scan(scan);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
     verify(connection).close();
   }
 
@@ -328,6 +350,32 @@ public class JdbcDatabaseTest {
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(RetriableExecutionException.class);
+    verify(connection).close();
+  }
+
+  @Test
+  public void mutate_WhenSettingAutoCommitFails_ShouldThrowExceptionAndCloseConnection()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Exception exception = new RuntimeException("Failed to set auto-commit");
+    doThrow(exception).when(connection).setAutoCommit(anyBoolean());
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+              jdbcDatabase.mutate(Arrays.asList(put, delete));
+            })
+        .isEqualTo(exception);
+    verify(connection).setAutoCommit(false);
+    verify(jdbcService, never()).mutate(any(), any());
+    verify(connection, never()).rollback();
     verify(connection).close();
   }
 }
