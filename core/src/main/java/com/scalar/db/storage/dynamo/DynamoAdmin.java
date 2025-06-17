@@ -97,7 +97,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
   private static final int DEFAULT_WAITING_DURATION_SECS = 3;
-  private static final int DEFAULT_MAX_RETRY_COUNT = 10;
+  @VisibleForTesting static final int DEFAULT_MAX_RETRY_COUNT = 10;
 
   @VisibleForTesting static final String PARTITION_KEY = "concatenatedPartitionKey";
   @VisibleForTesting static final String CLUSTERING_KEY = "concatenatedClusteringKey";
