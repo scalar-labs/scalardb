@@ -36,6 +36,7 @@ public class CommitHandler {
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+  protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   @LazyInit @Nullable private BeforePreparationSnapshotHook beforePreparationSnapshotHook;
 
@@ -44,11 +45,13 @@ public class CommitHandler {
       DistributedStorage storage,
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      boolean coordinatorWriteOmissionOnReadOnlyEnabled) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
   /**
@@ -137,8 +140,10 @@ public class CommitHandler {
 
         // If the transaction has no writes and deletes, we don't need to abort-state and
         // rollback-records since there are no changes to be made.
-        if (hasSomeWritesOrDeletesInSnapshot) {
+        if (hasSomeWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
           abortState(snapshot.getId());
+        }
+        if (hasSomeWritesOrDeletesInSnapshot) {
           rollbackRecords(snapshot);
         }
 
@@ -154,8 +159,10 @@ public class CommitHandler {
 
     waitBeforePreparationSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
 
-    if (hasSomeWritesOrDeletesInSnapshot) {
+    if (hasSomeWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
       commitState(snapshot);
+    }
+    if (hasSomeWritesOrDeletesInSnapshot) {
       commitRecords(snapshot);
     }
   }

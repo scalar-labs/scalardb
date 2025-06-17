@@ -29,8 +29,14 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       CoordinatorGroupCommitter groupCommitter) {
-    super(storage, coordinator, tableMetadataManager, parallelExecutor);
+    super(
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        coordinatorWriteOmissionOnReadOnlyEnabled);
 
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
@@ -41,7 +47,9 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @Override
   public void commit(Snapshot snapshot, boolean readOnly)
       throws CommitException, UnknownTransactionStatusException {
-    if (!readOnly && !snapshot.hasSomeWritesOrDeletes()) {
+    if (!readOnly
+        && !snapshot.hasSomeWritesOrDeletes()
+        && coordinatorWriteOmissionOnReadOnlyEnabled) {
       cancelGroupCommitIfNeeded(snapshot.getId());
     }
 

@@ -33,6 +33,9 @@ public class ConsensusCommitConfig {
   public static final String ASYNC_COMMIT_ENABLED = PREFIX + "async_commit.enabled";
   public static final String ASYNC_ROLLBACK_ENABLED = PREFIX + "async_rollback.enabled";
 
+  public static final String COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED =
+      PREFIX + "coordinator.write_omission_on_read_only.enabled";
+
   public static final String PARALLEL_IMPLICIT_PRE_READ =
       PREFIX + "parallel_implicit_pre_read.enabled";
 
@@ -73,9 +76,11 @@ public class ConsensusCommitConfig {
   private final boolean asyncCommitEnabled;
   private final boolean asyncRollbackEnabled;
 
-  private final boolean isIncludeMetadataEnabled;
+  private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   private final boolean parallelImplicitPreReadEnabled;
+
+  private final boolean isIncludeMetadataEnabled;
 
   private final boolean coordinatorGroupCommitEnabled;
   private final int coordinatorGroupCommitSlotCapacity;
@@ -92,7 +97,9 @@ public class ConsensusCommitConfig {
           DatabaseConfig.TRANSACTION_MANAGER + " should be '" + TRANSACTION_MANAGER_NAME + "'");
     }
 
-    if (databaseConfig.getProperties().containsKey("scalar.db.isolation_level")) {
+    Properties properties = databaseConfig.getProperties();
+
+    if (properties.containsKey("scalar.db.isolation_level")) {
       logger.warn(
           "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 5.0.0. "
               + "Please use \""
@@ -102,19 +109,17 @@ public class ConsensusCommitConfig {
     isolation =
         Isolation.valueOf(
             getString(
-                    databaseConfig.getProperties(),
+                    properties,
                     ISOLATION_LEVEL,
                     getString(
-                        databaseConfig.getProperties(),
+                        properties,
                         "scalar.db.isolation_level", // for backward compatibility
                         Isolation.SNAPSHOT.toString()))
                 .toUpperCase(Locale.ROOT));
     if (isolation.equals(Isolation.SERIALIZABLE)) {
       validateCrossPartitionScanConfig(databaseConfig);
 
-      if (databaseConfig
-          .getProperties()
-          .containsKey("scalar.db.consensus_commit.serializable_strategy")) {
+      if (properties.containsKey("scalar.db.consensus_commit.serializable_strategy")) {
         logger.warn(
             "The property \"scalar.db.consensus_commit.serializable_strategy\" is deprecated and will "
                 + "be removed in 5.0.0. The EXTRA_READ strategy is always used for the SERIALIZABLE "
@@ -122,71 +127,60 @@ public class ConsensusCommitConfig {
       }
     }
 
-    coordinatorNamespace = getString(databaseConfig.getProperties(), COORDINATOR_NAMESPACE, null);
+    coordinatorNamespace = getString(properties, COORDINATOR_NAMESPACE, null);
 
     parallelExecutorCount =
-        getInt(
-            databaseConfig.getProperties(),
-            PARALLEL_EXECUTOR_COUNT,
-            DEFAULT_PARALLEL_EXECUTOR_COUNT);
-    parallelPreparationEnabled =
-        getBoolean(databaseConfig.getProperties(), PARALLEL_PREPARATION_ENABLED, true);
-    parallelCommitEnabled =
-        getBoolean(databaseConfig.getProperties(), PARALLEL_COMMIT_ENABLED, true);
+        getInt(properties, PARALLEL_EXECUTOR_COUNT, DEFAULT_PARALLEL_EXECUTOR_COUNT);
+    parallelPreparationEnabled = getBoolean(properties, PARALLEL_PREPARATION_ENABLED, true);
+    parallelCommitEnabled = getBoolean(properties, PARALLEL_COMMIT_ENABLED, true);
 
     // Use the value of parallel commit for parallel validation and parallel rollback as default
     // value
     parallelValidationEnabled =
-        getBoolean(
-            databaseConfig.getProperties(), PARALLEL_VALIDATION_ENABLED, parallelCommitEnabled);
+        getBoolean(properties, PARALLEL_VALIDATION_ENABLED, parallelCommitEnabled);
     parallelRollbackEnabled =
-        getBoolean(
-            databaseConfig.getProperties(), PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
+        getBoolean(properties, PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
 
-    asyncCommitEnabled = getBoolean(databaseConfig.getProperties(), ASYNC_COMMIT_ENABLED, false);
+    asyncCommitEnabled = getBoolean(properties, ASYNC_COMMIT_ENABLED, false);
 
     // Use the value of async commit for async rollback as default value
-    asyncRollbackEnabled =
-        getBoolean(databaseConfig.getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
+    asyncRollbackEnabled = getBoolean(properties, ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
 
-    isIncludeMetadataEnabled =
-        getBoolean(databaseConfig.getProperties(), INCLUDE_METADATA_ENABLED, false);
+    coordinatorWriteOmissionOnReadOnlyEnabled =
+        getBoolean(properties, COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED, true);
 
-    parallelImplicitPreReadEnabled =
-        getBoolean(databaseConfig.getProperties(), PARALLEL_IMPLICIT_PRE_READ, true);
+    parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
-    coordinatorGroupCommitEnabled =
-        getBoolean(databaseConfig.getProperties(), COORDINATOR_GROUP_COMMIT_ENABLED, false);
+    isIncludeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
+
+    coordinatorGroupCommitEnabled = getBoolean(properties, COORDINATOR_GROUP_COMMIT_ENABLED, false);
     coordinatorGroupCommitSlotCapacity =
         getInt(
-            databaseConfig.getProperties(),
+            properties,
             COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY,
             DEFAULT_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY);
     coordinatorGroupCommitGroupSizeFixTimeoutMillis =
         getInt(
-            databaseConfig.getProperties(),
+            properties,
             COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS,
             DEFAULT_COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS);
     coordinatorGroupCommitDelayedSlotMoveTimeoutMillis =
         getInt(
-            databaseConfig.getProperties(),
+            properties,
             COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS,
             DEFAULT_COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS);
     coordinatorGroupCommitOldGroupAbortTimeoutMillis =
         getInt(
-            databaseConfig.getProperties(),
+            properties,
             COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_MILLIS,
             DEFAULT_COORDINATOR_GROUP_COMMIT_OLD_GROUP_ABORT_TIMEOUT_MILLIS);
     coordinatorGroupCommitTimeoutCheckIntervalMillis =
         getInt(
-            databaseConfig.getProperties(),
+            properties,
             COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS,
             DEFAULT_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS);
     coordinatorGroupCommitMetricsMonitorLogEnabled =
-        getBoolean(
-            databaseConfig.getProperties(),
-            COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED,
-            false);
+        getBoolean(properties, COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED, false);
   }
 
   public Isolation getIsolation() {
@@ -225,12 +219,16 @@ public class ConsensusCommitConfig {
     return asyncRollbackEnabled;
   }
 
-  public boolean isIncludeMetadataEnabled() {
-    return isIncludeMetadataEnabled;
+  public boolean isCoordinatorWriteOmissionOnReadOnlyEnabled() {
+    return coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
   public boolean isParallelImplicitPreReadEnabled() {
     return parallelImplicitPreReadEnabled;
+  }
+
+  public boolean isIncludeMetadataEnabled() {
+    return isIncludeMetadataEnabled;
   }
 
   public boolean isCoordinatorGroupCommitEnabled() {

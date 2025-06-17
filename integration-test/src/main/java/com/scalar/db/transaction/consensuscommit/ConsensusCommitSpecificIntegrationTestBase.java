@@ -187,9 +187,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+          storage, coordinator, tableMetadataManager, parallelExecutor, true, groupCommitter);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, true);
     }
   }
 

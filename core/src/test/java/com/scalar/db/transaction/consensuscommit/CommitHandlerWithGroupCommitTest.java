@@ -60,10 +60,15 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   }
 
   @Override
-  protected CommitHandler createCommitHandler() {
+  protected CommitHandler createCommitHandler(boolean coordinatorWriteOmissionOnReadOnlyEnabled) {
     createGroupCommitterIfNotExists();
     return new CommitHandlerWithGroupCommit(
-        storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        coordinatorWriteOmissionOnReadOnlyEnabled,
+        groupCommitter);
   }
 
   private String anyGroupCommitParentId() {
@@ -160,6 +165,22 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
     // Assert
     verify(groupCommitter).remove(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void
+      commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
+          boolean withSnapshotHook)
+          throws CommitException, UnknownTransactionStatusException, ExecutionException,
+              CoordinatorException, ValidationConflictException {
+    super
+        .commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
+            withSnapshotHook);
+
+    // Assert
+    verify(groupCommitter, never()).remove(anyId());
   }
 
   @ParameterizedTest
