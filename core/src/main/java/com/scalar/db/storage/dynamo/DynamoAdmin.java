@@ -294,6 +294,16 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       if (!(ifNotExists && tableExistsInternal(namespace, table))) {
         client.createTable(requestBuilder.build());
         waitForTableCreation(namespace, table);
+      } else if (!metadata.getSecondaryIndexNames().isEmpty()) {
+        for (String indexColumnName : metadata.getSecondaryIndexNames()) {
+          createIndex(
+              namespace,
+              table,
+              indexColumnName,
+              metadata.getColumnDataType(indexColumnName),
+              ru,
+              true);
+        }
       }
     } catch (Exception e) {
       throw new ExecutionException(
@@ -938,46 +948,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
-
-    try {
-      client.updateTable(
-          UpdateTableRequest.builder()
-              .tableName(getFullTableName(namespace, table))
-              .attributeDefinitions(
-                  AttributeDefinition.builder()
-                      .attributeName(columnName)
-                      .attributeType(
-                          SECONDARY_INDEX_DATATYPE_MAP.get(metadata.getColumnDataType(columnName)))
-                      .build())
-              .globalSecondaryIndexUpdates(
-                  GlobalSecondaryIndexUpdate.builder()
-                      .create(
-                          CreateGlobalSecondaryIndexAction.builder()
-                              .indexName(getGlobalIndexName(namespace, table, columnName))
-                              .keySchema(
-                                  KeySchemaElement.builder()
-                                      .attributeName(columnName)
-                                      .keyType(KeyType.HASH)
-                                      .build())
-                              .projection(
-                                  Projection.builder().projectionType(ProjectionType.ALL).build())
-                              .provisionedThroughput(
-                                  ProvisionedThroughput.builder()
-                                      .readCapacityUnits(ru)
-                                      .writeCapacityUnits(ru)
-                                      .build())
-                              .build())
-                      .build())
-              .build());
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format(
-              "Creating the secondary index for the %s column of the %s table failed",
-              columnName, getFullTableName(namespace, table)),
-          e);
-    }
-
-    waitForIndexCreation(namespace, table, columnName);
+    createIndex(namespace, table, columnName, metadata.getColumnDataType(columnName), ru, false);
 
     // enable auto scaling
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
@@ -1007,26 +978,86 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build());
   }
 
-  private void waitForIndexCreation(Namespace namespace, String table, String columnName)
+  private void createIndex(
+      Namespace namespace,
+      String table,
+      String columnName,
+      DataType dataType,
+      Long ru,
+      boolean ifNotExists)
       throws ExecutionException {
     try {
-      String indexName = getGlobalIndexName(namespace, table, columnName);
-      while (true) {
-        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
-        DescribeTableResponse response =
-            client.describeTable(
-                DescribeTableRequest.builder()
-                    .tableName(getFullTableName(namespace, table))
-                    .build());
-        for (GlobalSecondaryIndexDescription globalSecondaryIndex :
-            response.table().globalSecondaryIndexes()) {
-          if (globalSecondaryIndex.indexName().equals(indexName)) {
-            if (globalSecondaryIndex.indexStatus() == IndexStatus.ACTIVE) {
-              return;
-            }
+      if (!(ifNotExists && indexExists(namespace, table, columnName))) {
+        client.updateTable(
+            UpdateTableRequest.builder()
+                .tableName(getFullTableName(namespace, table))
+                .attributeDefinitions(
+                    AttributeDefinition.builder()
+                        .attributeName(columnName)
+                        .attributeType(SECONDARY_INDEX_DATATYPE_MAP.get(dataType))
+                        .build())
+                .globalSecondaryIndexUpdates(
+                    GlobalSecondaryIndexUpdate.builder()
+                        .create(
+                            CreateGlobalSecondaryIndexAction.builder()
+                                .indexName(getGlobalIndexName(namespace, table, columnName))
+                                .keySchema(
+                                    KeySchemaElement.builder()
+                                        .attributeName(columnName)
+                                        .keyType(KeyType.HASH)
+                                        .build())
+                                .projection(
+                                    Projection.builder().projectionType(ProjectionType.ALL).build())
+                                .provisionedThroughput(
+                                    ProvisionedThroughput.builder()
+                                        .readCapacityUnits(ru)
+                                        .writeCapacityUnits(ru)
+                                        .build())
+                                .build())
+                        .build())
+                .build());
+        waitForIndexCreation(namespace, table, columnName);
+      }
+    } catch (Exception e) {
+      throw new ExecutionException(
+          String.format(
+              "Creating the secondary index for the %s column of the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  private boolean indexExists(Namespace namespace, String table, String columnName)
+      throws ExecutionException {
+    String indexName = getGlobalIndexName(namespace, table, columnName);
+    try {
+      DescribeTableResponse response =
+          client.describeTable(
+              DescribeTableRequest.builder().tableName(getFullTableName(namespace, table)).build());
+      for (GlobalSecondaryIndexDescription globalSecondaryIndex :
+          response.table().globalSecondaryIndexes()) {
+        if (globalSecondaryIndex.indexName().equals(indexName)) {
+          if (globalSecondaryIndex.indexStatus() == IndexStatus.ACTIVE) {
+            return true;
           }
         }
       }
+      return false;
+    } catch (Exception e) {
+      throw new ExecutionException(
+          String.format(
+              "Checking the secondary index existence for the %s column of the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  private void waitForIndexCreation(Namespace namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      do {
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+      } while (!indexExists(namespace, table, columnName));
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(
