@@ -55,6 +55,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * <p>Additionally, this class tests the thread executor behavior in ImportProcessor, including
  * proper shutdown, waiting for tasks to complete, handling interruptions, and task distribution.
  */
+@SuppressWarnings("SameNameButDifferent")
 @ExtendWith(MockitoExtension.class)
 class ImportProcessorTest {
 
