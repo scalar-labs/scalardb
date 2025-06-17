@@ -16,10 +16,20 @@ public class ExportReport {
    */
   private final LongAdder exportedRowCount = new LongAdder();
 
+  /**
+   * Returns the total number of rows that have been exported so far.
+   *
+   * @return the cumulative exported row count
+   */
   public long getExportedRowCount() {
     return exportedRowCount.sum();
   }
 
+  /**
+   * Increments the exported row count by the specified value.
+   *
+   * @param count the number of rows to add to the exported count
+   */
   public void updateExportedRowCount(long count) {
     this.exportedRowCount.add(count);
   }

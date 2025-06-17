@@ -9,6 +9,7 @@ import lombok.Value;
  * <p>This class holds the metadata for a column, including the namespace (schema), table name, and
  * the column name within the table.
  */
+@SuppressWarnings("SameNameButDifferent")
 @Value
 @Builder
 public class ColumnInfo {
