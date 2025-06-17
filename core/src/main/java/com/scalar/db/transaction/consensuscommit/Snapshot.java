@@ -217,11 +217,11 @@ public class Snapshot {
     return getSet.containsKey(get);
   }
 
-  public boolean hasSomeWritesOrDeletes() {
+  public boolean hasWritesOrDeletes() {
     return !writeSet.isEmpty() || !deleteSet.isEmpty();
   }
 
-  public boolean hasSomeReads() {
+  public boolean hasReads() {
     return !getSet.isEmpty() || !scanSet.isEmpty() || !scannerSet.isEmpty();
   }
 

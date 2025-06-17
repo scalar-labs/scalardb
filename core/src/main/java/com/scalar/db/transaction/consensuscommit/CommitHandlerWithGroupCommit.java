@@ -47,9 +47,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @Override
   public void commit(Snapshot snapshot, boolean readOnly)
       throws CommitException, UnknownTransactionStatusException {
-    if (!readOnly
-        && !snapshot.hasSomeWritesOrDeletes()
-        && coordinatorWriteOmissionOnReadOnlyEnabled) {
+    if (!readOnly && !snapshot.hasWritesOrDeletes() && coordinatorWriteOmissionOnReadOnlyEnabled) {
       cancelGroupCommitIfNeeded(snapshot.getId());
     }
 

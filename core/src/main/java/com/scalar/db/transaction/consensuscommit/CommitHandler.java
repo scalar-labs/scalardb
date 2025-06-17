@@ -111,7 +111,7 @@ public class CommitHandler {
 
   public void commit(Snapshot snapshot, boolean readOnly)
       throws CommitException, UnknownTransactionStatusException {
-    boolean hasSomeWritesOrDeletesInSnapshot = !readOnly && snapshot.hasSomeWritesOrDeletes();
+    boolean hasSomeWritesOrDeletesInSnapshot = !readOnly && snapshot.hasWritesOrDeletes();
 
     Optional<Future<Void>> snapshotHookFuture = invokeBeforePreparationSnapshotHook(snapshot);
 
@@ -132,7 +132,7 @@ public class CommitHandler {
       }
     }
 
-    if (snapshot.hasSomeReads()) {
+    if (snapshot.hasReads()) {
       try {
         validate(snapshot);
       } catch (ValidationException e) {
