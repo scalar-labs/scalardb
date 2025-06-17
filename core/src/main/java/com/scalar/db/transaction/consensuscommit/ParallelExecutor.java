@@ -155,6 +155,13 @@ public class ParallelExecutor {
       String taskName,
       String transactionId)
       throws ExecutionException, ValidationConflictException, CrudException {
+    if (tasks.size() == 1 && !noWait) {
+      // If there is only one task and noWait is false, we can run it directly without parallel
+      // execution.
+      executeTasksSerially(tasks, stopOnError, taskName, transactionId);
+      return;
+    }
+
     if (parallel) {
       executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
     } else {
