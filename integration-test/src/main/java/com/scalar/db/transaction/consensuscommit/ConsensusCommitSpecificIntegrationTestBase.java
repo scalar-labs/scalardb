@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.api.ConditionBuilder.column;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,7 +19,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.Sets;
-import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -43,8 +43,10 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -62,6 +64,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 import org.junit.jupiter.api.AfterAll;
@@ -2353,7 +2356,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     Get get =
         Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isEqualToInt(1))
+            .where(column(BALANCE).isEqualToInt(1))
             .build();
     Optional<Result> result = transaction.get(get);
     assertThatCode(transaction::commit).doesNotThrowAnyException();
@@ -2374,7 +2377,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     Get get =
         Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isEqualToInt(0))
+            .where(column(BALANCE).isEqualToInt(0))
             .build();
     Optional<Result> result = transaction.get(get);
     assertThatCode(transaction::commit).doesNotThrowAnyException();
@@ -2393,7 +2396,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1);
     Get get =
         Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isLessThanOrEqualToInt(INITIAL_BALANCE))
+            .where(column(BALANCE).isLessThanOrEqualToInt(INITIAL_BALANCE))
             .build();
 
     // Act
@@ -2416,7 +2419,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1);
     Get get =
         Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isEqualToInt(0))
+            .where(column(BALANCE).isEqualToInt(0))
             .build();
 
     // Act
@@ -2538,7 +2541,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .start(Key.ofInt(ACCOUNT_TYPE, 0))
-            .where(ConditionBuilder.column(BALANCE).isNotEqualToInt(1))
+            .where(column(BALANCE).isNotEqualToInt(1))
             .build();
 
     // Act
@@ -2559,7 +2562,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 9999));
     Scan scan =
         Scan.newBuilder(prepareScan(0, 1, 1, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isLessThanOrEqualToInt(INITIAL_BALANCE))
+            .where(column(BALANCE).isLessThanOrEqualToInt(INITIAL_BALANCE))
             .build();
 
     // Act
@@ -2581,8 +2584,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .withValue(SOME_COLUMN, "aaa"));
     Scan scan =
         Scan.newBuilder(prepareScan(0, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isLessThanInt(1000))
-            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToText("aaa"))
+            .where(column(BALANCE).isLessThanInt(1000))
+            .and(column(SOME_COLUMN).isEqualToText("aaa"))
             .build();
 
     // Act
@@ -2606,7 +2609,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
     Scan scan =
         Scan.newBuilder(prepareScanWithIndex(namespace1, TABLE_1, 1))
-            .where(ConditionBuilder.column(SOME_COLUMN).isGreaterThanText("aaa"))
+            .where(column(SOME_COLUMN).isGreaterThanText("aaa"))
             .build();
 
     // Act
@@ -2688,8 +2691,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .withValue(SOME_COLUMN, "aaa"));
     Scan scan =
         Scan.newBuilder(prepareScanWithIndex(namespace1, TABLE_1, 999))
-            .where(ConditionBuilder.column(BALANCE).isLessThanInt(1000))
-            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToText("aaa"))
+            .where(column(BALANCE).isLessThanInt(1000))
+            .and(column(SOME_COLUMN).isEqualToText("aaa"))
             .build();
 
     // Act
@@ -2959,8 +2962,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     Get get =
         Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-            .and(ConditionBuilder.column(SOME_COLUMN).isNullText())
+            .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .and(column(SOME_COLUMN).isNullText())
             .build();
 
     // Act
@@ -2983,8 +2986,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
     Get get =
         Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
-            .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-            .and(ConditionBuilder.column(SOME_COLUMN).isEqualToText("aaa"))
+            .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .and(column(SOME_COLUMN).isEqualToText("aaa"))
             .build();
 
     // Act
@@ -3028,7 +3031,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .start(Key.ofInt(ACCOUNT_TYPE, 0))
-            .where(ConditionBuilder.column(BALANCE).isEqualToInt(1))
+            .where(column(BALANCE).isEqualToInt(1))
             .build();
     List<Result> result1 = transaction1.scan(scan);
 
@@ -3063,7 +3066,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .start(Key.ofInt(ACCOUNT_TYPE, 0))
-            .where(ConditionBuilder.column(BALANCE).isEqualToInt(1))
+            .where(column(BALANCE).isEqualToInt(1))
             .build();
     Scan scan2 =
         Scan.newBuilder()
@@ -3071,7 +3074,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .start(Key.ofInt(ACCOUNT_TYPE, 0))
-            .where(ConditionBuilder.column(BALANCE).isGreaterThanInt(1))
+            .where(column(BALANCE).isGreaterThanInt(1))
             .build();
     List<Result> result1 = transaction1.scan(scan1);
 
@@ -5271,6 +5274,623 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
 
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      get_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    // Create a prepared record without before image
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+
+    // Act Assert
+    Optional<Result> actual;
+    while (true) {
+      try {
+        actual =
+            manager.get(
+                Get.newBuilder()
+                    .namespace(namespace1)
+                    .table(TABLE_1)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                    .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                    .build());
+        break;
+      } catch (CrudConflictException e) {
+        // Retry on conflict
+      }
+    }
+
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void
+      get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    // Create a committed record with before image to simulate an old committed record that has both
+    // after and before images
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .bigIntValue(Attribute.COMMITTED_AT, System.currentTimeMillis())
+            .build());
+
+    // Act Assert
+    Optional<Result> actual =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .build());
+
+    assertThat(actual).isNotPresent();
+  }
+
+  @Test
+  public void
+      scan_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Create a prepared record without before image
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+
+    // Act Assert
+    List<Result> results;
+    while (true) {
+      try {
+        results =
+            manager.scan(
+                Scan.newBuilder()
+                    .namespace(namespace1)
+                    .table(TABLE_1)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                    .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                    .build());
+        break;
+      } catch (CrudConflictException e) {
+        // Retry on conflict
+      }
+    }
+
+    assertThat(results).hasSize(2);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void
+      scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Create a committed record with before image to simulate an old committed record that has both
+    // after and before images
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .bigIntValue(Attribute.COMMITTED_AT, System.currentTimeMillis())
+            .build());
+
+    // Act Assert
+    List<Result> results =
+        manager.scan(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .build());
+
+    assertThat(results).hasSize(1);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void
+      scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 3))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Create a committed record with before image to simulate an old committed record that has both
+    // after and before images
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .bigIntValue(Attribute.COMMITTED_AT, System.currentTimeMillis())
+            .build());
+
+    // Act Assert
+    List<Result> results =
+        manager.scan(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .limit(2)
+                .build());
+
+    assertThat(results).hasSize(2);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void
+      getScanner_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Create a prepared record without before image
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+
+    // Act Assert
+    List<Result> results;
+    while (true) {
+      try (TransactionManagerCrudOperable.Scanner scanner =
+          manager.getScanner(
+              Scan.newBuilder()
+                  .namespace(namespace1)
+                  .table(TABLE_1)
+                  .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                  .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                  .build())) {
+        results = scanner.all();
+        break;
+      } catch (CrudConflictException e) {
+        // Retry on conflict
+      }
+    }
+
+    assertThat(results).hasSize(2);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void
+      getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Create a committed record with before image to simulate an old committed record that has both
+    // after and before images
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .bigIntValue(Attribute.COMMITTED_AT, System.currentTimeMillis())
+            .build());
+
+    // Act Assert
+    List<Result> results;
+    try (TransactionManagerCrudOperable.Scanner scanner =
+        manager.getScanner(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .build())) {
+      results = scanner.all();
+    }
+
+    assertThat(results).hasSize(1);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void
+      getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
+          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+    // Arrange
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 3))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    // Create a committed record with before image to simulate an old committed record that has both
+    // after and before images
+    Optional<Result> result =
+        originalStorage.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
+    String transactionId = UUID.randomUUID().toString();
+    PrepareMutationComposer prepareMutationComposer =
+        new PrepareMutationComposer(
+            transactionId,
+            System.currentTimeMillis() - (RecoveryHandler.TRANSACTION_LIFETIME_MILLIS + 1),
+            new TransactionTableMetadataManager(admin, 0));
+    prepareMutationComposer.add(put, result.map(TransactionResult::new).orElse(null));
+    originalStorage.mutate(prepareMutationComposer.get());
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .bigIntValue(Attribute.COMMITTED_AT, System.currentTimeMillis())
+            .build());
+
+    // Act Assert
+    List<Result> results;
+    try (TransactionManagerCrudOperable.Scanner scanner =
+        manager.getScanner(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .limit(2)
+                .build())) {
+      results = scanner.all();
+    }
+
+    assertThat(results).hasSize(2);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
   @Test
