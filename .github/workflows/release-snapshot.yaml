@@ -56,3 +56,4 @@ jobs:
         if: contains(steps.version.outputs.version, '-SNAPSHOT')
         run: |
           docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
+          docker push ghcr.io/scalar-labs/scalardb-data-loader-cli:${{ steps.version.outputs.version }}
