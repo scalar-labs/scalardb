@@ -36,6 +36,7 @@ public class CommitHandler {
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+  protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   @LazyInit @Nullable private BeforePreparationSnapshotHook beforePreparationSnapshotHook;
 
@@ -44,11 +45,13 @@ public class CommitHandler {
       DistributedStorage storage,
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      boolean coordinatorWriteOmissionOnReadOnlyEnabled) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
   /**
@@ -106,42 +109,62 @@ public class CommitHandler {
     }
   }
 
-  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+  public void commit(Snapshot snapshot, boolean readOnly)
+      throws CommitException, UnknownTransactionStatusException {
+    boolean hasWritesOrDeletesInSnapshot = !readOnly && snapshot.hasWritesOrDeletes();
+
     Optional<Future<Void>> snapshotHookFuture = invokeBeforePreparationSnapshotHook(snapshot);
-    try {
-      prepare(snapshot);
-    } catch (PreparationException e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      abortState(snapshot.getId());
-      rollbackRecords(snapshot);
-      if (e instanceof PreparationConflictException) {
-        throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+
+    if (hasWritesOrDeletesInSnapshot) {
+      try {
+        prepare(snapshot);
+      } catch (PreparationException e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+        abortState(snapshot.getId());
+        rollbackRecords(snapshot);
+        if (e instanceof PreparationConflictException) {
+          throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+        }
+        throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+      } catch (Exception e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+        throw e;
       }
-      throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    } catch (Exception e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      throw e;
     }
 
-    try {
-      validate(snapshot);
-    } catch (ValidationException e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      abortState(snapshot.getId());
-      rollbackRecords(snapshot);
-      if (e instanceof ValidationConflictException) {
-        throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    if (snapshot.hasReads()) {
+      try {
+        validate(snapshot);
+      } catch (ValidationException e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+
+        // If the transaction has no writes and deletes, we don't need to abort-state and
+        // rollback-records since there are no changes to be made.
+        if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+          abortState(snapshot.getId());
+        }
+        if (hasWritesOrDeletesInSnapshot) {
+          rollbackRecords(snapshot);
+        }
+
+        if (e instanceof ValidationConflictException) {
+          throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+        }
+        throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+      } catch (Exception e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+        throw e;
       }
-      throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    } catch (Exception e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      throw e;
     }
 
     waitBeforePreparationSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
 
-    commitState(snapshot);
-    commitRecords(snapshot);
+    if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+      commitState(snapshot);
+    }
+    if (hasWritesOrDeletesInSnapshot) {
+      commitRecords(snapshot);
+    }
   }
 
   protected void handleCommitConflict(Snapshot snapshot, Exception cause)

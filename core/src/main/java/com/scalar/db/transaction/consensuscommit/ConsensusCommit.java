@@ -269,7 +269,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
           CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(), e, getId());
     }
 
-    commit.commit(crud.getSnapshot());
+    commit.commit(crud.getSnapshot(), crud.isReadOnly());
   }
 
   @Override
@@ -280,7 +280,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       logger.warn("Failed to close the scanner", e);
     }
 
-    if (groupCommitter != null) {
+    if (groupCommitter != null && !crud.isReadOnly()) {
       groupCommitter.remove(crud.getSnapshot().getId());
     }
   }

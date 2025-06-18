@@ -23,12 +23,14 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -64,6 +66,8 @@ public class CrudHandlerTest {
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
+  private static final String ANY_TEXT_4 = "text4";
+  private static final String ANY_TEXT_5 = "text5";
   private static final String ANY_TX_ID = "tx_id";
 
   private static final TableMetadata TABLE_METADATA =
@@ -99,6 +103,7 @@ public class CrudHandlerTest {
             false,
             mutationConditionsValidator,
             parallelExecutor,
+            false,
             false);
 
     // Arrange
@@ -226,7 +231,8 @@ public class CrudHandlerTest {
             false,
             mutationConditionsValidator,
             parallelExecutor,
-            true);
+            true,
+            false);
 
     Get get = prepareGet();
     Get getForStorage = toGetForStorageFrom(get);
@@ -236,6 +242,131 @@ public class CrudHandlerTest {
     when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.getResult(key, getForStorage)).thenReturn(transactionResult);
+
+    // Act
+    Optional<Result> result = handler.get(get);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_InOneOperationMode_ValidationNotRequired_ShouldReturnFromStorageAndUpdateSnapshot()
+          throws CrudException, ExecutionException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            true);
+    when(snapshot.isValidationRequired()).thenReturn(false);
+
+    Get get = prepareGet();
+    Get getForStorage = toGetForStorageFrom(get);
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(storage.get(getForStorage)).thenReturn(expected);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
+
+    // Act
+    Optional<Result> result = handler.get(get);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_InOneOperationMode_ValidationRequired_ShouldReturnFromStorageAndUpdateSnapshot()
+          throws CrudException, ExecutionException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            true);
+    when(snapshot.isValidationRequired()).thenReturn(true);
+
+    Get get = prepareGet();
+    Get getForStorage = toGetForStorageFrom(get);
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(storage.get(getForStorage)).thenReturn(expected);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
+
+    // Act
+    Optional<Result> result = handler.get(get);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
+  }
+
+  @Test
+  public void
+      get_GetWithConjunction_GetNotExistsInSnapshotAndRecordInStorageCommitted_InOneOperationMode_ValidationRequired_ShouldReturnFromStorageAndUpdateSnapshot()
+          throws CrudException, ExecutionException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            true);
+    when(snapshot.isValidationRequired()).thenReturn(true);
+
+    ConditionalExpression condition = mock(ConditionalExpression.class);
+    Get get = Get.newBuilder(prepareGet()).where(condition).build();
+    Get getForStorage = toGetForStorageFrom(get);
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(storage.get(getForStorage)).thenReturn(expected);
+    when(snapshot.mergeResult(
+            key, transactionResult, Collections.singleton(Selection.Conjunction.of(condition))))
+        .thenReturn(transactionResult);
 
     // Act
     Optional<Result> result = handler.get(get);
@@ -351,7 +482,8 @@ public class CrudHandlerTest {
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler =
-        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
+        new CrudHandler(
+            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
 
     // Act
@@ -433,7 +565,93 @@ public class CrudHandlerTest {
             false,
             mutationConditionsValidator,
             parallelExecutor,
+            true,
+            false);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+    TransactionResult expected = new TransactionResult(result);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_ResultGivenFromStorage_InOneOperationMode_ValidationNotRequired_ShouldUpdateSnapshotAndReturn(
+          ScanType scanType) throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
             true);
+    when(snapshot.isValidationRequired()).thenReturn(false);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    TransactionResult expected = new TransactionResult(result);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(snapshot.getResult(any())).thenReturn(Optional.of(expected));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoScanSet(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_ResultGivenFromStorage_InOneOperationMode_ValidationRequired_ShouldUpdateSnapshotAndReturn(
+          ScanType scanType) throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            true);
+    when(snapshot.isValidationRequired()).thenReturn(true);
 
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -545,7 +763,8 @@ public class CrudHandlerTest {
     TransactionResult expected = new TransactionResult(result);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler =
-        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
+        new CrudHandler(
+            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -613,7 +832,8 @@ public class CrudHandlerTest {
     result = prepareResult(TransactionState.COMMITTED);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler =
-        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
+        new CrudHandler(
+            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -679,7 +899,8 @@ public class CrudHandlerTest {
             deleteSet,
             new ArrayList<>());
     handler =
-        new CrudHandler(storage, snapshot, tableMetadataManager, false, parallelExecutor, false);
+        new CrudHandler(
+            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     } else {
@@ -842,6 +1063,8 @@ public class CrudHandlerTest {
       getScanner_ScannerNotFullyScanned_ShouldPutReadSetAndScannerSetInSnapshotAndVerifyScan()
           throws ExecutionException, CrudException, IOException {
     // Arrange
+    when(snapshot.isValidationRequired()).thenReturn(true);
+
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     Result result1 = prepareResult(TransactionState.COMMITTED);
@@ -865,6 +1088,92 @@ public class CrudHandlerTest {
     verify(snapshot)
         .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
     verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key1, txResult1));
+
+    assertThat(actualResult)
+        .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @Test
+  public void
+      getScanner_ScannerNotFullyScanned_InOneOperationMode_ValidationNotRequired_ShouldUpdateSnapshotProperly()
+          throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            true);
+    when(snapshot.isValidationRequired()).thenReturn(false);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result1 = prepareResult(TransactionState.COMMITTED);
+    Result result2 = prepareResult(TransactionState.COMMITTED);
+    TransactionResult txResult1 = new TransactionResult(result1);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan);
+    Optional<Result> actualResult = actualScanner.one();
+    actualScanner.close();
+
+    // Assert
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoScannerSet(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
+
+    assertThat(actualResult)
+        .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @Test
+  public void
+      getScanner_ScannerNotFullyScanned_InOneOperationMode_ValidationRequired_ShouldUpdateSnapshotProperly()
+          throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            true);
+    when(snapshot.isValidationRequired()).thenReturn(true);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result1 = prepareResult(TransactionState.COMMITTED);
+    Result result2 = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    TransactionResult txResult1 = new TransactionResult(result1);
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan);
+    Optional<Result> actualResult = actualScanner.one();
+    actualScanner.close();
+
+    // Assert
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot)
+        .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
@@ -1344,40 +1653,104 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void readIfImplicitPreReadEnabled_ShouldCallAppropriateMethods() throws CrudException {
+  public void readIfImplicitPreReadEnabled_ShouldCallAppropriateMethods()
+      throws CrudException, ExecutionException, ValidationConflictException {
     // Arrange
+    Key partitionKey1 = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey2 = Key.ofText(ANY_NAME_1, ANY_TEXT_2);
+    Key partitionKey3 = Key.ofText(ANY_NAME_1, ANY_TEXT_3);
+    Key partitionKey4 = Key.ofText(ANY_NAME_1, ANY_TEXT_4);
+    Key partitionKey5 = Key.ofText(ANY_NAME_1, ANY_TEXT_5);
+
     Put put1 = mock(Put.class);
     when(put1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put1.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(put1.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+    when(put1.getPartitionKey()).thenReturn(partitionKey1);
     when(put1.getAttribute(ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED))
         .thenReturn(Optional.of("true"));
 
     Put put2 = mock(Put.class);
     when(put2.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put2.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(put2.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_2));
+    when(put2.getPartitionKey()).thenReturn(partitionKey2);
     when(put2.getAttribute(ConsensusCommitOperationAttributes.IMPLICIT_PRE_READ_ENABLED))
         .thenReturn(Optional.of("true"));
 
     Put put3 = mock(Put.class);
     when(put3.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(put3.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(put3.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_3));
+    when(put3.getPartitionKey()).thenReturn(partitionKey3);
 
     when(snapshot.getPutsInWriteSet()).thenReturn(Arrays.asList(put1, put2, put3));
 
     Delete delete1 = mock(Delete.class);
     when(delete1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(delete1.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(delete1.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+    when(delete1.getPartitionKey()).thenReturn(partitionKey4);
 
     Delete delete2 = mock(Delete.class);
     when(delete2.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
     when(delete2.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(delete2.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_2));
+    when(delete2.getPartitionKey()).thenReturn(partitionKey5);
 
     when(snapshot.getDeletesInDeleteSet()).thenReturn(Arrays.asList(delete1, delete2));
+
+    Get get1 =
+        toGetForStorageFrom(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(partitionKey1)
+                .build());
+
+    Get get2 =
+        toGetForStorageFrom(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(partitionKey2)
+                .build());
+
+    Get get3 =
+        toGetForStorageFrom(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(partitionKey4)
+                .build());
+
+    Get get4 =
+        toGetForStorageFrom(
+            Get.newBuilder()
+                .namespace(ANY_NAMESPACE_NAME)
+                .table(ANY_TABLE_NAME)
+                .partitionKey(partitionKey5)
+                .build());
+
+    Result result1 = mock(Result.class);
+    when(result1.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result1.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(result1.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    Result result2 = mock(Result.class);
+    when(result2.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result2.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(result2.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_2);
+
+    Result result3 = mock(Result.class);
+    when(result3.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result3.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(result3.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_3);
+
+    Result result4 = mock(Result.class);
+    when(result4.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result4.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(result4.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_4);
+
+    when(storage.get(get1)).thenReturn(Optional.of(result1));
+    when(storage.get(get2)).thenReturn(Optional.of(result2));
+    when(storage.get(get3)).thenReturn(Optional.of(result3));
+    when(storage.get(get4)).thenReturn(Optional.of(result4));
 
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
 
@@ -1394,6 +1767,29 @@ public class CrudHandlerTest {
 
     List<ParallelExecutor.ParallelExecutorTask> tasks = tasksCaptor.getValue();
     assertThat(tasks.size()).isEqualTo(4);
+
+    for (ParallelExecutor.ParallelExecutorTask task : tasks) {
+      task.run();
+    }
+
+    verify(storage).get(get1);
+    verify(storage).get(get2);
+    verify(storage).get(get3);
+    verify(storage).get(get4);
+
+    verify(snapshot)
+        .putIntoReadSet(new Snapshot.Key(get1), Optional.of(new TransactionResult(result1)));
+    verify(snapshot)
+        .putIntoReadSet(new Snapshot.Key(get2), Optional.of(new TransactionResult(result2)));
+    verify(snapshot)
+        .putIntoReadSet(new Snapshot.Key(get3), Optional.of(new TransactionResult(result3)));
+    verify(snapshot)
+        .putIntoReadSet(new Snapshot.Key(get4), Optional.of(new TransactionResult(result4)));
+
+    verify(snapshot).putIntoGetSet(get1, Optional.of(new TransactionResult(result1)));
+    verify(snapshot).putIntoGetSet(get2, Optional.of(new TransactionResult(result2)));
+    verify(snapshot).putIntoGetSet(get3, Optional.of(new TransactionResult(result3)));
+    verify(snapshot).putIntoGetSet(get4, Optional.of(new TransactionResult(result4)));
 
     assertThat(transactionIdCaptor.getValue()).isEqualTo(ANY_TX_ID);
   }
