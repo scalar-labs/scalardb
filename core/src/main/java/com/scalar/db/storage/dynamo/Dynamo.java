@@ -14,6 +14,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
 import com.scalar.db.common.FilterableScanner;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.common.error.CoreError;
@@ -71,13 +72,19 @@ public class Dynamo extends AbstractDistributedStorage {
             .region(Region.of(config.getRegion()))
             .build();
 
+    DynamoAdmin dynamoAdmin = new DynamoAdmin(client, config);
     TableMetadataManager metadataManager =
-        new TableMetadataManager(
-            new DynamoAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new DynamoOperationChecker(databaseConfig, metadataManager);
+        new TableMetadataManager(dynamoAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    operationChecker =
+        new DynamoOperationChecker(
+            databaseConfig, metadataManager, new StorageInfoProvider(dynamoAdmin));
 
     selectStatementHandler =
-        new SelectStatementHandler(client, metadataManager, config.getNamespacePrefix());
+        new SelectStatementHandler(
+            client,
+            metadataManager,
+            config.getNamespacePrefix(),
+            databaseConfig.getScanFetchSize());
     putStatementHandler =
         new PutStatementHandler(client, metadataManager, config.getNamespacePrefix());
     deleteStatementHandler =

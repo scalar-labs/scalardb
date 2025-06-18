@@ -100,7 +100,7 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION(
       Category.USER_ERROR,
       "0019",
-      "Mutations that span multiple partitions are not supported. Mutations: %s",
+      "The storage does not support mutations across multiple partitions. Storage: %s; Mutations: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_PARTITION_KEY(
@@ -214,10 +214,10 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0042", "Invalid ID specified. ID: %d", "", ""),
   TRANSACTION_NOT_ACTIVE(
       Category.USER_ERROR, "0043", "The transaction is not active. Status: %s", "", ""),
-  TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK(
+  TRANSACTION_ALREADY_COMMITTED(
       Category.USER_ERROR,
       "0044",
-      "The transaction has already been committed or rolled back. Status: %s",
+      "The transaction has already been committed. Status: %s",
       "",
       ""),
   TRANSACTION_NOT_PREPARED(
@@ -689,7 +689,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0149",
-      "Invalid base64 encoding for blob value '%s' for column %s in table %s in namespace %s.",
+      "Invalid base64 encoding for blob value '%s' for column %s in table %s in namespace %s",
       "",
       ""),
   DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
@@ -861,8 +861,7 @@ public enum CoreError implements ScalarDbError {
   REPLICATION_NOT_ENABLED(
       Category.USER_ERROR,
       "0188",
-      // TODO: Update the message once the licence type is determined.
-      "The replication feature is not enabled. To use this feature, you must enable it",
+      "The replication feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   DATA_LOADER_IMPORT_TARGET_MISSING(
@@ -931,6 +930,36 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0209", "Number of max threads must be greater than 0", "", ""),
   DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE(
       Category.USER_ERROR, "0210", "Data chunk queue size must be greater than 0", "", ""),
+  MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
+      Category.USER_ERROR,
+      "0211",
+      "Mutations are not allowed in read-only transactions. Transaction ID: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_RECORD_MUTATION(
+      Category.USER_ERROR,
+      "0212",
+      "The storage does not support mutations across multiple records. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_TABLE_MUTATION(
+      Category.USER_ERROR,
+      "0213",
+      "The storage does not support mutations across multiple tables. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_NAMESPACE_MUTATION(
+      Category.USER_ERROR,
+      "0214",
+      "The storage does not support mutations across multiple namespaces. Storage: %s; Mutations: %s",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_MULTI_STORAGE_MUTATION(
+      Category.USER_ERROR,
+      "0215",
+      "Mutations across multiple storages are not allowed. Mutations: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1125,7 +1154,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_ERROR_OCCURRED_IN_SELECTION(
       Category.INTERNAL_ERROR, "0027", "An error occurred in the selection. Details: %s", "", ""),
   JDBC_FETCHING_NEXT_RESULT_FAILED(
-      Category.INTERNAL_ERROR, "0028", "Fetching the next result failed", "", ""),
+      Category.INTERNAL_ERROR, "0028", "Fetching the next result failed. Details: %s", "", ""),
   JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR, "0029", "Rolling back the transaction failed. Details: %s", "", ""),
   JDBC_TRANSACTION_COMMITTING_TRANSACTION_FAILED(
@@ -1204,6 +1233,14 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
       Category.INTERNAL_ERROR, "0054", "Getting the scanner failed. Details: %s", "", ""),
+  JDBC_CLOSING_SCANNER_FAILED(
+      Category.INTERNAL_ERROR, "0055", "Closing the scanner failed. Details: %s", "", ""),
+  GETTING_STORAGE_INFO_FAILED(
+      Category.INTERNAL_ERROR,
+      "0056",
+      "Getting the storage information failed. Namespace: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category

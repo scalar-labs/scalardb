@@ -7,7 +7,9 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -95,6 +97,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
   private static final int DEFAULT_WAITING_DURATION_SECS = 3;
+  @VisibleForTesting static final int MAX_RETRY_COUNT = 10;
 
   @VisibleForTesting static final String PARTITION_KEY = "concatenatedPartitionKey";
   @VisibleForTesting static final String CLUSTERING_KEY = "concatenatedClusteringKey";
@@ -153,6 +156,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(SCALING_TYPE_INDEX_READ, MetricType.DYNAMO_DB_READ_CAPACITY_UTILIZATION)
           .put(SCALING_TYPE_INDEX_WRITE, MetricType.DYNAMO_DB_WRITE_CAPACITY_UTILIZATION)
           .build();
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "dynamo",
+          StorageInfo.MutationAtomicityUnit.STORAGE,
+          // DynamoDB has a limit of 100 items per transactional batch write operation
+          100);
 
   private final DynamoDbClient client;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
@@ -230,15 +239,26 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private void upsertIntoNamespacesTable(Namespace namespace) throws ExecutionException {
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(NAMESPACES_ATTR_NAME, AttributeValue.builder().s(namespace.prefixed()).build());
-    try {
-      client.putItem(
-          PutItemRequest.builder()
-              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
-              .item(itemValues)
-              .build());
-    } catch (Exception e) {
-      throw new ExecutionException(
-          "Inserting the " + namespace + " namespace into the namespaces table failed", e);
+    int retryCount = 0;
+    while (true) {
+      try {
+        client.putItem(
+            PutItemRequest.builder()
+                .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
+                .item(itemValues)
+                .build());
+        return;
+      } catch (ResourceNotFoundException e) {
+        if (retryCount >= MAX_RETRY_COUNT) {
+          throw new ExecutionException(
+              "Inserting the " + namespace + " namespace into the namespaces table failed", e);
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        retryCount++;
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Inserting the " + namespace + " namespace into the namespaces table failed", e);
+      }
     }
   }
 
@@ -462,15 +482,28 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           METADATA_ATTR_SECONDARY_INDEX,
           AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
     }
-    try {
-      client.putItem(
-          PutItemRequest.builder()
-              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
-              .item(itemValues)
-              .build());
-    } catch (Exception e) {
-      throw new ExecutionException(
-          "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed", e);
+    int retryCount = 0;
+    while (true) {
+      try {
+        client.putItem(
+            PutItemRequest.builder()
+                .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
+                .item(itemValues)
+                .build());
+        return;
+      } catch (ResourceNotFoundException e) {
+        if (retryCount >= MAX_RETRY_COUNT) {
+          throw new ExecutionException(
+              "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed",
+              e);
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        retryCount++;
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed",
+            e);
+      }
     }
   }
 
@@ -1501,6 +1534,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private String getFullTableName(Namespace namespace, String table) {
     return ScalarDbUtils.getFullTableName(namespace.prefixed(), table);
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 
   @Override

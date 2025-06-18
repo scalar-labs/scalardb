@@ -2,6 +2,11 @@ package com.scalar.db.dataloader.core.util;
 
 import java.io.File;
 
+/**
+ * A utility class for common operations related to file system paths.
+ *
+ * <p>Provides helper methods such as ensuring a trailing path separator for directory paths.
+ */
 public class PathUtil {
 
   /**

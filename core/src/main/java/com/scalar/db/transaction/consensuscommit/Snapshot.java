@@ -58,14 +58,28 @@ public class Snapshot {
   private final Isolation isolation;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
-  private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
-  private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
-  private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
-  private final Map<Key, Put> writeSet;
-  private final Map<Key, Delete> deleteSet;
 
-  // The scanner set used to store information about scanners that are not fully scanned
+  // The read set stores information about the records that are read in this transaction. This is
+  // used as a previous version for write operations.
+  private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
+
+  // The get set stores information about the records retrieved by Get operations in this
+  // transaction. This is used for validation and snapshot read.
+  private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
+
+  // The scan set stores information about the records retrieved by Scan operations in this
+  // transaction. This is used for validation and snapshot read.
+  private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
+
+  // The scanner set stores information about scanners that are not fully scanned. This is used for
+  // validation.
   private final List<ScannerInfo> scannerSet;
+
+  // The write set stores information about writes in this transaction.
+  private final Map<Key, Put> writeSet;
+
+  // The delete set stores information about deletes in this transaction.
+  private final Map<Key, Delete> deleteSet;
 
   public Snapshot(
       String id,
@@ -203,6 +217,14 @@ public class Snapshot {
     return getSet.containsKey(get);
   }
 
+  public boolean hasWritesOrDeletes() {
+    return !writeSet.isEmpty() || !deleteSet.isEmpty();
+  }
+
+  public boolean hasReads() {
+    return !getSet.isEmpty() || !scanSet.isEmpty() || !scannerSet.isEmpty();
+  }
+
   public Optional<TransactionResult> getResult(Key key) throws CrudException {
     Optional<TransactionResult> result = readSet.getOrDefault(key, Optional.empty());
     return mergeResult(key, result);
@@ -235,18 +257,22 @@ public class Snapshot {
     }
   }
 
-  private Optional<TransactionResult> mergeResult(
+  public Optional<TransactionResult> mergeResult(
       Key key, Optional<TransactionResult> result, Set<Conjunction> conjunctions)
       throws CrudException {
-    return mergeResult(key, result)
-        .filter(
-            r ->
-                // We need to apply conditions if it is a merged result because the transaction’s
-                // write makes the record no longer match the conditions. Of course, we can just
-                // return the result without checking the condition if there is no condition.
-                !r.isMergedResult()
-                    || conjunctions.isEmpty()
-                    || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
+    Optional<TransactionResult> ret = mergeResult(key, result);
+
+    if (conjunctions.isEmpty()) {
+      // We can just return the result without checking the condition if there is no condition.
+      return ret;
+    }
+
+    return ret.filter(
+        r ->
+            // We need to apply conditions if it is a merged result because the transaction’s write
+            // makes the record no longer match the conditions.
+            !r.isMergedResult()
+                || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
@@ -522,7 +548,7 @@ public class Snapshot {
       }
     }
 
-    parallelExecutor.validate(tasks, getId());
+    parallelExecutor.validateRecords(tasks, getId());
   }
 
   /**

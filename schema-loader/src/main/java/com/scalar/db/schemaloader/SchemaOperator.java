@@ -286,6 +286,49 @@ public class SchemaOperator implements AutoCloseable {
     }
   }
 
+  public void createReplicationTables(Map<String, String> options) throws SchemaLoaderException {
+    if (replicationTablesExist()) {
+      logger.warn("The replication tables already exist");
+      return;
+    }
+    try {
+      transactionAdmin.get().createReplicationTables(options);
+      logger.info("Creating the replication tables succeeded");
+    } catch (ExecutionException e) {
+      throw new SchemaLoaderException(e.getMessage(), e);
+    }
+  }
+
+  public void dropReplicationTables() throws SchemaLoaderException {
+    if (!replicationTablesExist()) {
+      logger.warn("The replication tables don't exist");
+      return;
+    }
+    try {
+      transactionAdmin.get().dropReplicationTables();
+      logger.info("Deleting the replication tables succeeded");
+    } catch (ExecutionException e) {
+      throw new SchemaLoaderException(e.getMessage(), e);
+    }
+  }
+
+  private boolean replicationTablesExist() throws SchemaLoaderException {
+    try {
+      return transactionAdmin.get().replicationTablesExist();
+    } catch (ExecutionException e) {
+      throw new SchemaLoaderException(e.getMessage(), e);
+    }
+  }
+
+  public void repairReplicationTables(Map<String, String> options) throws SchemaLoaderException {
+    try {
+      transactionAdmin.get().repairReplicationTables(options);
+      logger.info("Repairing the replication tables succeeded");
+    } catch (ExecutionException e) {
+      throw new SchemaLoaderException(e.getMessage(), e);
+    }
+  }
+
   public void alterTables(List<TableSchema> tableSchemaList, Map<String, String> options)
       throws SchemaLoaderException {
     for (TableSchema tableSchema : tableSchemaList) {

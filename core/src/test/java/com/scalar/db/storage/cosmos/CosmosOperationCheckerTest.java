@@ -17,7 +17,10 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -37,6 +40,8 @@ public class CosmosOperationCheckerTest {
   private static final String CKEY1 = "c1";
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl("cosmos", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE);
 
   private static final TableMetadata TABLE_METADATA1 =
       TableMetadata.newBuilder()
@@ -59,13 +64,15 @@ public class CosmosOperationCheckerTest {
 
   @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
+  @Mock private StorageInfoProvider storageInfoProvider;
   private CosmosOperationChecker operationChecker;
 
   @BeforeEach
   public void setUp() throws Exception {
     openMocks(this).close();
 
-    operationChecker = new CosmosOperationChecker(databaseConfig, metadataManager);
+    operationChecker =
+        new CosmosOperationChecker(databaseConfig, metadataManager, storageInfoProvider);
   }
 
   @Test
@@ -218,6 +225,7 @@ public class CosmosOperationCheckerTest {
       throws ExecutionException {
     // Arrange
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+    when(storageInfoProvider.getStorageInfo(any())).thenReturn(STORAGE_INFO);
 
     Put put =
         Put.newBuilder()
@@ -320,6 +328,7 @@ public class CosmosOperationCheckerTest {
       throws ExecutionException {
     // Arrange
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+    when(storageInfoProvider.getStorageInfo(any())).thenReturn(STORAGE_INFO);
 
     Delete delete =
         Delete.newBuilder()
@@ -657,6 +666,7 @@ public class CosmosOperationCheckerTest {
           throws ExecutionException {
     // Arrange
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+    when(storageInfoProvider.getStorageInfo(any())).thenReturn(STORAGE_INFO);
 
     Put put1 =
         Put.newBuilder()
