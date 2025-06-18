@@ -548,7 +548,7 @@ public class Snapshot {
       }
     }
 
-    parallelExecutor.validate(tasks, getId());
+    parallelExecutor.validateRecords(tasks, getId());
   }
 
   /**
