@@ -117,7 +117,7 @@ public class CommitHandler {
 
     if (hasWritesOrDeletesInSnapshot) {
       try {
-        prepare(snapshot);
+        prepareRecords(snapshot);
       } catch (PreparationException e) {
         safelyCallOnFailureBeforeCommit(snapshot);
         abortState(snapshot.getId());
@@ -134,7 +134,7 @@ public class CommitHandler {
 
     if (snapshot.hasReads()) {
       try {
-        validate(snapshot);
+        validateRecords(snapshot);
       } catch (ValidationException e) {
         safelyCallOnFailureBeforeCommit(snapshot);
 
@@ -194,9 +194,19 @@ public class CommitHandler {
     }
   }
 
-  public void prepare(Snapshot snapshot) throws PreparationException {
+  public void prepareRecords(Snapshot snapshot) throws PreparationException {
     try {
-      prepareRecords(snapshot);
+      PrepareMutationComposer composer =
+          new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+      snapshot.to(composer);
+      PartitionedMutations mutations = new PartitionedMutations(composer.get());
+
+      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
+      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
+      for (PartitionedMutations.Key key : orderedKeys) {
+        tasks.add(() -> storage.mutate(mutations.get(key)));
+      }
+      parallelExecutor.prepareRecords(tasks, snapshot.getId());
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
@@ -211,22 +221,7 @@ public class CommitHandler {
     }
   }
 
-  private void prepareRecords(Snapshot snapshot)
-      throws ExecutionException, PreparationConflictException {
-    PrepareMutationComposer composer =
-        new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
-    snapshot.to(composer);
-    PartitionedMutations mutations = new PartitionedMutations(composer.get());
-
-    ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-    List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-    for (PartitionedMutations.Key key : orderedKeys) {
-      tasks.add(() -> storage.mutate(mutations.get(key)));
-    }
-    parallelExecutor.prepare(tasks, snapshot.getId());
-  }
-
-  public void validate(Snapshot snapshot) throws ValidationException {
+  public void validateRecords(Snapshot snapshot) throws ValidationException {
     try {
       // validation is executed when SERIALIZABLE is chosen.
       snapshot.toSerializable(storage);
