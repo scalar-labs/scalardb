@@ -3126,7 +3126,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnabledIf("isGroupCommitEnabled")
   void put_WhenTheOtherTransactionsFails_ShouldBeCommittedWithoutBlocked() throws Exception {
     // Arrange
-    doThrow(PreparationConflictException.class).when(commit).prepare(any());
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
 
     // Act
     DistributedTransaction failingTxn = manager.begin();
@@ -3206,7 +3206,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     DistributedTransaction failingTxn1 = manager.begin(Isolation.SERIALIZABLE);
     DistributedTransaction failingTxn2 = manager.begin(Isolation.SERIALIZABLE);
 
-    doThrow(PreparationConflictException.class).when(commit).prepare(any());
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
 
     failingTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
     failingTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
