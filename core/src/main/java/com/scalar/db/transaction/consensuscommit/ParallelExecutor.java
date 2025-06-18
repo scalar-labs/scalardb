@@ -60,7 +60,7 @@ public class ParallelExecutor {
     this.parallelExecutorService = parallelExecutorService;
   }
 
-  public void prepare(List<ParallelExecutorTask> tasks, String transactionId)
+  public void prepareRecords(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException {
     try {
       // When parallel preparation is disabled, we stop running the tasks when one of them fails
@@ -85,7 +85,7 @@ public class ParallelExecutor {
     }
   }
 
-  public void validate(List<ParallelExecutorTask> tasks, String transactionId)
+  public void validateRecords(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException, ValidationConflictException {
     try {
       executeTasks(
