@@ -111,11 +111,11 @@ public class CommitHandler {
 
   public void commit(Snapshot snapshot, boolean readOnly)
       throws CommitException, UnknownTransactionStatusException {
-    boolean hasSomeWritesOrDeletesInSnapshot = !readOnly && snapshot.hasWritesOrDeletes();
+    boolean hasWritesOrDeletesInSnapshot = !readOnly && snapshot.hasWritesOrDeletes();
 
     Optional<Future<Void>> snapshotHookFuture = invokeBeforePreparationSnapshotHook(snapshot);
 
-    if (hasSomeWritesOrDeletesInSnapshot) {
+    if (hasWritesOrDeletesInSnapshot) {
       try {
         prepare(snapshot);
       } catch (PreparationException e) {
@@ -140,10 +140,10 @@ public class CommitHandler {
 
         // If the transaction has no writes and deletes, we don't need to abort-state and
         // rollback-records since there are no changes to be made.
-        if (hasSomeWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+        if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
           abortState(snapshot.getId());
         }
-        if (hasSomeWritesOrDeletesInSnapshot) {
+        if (hasWritesOrDeletesInSnapshot) {
           rollbackRecords(snapshot);
         }
 
@@ -159,10 +159,10 @@ public class CommitHandler {
 
     waitBeforePreparationSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
 
-    if (hasSomeWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+    if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
       commitState(snapshot);
     }
-    if (hasSomeWritesOrDeletesInSnapshot) {
+    if (hasWritesOrDeletesInSnapshot) {
       commitRecords(snapshot);
     }
   }
