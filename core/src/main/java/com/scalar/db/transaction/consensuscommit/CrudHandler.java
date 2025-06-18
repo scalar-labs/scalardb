@@ -154,7 +154,8 @@ public class CrudHandler {
     }
 
     if (!get.getConjunctions().isEmpty()) {
-      // Check if the result matches the conjunctions
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
       result =
           result.filter(
               r ->
@@ -266,7 +267,8 @@ public class CrudHandler {
 
     Optional<TransactionResult> ret = Optional.of(result);
     if (!scan.getConjunctions().isEmpty()) {
-      // Check if the result matches the conjunctions
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
       ret =
           ret.filter(
               r ->
