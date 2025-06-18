@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
  * Implementation of {@link TableMetadataService} that retrieves table metadata using {@link
  * DistributedTransactionAdmin}.
  */
+@SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public class TableMetadataTransactionService extends TableMetadataService {
 

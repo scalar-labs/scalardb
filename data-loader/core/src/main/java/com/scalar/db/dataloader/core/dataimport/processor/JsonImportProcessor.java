@@ -38,6 +38,11 @@ public class JsonImportProcessor extends ImportProcessor {
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
   private final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
 
+  /**
+   * Creates a new JsonImportProcessor with the specified parameters.
+   *
+   * @param params Configuration parameters for the import processor
+   */
   public JsonImportProcessor(ImportProcessorParams params) {
     super(params);
   }

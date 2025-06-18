@@ -51,7 +51,6 @@ import picocli.CommandLine.Spec;
 @CommandLine.Command(name = "export", description = "export data from a ScalarDB table")
 public class ExportCommand extends ExportCommandOptions implements Callable<Integer> {
 
-  private static final String EXPORT_FILE_NAME_FORMAT = "export.%s.%s.%s.%s";
   private static final Logger logger = LoggerFactory.getLogger(ExportCommand.class);
 
   @Spec CommandSpec spec;
@@ -264,11 +263,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     String fileName =
         StringUtils.isBlank(outputFileName)
             ? String.format(
-                EXPORT_FILE_NAME_FORMAT,
-                namespace,
-                table,
-                System.nanoTime(),
-                outputFormat.toString().toLowerCase())
+                "export.%s.%s.%s.%s",
+                namespace, table, System.nanoTime(), outputFormat.toString().toLowerCase())
             : outputFileName;
 
     if (StringUtils.isBlank(outputDirectory)) {

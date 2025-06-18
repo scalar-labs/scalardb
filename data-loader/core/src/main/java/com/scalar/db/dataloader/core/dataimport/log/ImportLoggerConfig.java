@@ -10,6 +10,7 @@ import lombok.Value;
  */
 @Value
 @Builder
+@SuppressWarnings("SameNameButDifferent")
 public class ImportLoggerConfig {
   /**
    * The directory path where log files will be stored. This path should end with a directory
