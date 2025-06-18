@@ -5343,7 +5343,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecordAfterLazyRecovery()
+      get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
           throws UnknownTransactionStatusException, CrudException, ExecutionException {
     // Arrange
     manager.insert(
@@ -5392,23 +5392,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
-    Optional<Result> actual;
-    while (true) {
-      try {
-        actual =
-            manager.get(
-                Get.newBuilder()
-                    .namespace(namespace1)
-                    .table(TABLE_1)
-                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                    .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                    .build());
-        break;
-      } catch (CrudConflictException e) {
-        // Retry on conflict
-      }
-    }
+    Optional<Result> actual =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .build());
 
     assertThat(actual).isNotPresent();
   }
@@ -5490,7 +5482,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecordAfterLazyRecovery()
+      scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
           throws UnknownTransactionStatusException, CrudException, ExecutionException {
     // Arrange
     manager.mutate(
@@ -5547,22 +5539,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
-    List<Result> results;
-    while (true) {
-      try {
-        results =
-            manager.scan(
-                Scan.newBuilder()
-                    .namespace(namespace1)
-                    .table(TABLE_1)
-                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                    .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                    .build());
-        break;
-      } catch (CrudConflictException e) {
-        // Retry on conflict
-      }
-    }
+    List<Result> results =
+        manager.scan(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .build());
 
     assertThat(results).hasSize(1);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -5572,7 +5556,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecordAfterLazyRecovery()
+      scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
           throws UnknownTransactionStatusException, CrudException, ExecutionException {
     // Arrange
     manager.mutate(
@@ -5643,23 +5627,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
-    List<Result> results;
-    while (true) {
-      try {
-        results =
-            manager.scan(
-                Scan.newBuilder()
-                    .namespace(namespace1)
-                    .table(TABLE_1)
-                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                    .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                    .limit(2)
-                    .build());
-        break;
-      } catch (CrudConflictException e) {
-        // Retry on conflict
-      }
-    }
+    List<Result> results =
+        manager.scan(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .limit(2)
+                .build());
 
     assertThat(results).hasSize(2);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -5747,7 +5723,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecordAfterLazyRecovery()
+      getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
           throws UnknownTransactionStatusException, CrudException, ExecutionException {
     // Arrange
     manager.mutate(
@@ -5805,20 +5781,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act Assert
     List<Result> results;
-    while (true) {
-      try (TransactionManagerCrudOperable.Scanner scanner =
-          manager.getScanner(
-              Scan.newBuilder()
-                  .namespace(namespace1)
-                  .table(TABLE_1)
-                  .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                  .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                  .build())) {
-        results = scanner.all();
-        break;
-      } catch (CrudConflictException e) {
-        // Retry on conflict
-      }
+    try (TransactionManagerCrudOperable.Scanner scanner =
+        manager.getScanner(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .build())) {
+      results = scanner.all();
     }
 
     assertThat(results).hasSize(1);
@@ -5829,7 +5800,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @Test
   public void
-      getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecordAfterLazyRecovery()
+      getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
           throws UnknownTransactionStatusException, CrudException, ExecutionException {
     // Arrange
     manager.mutate(
@@ -5901,21 +5872,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act Assert
     List<Result> results;
-    while (true) {
-      try (TransactionManagerCrudOperable.Scanner scanner =
-          manager.getScanner(
-              Scan.newBuilder()
-                  .namespace(namespace1)
-                  .table(TABLE_1)
-                  .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                  .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
-                  .limit(2)
-                  .build())) {
-        results = scanner.all();
-        break;
-      } catch (CrudConflictException e) {
-        // Retry on conflict
-      }
+    try (TransactionManagerCrudOperable.Scanner scanner =
+        manager.getScanner(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+                .limit(2)
+                .build())) {
+      results = scanner.all();
     }
 
     assertThat(results).hasSize(2);
