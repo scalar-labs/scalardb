@@ -74,7 +74,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    commit =
+        new CommitHandler(
+            storage,
+            coordinator,
+            tableMetadataManager,
+            parallelExecutor,
+            config.isCoordinatorWriteOmissionOnReadOnlyEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -91,7 +97,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    commit =
+        new CommitHandler(
+            storage,
+            coordinator,
+            tableMetadataManager,
+            parallelExecutor,
+            config.isCoordinatorWriteOmissionOnReadOnlyEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }

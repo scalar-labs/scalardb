@@ -130,9 +130,19 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private CommitHandler createCommitHandler() {
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+          groupCommitter);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+      return new CommitHandler(
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          config.isCoordinatorWriteOmissionOnReadOnlyEnabled());
     }
   }
 
@@ -221,7 +231,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   DistributedTransaction begin(String txId, Isolation isolation, boolean readOnly) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
-    if (isGroupCommitEnabled()) {
+    if (!readOnly && isGroupCommitEnabled()) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);
     }
