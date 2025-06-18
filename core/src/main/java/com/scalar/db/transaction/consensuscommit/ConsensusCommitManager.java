@@ -154,7 +154,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public DistributedTransaction begin(String txId) {
-    return begin(txId, config.getIsolation(), false);
+    return begin(txId, config.getIsolation(), false, false);
   }
 
   @Override
@@ -165,7 +165,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public DistributedTransaction beginReadOnly(String txId) {
-    return begin(txId, config.getIsolation(), true);
+    return begin(txId, config.getIsolation(), true, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -179,7 +179,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, com.scalar.db.api.Isolation isolation) {
-    return begin(txId, Isolation.valueOf(isolation.name()), false);
+    return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -202,7 +202,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Override
   public DistributedTransaction start(
       String txId, com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(txId, Isolation.SERIALIZABLE, false);
+    return begin(txId, Isolation.SERIALIZABLE, false, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -212,23 +212,24 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId,
       com.scalar.db.api.Isolation isolation,
       com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(txId, Isolation.valueOf(isolation.name()), false);
+    return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
   @VisibleForTesting
   DistributedTransaction begin(Isolation isolation) {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, isolation, false);
+    return begin(txId, isolation, false, false);
   }
 
   @VisibleForTesting
   DistributedTransaction beginReadOnly(Isolation isolation) {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, isolation, true);
+    return begin(txId, isolation, true, false);
   }
 
   @VisibleForTesting
-  DistributedTransaction begin(String txId, Isolation isolation, boolean readOnly) {
+  DistributedTransaction begin(
+      String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
     if (!readOnly && isGroupCommitEnabled()) {
@@ -248,7 +249,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             isIncludeMetadataEnabled,
             parallelExecutor,
-            readOnly);
+            readOnly,
+            oneOperation);
     DistributedTransaction transaction =
         new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
     if (readOnly) {
@@ -257,6 +259,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return transaction;
+  }
+
+  private DistributedTransaction beginOneOperation(boolean readOnly) {
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, config.getIsolation(), readOnly, true);
   }
 
   @Override
@@ -271,7 +278,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    DistributedTransaction transaction = beginReadOnly();
+    DistributedTransaction transaction = beginOneOperation(true);
 
     TransactionCrudOperable.Scanner scanner;
     try {
@@ -441,12 +448,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction,
       boolean readOnly)
       throws CrudException, UnknownTransactionStatusException {
-    DistributedTransaction transaction;
-    if (readOnly) {
-      transaction = beginReadOnly();
-    } else {
-      transaction = begin();
-    }
+    DistributedTransaction transaction = beginOneOperation(readOnly);
 
     try {
       R result = throwableFunction.apply(transaction);

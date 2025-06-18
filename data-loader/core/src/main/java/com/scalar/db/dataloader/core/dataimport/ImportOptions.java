@@ -7,7 +7,8 @@ import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import lombok.Builder;
 import lombok.Data;
 
-/** Import options to import data into one or more ScalarDB tables */
+/** Import options to import data into one or more ScalarDB tables. */
+@SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Builder
 @Data
 public class ImportOptions {

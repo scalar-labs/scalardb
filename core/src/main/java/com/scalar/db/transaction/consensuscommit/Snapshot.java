@@ -257,18 +257,22 @@ public class Snapshot {
     }
   }
 
-  private Optional<TransactionResult> mergeResult(
+  public Optional<TransactionResult> mergeResult(
       Key key, Optional<TransactionResult> result, Set<Conjunction> conjunctions)
       throws CrudException {
-    return mergeResult(key, result)
-        .filter(
-            r ->
-                // We need to apply conditions if it is a merged result because the transaction’s
-                // write makes the record no longer match the conditions. Of course, we can just
-                // return the result without checking the condition if there is no condition.
-                !r.isMergedResult()
-                    || conjunctions.isEmpty()
-                    || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
+    Optional<TransactionResult> ret = mergeResult(key, result);
+
+    if (conjunctions.isEmpty()) {
+      // We can just return the result without checking the condition if there is no condition.
+      return ret;
+    }
+
+    return ret.filter(
+        r ->
+            // We need to apply conditions if it is a merged result because the transaction’s write
+            // makes the record no longer match the conditions.
+            !r.isMergedResult()
+                || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
