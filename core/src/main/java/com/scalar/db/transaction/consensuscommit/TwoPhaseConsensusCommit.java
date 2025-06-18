@@ -269,7 +269,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      commit.prepare(crud.getSnapshot());
+      commit.prepareRecords(crud.getSnapshot());
     } finally {
       needRollback = true;
     }
@@ -277,7 +277,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void validate() throws ValidationException {
-    commit.validate(crud.getSnapshot());
+    commit.validateRecords(crud.getSnapshot());
     validated = true;
   }
 
