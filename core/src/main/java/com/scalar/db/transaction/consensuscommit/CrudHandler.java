@@ -493,10 +493,10 @@ public class CrudHandler {
    *   | 0             | 1              | 200    | PREPARED  | 1000          | COMMITTED      |
    * </pre>
    *
-   * If we scan records with the condition `column = 1000`, we will only retrieve the first record,
-   * since the `column` value of the second record is `200`, which does not match `1000`. However,
-   * the second record is a prepared record whose before image matches the condition, so it should
-   * also be returned in the scan result.
+   * If we scan records with the condition "column = 1000" without converting the condition
+   * (conjunction), we only get the first record, not the second one, because the condition does not
+   * match. However, the second record has not been committed yet, so we should still retrieve it,
+   * considering the possibility that the record will be rolled back.
    *
    * <p>To handle such cases, we convert the conjunctions to include conditions on the before image.
    * For example, if the original condition is:
