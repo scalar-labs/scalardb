@@ -81,7 +81,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         Files.newBufferedReader(Paths.get(sourceFilePath), Charset.defaultCharset())) {
       ImportManager importManager =
           createImportManager(importOptions, tableMetadataMap, reader, logWriterFactory, config);
-      importManager.addListener(new ConsoleImportProgressListener(Duration.ofMillis(1000)));
+      importManager.addListener(new ConsoleImportProgressListener(Duration.ofSeconds(1)));
       importManager.startImport();
     }
     return 0;

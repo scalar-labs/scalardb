@@ -7,20 +7,25 @@ import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransacti
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchStatus;
 import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ConsoleImportProgressListener implements ImportEventListener {
 
   private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final long startTime;
+  private final long startTime;
   private final Map<Integer, String> chunkLogs = new ConcurrentHashMap<>();
   private final Map<Integer, String> chunkFailureLogs = new ConcurrentHashMap<>();
   private final AtomicLong totalRecords = new AtomicLong();
+  private final AtomicLong totalSuccess = new AtomicLong();
+  private final AtomicLong totalFailures = new AtomicLong();
   private volatile boolean completed = false;
 
   public ConsoleImportProgressListener(Duration updateInterval) {
-      this.startTime = System.currentTimeMillis();
+    startTime = System.currentTimeMillis();
     scheduler.scheduleAtFixedRate(
         this::render, 0, updateInterval.toMillis(), TimeUnit.MILLISECONDS);
   }
@@ -30,14 +35,16 @@ public class ConsoleImportProgressListener implements ImportEventListener {
     chunkLogs.put(
         status.getDataChunkId(),
         String.format(
-            "🔄 Chunk %d: Processing... %d records so far",
-            status.getDataChunkId(), status.getTotalRecords()));
+            "🔄 Chunk %d: Processing... %,d records so far",
+            status.getDataChunkId(), totalRecords.get()));
   }
 
   @Override
   public void onDataChunkCompleted(ImportDataChunkStatus status) {
     long elapsed = status.getEndTime().toEpochMilli() - status.getStartTime().toEpochMilli();
     totalRecords.addAndGet(status.getTotalRecords());
+    totalSuccess.addAndGet(status.getSuccessCount());
+    totalFailures.addAndGet(status.getFailureCount());
     if (status.getSuccessCount() > 0) {
       chunkLogs.put(
           status.getDataChunkId(),
@@ -52,15 +59,8 @@ public class ConsoleImportProgressListener implements ImportEventListener {
   }
 
   @Override
-  public void onAllDataChunksCompleted() {
-    completed = true;
-    scheduler.shutdown();
-    render(); // Final render
-  }
-
-  @Override
   public void onTransactionBatchStarted(ImportTransactionBatchStatus batchStatus) {
-
+    // Not used currently, but could be extended for detailed batch-level progress
   }
 
   @Override
@@ -69,16 +69,31 @@ public class ConsoleImportProgressListener implements ImportEventListener {
       chunkFailureLogs.put(
           batchResult.getDataChunkId(),
           String.format(
-              "❌ Chunk %d: Transaction batch %d Failed - %d records failed to be imported) ",
+              "❌ Chunk id: %d, Transaction batch id: %d failed: %,d records could not be imported",
               batchResult.getDataChunkId(),
               batchResult.getTransactionBatchId(),
               batchResult.getRecords().size()));
     }
-    // Optional: Implement error reporting or success/failure count
   }
 
   @Override
   public void onTaskComplete(ImportTaskResult taskResult) {
+    // No-op currently, could be extended to summarize task-level results
+  }
+
+  @Override
+  public void onAllDataChunksCompleted() {
+    completed = true;
+    scheduler.shutdown();
+    try {
+      if (!scheduler.awaitTermination(2, TimeUnit.SECONDS)) {
+        scheduler.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      scheduler.shutdownNow();
+    }
+    render(); // Final render after shutdown
   }
 
   private void render() {
@@ -92,13 +107,15 @@ public class ConsoleImportProgressListener implements ImportEventListener {
             "\rImporting... %,d records | %.0f rec/s | %s\n",
             totalRecords.get(), recPerSec, formatElapsed(elapsed)));
 
-    chunkLogs.values().stream()
-        .sorted() // Optional: stable ordering
-        .forEach(line -> builder.append(line).append("\n"));
-    chunkFailureLogs.values().stream()
-        .sorted() // Optional: stable ordering
-        .forEach(line -> builder.append(line).append("\n"));
+    chunkLogs.values().stream().sorted().forEach(line -> builder.append(line).append("\n"));
+    chunkFailureLogs.values().stream().sorted().forEach(line -> builder.append(line).append("\n"));
 
+    if (completed) {
+      builder.append(
+          String.format(
+              "\n✅ Import completed: %,d records succeeded, %,d failed\n",
+              totalSuccess.get(), totalFailures.get()));
+    }
     clearConsole();
     System.out.print(builder);
     System.out.flush();
@@ -107,12 +124,11 @@ public class ConsoleImportProgressListener implements ImportEventListener {
   private String formatElapsed(long elapsedMillis) {
     long seconds = (elapsedMillis / 1000) % 60;
     long minutes = (elapsedMillis / 1000) / 60;
-    return String.format("%dm %ds elapsed", minutes, seconds);
+    return String.format("%dm %02ds elapsed", minutes, seconds);
   }
 
   private void clearConsole() {
-    // Clear screen for updated multiline rendering
-    System.out.print("\033[H\033[2J"); // ANSI escape for clearing screen
+    System.out.print("\033[H\033[2J"); // ANSI escape to clear screen
     System.out.flush();
   }
 }
