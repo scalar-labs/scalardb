@@ -1,12 +1,14 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
+import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -14,12 +16,14 @@ import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -82,17 +86,33 @@ public class CommitMutationComposer extends AbstractMutationComposer {
 
   private Put composePut(Operation base, @Nullable TransactionResult result)
       throws ExecutionException {
-    return new Put(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(
-            new PutIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(
-                    STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)))
-        .withValue(Attribute.toCommittedAtValue(current))
-        .withValue(Attribute.toStateValue(TransactionState.COMMITTED));
+    PutBuilder.Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(getPartitionKey(base, result))
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(TransactionState.PREPARED.get()))
+                    .build())
+            .bigIntValue(COMMITTED_AT, current)
+            .intValue(STATE, TransactionState.COMMITTED.get())
+            .consistency(Consistency.LINEARIZABLE);
+    getClusteringKey(base, result).ifPresent(putBuilder::clusteringKey);
+
+    // Set before image columns to null
+    if (result != null) {
+      TransactionTableMetadata transactionTableMetadata =
+          tableMetadataManager.getTransactionTableMetadata(base);
+      LinkedHashSet<String> beforeImageColumnNames =
+          transactionTableMetadata.getBeforeImageColumnNames();
+      TableMetadata tableMetadata = transactionTableMetadata.getTableMetadata();
+      setBeforeImageColumnsToNull(putBuilder, beforeImageColumnNames, tableMetadata);
+    }
+
+    return putBuilder.build();
   }
 
   private Delete composeDelete(Operation base, @Nullable TransactionResult result)
