@@ -706,7 +706,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void prepare_ProcessedCrudGiven_ShouldPrepareWithSnapshot()
+  public void prepare_ProcessedCrudGiven_ShouldPrepareRecordsWithSnapshot()
       throws PreparationException, CrudException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -716,7 +716,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud).readIfImplicitPreReadEnabled();
-    verify(commit).prepare(snapshot);
+    verify(commit).prepareRecords(snapshot);
   }
 
   @Test
@@ -775,7 +775,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void validate_ProcessedCrudGiven_ShouldPerformValidationWithSnapshot()
+  public void validate_ProcessedCrudGiven_ShouldValidateRecordsWithSnapshot()
       throws ValidationException, PreparationException {
     // Arrange
     transaction.prepare();
@@ -785,7 +785,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.validate();
 
     // Assert
-    verify(commit).validate(snapshot);
+    verify(commit).validateRecords(snapshot);
   }
 
   @Test
@@ -855,7 +855,7 @@ public class TwoPhaseConsensusCommitTest {
       throws TransactionException {
     // Arrange
     when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(PreparationException.class).when(commit).prepare(snapshot);
+    doThrow(PreparationException.class).when(commit).prepareRecords(snapshot);
 
     // Act
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
