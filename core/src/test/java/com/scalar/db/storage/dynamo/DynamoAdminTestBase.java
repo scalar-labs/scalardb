@@ -657,6 +657,51 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void createTable_WhenActualMetadataTableCreationIsDelayed_ShouldFailAfterRetries() {
+    // Arrange
+    // prepare tableIsActiveResponse
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableIsActiveResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(tableIsActiveResponse);
+    // prepare backupIsEnabledResponse
+    DescribeContinuousBackupsResponse backupIsEnabledResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(backupIsEnabledResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
+    when(client.putItem(any(PutItemRequest.class))).thenThrow(ResourceNotFoundException.class);
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addClusteringKey("c2", Order.DESC)
+            .addClusteringKey("c3", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.INT)
+            .addColumn("c5", DataType.BLOB)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
+            .addSecondaryIndex("c4")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, metadata))
+        .isInstanceOf(ExecutionException.class);
+    verify(client, times(DynamoAdmin.MAX_RETRY_COUNT + 1)).putItem(any(PutItemRequest.class));
+  }
+
+  @Test
   public void dropTable_WithNoMetadataLeft_ShouldDropTableAndDeleteMetadata()
       throws ExecutionException {
     // Arrange

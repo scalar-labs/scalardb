@@ -97,6 +97,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
   private static final int DEFAULT_WAITING_DURATION_SECS = 3;
+  @VisibleForTesting static final int MAX_RETRY_COUNT = 10;
 
   @VisibleForTesting static final String PARTITION_KEY = "concatenatedPartitionKey";
   @VisibleForTesting static final String CLUSTERING_KEY = "concatenatedClusteringKey";
@@ -430,15 +431,28 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           METADATA_ATTR_SECONDARY_INDEX,
           AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
     }
-    try {
-      client.putItem(
-          PutItemRequest.builder()
-              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
-              .item(itemValues)
-              .build());
-    } catch (Exception e) {
-      throw new ExecutionException(
-          "Adding the meta data for table " + getFullTableName(namespace, table) + " failed", e);
+    int retryCount = 0;
+    while (true) {
+      try {
+        client.putItem(
+            PutItemRequest.builder()
+                .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
+                .item(itemValues)
+                .build());
+        return;
+      } catch (ResourceNotFoundException e) {
+        if (retryCount >= MAX_RETRY_COUNT) {
+          throw new ExecutionException(
+              "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed",
+              e);
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        retryCount++;
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed",
+            e);
+      }
     }
   }
 
