@@ -17,6 +17,7 @@ import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.dataexport.CsvExportManager;
 import com.scalar.db.dataloader.core.dataexport.ExportManager;
 import com.scalar.db.dataloader.core.dataexport.ExportOptions;
+import com.scalar.db.dataloader.core.dataexport.ExportReport;
 import com.scalar.db.dataloader.core.dataexport.JsonExportManager;
 import com.scalar.db.dataloader.core.dataexport.JsonLineExportManager;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
@@ -36,16 +37,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
 
 @CommandLine.Command(name = "export", description = "export data from a ScalarDB table")
 public class ExportCommand extends ExportCommandOptions implements Callable<Integer> {
-
-  private static final Logger logger = LoggerFactory.getLogger(ExportCommand.class);
 
   @Spec CommandSpec spec;
 
@@ -86,23 +83,23 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       String filePath =
           getOutputAbsoluteFilePath(
               outputDirectory, outputFileName, exportOptions.getOutputFileFormat());
-      logger.info("Exporting data to file: {}", filePath);
 
       try (BufferedWriter writer =
           Files.newBufferedWriter(Paths.get(filePath), Charset.defaultCharset(), CREATE, APPEND)) {
-        exportManager.startExport(exportOptions, tableMetadata, writer);
+        ConsoleExportProgressReporter reporter = new ConsoleExportProgressReporter(filePath);
+        ExportReport report = exportManager.startExport(exportOptions, tableMetadata, writer);
+        reporter.reportCompletion(report.getExportedRowCount());
       }
 
     } catch (DirectoryValidationException e) {
-      logger.error("Invalid output directory path: {}", outputDirectory);
+      ConsoleExportProgressReporter.reportError("Invalid output directory: " + outputDirectory, e);
       return 1;
     } catch (InvalidFilePathException e) {
-      logger.error(
-          "The ScalarDB connection settings file path is invalid or the file is missing: {}",
-          scalarDbPropertiesFilePath);
+      ConsoleExportProgressReporter.reportError(
+          "Invalid ScalarDB connection file path: " + scalarDbPropertiesFilePath, e);
       return 1;
     } catch (TableMetadataException e) {
-      logger.error("Failed to retrieve table metadata: {}", e.getMessage());
+      ConsoleExportProgressReporter.reportError("Failed to retrieve table metadata", e);
       return 1;
     }
     return 0;

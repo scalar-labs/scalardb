@@ -24,6 +24,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
   private final AtomicLong totalFailures = new AtomicLong();
   private volatile boolean completed = false;
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   public ConsoleImportProgressListener(Duration updateInterval) {
     startTime = System.currentTimeMillis();
     scheduler.scheduleAtFixedRate(
@@ -104,7 +105,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
 
     builder.append(
         String.format(
-            "\rImporting... %,d records | %.0f rec/s | %s\n",
+            "\rImporting... %,d records | %.0f rec/s | %s%n",
             totalRecords.get(), recPerSec, formatElapsed(elapsed)));
 
     chunkLogs.values().stream().sorted().forEach(line -> builder.append(line).append("\n"));
@@ -113,7 +114,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
     if (completed) {
       builder.append(
           String.format(
-              "\n✅ Import completed: %,d records succeeded, %,d failed\n",
+              "%n✅ Import completed: %,d records succeeded, %,d failed%n",
               totalSuccess.get(), totalFailures.get()));
     }
     clearConsole();
