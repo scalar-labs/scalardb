@@ -136,6 +136,23 @@ public class ConditionBuilder {
   }
 
   /**
+   * Builds a like expression with the specified column, operator, and escape character.
+   *
+   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+   * this method. Users should not depend on it.
+   *
+   * @param column a target text column used to compare
+   * @param operator an operator used to compare the target column. The operator must be either LIKE
+   *     or NOT_LIKE.
+   * @param escape an escape character for the like operator
+   * @return a conditional expression
+   */
+  public static ConditionalExpression buildLikeExpression(
+      TextColumn column, Operator operator, String escape) {
+    return new LikeExpression(column, operator, escape);
+  }
+
+  /**
    * Returns a builder object for a condition expression for PutIf/DeleteIf
    *
    * @param columnName a column name for a condition expression
@@ -352,6 +369,7 @@ public class ConditionBuilder {
     public ConditionalExpression isNotEqualToBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.NE);
     }
+
     /**
      * Creates a 'not equal' conditional expression for a DATE value.
      *
@@ -391,6 +409,7 @@ public class ConditionBuilder {
     public ConditionalExpression isNotEqualToTimestampTZ(Instant value) {
       return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.NE);
     }
+
     /**
      * Creates a 'greater than' conditional expression for a BOOLEAN value.
      *
@@ -590,6 +609,7 @@ public class ConditionBuilder {
     public ConditionalExpression isGreaterThanOrEqualToBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.GTE);
     }
+
     /**
      * Creates a 'greater than or equal' conditional expression for a DATE value.
      *
@@ -709,6 +729,7 @@ public class ConditionBuilder {
     public ConditionalExpression isLessThanBlob(ByteBuffer value) {
       return new ConditionalExpression(columnName, value, Operator.LT);
     }
+
     /**
      * Creates a 'less than' conditional expression for a DATE value.
      *
@@ -748,6 +769,7 @@ public class ConditionBuilder {
     public ConditionalExpression isLessThanTimestampTZ(Instant value) {
       return new ConditionalExpression(TimestampTZColumn.of(columnName, value), Operator.LT);
     }
+
     /**
      * Creates a 'less than or equal' conditional expression for a BOOLEAN value.
      *
@@ -1029,6 +1051,7 @@ public class ConditionBuilder {
     public ConditionalExpression isNotNullBlob() {
       return new ConditionalExpression(BlobColumn.ofNull(columnName), Operator.IS_NOT_NULL);
     }
+
     /**
      * Creates an 'is not null' conditional expression for a DATE value.
      *
