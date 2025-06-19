@@ -49,14 +49,12 @@ public class RecoveryExecutor implements AutoCloseable {
   public RecoveryExecutor(
       Coordinator coordinator,
       RecoveryHandler recovery,
-      TransactionTableMetadataManager tableMetadataManager,
-      int threadPoolSize) {
+      TransactionTableMetadataManager tableMetadataManager) {
     this.coordinator = Objects.requireNonNull(coordinator);
     this.recovery = Objects.requireNonNull(recovery);
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     executorService =
-        Executors.newFixedThreadPool(
-            threadPoolSize,
+        Executors.newCachedThreadPool(
             new ThreadFactoryBuilder()
                 .setNameFormat("recovery-executor-%d")
                 .setDaemon(true)

@@ -74,9 +74,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor =
-        new RecoveryExecutor(
-            coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     commit =
         new CommitHandler(
             storage,
@@ -100,9 +98,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor =
-        new RecoveryExecutor(
-            coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     commit =
         new CommitHandler(
             storage,

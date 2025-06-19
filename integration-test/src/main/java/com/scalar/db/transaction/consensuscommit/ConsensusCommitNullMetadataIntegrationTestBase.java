@@ -138,12 +138,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    recoveryExecutor =
-        new RecoveryExecutor(
-            coordinator,
-            recovery,
-            tableMetadataManager,
-            consensusCommitConfig.getRecoveryExecutorCount());
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =

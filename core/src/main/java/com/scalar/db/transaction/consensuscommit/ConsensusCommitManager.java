@@ -72,9 +72,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor =
-        new RecoveryExecutor(
-            coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
@@ -94,9 +92,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor =
-        new RecoveryExecutor(
-            coordinator, recovery, tableMetadataManager, config.getRecoveryExecutorCount());
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     commit = createCommitHandler();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();

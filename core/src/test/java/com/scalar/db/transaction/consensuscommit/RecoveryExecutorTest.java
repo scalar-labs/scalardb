@@ -134,7 +134,7 @@ public class RecoveryExecutorTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    executor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager, 1);
+    executor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(selection))
