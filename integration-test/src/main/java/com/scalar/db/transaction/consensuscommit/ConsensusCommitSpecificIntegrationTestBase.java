@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionBuilder.column;
+import static com.scalar.db.api.ConditionBuilder.updateIf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -45,6 +46,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
@@ -6071,6 +6073,91 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void
+      commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowCommitConflictExceptionAndPreserveExternalChanges()
+          throws UnknownTransactionStatusException, CrudException, RollbackException {
+    // Arrange
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+
+    // Retrieve the record
+    Optional<Result> result =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    // Update the balance of the record
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .condition(updateIf(column(BALANCE).isEqualToInt(INITIAL_BALANCE)).build())
+            .intValue(BALANCE, 100)
+            .build());
+
+    // Update the balance of the record by another transaction
+    manager.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 200)
+            .build());
+
+    // Retrieve the record again, but use a different Get object (with a where clause)
+    result =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .where(column(BALANCE).isEqualToInt(200))
+                .build());
+
+    assertThat(result).isNotPresent();
+
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    transaction.rollback();
+
+    // Assert
+    result =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(200);
   }
 
   @Test
