@@ -541,6 +541,45 @@ public class CrudHandlerTest {
     assertThatThrownBy(() -> handler.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void get_DifferentGetButSameRecordReturned_ShouldNotOverwriteReadSet()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3)).build();
+    Get getForStorage1 = toGetForStorageFrom(get1);
+    Get getForStorage2 =
+        Get.newBuilder(get2)
+            .clearProjections()
+            .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
+            .clearConditions()
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
+    Snapshot.Key key = new Snapshot.Key(getForStorage1);
+    when(snapshot.getResult(any(), any())).thenReturn(expected).thenReturn(expected);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false).thenReturn(true);
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Result> results1 = handler.get(get1);
+    Optional<Result> results2 = handler.get(get2);
+
+    // Assert
+    assertThat(results1)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    assertThat(results2).isEqualTo(results1);
+    verify(storage).get(getForStorage1);
+    verify(storage).get(getForStorage2);
+    verify(snapshot).putIntoReadSet(key, expected);
+  }
+
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void scanOrGetScanner_ResultGivenFromStorage_ShouldUpdateSnapshotAndReturn(ScanType scanType)
