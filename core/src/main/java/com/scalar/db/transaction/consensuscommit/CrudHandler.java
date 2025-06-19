@@ -164,11 +164,10 @@ public class CrudHandler {
     }
 
     if (result.isPresent() || get.getConjunctions().isEmpty()) {
-      // Keep the read set latest to create before image by using the latest record (result)
-      // because another conflicting transaction might have updated the record after this
-      // transaction read it first. However, we update it only if a get operation has no
-      // conjunction or the result exists. This is because we don’t know whether the record
-      // actually exists or not due to the conjunction.
+      // We put the result into the read set only if a get operation has no conjunction or the
+      // result exists. This is because we don’t know whether the record actually exists or not
+      // due to the conjunction.
+
       if (key != null) {
         putIntoReadSetInSnapshot(key, result);
       } else {
@@ -277,9 +276,6 @@ public class CrudHandler {
     }
 
     if (ret.isPresent()) {
-      // We always update the read set to create before image by using the latest record (result)
-      // because another conflicting transaction might have updated the record after this
-      // transaction read it first.
       putIntoReadSetInSnapshot(key, ret);
     }
 
@@ -319,7 +315,7 @@ public class CrudHandler {
 
   private void putIntoReadSetInSnapshot(Snapshot.Key key, Optional<TransactionResult> result) {
     // In read-only mode, we don't need to put the result into the read set
-    if (!readOnly) {
+    if (!readOnly && !snapshot.containsKeyInReadSet(key)) {
       snapshot.putIntoReadSet(key, result);
     }
   }
