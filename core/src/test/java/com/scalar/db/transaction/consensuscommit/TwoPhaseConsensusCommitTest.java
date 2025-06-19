@@ -66,7 +66,7 @@ public class TwoPhaseConsensusCommitTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    // Arrange1
+    // Arrange
     transaction = new TwoPhaseConsensusCommit(crud, commit, mutationOperationChecker);
 
     when(crud.areAllScannersClosed()).thenReturn(true);
