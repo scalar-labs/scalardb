@@ -568,7 +568,6 @@ public class CrudHandlerTest {
     Get getForStorage2 =
         Get.newBuilder(get2)
             .clearProjections()
-            .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
             .clearConditions()
             .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
             .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
