@@ -5,7 +5,7 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.scalar.db.api.ConditionBuilder;
@@ -106,7 +106,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     clusteringKey.ifPresent(putBuilder::clusteringKey);
 
     Map<String, Column<?>> columns = new HashMap<>();
-    extractAfterImageColumnsFromBeforeImage(columns, result, beforeImageColumnNames);
+    createAfterImageColumnsFromBeforeImage(columns, result, beforeImageColumnNames);
     columns.values().forEach(putBuilder::value);
 
     // Set before image columns to null

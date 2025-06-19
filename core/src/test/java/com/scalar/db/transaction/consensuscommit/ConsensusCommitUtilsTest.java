@@ -625,7 +625,7 @@ public class ConsensusCommitUtilsTest {
   }
 
   @Test
-  public void extractAfterImageColumnsFromBeforeImage_shouldExtractCorrectly() {
+  public void createAfterImageColumnsFromBeforeImage_shouldExtractCorrectly() {
     // Arrange
     Map<String, Column<?>> columns = new HashMap<>();
     Set<String> beforeImageColumnNames = new HashSet<>();
@@ -641,7 +641,7 @@ public class ConsensusCommitUtilsTest {
     when(result.getColumns()).thenReturn(resultColumns);
 
     // Act
-    ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage(
+    ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage(
         columns, result, beforeImageColumnNames);
 
     // Assert
@@ -655,7 +655,7 @@ public class ConsensusCommitUtilsTest {
 
   @Test
   public void
-      extractAfterImageColumnsFromBeforeImage_versionColumnWithZero_shouldCreateNullVersion() {
+      createAfterImageColumnsFromBeforeImage_versionColumnWithZero_shouldCreateNullVersion() {
     // Arrange
     Map<String, Column<?>> columns = new HashMap<>();
     Set<String> beforeImageColumnNames = new HashSet<>();
@@ -668,7 +668,7 @@ public class ConsensusCommitUtilsTest {
     when(result.getColumns()).thenReturn(resultColumns);
 
     // Act
-    ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage(
+    ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage(
         columns, result, beforeImageColumnNames);
 
     // Assert
@@ -678,7 +678,7 @@ public class ConsensusCommitUtilsTest {
   }
 
   @Test
-  public void extractAfterImageColumnsFromBeforeImage_versionColumnWithNonZero_shouldCopyValue() {
+  public void createAfterImageColumnsFromBeforeImage_versionColumnWithNonZero_shouldCopyValue() {
     // Arrange
     Map<String, Column<?>> columns = new HashMap<>();
     Set<String> beforeImageColumnNames = new HashSet<>();
@@ -691,7 +691,7 @@ public class ConsensusCommitUtilsTest {
     when(result.getColumns()).thenReturn(resultColumns);
 
     // Act
-    ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage(
+    ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage(
         columns, result, beforeImageColumnNames);
 
     // Assert

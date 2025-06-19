@@ -1,6 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.extractAfterImageColumnsFromBeforeImage;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -102,10 +102,10 @@ public class RecoveryExecutor implements AutoCloseable {
     throwUncommittedRecordExceptionIfTransactionNotExpired(state, selection, result, transactionId);
 
     if (!state.isPresent() || state.get().getState() == TransactionState.ABORTED) {
-      return createRolledBackRecord(selection, result, transactionId);
+      return createRecordFromBeforeImage(selection, result, transactionId);
     } else {
       assert state.get().getState() == TransactionState.COMMITTED;
-      return createRolledForwardResult(selection, result, transactionId);
+      return createResultFromAfterImage(selection, result, transactionId);
     }
   }
 
@@ -124,7 +124,7 @@ public class RecoveryExecutor implements AutoCloseable {
     }
   }
 
-  private Optional<TransactionResult> createRolledBackRecord(
+  private Optional<TransactionResult> createRecordFromBeforeImage(
       Selection selection, TransactionResult result, String transactionId) throws CrudException {
     if (!result.hasBeforeImage()) {
       return Optional.empty();
@@ -138,7 +138,7 @@ public class RecoveryExecutor implements AutoCloseable {
 
     Map<String, Column<?>> columns = new HashMap<>();
 
-    extractAfterImageColumnsFromBeforeImage(columns, result, beforeImageColumnNames);
+    createAfterImageColumnsFromBeforeImage(columns, result, beforeImageColumnNames);
 
     Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
     partitionKey.getColumns().forEach(c -> columns.put(c.getName(), c));
@@ -151,7 +151,7 @@ public class RecoveryExecutor implements AutoCloseable {
     return Optional.of(new TransactionResult(new ResultImpl(columns, tableMetadata)));
   }
 
-  private Optional<TransactionResult> createRolledForwardResult(
+  private Optional<TransactionResult> createResultFromAfterImage(
       Selection selection, TransactionResult result, String transactionId) throws CrudException {
     if (result.getState() == TransactionState.DELETED) {
       return Optional.empty();

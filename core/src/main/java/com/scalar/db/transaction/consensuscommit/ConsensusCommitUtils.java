@@ -319,7 +319,7 @@ public final class ConsensusCommitUtils {
     }
   }
 
-  static void extractAfterImageColumnsFromBeforeImage(
+  static void createAfterImageColumnsFromBeforeImage(
       Map<String, Column<?>> columns,
       TransactionResult result,
       Set<String> beforeImageColumnNames) {
