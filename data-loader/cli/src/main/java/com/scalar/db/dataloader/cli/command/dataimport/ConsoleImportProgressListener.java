@@ -36,7 +36,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
     chunkLogs.put(
         status.getDataChunkId(),
         String.format(
-            "🔄 Chunk %d: Processing... %,d records so far",
+            "🔄 Chunk %d: Processing... %d records so far",
             status.getDataChunkId(), totalRecords.get()));
   }
 
@@ -50,7 +50,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
       chunkLogs.put(
           status.getDataChunkId(),
           String.format(
-              "✓ Chunk %d: %,d records imported (%.1fs), %d records imported successfully, import of %d records failed",
+              "✓ Chunk %d: %d records imported (%.1fs), %d records imported successfully, import of %d records failed",
               status.getDataChunkId(),
               status.getTotalRecords(),
               elapsed / 1000.0,
@@ -70,7 +70,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
       chunkFailureLogs.put(
           batchResult.getDataChunkId(),
           String.format(
-              "❌ Chunk id: %d, Transaction batch id: %d failed: %,d records could not be imported",
+              "❌ Chunk id: %d, Transaction batch id: %d failed: %d records could not be imported",
               batchResult.getDataChunkId(),
               batchResult.getTransactionBatchId(),
               batchResult.getRecords().size()));
@@ -105,7 +105,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
 
     builder.append(
         String.format(
-            "\rImporting... %,d records | %.0f rec/s | %s%n",
+            "\rImporting... %d records | %.0f rec/s | %s%n",
             totalRecords.get(), recPerSec, formatElapsed(elapsed)));
 
     chunkLogs.values().stream().sorted().forEach(line -> builder.append(line).append("\n"));
@@ -114,7 +114,7 @@ public class ConsoleImportProgressListener implements ImportEventListener {
     if (completed) {
       builder.append(
           String.format(
-              "%n✅ Import completed: %,d records succeeded, %,d failed%n",
+              "%n✅ Import completed: %d records succeeded, %d failed%n",
               totalSuccess.get(), totalFailures.get()));
     }
     clearConsole();
