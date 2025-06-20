@@ -1358,6 +1358,7 @@ public abstract class DynamoAdminTestBase {
     GlobalSecondaryIndexDescription globalSecondaryIndexDescription =
         mock(GlobalSecondaryIndexDescription.class);
     when(tableDescription.globalSecondaryIndexes())
+        .thenReturn(Collections.emptyList())
         .thenReturn(Collections.singletonList(globalSecondaryIndexDescription));
     String indexName = getFullTableName() + ".global_index.c3";
     when(globalSecondaryIndexDescription.indexName()).thenReturn(indexName);
