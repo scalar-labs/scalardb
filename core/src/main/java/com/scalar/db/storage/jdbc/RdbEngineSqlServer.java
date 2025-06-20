@@ -365,8 +365,12 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     return escape.isEmpty() ? "\\" : escape;
   }
 
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
+  }
+
   @Override
-  public Map<String, String> getConnectionProperties() {
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
     // It is being considered setting to it to false by default in a future driver release.
     return ImmutableMap.of("sendTimeAsDatetime", "false");

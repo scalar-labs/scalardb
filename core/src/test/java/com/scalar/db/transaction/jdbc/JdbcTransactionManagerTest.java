@@ -79,7 +79,7 @@ public class JdbcTransactionManagerTest {
             databaseConfig,
             dataSource,
             tableMetadataDataSource,
-            RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL),
+            RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
             jdbcService);
   }
 
@@ -208,7 +208,7 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.get(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
@@ -241,7 +241,7 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.scan(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
@@ -641,7 +641,7 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.put(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
@@ -680,7 +680,7 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.delete(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
@@ -721,7 +721,7 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.put(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
