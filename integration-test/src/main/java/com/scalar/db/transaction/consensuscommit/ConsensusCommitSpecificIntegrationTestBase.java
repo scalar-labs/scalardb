@@ -32,6 +32,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionManagerCrudOperable;
@@ -39,6 +40,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.DecoratedDistributedTransaction;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -7431,8 +7433,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  public void putAndCommit_SinglePartitionMutationsGiven_ShouldAccessStorageOnceForPrepareAndCommit(
-      Isolation isolation) throws TransactionException, ExecutionException, CoordinatorException {
+  public void
+      putAndCommit_SinglePartitionMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageMutationAtomicityUnit(
+          Isolation isolation)
+          throws TransactionException, ExecutionException, CoordinatorException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
@@ -7447,8 +7451,23 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    // one for prepare, one for commit
-    verify(storage, times(2)).mutate(anyList());
+    StorageInfo storageInfo = admin.getStorageInfo(namespace1);
+    switch (storageInfo.getMutationAtomicityUnit()) {
+      case RECORD:
+        // twice for prepare, twice for commit
+        verify(storage, times(4)).mutate(anyList());
+        break;
+      case PARTITION:
+      case TABLE:
+      case NAMESPACE:
+      case STORAGE:
+        // one for prepare, one for commit
+        verify(storage, times(2)).mutate(anyList());
+        break;
+      default:
+        throw new AssertionError();
+    }
+
     if (isGroupCommitEnabled()) {
       verify(coordinator)
           .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
@@ -7459,8 +7478,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  public void putAndCommit_TwoPartitionsMutationsGiven_ShouldAccessStorageTwiceForPrepareAndCommit(
-      Isolation isolation) throws TransactionException, ExecutionException, CoordinatorException {
+  public void
+      putAndCommit_TwoPartitionsMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageMutationAtomicityUnit(
+          Isolation isolation)
+          throws TransactionException, ExecutionException, CoordinatorException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
@@ -7475,8 +7496,87 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    // twice for prepare, twice for commit
-    verify(storage, times(4)).mutate(anyList());
+    StorageInfo storageInfo = admin.getStorageInfo(namespace1);
+    switch (storageInfo.getMutationAtomicityUnit()) {
+      case RECORD:
+      case PARTITION:
+        // twice for prepare, twice for commit
+        verify(storage, times(4)).mutate(anyList());
+        break;
+      case TABLE:
+      case NAMESPACE:
+      case STORAGE:
+        // one for prepare, one for commit
+        verify(storage, times(2)).mutate(anyList());
+        break;
+      default:
+        throw new AssertionError();
+    }
+
+    if (isGroupCommitEnabled()) {
+      verify(coordinator)
+          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+      return;
+    }
+    verify(coordinator).putState(any(Coordinator.State.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      insertAndCommit_TwoNamespacesMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageMutationAtomicityUnit(
+          Isolation isolation)
+          throws TransactionException, ExecutionException, CoordinatorException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace2)
+            .table(TABLE_2)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    transaction.commit();
+
+    // Assert
+    StorageInfo storageInfo1 = admin.getStorageInfo(namespace1);
+    StorageInfo storageInfo2 = admin.getStorageInfo(namespace2);
+    if (!storageInfo1.getStorageName().equals(storageInfo2.getStorageName())) {
+      // different storages
+
+      // twice for prepare, twice for commit
+      verify(storage, times(4)).mutate(anyList());
+    } else {
+      // same storage
+      switch (storageInfo1.getMutationAtomicityUnit()) {
+        case RECORD:
+        case PARTITION:
+        case TABLE:
+        case NAMESPACE:
+          // twice for prepare, twice for commit
+          verify(storage, times(4)).mutate(anyList());
+          break;
+        case STORAGE:
+          // one for prepare, one for commit
+          verify(storage, times(2)).mutate(anyList());
+          break;
+        default:
+          throw new AssertionError();
+      }
+    }
+
     if (isGroupCommitEnabled()) {
       verify(coordinator)
           .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
@@ -7903,11 +8003,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private CommitHandler createCommitHandler(
       TransactionTableMetadataManager tableMetadataManager,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
+    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, true, groupCommitter);
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          true,
+          groupCommitter);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, true);
+      return new CommitHandler(
+          storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true);
     }
   }
 
