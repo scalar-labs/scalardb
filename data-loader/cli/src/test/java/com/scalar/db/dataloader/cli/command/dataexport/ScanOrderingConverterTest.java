@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.scalar.db.api.Scan;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,7 +22,7 @@ public class ScanOrderingConverterTest {
             () -> scanOrderingConverter.convert(value),
             "Expected to throw exception");
     Assertions.assertEquals(
-        CoreError.DATA_LOADER_INVALID_KEY_VALUE_INPUT.buildMessage(value), thrown.getMessage());
+        DataLoaderError.INVALID_KEY_VALUE_INPUT.buildMessage(value), thrown.getMessage());
   }
 
   @Test

@@ -6,7 +6,7 @@ import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Objects;

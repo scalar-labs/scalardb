@@ -8,7 +8,7 @@ import static com.scalar.db.config.ConfigUtils.getString;
 import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;

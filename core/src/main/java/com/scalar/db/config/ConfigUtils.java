@@ -3,7 +3,7 @@ package com.scalar.db.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;

@@ -3,9 +3,9 @@ package com.scalar.db.dataloader.core.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
@@ -116,7 +116,7 @@ public final class KeyUtils {
     DataType columnDataType = tableMetadata.getColumnDataType(columnName);
     if (columnDataType == null) {
       throw new KeyParsingException(
-          CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(
+          DataLoaderError.INVALID_COLUMN_NON_EXISTENT.buildMessage(
               columnName, tableName, namespace));
     }
     ColumnInfo columnInfo =

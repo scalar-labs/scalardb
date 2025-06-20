@@ -1,6 +1,6 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 
 /**
  * A factory class that creates appropriate ImportProcessor instances based on the input file
@@ -39,7 +39,7 @@ public class DefaultImportProcessorFactory implements ImportProcessorFactory {
         break;
       default:
         throw new IllegalArgumentException(
-            CoreError.DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED.buildMessage(
+            DataLoaderError.FILE_FORMAT_NOT_SUPPORTED.buildMessage(
                 params.getImportOptions().getFileFormat().toString()));
     }
     return importProcessor;

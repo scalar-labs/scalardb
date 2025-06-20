@@ -4,7 +4,7 @@ import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import java.util.Locale;
 
 public final class CosmosUtils {

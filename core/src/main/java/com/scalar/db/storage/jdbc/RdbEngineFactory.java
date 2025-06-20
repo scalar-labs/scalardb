@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 
 /** Factory class of subclasses of {@link RdbEngineStrategy} */
 public final class RdbEngineFactory {

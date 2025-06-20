@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.task.validation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import java.util.HashSet;
 import java.util.Set;
@@ -81,7 +81,7 @@ class ImportSourceRecordValidatorTest {
             partitionKeyNames, clusteringKeyNames, columnNames, sourceRecord, false, mockMetadata);
     Assertions.assertFalse(result.getColumnsWithErrors().isEmpty());
     Assertions.assertEquals(
-        CoreError.DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN.buildMessage("id1"),
+        DataLoaderError.MISSING_CLUSTERING_KEY_COLUMN.buildMessage("id1"),
         result.getErrorMessages().get(0));
   }
 }
