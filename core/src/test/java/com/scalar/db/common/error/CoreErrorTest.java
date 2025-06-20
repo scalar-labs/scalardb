@@ -1,6 +1,7 @@
 package com.scalar.db.common.error;
 
 import com.scalar.db.api.Put;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import org.assertj.core.api.Assertions;

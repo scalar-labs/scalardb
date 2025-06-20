@@ -2,7 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.common.AbstractScanner;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;

@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core.dataimport.controlfile;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.io.DataType;
 import java.util.HashMap;
@@ -24,7 +24,7 @@ class ControlFileValidatorTest {
   void validate_nullValuesGiven_shouldThrowNullPointerException() {
     assertThatThrownBy(() -> ControlFileValidator.validate(null, null, null))
         .isExactlyInstanceOf(NullPointerException.class)
-        .hasMessage(CoreError.DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT.buildMessage());
+        .hasMessage(DataLoaderError.ERROR_METHOD_NULL_ARGUMENT.buildMessage());
   }
 
   @Test
@@ -36,7 +36,7 @@ class ControlFileValidatorTest {
                 ControlFileValidator.validate(
                     controlFile, ControlFileValidationLevel.FULL, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS.buildMessage());
+        .hasMessage(DataLoaderError.CONTROL_FILE_MISSING_DATA_MAPPINGS.buildMessage());
   }
 
   @Test
@@ -62,7 +62,7 @@ class ControlFileValidatorTest {
                 ControlFileValidator.validate(
                     controlFile, ControlFileValidationLevel.MAPPED, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_DUPLICATE_DATA_MAPPINGS.buildMessage(lookupKey));
+        .hasMessage(DataLoaderError.DUPLICATE_DATA_MAPPINGS.buildMessage(lookupKey));
   }
 
   @Test
@@ -90,8 +90,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.MAPPED, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND.buildMessage(
-                COLUMN_ONE, lookupKey));
+            DataLoaderError.MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND.buildMessage(COLUMN_ONE, lookupKey));
   }
 
   @Test
@@ -109,7 +108,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.MAPPED, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(
+            DataLoaderError.MISSING_NAMESPACE_OR_TABLE.buildMessage(
                 controlFileTable.getNamespace(), controlFileTable.getTable()));
   }
 
@@ -136,7 +135,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.MAPPED, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_TARGET_COLUMN_NOT_FOUND.buildMessage(
+            DataLoaderError.TARGET_COLUMN_NOT_FOUND.buildMessage(
                 COLUMN_ONE, COLUMN_ONE, lookupKey));
   }
 
@@ -165,8 +164,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.FULL, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_MISSING_COLUMN_MAPPING.buildMessage(
-                COLUMN_PARTITION_KEY, lookupKey));
+            DataLoaderError.MISSING_COLUMN_MAPPING.buildMessage(COLUMN_PARTITION_KEY, lookupKey));
   }
 
   @Test
@@ -194,8 +192,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.KEYS, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_MISSING_PARTITION_KEY.buildMessage(
-                COLUMN_PARTITION_KEY, lookupKey));
+            DataLoaderError.MISSING_PARTITION_KEY.buildMessage(COLUMN_PARTITION_KEY, lookupKey));
   }
 
   @Test
@@ -228,8 +225,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.KEYS, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_MISSING_CLUSTERING_KEY.buildMessage(
-                COLUMN_CLUSTERING_KEY, lookupKey));
+            DataLoaderError.MISSING_CLUSTERING_KEY.buildMessage(COLUMN_CLUSTERING_KEY, lookupKey));
   }
 
   @Test
@@ -357,8 +353,7 @@ class ControlFileValidatorTest {
                 ControlFileValidator.validate(
                     controlFile, ControlFileValidationLevel.FULL, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
-        .hasMessage(
-            CoreError.DATA_LOADER_MISSING_COLUMN_MAPPING.buildMessage(COLUMN_ONE, lookupKeyTwo));
+        .hasMessage(DataLoaderError.MISSING_COLUMN_MAPPING.buildMessage(COLUMN_ONE, lookupKeyTwo));
   }
 
   @Test
@@ -400,7 +395,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.KEYS, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_MISSING_CLUSTERING_KEY.buildMessage(
+            DataLoaderError.MISSING_CLUSTERING_KEY.buildMessage(
                 COLUMN_CLUSTERING_KEY, lookupKeyTwo));
   }
 
@@ -440,8 +435,7 @@ class ControlFileValidatorTest {
                     controlFile, ControlFileValidationLevel.KEYS, tableMetadataMap))
         .isExactlyInstanceOf(ControlFileValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_MISSING_PARTITION_KEY.buildMessage(
-                COLUMN_PARTITION_KEY, lookupKeyTwo));
+            DataLoaderError.MISSING_PARTITION_KEY.buildMessage(COLUMN_PARTITION_KEY, lookupKeyTwo));
   }
 
   @Test

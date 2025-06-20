@@ -7,9 +7,9 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
@@ -69,8 +69,7 @@ class KeyUtilsTest {
             KeyParsingException.class,
             () -> KeyUtils.parseKeyValue(keyValue, "namespace", "table", tableMetadata));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_COLUMN_NON_EXISTENT.buildMessage(
-            columnName, "table", "namespace"),
+        DataLoaderError.INVALID_COLUMN_NON_EXISTENT.buildMessage(columnName, "table", "namespace"),
         exception.getMessage());
   }
 
