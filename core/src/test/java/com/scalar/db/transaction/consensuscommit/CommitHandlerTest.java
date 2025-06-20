@@ -12,12 +12,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.StorageInfoImpl;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -34,13 +38,11 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
-@ExtendWith(MockitoExtension.class)
 public class CommitHandlerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
@@ -58,6 +60,7 @@ public class CommitHandlerTest {
   @Mock protected DistributedStorage storage;
   @Mock protected Coordinator coordinator;
   @Mock protected TransactionTableMetadataManager tableMetadataManager;
+  @Mock protected StorageInfoProvider storageInfoProvider;
   @Mock protected ConsensusCommitConfig config;
   @Mock protected BeforePreparationSnapshotHook beforePreparationSnapshotHook;
   @Mock protected Future<Void> beforePreparationSnapshotHookFuture;
@@ -79,15 +82,24 @@ public class CommitHandlerTest {
         coordinator,
         tableMetadataManager,
         parallelExecutor,
+        new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled);
   }
 
   @BeforeEach
   void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+
     parallelExecutor = new ParallelExecutor(config);
     handler = spy(createCommitHandler(true));
 
     extraInitialize();
+
+    // Arrange
+    when(storageInfoProvider.getStorageInfo(ANY_NAMESPACE_NAME))
+        .thenReturn(
+            new StorageInfoImpl(
+                "storage1", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE));
   }
 
   @AfterEach
